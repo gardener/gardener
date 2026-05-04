@@ -122,6 +122,18 @@ This controller implements the `Bastion.extensions.gardener.cloud` resource by d
 
 Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
 
+#### `SelfHostedShootExposure`
+
+This controller implements the `SelfHostedShootExposure.extensions.gardener.cloud` resource for [self-hosted shoots with managed infrastructure](https://github.com/gardener/enhancements/tree/main/geps/0036-self-hosted-shoot-exposure).
+Its purpose is to expose the self-hosted shoot's API server via a `LoadBalancer` Service backed by the control plane node addresses.
+
+This controller runs inside the self-hosted shoot and creates two resources in the kind cluster (see [Credentials](#credentials)):
+
+- A `Service` of type `LoadBalancer`, which causes `cloud-controller-manager-local` to provision an Envoy Proxy based load balancer in the kind network (see [cloud-controller-manager-local](#cloud-controller-manager-local)).
+- One `EndpointSlice` per IP family configured in `Shoot.spec.networking.ipFamilies`, backed by the `InternalIP` addresses of the control plane nodes from `SelfHostedShootExposure.spec.endpoints`.
+
+The controller waits until the `LoadBalancer` Service is assigned ingress IPs by `cloud-controller-manager-local` before reporting the `SelfHostedShootExposure` as ready and populating `.status.ingress`.
+
 #### ETCD Backups
 
 This controller reconciles the `BackupBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
