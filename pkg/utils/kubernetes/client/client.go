@@ -18,50 +18,51 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-type objectsRemaining []client.Object
+type objectsRemaining struct {
+	scheme           *runtime.Scheme
+	remainingObjects []client.Object
+}
 
 // Error implements error.
 func (n objectsRemaining) Error() string {
-	out := make([]string, 0, len(n))
-	for _, obj := range n {
-		var typeID string
-		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Empty() {
-			typeID = fmt.Sprintf("%T", obj)
-		} else {
-			typeID = gvk.String()
-		}
-
-		out = append(out, fmt.Sprintf("%s %s", typeID, client.ObjectKeyFromObject(obj).String()))
+	out := make([]string, 0, len(n.remainingObjects))
+	for _, obj := range n.remainingObjects {
+		out = append(out, fmt.Sprintf("%s %s", GVKStringForObject(obj, n.scheme), client.ObjectKeyFromObject(obj).String()))
 	}
 	return fmt.Sprintf("remaining objects are still present: %v", out)
 }
 
 // AreObjectsRemaining checks whether the given error is an 'objects remaining error'.
 func AreObjectsRemaining(err error) bool {
-	_, ok := err.(objectsRemaining)
-	return ok
+	objectsRemainingErr := &objectsRemaining{}
+	return errors.As(err, &objectsRemainingErr)
 }
 
 // NewObjectsRemaining returns a new error with the remaining objects.
-func NewObjectsRemaining(obj runtime.Object) error {
+func NewObjectsRemaining(obj runtime.Object, scheme *runtime.Scheme) error {
+	r := &objectsRemaining{
+		scheme: scheme,
+	}
+
 	switch remaining := obj.(type) {
 	case client.ObjectList:
-		r := make(objectsRemaining, 0, meta.LenList(remaining))
+		r.remainingObjects = make([]client.Object, 0, meta.LenList(remaining))
 		if err := meta.EachListItem(remaining, func(obj runtime.Object) error {
-			r = append(r, obj.(client.Object))
+			r.remainingObjects = append(r.remainingObjects, obj.(client.Object))
 			return nil
 		}); err != nil {
 			return err
 		}
 		return r
 	case client.Object:
-		return objectsRemaining{remaining}
+		r.remainingObjects = append(r.remainingObjects, remaining)
+		return r
 	}
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
@@ -311,7 +312,7 @@ func ensureGone(ctx context.Context, c client.Client, log logr.Logger, obj clien
 		}
 	}
 
-	return NewObjectsRemaining(obj)
+	return NewObjectsRemaining(obj, c.Scheme())
 }
 
 func ensureCollectionGone(ctx context.Context, c client.Client, log logr.Logger, list client.ObjectList, listOpts []client.ListOption, ignoreFns []IgnoreLeftoverFunc) error {
@@ -341,7 +342,7 @@ func ensureCollectionGone(ctx context.Context, c client.Client, log logr.Logger,
 	}
 
 	if ignoredObjects < objectsInList {
-		return NewObjectsRemaining(list)
+		return NewObjectsRemaining(list, c.Scheme())
 	}
 	return nil
 }
@@ -470,4 +471,20 @@ func ForceDeleteObjects(c client.Client, namespace string, objectList client.Obj
 			return controllerutils.RemoveAllFinalizers(ctx, c, object)
 		})
 	}
+}
+
+// GVKStringForObject finds the GroupVersionKind associated with the given object.
+// Falls back to the object type if a distinct GVK couldn't be found.
+func GVKStringForObject(obj client.Object, scheme *runtime.Scheme) string {
+	var typeID string
+	// Generally use the scheme to find the GVK for the object, since list calls may strip the type meta.
+	// See https://github.com/kubernetes-sigs/controller-runtime/issues/3302#issuecomment-3237537512 for more information.
+	gvk, err := apiutil.GVKForObject(obj, scheme)
+	if err != nil || gvk.Empty() {
+		typeID = fmt.Sprintf("%T", obj)
+	} else {
+		typeID = gvk.String()
+	}
+
+	return typeID
 }

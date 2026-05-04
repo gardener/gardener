@@ -566,7 +566,7 @@ var _ = Describe("Cleaner", func() {
 			cm1 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
 			Expect(fakeClient.Create(ctx, cm1)).To(Succeed())
 
-			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, cm1)).To(Equal(NewObjectsRemaining(cm1)))
+			Expect(EnsureGone(ctx, logr.Discard(), fakeClient, cm1)).To(Equal(NewObjectsRemaining(cm1, kubernetesscheme.Scheme)))
 		})
 
 		It("should ensure that the object is ignored", func() {
@@ -780,6 +780,89 @@ var _ = Describe("Cleaner", func() {
 
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(HaveLen(1))
+		})
+	})
+
+	Describe("#GVKStringForObject", func() {
+		var scheme *runtime.Scheme
+
+		BeforeEach(func() {
+			scheme = runtime.NewScheme()
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
+		})
+
+		It("should return GVK string when object has GVK set", func() {
+			pod := &corev1.Pod{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Pod",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+				},
+			}
+
+			result := GVKStringForObject(pod, scheme)
+			Expect(result).To(Equal("/v1, Kind=Pod"))
+		})
+
+		It("should return GVK string when object is registered in scheme but GVK not explicitly set", func() {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+				},
+			}
+
+			result := GVKStringForObject(pod, scheme)
+			Expect(result).To(Equal("/v1, Kind=Pod"))
+		})
+
+		It("should fall back to type name when object is not registered in scheme", func() {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+				},
+			}
+
+			// Use empty scheme where Pod is not registered
+			emptyScheme := runtime.NewScheme()
+
+			result := GVKStringForObject(pod, emptyScheme)
+			Expect(result).To(Equal("*v1.Pod"))
+		})
+
+		It("should fall back to type name when GVK is empty even if type is set", func() {
+			pod := &corev1.Pod{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "",
+					Kind:       "",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+				},
+			}
+
+			// Use a scheme that doesn't have corev1 registered
+			emptyScheme := runtime.NewScheme()
+
+			result := GVKStringForObject(pod, emptyScheme)
+			Expect(result).To(Equal("*v1.Pod"))
+		})
+
+		It("should return GVK string for ConfigMap", func() {
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cm",
+					Namespace: "default",
+				},
+			}
+
+			result := GVKStringForObject(cm, scheme)
+			Expect(result).To(Equal("/v1, Kind=ConfigMap"))
 		})
 	})
 })

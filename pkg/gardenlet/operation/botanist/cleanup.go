@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -309,7 +310,7 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 	}
 
 	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
-		utilclient.IgnoreUnknownNamespaces(namespaces),
+		utilclient.IgnoreUnknownNamespaces(namespaces, kubernetes.ShootScheme),
 	)
 
 	// Kubernetes objects created after the cleanup started + finalize time should be ignored.
@@ -323,7 +324,7 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 	}
 
 	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
-		utilclient.IgnoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second)),
+		utilclient.IgnoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second), kubernetes.ShootScheme),
 	)
 
 	return nil

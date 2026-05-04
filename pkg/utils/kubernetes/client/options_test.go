@@ -13,10 +13,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 )
 
@@ -80,7 +82,7 @@ var _ = Describe("Options", func() {
 		It("should ignore objects in unknown namespaces", func() {
 			namespaces := []string{"test1", "test2"}
 
-			ignore := IgnoreUnknownNamespaces(namespaces)
+			ignore := IgnoreUnknownNamespaces(namespaces, kubernetes.ShootScheme)
 
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test1"}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test2"}})).To(BeFalse())
@@ -92,7 +94,7 @@ var _ = Describe("Options", func() {
 	Describe("#IgnoreObjectsCreatedAfter", func() {
 		It("should ignore objects create after configured time", func() {
 			clock := testclock.NewFakeClock(time.Now())
-			ignore := IgnoreObjectsCreatedAfter(clock.Now())
+			ignore := IgnoreObjectsCreatedAfter(clock.Now(), kubernetesscheme.Scheme)
 
 			createdBefore := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
