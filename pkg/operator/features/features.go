@@ -13,6 +13,7 @@ import (
 // RegisterFeatureGates registers the feature gates of gardener-operator.
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
+		features.BackupEntryForGarden,
 		features.DefaultSeccompProfile,
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
