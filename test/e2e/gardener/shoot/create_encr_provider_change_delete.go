@@ -36,8 +36,8 @@ func init() {
 	encryptionConfigDecoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
-var _ = FDescribe("Shoot Tests", Label("Shoot", "default"), func() {
-	FDescribe("Create Shoot, Change Encryption Provider Type and Delete Shoot", Label("encryption-provider-change"), func() {
+var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
+	Describe("Create Shoot, Change Encryption Provider Type and Delete Shoot", Label("encryption-provider-change"), func() {
 		Context("Shoot with workers", Ordered, func() {
 			var s *ShootContext
 
