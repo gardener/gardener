@@ -110,6 +110,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	log.Info("Getting rest config")
 	restConfig, err := getRESTConfig(ctx, log, fs, cfg)
 	if err != nil {
+		// Print sanitized error to stdout for console visibility
+		// This helps operators debug node join failures without SSH access
+		fmt.Fprintf(os.Stdout, "FATAL: Failed to establish API server connection: %v\n", sanitizeRESTConfigError(err))
 		return fmt.Errorf("failed getting REST config: %w", err)
 	}
 
@@ -341,4 +344,52 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer, nodeName str
 	}
 
 	return nil
+}
+
+// sanitizeRESTConfigError returns a sanitized, user-friendly error message for REST config failures.
+// This removes sensitive file paths while preserving diagnostic information for console log visibility.
+func sanitizeRESTConfigError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	errMsg := err.Error()
+
+	// Check for common network errors and return focused messages
+	if strings.Contains(errMsg, "dial tcp") {
+		// Extract the connection error part
+		if idx := strings.Index(errMsg, "dial tcp"); idx >= 0 {
+			return fmt.Errorf("network connection failed: %s", errMsg[idx:])
+		}
+	}
+
+	if strings.Contains(errMsg, "connection refused") {
+		return fmt.Errorf("API server connection refused - check if API server is accessible")
+	}
+
+	if strings.Contains(errMsg, "i/o timeout") {
+		return fmt.Errorf("API server connection timeout - check network connectivity and firewall rules")
+	}
+
+	if strings.Contains(errMsg, "no route to host") {
+		return fmt.Errorf("no network route to API server - check routing configuration")
+	}
+
+	if strings.Contains(errMsg, "certificate") || strings.Contains(errMsg, "tls") {
+		return fmt.Errorf("TLS/certificate validation failed - check CA bundle configuration")
+	}
+
+	if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Unauthorized") {
+		return fmt.Errorf("authentication failed - check bootstrap token validity")
+	}
+
+	if strings.Contains(errMsg, "403") || strings.Contains(errMsg, "Forbidden") {
+		return fmt.Errorf("authorization failed - check RBAC permissions for node-agent")
+	}
+
+	// Generic fallback - sanitize file paths
+	sanitized := strings.ReplaceAll(errMsg, nodeagentconfigv1alpha1.BootstrapTokenFilePath, "<bootstrap-token-path>")
+	sanitized = strings.ReplaceAll(sanitized, nodeagentconfigv1alpha1.KubeconfigFilePath, "<kubeconfig-path>")
+
+	return fmt.Errorf("unable to connect to Kubernetes API server: %s", sanitized)
 }

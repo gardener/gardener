@@ -70,6 +70,7 @@ LimitMEMLOCK=infinity
 ExecStart=/opt/bin/gardener-node-agent --config-dir=/var/lib/gardener-node-agent
 Restart=always
 RestartSec=5
+StandardOutput=journal+console
 
 [Install]
 WantedBy=multi-user.target`),
@@ -100,6 +101,7 @@ LimitMEMLOCK=infinity
 ExecStart=/opt/bin/gardener-node-agent --config-dir=/var/lib/gardener-node-agent
 Restart=always
 RestartSec=5
+StandardOutput=journal+console
 
 [Install]
 WantedBy=multi-user.target`))

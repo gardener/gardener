@@ -111,6 +111,7 @@ LimitMEMLOCK=infinity
 ExecStart=` + nodeagentconfigv1alpha1.BinaryDir + `/gardener-node-agent --config-dir=` + nodeagentconfigv1alpha1.BaseDir + `
 Restart=always
 RestartSec=5
+StandardOutput=journal+console
 
 [Install]
 WantedBy=multi-user.target`
