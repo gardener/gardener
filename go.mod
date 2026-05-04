@@ -17,6 +17,7 @@ require (
 	github.com/docker/go-connections v0.7.0
 	github.com/elastic/crd-ref-docs v0.3.0
 	github.com/elliotchance/orderedmap/v3 v3.1.0
+	github.com/fatih/color v1.18.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management v0.22.0
 	github.com/gardener/dependency-watchdog v1.7.0
@@ -167,7 +168,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect

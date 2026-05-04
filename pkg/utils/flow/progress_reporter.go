@@ -22,6 +22,15 @@ type ProgressReporter interface {
 	Report(context.Context, *Stats)
 }
 
+// RetryReporter is an optional interface for ProgressReporter implementation to receive per-task retry notifications.
+// If implemented, TaskFn.RetryUntilTimeout (and custom retry loops calling ReportRetry) surface errors
+type RetryReporter interface {
+	ProgressReporter
+
+	// ReportRetry is called each time a task fails and will be retried.
+	ReportRetry(ctx context.Context, id TaskID, err error)
+}
+
 // MakeDescription returns a description based on the stats.
 func MakeDescription(stats *Stats) string {
 	if stats.ProgressPercent() == 0 {

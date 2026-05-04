@@ -239,7 +239,11 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 
 		start := e.flow.clock.Now().UTC()
 		log.V(1).Info("Started")
-		err := node.fn(ctx)
+		taskCtx := ctx
+		if rr, ok := e.progressReporter.(RetryReporter); ok {
+			taskCtx = withRetryReporter(ctx, id, rr)
+		}
+		err := node.fn(taskCtx)
 		duration := e.flow.clock.Now().UTC().Sub(start)
 		log.V(1).Info("Finished", "duration", duration)
 

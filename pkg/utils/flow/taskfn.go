@@ -14,10 +14,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-var (
-	// ContextWithTimeout is context.WithTimeout. Exposed for testing.
-	ContextWithTimeout = context.WithTimeout
-)
+// ContextWithTimeout is context.WithTimeout. Exposed for testing.
+var ContextWithTimeout = context.WithTimeout
 
 // TaskFn is a payload function of a task.
 type TaskFn func(ctx context.Context) error
@@ -36,7 +34,34 @@ func (t TaskFn) Timeout(timeout time.Duration) TaskFn {
 	}
 }
 
+type retryReporterContextKey struct{}
+
+type retryReporterValue struct {
+	id       TaskID
+	reporter RetryReporter
+}
+
+func withRetryReporter(ctx context.Context, id TaskID, reporter RetryReporter) context.Context {
+	return context.WithValue(ctx, retryReporterContextKey{}, &retryReporterValue{id: id, reporter: reporter})
+}
+
+// ReportRetry reports that the current task failed with err and will be retried.
+// It extracts the reporter from the context (injected by the flow engine) and calls it.
+// This is a no-op if no reporter is present in the context.
+//
+// Call this inside a custom retry loop to surface the last error to the progress reporter.
+// When using TaskFn.RetryUntilTimeout, ReportRetry is called automatically on each failure.
+func ReportRetry(ctx context.Context, err error) {
+	v, ok := ctx.Value(retryReporterContextKey{}).(*retryReporterValue)
+	if !ok || v == nil {
+		return
+	}
+	v.reporter.ReportRetry(ctx, v.id, err)
+}
+
 // RetryUntilTimeout returns a TaskFn that is retried until the timeout is reached.
+// On each failed attempt, ReportRetry is called automatically so that progress reporters
+// can surface the last error without any additional wiring.
 func (t TaskFn) RetryUntilTimeout(interval, timeout time.Duration) TaskFn {
 	return func(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -44,6 +69,7 @@ func (t TaskFn) RetryUntilTimeout(interval, timeout time.Duration) TaskFn {
 
 		return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 			if err := t(ctx); err != nil {
+				ReportRetry(ctx, err)
 				return retry.MinorError(err)
 			}
 			return retry.Ok()
