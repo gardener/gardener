@@ -18,17 +18,19 @@ This guide is split into two main parts:
 
 # Preparing the Setup
 
-## [macOS only] Installing homebrew
+This local setup can be used with the following operating systems: [macOS](#macos), [Linux](#linux) and [Windows](#windows). Please refer to the relevant section for your chosen operating system.
 
-The copy-paste instructions in this guide are designed for macOS and use the package manager [Homebrew](https://brew.sh/).
+## macOS
 
-On macOS run
+The copy-paste instructions in this guide are designed for being used with the package manager [Homebrew](https://brew.sh/).
+
+To install it, run
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-## [macOS only] Installing GNU bash
+### Installing GNU bash
 
 Built-in apple-darwin bash is missing some features that could cause shell scripts to fail locally.
 
@@ -36,7 +38,7 @@ Built-in apple-darwin bash is missing some features that could cause shell scrip
 brew install bash
 ```
 
-## Installing git
+### Installing git
 
 We use `git` as VCS which you need to install. On macOS run
 
@@ -46,7 +48,7 @@ brew install git
 
 For other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
-## Installing Go
+### Installing Go
 
 Install the latest version of Go. On macOS run
 
@@ -56,7 +58,7 @@ brew install go
 
 For other OS, please check [Go installation documentation](https://golang.org/doc/install).
 
-## Installing kubectl
+### Installing kubectl
 
 Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.30.x`. On macOS run
 
@@ -66,7 +68,7 @@ brew install kubernetes-cli
 
 For other OS, please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
-## Installing Docker
+### Installing Docker
 
 You need to have docker installed and running. On macOS run
 
@@ -78,7 +80,7 @@ For other OS please check the [docker installation documentation](https://docs.d
 
 Ensure you have the [`docker compose` plugin](https://docs.docker.com/compose/install/) installed as well.
 
-## Installing iproute2
+### Installing iproute2
 
 `iproute2` provides a collection of utilities for network administration and configuration. On macOS run
 
@@ -86,7 +88,7 @@ Ensure you have the [`docker compose` plugin](https://docs.docker.com/compose/in
 brew install iproute2mac
 ```
 
-## Installing jq
+### Installing jq
 
 [jq](https://jqlang.github.io/jq/) is a lightweight and flexible command-line JSON processor. On macOS run
 
@@ -94,7 +96,7 @@ brew install iproute2mac
 brew install jq
 ```
 
-## Installing yq
+### Installing yq
 
 [yq](https://mikefarah.gitbook.io/yq) is a lightweight and portable command-line YAML processor. On macOS run
 
@@ -102,7 +104,7 @@ brew install jq
 brew install yq
 ```
 
-## Installing GNU Parallel
+### Installing GNU Parallel
 
 [GNU Parallel](https://www.gnu.org/software/parallel/) is a shell tool for executing jobs in parallel, used by the code generation scripts (`make generate`). On macOS run
 
@@ -110,7 +112,7 @@ brew install yq
 brew install parallel
 ```
 
-## [macOS only] Install GNU Core Utilities
+### Install GNU Core Utilities
 
 When running on macOS, install the GNU core utilities and friends:
 
@@ -129,7 +131,27 @@ export PATH=$(brew --prefix)/opt/grep/libexec/gnubin:$PATH
 export PATH=$(brew --prefix)/opt/gzip/bin:$PATH
 ```
 
-## [Windows Only] WSL2
+## Linux
+
+The tools mentioned in the [macOS](#macos) section should be installed according to the distribution-specific Linux installation instructions. Most of them should already be installed on your system. You do not need to use Homebrew to install the remaining dependencies.
+
+### `systemd-resolved`
+
+Ensure that your distribution uses `systemd-resolved` for DNS resolution. If this is not set up, services of type `LoadBalancer` cannot be resolved against the local setup. Some distributions (e.g. Arch Linux) use `NetworkManager` by default, which does not always configure `systemd-resolved`. Therefore, you may need to run a command such as `ln -sf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf` to successfully spin up the local setup.
+
+More information on how DNS resolution works in the local setup can be found in the [provider local documentation](../extensions/provider-local.md#bootstrapping).
+
+### Filesystem permissions of ETCD backups
+
+When the local setup is started or stopped multiple times in a row, error lines such as the following are expected:
+
+```plain
+rm: cannot remove '<repo-path>/dev-setup/../dev/local-backupbuckets/566b3b44-387c-4021-9915-1fead6a7bf31/shoot--local--local--6d218126-04a7-4daa-8343-5794d780f0ab': Permission denied
+```
+
+The `local-backupbuckets` folder contains the ETCD backups of the local setup and cannot be cleaned up due to filesystem permissions. As these UUIDs get regenerated on every startup, there are no conflicts with the folders and everything just works fine. If you want to clean them up, you can do so using `sudo rm -rf ./dev/local-backupbuckets/*`.
+
+## Windows
 
 Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
 
