@@ -45,7 +45,6 @@ import (
 
 var _ = Describe("ClusterAutoscaler", func() {
 	var (
-		c                 client.Client
 		fakeClient        client.Client
 		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
@@ -672,7 +671,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 	)
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
@@ -680,7 +678,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, workerConfig, nil)
+		clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})

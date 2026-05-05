@@ -427,7 +427,7 @@ var _ = Describe("Vali", func() {
 				Build()
 
 			DeferCleanup(testutils.WithVar(
-				&kubernetesutils.WaitUntilStatefulSetScaledToDesiredReplicas, func(_ context.Context, _ client.Client, _ types.NamespacedName, _ int32) error {
+				&kubernetesutils.WaitUntilStatefulSetScaled, func(_ context.Context, _ client.Client, _ types.NamespacedName, _ int32) error {
 					return nil
 				},
 			))
@@ -598,7 +598,7 @@ var _ = Describe("Vali", func() {
 
 		It("should not neglect errors when getting garden/vali's StatefulSet", func() {
 			DeferCleanup(testutils.WithVar(
-				&kubernetesutils.WaitUntilStatefulSetScaledToDesiredReplicas, func(_ context.Context, _ client.Client, _ types.NamespacedName, _ int32) error {
+				&kubernetesutils.WaitUntilStatefulSetScaled, func(_ context.Context, _ client.Client, _ types.NamespacedName, _ int32) error {
 					return errForbidden
 				},
 			))

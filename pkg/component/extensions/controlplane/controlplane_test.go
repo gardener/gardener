@@ -33,8 +33,8 @@ import (
 
 var _ = Describe("ControlPlane", func() {
 	var (
-		ctrl *gomock.Controller
-		c    client.Client
+		ctrl       *gomock.Controller
+		fakeClient client.Client
 
 		fakeClock *testclock.FakeClock
 		now       time.Time
@@ -64,7 +64,7 @@ var _ = Describe("ControlPlane", func() {
 
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
 		empty = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
@@ -99,7 +99,7 @@ var _ = Describe("ControlPlane", func() {
 			Region:                       region,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 		}
-		defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+		defaultDepWaiter = controlplane.New(log, fakeClient, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 	})
 
 	AfterEach(func() {
@@ -113,7 +113,7 @@ var _ = Describe("ControlPlane", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			obj := &extensionsv1alpha1.ControlPlane{}
-			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
+			err := fakeClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
@@ -141,7 +141,7 @@ var _ = Describe("ControlPlane", func() {
 			obj.Status.LastError = &gardencorev1beta1.LastError{
 				Description: "Some error",
 			}
-			Expect(c.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
 
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred(), "controlplane indicates error")
 		})
@@ -162,7 +162,7 @@ var _ = Describe("ControlPlane", func() {
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
+			Expect(fakeClient.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
 			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "controlplane indicates error")
@@ -185,7 +185,7 @@ var _ = Describe("ControlPlane", func() {
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
-			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
+			Expect(fakeClient.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
 			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "controlplane is ready")
@@ -198,7 +198,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should not return error when deleted successfully", func() {
-			Expect(c.Create(ctx, cp.DeepCopy())).To(Succeed(), "adding pre-existing controlplane succeeds")
+			Expect(fakeClient.Create(ctx, cp.DeepCopy())).To(Succeed(), "adding pre-existing controlplane succeeds")
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 		})
 
@@ -210,7 +210,7 @@ var _ = Describe("ControlPlane", func() {
 
 			fakeErr := fmt.Errorf("some random error")
 
-			c := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
 				Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
 					if _, ok := obj.(*extensionsv1alpha1.ControlPlane); ok {
 						return fakeErr
@@ -219,9 +219,9 @@ var _ = Describe("ControlPlane", func() {
 				},
 			}).Build()
 
-			Expect(c.Create(ctx, cp.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, cp.DeepCopy())).To(Succeed())
 
-			err := controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
+			err := controlplane.New(log, fakeClient, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
 			Expect(err).To(MatchError(fakeErr))
 		})
 	})
@@ -235,7 +235,7 @@ var _ = Describe("ControlPlane", func() {
 			timeNow := metav1.Now()
 			obj := cp.DeepCopy()
 			obj.DeletionTimestamp = &timeNow
-			Expect(c.Create(ctx, obj)).To(Succeed())
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(HaveOccurred())
 		})
@@ -282,12 +282,12 @@ var _ = Describe("ControlPlane", func() {
 
 	Describe("#Migrate", func() {
 		It("should migrate the resources", func() {
-			Expect(c.Create(ctx, cp.DeepCopy())).To(Succeed(), "creating controlplane succeeds")
+			Expect(fakeClient.Create(ctx, cp.DeepCopy())).To(Succeed(), "creating controlplane succeeds")
 
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
 
 			result := &extensionsv1alpha1.ControlPlane{}
-			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, result)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, result)).To(Succeed())
 			Expect(result.Annotations).To(HaveKeyWithValue("gardener.cloud/operation", "migrate"))
 		})
 
@@ -311,7 +311,7 @@ var _ = Describe("ControlPlane", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(c.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
 			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(HaveOccurred())
 		})
 
@@ -323,7 +323,7 @@ var _ = Describe("ControlPlane", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(c.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
+			Expect(fakeClient.Create(ctx, obj)).To(Succeed(), "creating controlplane succeeds")
 			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(Succeed(), "controlplane is ready, should not return an error")
 		})
 	})
