@@ -71,20 +71,19 @@ func Bootstrap(
 		return fmt.Errorf("unable to start unit %q: %w", nodeagentconfigv1alpha1.UnitName, err)
 	}
 
-	log.Info("Testing API server connectivity")
-	if err := testAPIServerConnectivity(ctx, log, fs); err != nil {
-		log.Error(err, "API server connectivity test failed")
-		// Print to stdout for console visibility (gardener-node-init has StandardOutput=journal+console)
-		fmt.Fprintf(os.Stdout, "WARNING: API server connectivity test failed: %v\n", err)
-		fmt.Fprintln(os.Stdout, "Node may fail to join the cluster - check network configuration and API server endpoint")
-		// Don't return error - let gardener-node-agent continue and retry with backoff
-	} else {
-		log.Info("API server connectivity test succeeded")
-	}
-
 	log.Info("Disabling gardener-node-init unit")
 	if err := dbus.Disable(ctx, nodeagentconfigv1alpha1.InitUnitName); err != nil {
 		return fmt.Errorf("unable to disable system unit %q: %w", nodeagentconfigv1alpha1.InitUnitName, err)
+	}
+
+	log.Info("Testing API server connectivity")
+	if err := testAPIServerConnectivity(log, fs); err != nil {
+		log.Error(err, "API server connectivity test failed")
+		fmt.Printf("WARNING: API server connectivity test failed: %v\n", err)
+		fmt.Println("Node may fail to join the cluster - check network configuration and API server endpoint")
+		// Don't return error - let gardener-node-agent continue and retry with backoff
+	} else {
+		log.Info("API server connectivity test succeeded")
 	}
 
 	// After this line, the execution of the gardener-node-agent bootstrap command terminates. It is not possible to
@@ -95,7 +94,7 @@ func Bootstrap(
 
 // testAPIServerConnectivity performs a connectivity test to the Kubernetes API server during bootstrap.
 // This provides early feedback on network issues before the bootstrap phase completes.
-func testAPIServerConnectivity(ctx context.Context, log logr.Logger, fs afero.Afero) error {
+func testAPIServerConnectivity(log logr.Logger, fs afero.Afero) error {
 	// Read API server config from the gardener-node-agent configuration
 	apiServerConfig, err := nodeagent.GetAPIServerConfig(fs, nodeagentconfigv1alpha1.BaseDir)
 	if err != nil {
