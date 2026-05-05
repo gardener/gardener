@@ -33,7 +33,6 @@ var _ = Describe("CommandLineProgressReporter", func() {
 			out:        outBuf,
 			lastErrs:   make(map[TaskID]error),
 			signalChan: debugChan,
-			template:   parseTemplate(),
 		}
 
 		testStats = &Stats{

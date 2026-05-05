@@ -16,7 +16,8 @@ import (
 	"github.com/fatih/color"
 )
 
-const infoTemplate = `Flow: {{ .stat.FlowName }}
+const infoTemplate = `
+Flow: {{ .stat.FlowName }}
 {{ green (printf "Succeeded: %d" (.stat.Succeeded | len ))}} | Failed: {{ .stat.Failed | len }} | Pending: {{.stat.Pending | len }} | Running: {{ .stat.Running | len }}
 Running Tasks: 
 {{- range $id, $empty := .stat.Running }}
