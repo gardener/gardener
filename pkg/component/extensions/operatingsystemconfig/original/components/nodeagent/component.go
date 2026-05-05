@@ -112,6 +112,7 @@ ExecStart=` + nodeagentconfigv1alpha1.BinaryDir + `/gardener-node-agent --config
 Restart=always
 RestartSec=5
 StandardOutput=journal+console
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target`

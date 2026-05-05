@@ -71,6 +71,7 @@ ExecStart=/opt/bin/gardener-node-agent --config-dir=/var/lib/gardener-node-agent
 Restart=always
 RestartSec=5
 StandardOutput=journal+console
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target`),
@@ -102,6 +103,7 @@ ExecStart=/opt/bin/gardener-node-agent --config-dir=/var/lib/gardener-node-agent
 Restart=always
 RestartSec=5
 StandardOutput=journal+console
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target`))
