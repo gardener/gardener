@@ -44,12 +44,9 @@ func newActuator(mgr manager.Manager) extensionselfhostedshootexposure.Actuator 
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, cluster *extensionscontroller.Cluster) ([]corev1.LoadBalancerIngress, error) {
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
-		Name:      exposure.Spec.CredentialsRef.Name,
-		Namespace: exposure.Spec.CredentialsRef.Namespace,
-	})
+	providerClient, err := a.providerClient(ctx, log, exposure)
 	if err != nil {
-		return nil, fmt.Errorf("could not create ProviderClient: %w", err)
+		return nil, err
 	}
 
 	service := serviceForExposure(exposure)
@@ -78,41 +75,53 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 	return service.Status.LoadBalancer.Ingress, nil
 }
 
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
-		Name:      exposure.Spec.CredentialsRef.Name,
-		Namespace: exposure.Spec.CredentialsRef.Namespace,
-	})
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := a.providerClient(ctx, log, exposure)
 	if err != nil {
-		return fmt.Errorf("could not create ProviderClient: %w", err)
+		return err
 	}
 
 	// Explicitly delete the Service and wait for it to be gone so the LoadBalancer is deprovisioned before
 	// releasing the SelfHostedShootExposure.
 	if err := providerClient.Delete(ctx, serviceForExposure(exposure)); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Service is gone, delete the EndpointSlices. They have no owner references in the provider
-			// cluster so they won't be garbage collected automatically.
-			for _, family := range []discoveryv1.AddressType{discoveryv1.AddressTypeIPv4, discoveryv1.AddressTypeIPv6} {
-				if err := providerClient.Delete(ctx, &discoveryv1.EndpointSlice{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      endpointSliceName(exposure, family),
-						Namespace: exposure.Namespace,
-					},
-				}); client.IgnoreNotFound(err) != nil {
-					return fmt.Errorf("could not delete %s EndpointSlice: %w", family, err)
-				}
-			}
-			log.Info("Service gone, releasing SelfHostedShootExposure")
-			return nil
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
-		return err
+	} else {
+		return &reconcilerutils.RequeueAfterError{
+			RequeueAfter: 5 * time.Second,
+			Cause:        fmt.Errorf("waiting for Service to be deleted"),
+		}
 	}
 
-	return &reconcilerutils.RequeueAfterError{
-		RequeueAfter: 5 * time.Second,
-		Cause:        fmt.Errorf("waiting for Service to be deleted"),
+	// Service is gone; delete the EndpointSlices. They have no owner references in the provider
+	// cluster so they won't be garbage collected automatically.
+	for _, family := range endpointSliceFamiliesForCluster(cluster) {
+		if err := providerClient.Delete(ctx, &discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      endpointSliceName(exposure, family),
+				Namespace: exposure.Namespace,
+			},
+		}); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("could not delete %s EndpointSlice: %w", family, err)
+		}
 	}
+	log.Info("Service and EndpointSlices gone, releasing SelfHostedShootExposure")
+	return nil
+}
+
+func (a *actuator) providerClient(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
+	if exposure.Spec.CredentialsRef == nil {
+		return nil, fmt.Errorf("credentialsRef is required for the provider-local SelfHostedShootExposure implementation but is not set")
+	}
+	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+		Name:      exposure.Spec.CredentialsRef.Name,
+		Namespace: exposure.Spec.CredentialsRef.Namespace,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not create provider client: %w", err)
+	}
+	return providerClient, nil
 }
 
 func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.SelfHostedShootExposure, _ *extensionscontroller.Cluster) error {
