@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionselfhostedshootexposure "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
+	extensionsselfhostedshootexposurecontroller "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
@@ -39,7 +39,7 @@ type actuator struct {
 	runtimeClient client.Client
 }
 
-func newActuator(mgr manager.Manager) extensionselfhostedshootexposure.Actuator {
+func newActuator(mgr manager.Manager) extensionsselfhostedshootexposurecontroller.Actuator {
 	return &actuator{runtimeClient: mgr.GetClient()}
 }
 
@@ -83,15 +83,15 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 
 	// Explicitly delete the Service and wait for it to be gone so the LoadBalancer is deprovisioned before
 	// releasing the SelfHostedShootExposure.
-	if err := providerClient.Delete(ctx, serviceForExposure(exposure)); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-	} else {
+	err = providerClient.Delete(ctx, serviceForExposure(exposure))
+	if err == nil {
 		return &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
 			Cause:        fmt.Errorf("waiting for Service to be deleted"),
 		}
+	}
+	if !apierrors.IsNotFound(err) {
+		return err
 	}
 
 	// Service is gone; delete the EndpointSlices. They have no owner references in the provider

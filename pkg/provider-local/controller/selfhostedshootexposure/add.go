@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	extensionselfhostedshootexposure "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
+	extensionsselfhostedshootexposurecontroller "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
@@ -41,10 +41,10 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return !supportedExtensionClasses.Has(class)
 	})
 
-	return extensionselfhostedshootexposure.Add(mgr, extensionselfhostedshootexposure.AddArgs{
+	return extensionsselfhostedshootexposurecontroller.Add(mgr, extensionsselfhostedshootexposurecontroller.AddArgs{
 		Actuator:          newActuator(mgr),
 		ControllerOptions: opts.Controller,
-		Predicates:        extensionselfhostedshootexposure.DefaultPredicates(opts.IgnoreOperationAnnotation),
+		Predicates:        extensionsselfhostedshootexposurecontroller.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,
 		ExtensionClasses:  classes,
 	})
