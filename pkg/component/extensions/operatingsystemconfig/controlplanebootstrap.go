@@ -47,8 +47,6 @@ type ControlPlaneBootstrapValues struct {
 
 	// Worker is the control plane worker pool.
 	Worker *gardencorev1beta1.Worker
-	// GardenadmImage is the gardenadm image reference that should be pulled.
-	GardenadmImage string
 }
 
 // NewControlPlaneBootstrap creates a new instance of Interface for deploying OperatingSystemConfigs during gardenadm bootstrap.
@@ -95,7 +93,7 @@ func (c *controlPlaneBootstrap) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
 	}
 
-	units, files, err := nodeinit.GardenadmConfig(c.values.GardenadmImage, string(sshKeypairSecret.Data[secretsutils.DataKeySSHAuthorizedKeys]))
+	units, files, err := nodeinit.GardenadmConfig(string(sshKeypairSecret.Data[secretsutils.DataKeySSHAuthorizedKeys]))
 	if err != nil {
 		return err
 	}

@@ -15,14 +15,11 @@ import (
 )
 
 var _ = Describe("Init", func() {
-	const (
-		image        = "gardenadm:tag"
-		sshPublicKey = "ssh-rsa foobar"
-	)
+	const sshPublicKey = "ssh-rsa foobar"
 
 	Describe("#GardenadmConfig", func() {
 		It("should return the correct units and files", func() {
-			units, files, err := GardenadmConfig(image, sshPublicKey)
+			units, files, err := GardenadmConfig(sshPublicKey)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(units).To(ConsistOf(
@@ -34,29 +31,6 @@ var _ = Describe("Init", func() {
 					HaveField("Name", "gardener-user.path"),
 					HaveField("Enable", HaveValue(BeTrue())),
 				),
-				extensionsv1alpha1.Unit{
-					Name:    "gardenadm-download.service",
-					Command: ptr.To(extensionsv1alpha1.CommandStart),
-					Enable:  ptr.To(true),
-					Content: ptr.To(`[Unit]
-Description=Downloads the gardenadm binary from the container registry and bootstraps it.
-Requires=containerd.service
-After=containerd.service
-After=network-online.target
-Wants=network-online.target
-[Service]
-Type=oneshot
-Restart=on-failure
-RestartSec=5
-StartLimitBurst=0
-EnvironmentFile=/etc/environment
-ExecStart=/var/lib/gardenadm/download.sh
-StandardOutput=journal+console
-StandardError=journal+console
-[Install]
-WantedBy=multi-user.target`),
-					FilePaths: []string{"/var/lib/gardenadm/download.sh"},
-				},
 			))
 
 			Expect(files).To(ConsistOf(
@@ -77,6 +51,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+if [ -z "$1" ]; then
+  echo "Usage: $0 <image-ref>"
+  exit 1
+fi
+image="$1"
+
 echo "> Prepare temporary directory for image pull and mount"
 tmp_dir="$(mktemp -d)"
 unmount() {
@@ -90,8 +70,8 @@ CTR_EXTRA_ARGS=""
 if [ "$CTR_MAJOR" -gt 1 ]; then
     CTR_EXTRA_ARGS="--skip-metadata"
 fi
-ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "` + image + `"
-ctr images mount "` + image + `" "$tmp_dir"
+ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "$image"
+ctr images mount "$image" "$tmp_dir"
 
 echo "> Copy gardenadm binary to host (/opt/bin) and make it executable"
 mkdir -p "/opt/bin"

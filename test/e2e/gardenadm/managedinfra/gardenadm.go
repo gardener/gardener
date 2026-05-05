@@ -122,14 +122,6 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
-		It("should download gardenadm in the control plane machine", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) {
-				stdOut, _, err := RunInMachine(ctx, technicalID, 0, "/opt/bin/gardenadm", "version")
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Eventually(ctx, stdOut).Should(gbytes.Say("gardenadm version"))
-			}).Should(Succeed())
-		}, SpecTimeout(time.Minute))
-
 		It("should stop machine-controller-manager", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: technicalID}}
 			Eventually(ctx, Object(deployment)).Should(HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))))

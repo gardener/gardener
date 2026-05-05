@@ -120,6 +120,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+image="` + image + `"
+
 echo "> Prepare temporary directory for image pull and mount"
 tmp_dir="$(mktemp -d)"
 unmount() {
@@ -133,8 +135,8 @@ CTR_EXTRA_ARGS=""
 if [ "$CTR_MAJOR" -gt 1 ]; then
     CTR_EXTRA_ARGS="--skip-metadata"
 fi
-ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "` + image + `"
-ctr images mount "` + image + `" "$tmp_dir"
+ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "$image"
+ctr images mount "$image" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
 mkdir -p "/opt/bin"

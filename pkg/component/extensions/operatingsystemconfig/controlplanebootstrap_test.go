@@ -90,8 +90,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 				Namespace:         namespace,
 				KubernetesVersion: semver.MustParse("1.34.0"),
 			},
-			Worker:         worker,
-			GardenadmImage: "gardenadm-image",
+			Worker: worker,
 		}
 		deployer = NewControlPlaneBootstrap(logr.Discard(), c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 	})
@@ -112,7 +111,6 @@ var _ = Describe("controlPlaneBootstrap", func() {
 			Expect(actual.Spec.Units).To(ConsistOf(
 				HaveField("Name", "gardener-user.service"),
 				HaveField("Name", "gardener-user.path"),
-				HaveField("Name", "gardenadm-download.service"),
 			))
 			Expect(actual.Spec.Files).To(ConsistOf(
 				HaveField("Path", "/var/lib/gardener-user/run.sh"),

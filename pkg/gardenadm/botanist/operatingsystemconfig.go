@@ -221,12 +221,6 @@ func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secret
 // ControlPlaneBootstrapOperatingSystemConfig creates the deployer for the OperatingSystemConfig custom resource that is
 // used for bootstrapping control plane nodes in `gardenadm bootstrap`.
 func (b *GardenadmBotanist) ControlPlaneBootstrapOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenadm)
-	if err != nil {
-		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenadm, err)
-	}
-	image.WithOptionalTag(version.Get().GitVersion)
-
 	worker := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
 	if worker == nil {
 		return nil, fmt.Errorf("did not find the control plane worker pool of the shoot")
@@ -242,9 +236,8 @@ func (b *GardenadmBotanist) ControlPlaneBootstrapOperatingSystemConfig() (operat
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
 		&operatingsystemconfig.ControlPlaneBootstrapValues{
-			Values:         values,
-			Worker:         worker,
-			GardenadmImage: image.String(),
+			Values: values,
+			Worker: worker,
 		},
 		operatingsystemconfig.DefaultInterval,
 		operatingsystemconfig.DefaultSevereThreshold,

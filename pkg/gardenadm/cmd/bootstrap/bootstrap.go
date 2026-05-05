@@ -15,8 +15,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -289,6 +291,21 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(connectToMachine, compileShootState),
 		})
 
+		downloadGardenadm = g.Add(flow.Task{
+			Name: "Downloading gardenadm binary on the first control plane machine",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenadm)
+				if err != nil {
+					return fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenadm, err)
+				}
+				image.WithOptionalTag(version.Get().GitVersion)
+
+				return b.SSHConnection().RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
+					fmt.Sprintf("%s %q", nodeinit.GardenadmPathDownloadScript, image.String()),
+				)
+			}).Timeout(5 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
+		})
 		bootstrapControlPlane = g.Add(flow.Task{
 			Name: "Bootstrapping control plane on the first control plane machine",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -299,7 +316,7 @@ func run(ctx context.Context, opts *Options) error {
 					),
 				)
 			}).Timeout(30 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
+			Dependencies: flow.NewTaskIDs(downloadGardenadm),
 		})
 
 		fetchKubeconfig = g.Add(flow.Task{

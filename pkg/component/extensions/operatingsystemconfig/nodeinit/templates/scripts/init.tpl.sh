@@ -4,6 +4,16 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+{{ if .image -}}
+image="{{ .image }}"
+{{- else -}}
+if [ -z "$1" ]; then
+  echo "Usage: $0 <image-ref>"
+  exit 1
+fi
+image="$1"
+{{- end }}
+
 echo "> Prepare temporary directory for image pull and mount"
 tmp_dir="$(mktemp -d)"
 unmount() {
@@ -22,8 +32,8 @@ CTR_EXTRA_ARGS=""
 if [ "$CTR_MAJOR" -gt 1 ]; then
     CTR_EXTRA_ARGS="--skip-metadata"
 fi
-ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "{{ .image }}"
-ctr images mount "{{ .image }}" "$tmp_dir"
+ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "$image"
+ctr images mount "$image" "$tmp_dir"
 
 echo "> Copy {{ .binaryName }} binary to host ({{ .binaryDirectory }}) and make it executable"
 mkdir -p "{{ .binaryDirectory }}"
