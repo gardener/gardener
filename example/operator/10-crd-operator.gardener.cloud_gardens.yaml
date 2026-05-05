@@ -2030,6 +2030,27 @@ spec:
           status:
             description: Status contains the status of this garden.
             properties:
+              advertisedAddresses:
+                description: |-
+                  List of addresses that are relevant to the Garden.
+                  These include the Kube API server address of the virtual garden cluster.
+                items:
+                  description: AdvertisedAddress contains information for the Garden's
+                    servers.
+                  properties:
+                    name:
+                      description: Name of the advertised address. e.g. virtual or
+                        discovery-server
+                      type: string
+                    url:
+                      description: The URL of the server. e.g. https://api.foo.bar
+                        or https://1.2.3.4
+                      type: string
+                  required:
+                  - name
+                  - url
+                  type: object
+                type: array
               conditions:
                 description: Conditions is a list of conditions.
                 items:

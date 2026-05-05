@@ -821,6 +821,10 @@ type GardenStatus struct {
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
+
+	// List of addresses that are relevant to the Garden.
+	// These include the Kube API server address of the virtual garden cluster.
+	AdvertisedAddresses []AdvertisedAddress `json:"advertisedAddresses,omitempty"`
 }
 
 // Credentials contains information about the virtual garden cluster credentials.
@@ -888,6 +892,14 @@ type WorkloadIdentityKeyRotation struct {
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty"`
+}
+
+// AdvertisedAddress contains information for the Garden's servers.
+type AdvertisedAddress struct {
+	// Name of the advertised address. e.g. virtual or discovery-server
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// The URL of the server. e.g. https://api.foo.bar or https://1.2.3.4
+	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 }
 
 const (
