@@ -27,6 +27,14 @@ Running Tasks:
 {{- end }}
 `
 
+var infoTpl = template.Must(template.New("").
+	Option("missingkey=zero").
+	Funcs(map[string]interface{}{
+		"red":   color.RedString,
+		"green": color.GreenString,
+	}).
+	Parse(infoTemplate))
+
 // NewCommandLineProgressReporter returns a new progress reporter that writes the current status of the flow to the
 // given output, when a SIGINFO is received (usually Ctrl+T). Any TaskFn wrapped with .RetryUntilTimeout() will have its
 // retry errors surfaced here.
@@ -36,23 +44,8 @@ func NewCommandLineProgressReporter(out io.Writer) ProgressReporter {
 	}
 	return &progressReporterCommandline{
 		out:      out,
-		template: parseTemplate(),
 		lastErrs: make(map[TaskID]error),
 	}
-}
-
-func parseTemplate() *template.Template {
-	t, err := template.New("").
-		Option("missingkey=zero").
-		Funcs(map[string]interface{}{
-			"red":   color.RedString,
-			"green": color.GreenString,
-		}).
-		Parse(infoTemplate)
-	if err != nil {
-		panic(err)
-	}
-	return t
 }
 
 type progressReporterCommandline struct {
@@ -60,7 +53,6 @@ type progressReporterCommandline struct {
 	ctxCancel context.CancelFunc
 	lastStats *Stats
 
-	template *template.Template
 	out      io.Writer
 	lastErrs map[TaskID]error
 
@@ -120,11 +112,10 @@ func (p *progressReporterCommandline) ReportRetry(_ context.Context, id TaskID, 
 }
 
 func (p *progressReporterCommandline) printInfo() {
-	err := p.template.Execute(p.out, map[string]interface{}{
+	if err := infoTpl.Execute(p.out, map[string]interface{}{
 		"stat":     p.lastStats,
 		"lastErrs": p.lastErrs,
-	})
-	if err != nil {
+	}); err != nil {
 		fmt.Fprintf(p.out, "Failed to print progress: %v", err)
 	}
 }
