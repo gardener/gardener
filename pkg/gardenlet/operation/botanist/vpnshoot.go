@@ -49,6 +49,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
+		AutoMTU:                              b.Shoot.VPNAutoMTU,
 	}
 
 	return vpnshoot.New(
