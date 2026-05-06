@@ -27,10 +27,10 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.141  | Week 16-17 | April 13, 2026         | April 26, 2026     | [@plkokanov](https://github.com/plkokanov)                   |
  v1.142  | Week 18-19 | April 27, 2026         | May 10, 2026       | [@rfranzke](https://github.com/rfranzke)                     |
  v1.143  | Week 20-21 | May 11, 2026           | May 24, 2026       | [@shafeeqes](https://github.com/shafeeqes)                   |
- v1.144  | Week 22-23 | May 25, 2026           | June 7, 2026       | [@Kostov6](https://github.com/Kostov6)                       |
+ v1.144  | Week 22-23 | May 25, 2026           | June 7, 2026       | [@RadaBDimitrova](https://github.com/RadaBDimitrova)         |
  v1.145  | Week 24-25 | June 8, 2026           | June 21, 2026      | [@vitanovs](https://github.com/vitanovs)                     |
  v1.146  | Week 26-27 | June 22, 2026          | July 5, 2026       | [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
- v1.147  | Week 28-29 | July 6, 2026           | July 19, 2026      | [@RadaBDimitrova](https://github.com/RadaBDimitrova)         |
+ v1.147  | Week 28-29 | July 6, 2026           | July 19, 2026      | [@Kostov6](https://github.com/Kostov6)                       |
  v1.148  | Week 30-31 | July 20, 2026          | August 2, 2026     | [@acumino](https://github.com/acumino)                       |
  v1.149  | Week 32-33 | August 3, 2026         | August 16, 2026    | [@ialidzhikov](https://github.com/ialidzhikov)               |
  v1.150  | Week 34-35 | August 17, 2026        | August 30, 2026    | [@timuthy](https://github.com/timuthy)                       |
