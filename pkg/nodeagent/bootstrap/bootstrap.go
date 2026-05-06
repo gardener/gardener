@@ -82,8 +82,6 @@ func Bootstrap(
 		fmt.Printf("WARNING: API server connectivity test failed: %v\n", err)
 		fmt.Println("Node may fail to join the cluster - check network configuration and API server endpoint")
 		// Don't return error - let gardener-node-agent continue and retry with backoff
-	} else {
-		log.Info("API server connectivity test succeeded")
 	}
 
 	// After this line, the execution of the gardener-node-agent bootstrap command terminates. It is not possible to
