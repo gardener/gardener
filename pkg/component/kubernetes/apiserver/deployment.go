@@ -885,6 +885,12 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 			Value: "balance-rr",
 		})
 	}
+	if k.values.VPN.AutoMTU != nil {
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "OPENVPN_AUTO_MTU",
+			Value: strconv.FormatBool(*k.values.VPN.AutoMTU),
+		})
+	}
 	// may need to enable IPv6 in pod network (e.g. for GKE clusters)
 	container.SecurityContext.Privileged = ptr.To(true)
 
@@ -980,6 +986,13 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			// IP_FAMILIES of seed
 			Name:  "IP_FAMILIES",
 			Value: string(k.values.VPN.IPFamilies[0]),
+		})
+	}
+
+	if k.values.VPN.AutoMTU != nil {
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "OPENVPN_AUTO_MTU",
+			Value: strconv.FormatBool(*k.values.VPN.AutoMTU),
 		})
 	}
 

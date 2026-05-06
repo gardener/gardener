@@ -206,6 +206,9 @@ type VPNConfig struct {
 	HighAvailabilityNumberOfShootClients int
 	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
+	// AutoMTU enables automatic MTU configuration for the VPN connection.
+	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
+	AutoMTU *bool
 }
 
 // ServerCertificateConfig contains configuration for the server certificate.
