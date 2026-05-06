@@ -109,7 +109,6 @@ func testAPIServerConnectivity(log logr.Logger, fs afero.Afero) error {
 		Timeout:         10 * time.Second,
 	}
 
-	// Create kubernetes client
 	client, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return fmt.Errorf("failed creating kubernetes client: %w", err)
