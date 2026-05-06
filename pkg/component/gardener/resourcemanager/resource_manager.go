@@ -1356,8 +1356,16 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		}
 	}
 
-	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
-		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
+	if r.values.SystemComponentsConfigWebhookEnabled && !r.values.IsWorkerless {
+		systemComponentsNamespaceSelector := namespaceSelector.DeepCopy()
+		if r.values.ResponsibilityMode == ForRuntime {
+			if systemComponentsNamespaceSelector.MatchLabels == nil {
+				systemComponentsNamespaceSelector.MatchLabels = map[string]string{}
+			}
+			systemComponentsNamespaceSelector.MatchLabels[resourcesv1alpha1.SystemComponentsConfigConsider] = "true"
+		}
+
+		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(systemComponentsNamespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.EndpointSliceHintsEnabled {
