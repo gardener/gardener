@@ -98,6 +98,7 @@ type Shoot struct {
 	VPNHighAvailabilityNumberOfSeedServers  int
 	VPNHighAvailabilityNumberOfShootClients int
 	VPNVPAUpdateDisabled                    bool
+	VPNAutoMTU                              *bool
 	NodeLocalDNSEnabled                     bool
 	TopologyAwareRoutingEnabled             bool
 	Networks                                *Networks
