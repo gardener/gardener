@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -78,17 +77,12 @@ var _ = Describe("NginxIngress", func() {
 	})
 
 	Describe("#DefaultNginxIngress", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fake.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		})
 
 		It("should successfully create a nginxingress interface", func() {
-			kubernetesClient.EXPECT().Client()
-
 			nginxIngress, err := botanist.DefaultNginxIngress()
 			Expect(nginxIngress).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())

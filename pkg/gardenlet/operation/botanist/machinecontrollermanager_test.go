@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +25,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -40,10 +39,9 @@ var _ = Describe("MachineControllerManager", func() {
 		ctx     = context.TODO()
 		fakeErr = errors.New("fake err")
 
-		ctrl               *gomock.Controller
-		kubernetesClient   *kubernetesmock.MockInterface
-		fakeClient         client.Client
-		fakeSecretsManager secretsmanager.Interface
+		kubernetesClientSet *fakekubernetes.ClientSet
+		fakeClient          client.Client
+		fakeSecretsManager  secretsmanager.Interface
 
 		shoot      *gardencorev1beta1.Shoot
 		deployment *appsv1.Deployment
@@ -53,35 +51,26 @@ var _ = Describe("MachineControllerManager", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
-		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 		// Starting with controller-runtime v0.22.0, the default object tracker does not work with resources which include
 		// structs directly as pointer, e.g. *MachineConfiguration in Machine resource. Hence, use the old one instead.
 		objectTracker := testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjectTracker(objectTracker).Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
+		kubernetesClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithVersion("1.31.1").Build()
 
 		shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"}}}
 		deployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: namespace}}
 
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.SeedClientSet = kubernetesClient
+		botanist.SeedClientSet = kubernetesClientSet
 		botanist.SecretsManager = fakeSecretsManager
 		botanist.Seed = &seedpkg.Seed{KubernetesVersion: semver.MustParse("1.31.0")}
 		botanist.Shoot = &shootpkg.Shoot{ControlPlaneNamespace: namespace}
 		botanist.Shoot.SetInfo(shoot)
-
-		DeferCleanup(func() {
-			ctrl.Finish()
-		})
 	})
 
 	Describe("#DeployMachineControllerManager", func() {
 		BeforeEach(func() {
-			kubernetesClient.EXPECT().Version()
-			kubernetesClient.EXPECT().Client().Return(fakeClient)
-
 			botanist.SeedNamespaceObject = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: types.UID("5678"),
@@ -99,8 +88,6 @@ var _ = Describe("MachineControllerManager", func() {
 
 		DescribeTable("it should successfully create a machine-controller-manager interface",
 			func(expectedReplicas int, prepTest func()) {
-				kubernetesClient.EXPECT().Client().Return(fakeClient)
-
 				if prepTest != nil {
 					prepTest()
 				}
@@ -162,19 +149,8 @@ var _ = Describe("MachineControllerManager", func() {
 	})
 
 	Describe("#ScaleMachineControllerManagerToZero", func() {
-		var (
-			patch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":0}}`))
-		)
-
-		BeforeEach(func() {
-			kubernetesClient.EXPECT().Client().DoAndReturn(func() client.Client { return fakeClient })
-			botanist.SeedClientSet = kubernetesClient
-		})
-
 		It("should scale the CA deployment", func() {
-			// Create deployment so SubResource("scale").Patch can succeed
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
-			_ = patch // kept for reference
 			Expect(botanist.ScaleMachineControllerManagerToZero(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -182,11 +158,12 @@ var _ = Describe("MachineControllerManager", func() {
 		})
 
 		It("should fail when the scale call fails", func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+			fakeClientWithErr := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
 				SubResourcePatch: func(_ context.Context, _ client.Client, _ string, _ client.Object, _ client.Patch, _ ...client.SubResourcePatchOption) error {
 					return fakeErr
 				},
 			}).Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithErr).Build()
 
 			Expect(botanist.ScaleMachineControllerManagerToZero(ctx)).To(MatchError(fakeErr))
 		})

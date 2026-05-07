@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockvpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -47,11 +47,9 @@ var _ = Describe("VPNShoot", func() {
 	})
 
 	Describe("#DefaultVPNShoot", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fakeclient.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 			botanist.Shoot = &shootpkg.Shoot{
 				Networks: &shootpkg.Networks{
 					Pods:     []net.IPNet{{IP: []byte("192.168.0.0"), Mask: []byte("16")}},
@@ -78,8 +76,6 @@ var _ = Describe("VPNShoot", func() {
 		})
 
 		It("should successfully create a vpnShoot interface for ReversedVPN", func() {
-			kubernetesClient.EXPECT().Client()
-
 			vpnShoot, err := botanist.DefaultVPNShoot()
 			Expect(vpnShoot).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())

@@ -12,10 +12,11 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	"k8s.io/utils/ptr"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -55,17 +56,12 @@ var _ = Describe("NodeExporter", func() {
 	})
 
 	Describe("#DefaultNodeExporter", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fakeclient.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		})
 
 		It("should successfully create a nodeExporter interface", func() {
-			kubernetesClient.EXPECT().Client()
-
 			nodeExporter, err := botanist.DefaultNodeExporter()
 			Expect(nodeExporter).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())

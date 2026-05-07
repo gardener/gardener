@@ -7,12 +7,12 @@ package botanist
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	"k8s.io/utils/ptr"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -20,14 +20,12 @@ import (
 
 var _ = Describe("IstioBasicAuthServer", func() {
 	var (
-		ctrl             *gomock.Controller
-		botanist         *Botanist
-		kubernetesClient *kubernetesmock.MockInterface
+		botanist *Botanist
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
+		fakeClient := fakeclient.NewClientBuilder().Build()
+		kubernetesClientSet := fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
 			Config: &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -43,19 +41,13 @@ var _ = Describe("IstioBasicAuthServer", func() {
 				},
 			},
 			Seed:          &seedpkg.Seed{},
-			SeedClientSet: kubernetesClient,
+			SeedClientSet: kubernetesClientSet,
 		}}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#DefaultIstioBasicAuthServer", func() {
 		It("should successfully create a istio-basic-auth-server interface", func() {
-			kubernetesClient.EXPECT().Client()
-
 			istioBasicAuthServer, err := botanist.DefaultIstioBasicAuthServer()
 			Expect(istioBasicAuthServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())

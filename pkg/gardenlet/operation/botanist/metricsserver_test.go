@@ -7,10 +7,10 @@ package botanist_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -19,29 +19,20 @@ import (
 
 var _ = Describe("MetricsServer", func() {
 	var (
-		ctrl     *gomock.Controller
 		botanist *Botanist
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{
 			Garden: &garden.Garden{},
 			Shoot:  &shoot.Shoot{},
 		}}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#DefaultMetricsServer", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fakeclient.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
@@ -52,8 +43,6 @@ var _ = Describe("MetricsServer", func() {
 		})
 
 		It("should successfully create a metrics-server interface", func() {
-			kubernetesClient.EXPECT().Client()
-
 			metricsServer, err := botanist.DefaultMetricsServer()
 			Expect(metricsServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())

@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mocknodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -76,17 +75,12 @@ var _ = Describe("NodeLocalDNS", func() {
 	})
 
 	Describe("#DefaultNodeLocalDNS", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fakeclient.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		})
 
 		It("should successfully create a node-local-dns interface", func() {
-			kubernetesClient.EXPECT().Client()
-
 			nodeLocalDNS, err := botanist.DefaultNodeLocalDNS()
 			Expect(nodeLocalDNS).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())

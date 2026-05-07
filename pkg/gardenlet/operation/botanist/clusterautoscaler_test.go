@@ -25,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler/mock"
 	mockworker "github.com/gardener/gardener/pkg/component/extensions/worker/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
@@ -37,19 +37,21 @@ import (
 
 var _ = Describe("ClusterAutoscaler", func() {
 	var (
-		ctx              = context.TODO()
-		fakeErr          = errors.New("fake err")
-		namespace        = "shoot--foo--bar"
-		ctrl             *gomock.Controller
-		botanist         *Botanist
-		kubernetesClient *kubernetesmock.MockInterface
-		fakeClient       client.Client
+		ctx                 = context.TODO()
+		fakeErr             = errors.New("fake err")
+		namespace           = "shoot--foo--bar"
+		ctrl                *gomock.Controller
+		botanist            *Botanist
+		kubernetesClientSet *fakekubernetes.ClientSet
+		fakeClient          client.Client
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+		fakeClient = fakeclient.NewClientBuilder().Build()
+		kubernetesClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithVersion("1.35.0").Build()
+
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Seed = &seedpkg.Seed{
 			KubernetesVersion: semver.MustParse("1.35.0"),
@@ -58,7 +60,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Networks:     &shootpkg.Networks{},
 			CloudProfile: &gardencorev1beta1.CloudProfile{},
 		}
-		botanist.SeedClientSet = kubernetesClient
+		botanist.SeedClientSet = kubernetesClientSet
 	})
 
 	AfterEach(func() {
@@ -67,8 +69,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#DefaultClusterAutoscaler", func() {
 		BeforeEach(func() {
-			kubernetesClient.EXPECT().Client()
-			kubernetesClient.EXPECT().Version().Return("1.35.0")
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.35.0"}}})
 			botanist.Shoot.ControlPlaneNamespace = namespace
 		})
@@ -110,7 +110,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			}
 			botanist.Shoot.ControlPlaneNamespace = namespace
-			kubernetesClient.EXPECT().Client().Return(fakeClient).MaxTimes(3)
 		})
 
 		Context("CA wanted", func() {
@@ -160,7 +159,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		)
 
 		BeforeEach(func() {
-			botanist.SeedClientSet = kubernetesClient
+			botanist.SeedClientSet = kubernetesClientSet
 			botanist.Shoot = &shootpkg.Shoot{
 				ControlPlaneNamespace: namespace,
 			}
@@ -173,7 +172,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			}
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-			kubernetesClient.EXPECT().Client().Return(fakeClient)
 			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, deployment)).To(Succeed())
@@ -186,7 +184,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					return fakeErr
 				},
 			}).Build()
-			kubernetesClient.EXPECT().Client().Return(fakeClientWithErr)
+
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithErr).Build()
 
 			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(MatchError(fakeErr))
 		})
@@ -243,21 +242,18 @@ var _ = Describe("ClusterAutoscaler", func() {
 		})
 
 		It("should return the CloudProfile limit if network is not limited", func() {
-			kubernetesClient.EXPECT().Client().Return(fakeClient)
 
 			shoot.Spec.Networking = nil
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the CloudProfile limit if it is lower than the network limit", func() {
-			kubernetesClient.EXPECT().Client().Return(fakeClient)
 
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the network limit if it is lower than the CloudProfile limit", func() {
-			kubernetesClient.EXPECT().Client().Return(fakeClient)
 
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks + 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks))
@@ -273,7 +269,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					return nil
 				},
 			}).Build()
-			kubernetesClient.EXPECT().Client().Return(fakeClientWithMachines)
+
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithMachines).Build()
 
 			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 100)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks - 50))

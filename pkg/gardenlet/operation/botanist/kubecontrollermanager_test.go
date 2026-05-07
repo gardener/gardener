@@ -24,7 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager/mock"
@@ -36,10 +36,10 @@ import (
 
 var _ = Describe("KubeControllerManager", func() {
 	var (
-		ctrl             *gomock.Controller
-		botanist         *Botanist
-		kubernetesClient *kubernetesmock.MockInterface
-		fakeClient       client.Client
+		ctrl                *gomock.Controller
+		botanist            *Botanist
+		kubernetesClientSet *fakekubernetes.ClientSet
+		fakeClient          client.Client
 
 		ctx       = context.TODO()
 		fakeErr   = errors.New("fake err")
@@ -49,8 +49,8 @@ var _ = Describe("KubeControllerManager", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().Build()
+		kubernetesClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 	})
 
 	AfterEach(func() {
@@ -60,7 +60,7 @@ var _ = Describe("KubeControllerManager", func() {
 	Describe("#DefaultKubeControllerManager", func() {
 		BeforeEach(func() {
 			botanist.Logger = logr.Discard()
-			botanist.SeedClientSet = kubernetesClient
+			botanist.SeedClientSet = kubernetesClientSet
 			botanist.Seed = &seedpkg.Seed{
 				KubernetesVersion: semver.MustParse("1.31.0"),
 			}
@@ -88,7 +88,7 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
-			botanist.SeedClientSet = kubernetesClient
+			botanist.SeedClientSet = kubernetesClientSet
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -103,7 +103,6 @@ var _ = Describe("KubeControllerManager", func() {
 				},
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
-			kubernetesClient.EXPECT().Client().DoAndReturn(func() client.Client { return fakeClient }).AnyTimes()
 		})
 
 		Context("successfully deployment", func() {
@@ -268,11 +267,12 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should fail when the replicas cannot be determined", func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+			fakeClientWithErr := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
 				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return fakeErr
 				},
 			}).Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithErr).Build()
 			Expect(botanist.DeployKubeControllerManager(ctx)).To(MatchError(`failed to check if deployment "foo/kube-controller-manager" is controlled by dependency-watchdog: fake err`))
 		})
 
@@ -291,7 +291,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 	Describe("#ScaleKubeControllerManagerToOne", func() {
 		BeforeEach(func() {
-			botanist.SeedClientSet = kubernetesClient
+			botanist.SeedClientSet = kubernetesClientSet
 			botanist.Shoot = &shootpkg.Shoot{
 				ControlPlaneNamespace: namespace,
 			}
@@ -302,7 +302,6 @@ var _ = Describe("KubeControllerManager", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
 				Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](0)},
 			})).To(Succeed())
-			kubernetesClient.EXPECT().Client().Return(fakeClient)
 
 			Expect(botanist.ScaleKubeControllerManagerToOne(ctx)).To(Succeed())
 
@@ -317,7 +316,7 @@ var _ = Describe("KubeControllerManager", func() {
 					return fakeErr
 				},
 			}).Build()
-			kubernetesClient.EXPECT().Client().Return(fakeClientWithErr)
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithErr).Build()
 			Expect(botanist.ScaleKubeControllerManagerToOne(ctx)).To(MatchError(fakeErr))
 		})
 	})
