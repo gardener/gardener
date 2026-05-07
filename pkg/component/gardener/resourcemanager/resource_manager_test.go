@@ -2554,7 +2554,7 @@ subjects:
 				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, actualManagedResource)).To(Succeed())
 				actualManagedResource.ResourceVersion = ""
 				managedResource.ResourceVersion = ""
-				Expect(actualManagedResource).To(Equal(managedResource))
+				Expect(actualManagedResource).To(DeepEqual(managedResource))
 			})
 		})
 

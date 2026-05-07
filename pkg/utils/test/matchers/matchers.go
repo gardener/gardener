@@ -30,6 +30,7 @@ func init() {
 
 // DeepEqual returns a Gomega matcher which checks whether the expected object is deeply equal with the object it is
 // being compared against.
+// In contrast to gomega.Equal(), this matcher uses semantic equality for comparing objects.
 func DeepEqual(expected any) types.GomegaMatcher {
 	return newDeepEqualMatcher(expected)
 }
