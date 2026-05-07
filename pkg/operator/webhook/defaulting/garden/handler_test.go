@@ -171,5 +171,33 @@ var _ = Describe("Handler", func() {
 			Expect(garden.Spec.RuntimeCluster.Networking.IPFamilies).To(Equal([]gardencorev1beta1.IPFamily{"foo"}))
 		})
 
+		DescribeTable("should cap eventTTL to the allowed maximum",
+			func(eventTTL *metav1.Duration, expectedEventTTL *metav1.Duration) {
+				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+					KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+						EventTTL: eventTTL,
+					},
+				}
+
+				Expect(handler.Default(ctx, garden)).To(Succeed())
+				Expect(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.EventTTL).To(Equal(expectedEventTTL))
+			},
+			Entry("should not modify when eventTTL is nil",
+				nil,
+				&metav1.Duration{Duration: 1 * time.Hour},
+			),
+			Entry("should not modify when within valid range",
+				&metav1.Duration{Duration: 12 * time.Hour},
+				&metav1.Duration{Duration: 12 * time.Hour},
+			),
+			Entry("should not modify when exactly 24h",
+				&metav1.Duration{Duration: 24 * time.Hour},
+				&metav1.Duration{Duration: 24 * time.Hour},
+			),
+			Entry("cap to 24h when exceeding maximum",
+				&metav1.Duration{Duration: 48 * time.Hour},
+				&metav1.Duration{Duration: 24 * time.Hour},
+			),
+		)
 	})
 })

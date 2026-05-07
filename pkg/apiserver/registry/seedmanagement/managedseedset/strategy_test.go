@@ -6,6 +6,7 @@ package managedseedset_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -62,6 +63,46 @@ var _ = Describe("Strategy", func() {
 			strategy.PrepareForUpdate(ctx, newManagedSeedSet, oldManagedSeedSet)
 			Expect(newManagedSeedSet.Generation).To(Equal(oldManagedSeedSet.Generation))
 		})
+
+		DescribeTable("should cap eventTTL to the allowed maximum",
+			func(kubeAPIServer *core.KubeAPIServerConfig, expectedKubeAPIServer *core.KubeAPIServerConfig) {
+				oldManagedSeedSet = &seedmanagement.ManagedSeedSet{
+					Spec: seedmanagement.ManagedSeedSetSpec{
+						ShootTemplate: core.ShootTemplate{
+							Spec: core.ShootSpec{
+								Kubernetes: core.Kubernetes{
+									KubeAPIServer: kubeAPIServer,
+								},
+							},
+						},
+					},
+				}
+				newManagedSeedSet = oldManagedSeedSet.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newManagedSeedSet, oldManagedSeedSet)
+				Expect(newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer).To(Equal(expectedKubeAPIServer))
+			},
+			Entry("should not modify when kubeAPIServer is nil",
+				nil,
+				nil,
+			),
+			Entry("should not modify when eventTTL is nil",
+				&core.KubeAPIServerConfig{},
+				&core.KubeAPIServerConfig{},
+			),
+			Entry("should not modify when within valid range",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 12 * time.Hour}},
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 12 * time.Hour}},
+			),
+			Entry("should not modify when exactly 24h",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 24 * time.Hour}},
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 24 * time.Hour}},
+			),
+			Entry("cap to 24h when exceeding maximum",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 48 * time.Hour}},
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 24 * time.Hour}},
+			),
+		)
 	})
 })
 

@@ -7,6 +7,7 @@ package garden
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -66,5 +67,21 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		garden.Status.Credentials.EncryptionAtRest.Provider.Type = operatorv1alpha1helper.GetKubeAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
 	}
 
+	capEventTTL(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
+
 	return nil
+}
+
+// capEventTTL caps the eventTTL to 24h for already persisted Gardens with a value exceeding the allowed maximum.
+//
+// TODO(ialidzhikov): Remove this function after v1.145 has been released.
+func capEventTTL(kubeAPIServer *gardencorev1beta1.KubeAPIServerConfig) {
+	if kubeAPIServer == nil || kubeAPIServer.EventTTL == nil {
+		return
+	}
+
+	const maxEventTTL = 24 * time.Hour
+	if kubeAPIServer.EventTTL.Duration > maxEventTTL {
+		kubeAPIServer.EventTTL.Duration = maxEventTTL
+	}
 }

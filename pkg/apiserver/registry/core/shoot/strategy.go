@@ -90,6 +90,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	// Ensure that encrypted provider type is set in `status.credentials.encryptionAtRest.providerType`.
 	SyncEncryptedProviderStatus(newShoot)
+
+	capEventTTL(newShoot.Spec.Kubernetes.KubeAPIServer)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -213,6 +215,20 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	}
 
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
+}
+
+// capEventTTL caps the eventTTL to 24h for already persisted Shoots with a value exceeding the allowed maximum.
+//
+// TODO(ialidzhikov): Remove this function after v1.145 has been released.
+func capEventTTL(kubeAPIServer *core.KubeAPIServerConfig) {
+	if kubeAPIServer == nil || kubeAPIServer.EventTTL == nil {
+		return
+	}
+
+	const maxEventTTL = 24 * time.Hour
+	if kubeAPIServer.EventTTL.Duration > maxEventTTL {
+		kubeAPIServer.EventTTL.Duration = maxEventTTL
+	}
 }
 
 func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {

@@ -7,6 +7,7 @@ package managedseedset
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -20,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/seedmanagement/managedseedset"
 	"github.com/gardener/gardener/pkg/api/seedmanagement/validation"
+	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -61,6 +63,8 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	if mustIncreaseGeneration(oldManagedSeedSet, newManagedSeedSet) {
 		newManagedSeedSet.Generation = oldManagedSeedSet.Generation + 1
 	}
+
+	capEventTTL(newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.KubeAPIServer)
 }
 
 func mustIncreaseGeneration(oldManagedSeedSet, newManagedSeedSet *seedmanagement.ManagedSeedSet) bool {
@@ -81,6 +85,20 @@ func mustIncreaseGeneration(oldManagedSeedSet, newManagedSeedSet *seedmanagement
 	}
 
 	return false
+}
+
+// capEventTTL caps the eventTTL to 24h for already persisted ManagedSeedSets with a value exceeding the allowed maximum.
+//
+// TODO(ialidzhikov): Remove this function after v1.145 has been released.
+func capEventTTL(kubeAPIServer *core.KubeAPIServerConfig) {
+	if kubeAPIServer == nil || kubeAPIServer.EventTTL == nil {
+		return
+	}
+
+	const maxEventTTL = 24 * time.Hour
+	if kubeAPIServer.EventTTL.Duration > maxEventTTL {
+		kubeAPIServer.EventTTL.Duration = maxEventTTL
+	}
 }
 
 // Validate validates the given object.

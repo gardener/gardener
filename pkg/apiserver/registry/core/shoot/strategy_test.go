@@ -7,6 +7,7 @@ package shoot_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -302,6 +303,42 @@ var _ = Describe("Strategy", func() {
 			),
 			Entry("do not sync when encryption provider is nil", nil, core.ShootStatus{}, core.ShootStatus{}),
 			Entry("do not sync when encryption provider is empty", ptr.To(core.EncryptionProviderType("")), core.ShootStatus{}, core.ShootStatus{}),
+		)
+
+		DescribeTable("should cap eventTTL to the allowed maximum",
+			func(kubeAPIServer *core.KubeAPIServerConfig, expectedKubeAPIServer *core.KubeAPIServerConfig) {
+				oldShoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: kubeAPIServer,
+						},
+					},
+				}
+				newShoot = oldShoot.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer).To(Equal(expectedKubeAPIServer))
+			},
+			Entry("should not modify when kubeAPIServer is nil",
+				nil,
+				nil,
+			),
+			Entry("should not modify when eventTTL is nil",
+				&core.KubeAPIServerConfig{},
+				&core.KubeAPIServerConfig{},
+			),
+			Entry("should not modify when within valid range",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 12 * time.Hour}},
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 12 * time.Hour}},
+			),
+			Entry("should not modify when exactly 24h",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 24 * time.Hour}},
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 24 * time.Hour}},
+			),
+			Entry("cap to 24h when exceeding maximum",
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 48 * time.Hour}},
+				&core.KubeAPIServerConfig{EventTTL: &metav1.Duration{Duration: 24 * time.Hour}},
+			),
 		)
 
 		Context("seedName change", func() {
