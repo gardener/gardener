@@ -12,6 +12,9 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // ListControlPlaneMachines stores all control plane machines in controlPlaneMachines for later retrieval.
@@ -46,6 +49,25 @@ var addressTypePreference = map[corev1.NodeAddressType]int{
 	corev1.NodeExternalDNS: 2,
 	// this should be returned by all providers, and is actually locally resolvable in many infrastructures
 	corev1.NodeHostName: 1,
+}
+
+// listControlPlaneNodes returns the Node objects of the shoot's control plane worker pool from the seed cluster.
+// It returns an error if the control plane worker pool cannot be determined or if no nodes match the worker pool label.
+func (b *GardenadmBotanist) listControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
+	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
+	if controlPlaneWorkerPool == nil {
+		return nil, fmt.Errorf("failed fetching the control plane worker pool for the shoot")
+	}
+
+	nodeList := &corev1.NodeList{}
+	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: controlPlaneWorkerPool.Name}); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	if len(nodeList.Items) == 0 {
+		return nil, fmt.Errorf("no control plane nodes found")
+	}
+
+	return nodeList.Items, nil
 }
 
 // PreferredAddress returns the preferred address of the given node/machine addresses based on addressTypePreference.
