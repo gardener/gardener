@@ -357,6 +357,7 @@ gardenadm:
 	BUILD_OUTPUT_FILE=./bin/ BUILD_PACKAGES=./cmd/gardenadm $(MAKE) build
 # gardenadm-{up,down}
 gardenadm-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-gardenadm.yaml
+gardenadm-%: export NETWORK_PROVIDER ?=
 gardenadm-up gardenadm-down: $(SKAFFOLD) $(KUBECTL)
 	$(DEV_SETUP)/gardenadm.sh $(subst gardenadm-,,$@)
 

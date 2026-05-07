@@ -1181,8 +1181,18 @@ profiles:
         value: local-skaffold/machine-controller-manager-provider-local
       - op: remove
         path: /build/artifacts/4
+  - name: unmanaged-infra-cilium
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenadm/resources/overlays/unmanaged-infra-cilium
   - name: managed-infra
     manifests:
       kustomize:
         paths:
           - dev-setup/gardenadm/resources/overlays/managed-infra
+  - name: managed-infra-cilium
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenadm/resources/overlays/managed-infra-cilium

@@ -10,7 +10,19 @@ COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "down")
 
 SCENARIO="${SCENARIO:-unmanaged-infra}"
+NETWORK_PROVIDER="${NETWORK_PROVIDER:-calico}"
 VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect" "connect-kind")
+
+skaffold_profiles() {
+  profiles=(
+    "${SCENARIO}"
+  )
+  if [[ "$NETWORK_PROVIDER" == "cilium" ]]; then
+    profiles+=("${SCENARIO}-cilium")
+  fi
+  printf -v joined '%s,' "${profiles[@]}"
+  echo "${joined%,}"
+}
 
 # For unmanaged-infra and connect scenarios, there is no cluster to detect the node platform from.
 # Default to the local machine's architecture.
@@ -43,13 +55,13 @@ case "$COMMAND" in
       # Prepare resources and generate manifests.
       # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
       skaffold build \
-        -p "$SCENARIO" \
+        -p "$(skaffold_profiles)" \
         -m gardenadm,provider-local \
         -q \
         --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh gardenadm)" \
         |\
       skaffold render \
-        -p "$SCENARIO" \
+        -p "$(skaffold_profiles)" \
         -m provider-local \
         -o "$(dirname "$0")/gardenadm/resources/generated/$SCENARIO/manifests.yaml" \
         --build-artifacts \
