@@ -171,6 +171,7 @@ func generateEnvoyDynamicConfig(service *corev1.Service, nodes []*corev1.Node) (
 			Listener: listener{
 				Port: port.Port,
 			},
+			Protocol: string(port.Protocol),
 		}
 
 		for _, nodeIP := range allNodeIPs {
