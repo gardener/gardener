@@ -25,11 +25,11 @@ jobs:
             "images": [
               {
                 "version": "1.25",
-                "image": "golang:1.25.9-bookworm"
+                "image": "golang:1.25.10-bookworm"
               },
               {
                 "version": "1.26",
-                "image": "golang:1.26.2-bookworm"
+                "image": "golang:1.26.3-bookworm"
               }
             ]
           }
