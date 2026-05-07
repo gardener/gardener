@@ -1367,11 +1367,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 
 		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(systemComponentsNamespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
-
-	if r.values.EndpointSliceHintsEnabled {
-		webhooks = append(webhooks, NewEndpointSliceHintsMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
-	}
-
+	
 	if r.values.PodTopologySpreadConstraintsEnabled && !r.values.IsWorkerless {
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
