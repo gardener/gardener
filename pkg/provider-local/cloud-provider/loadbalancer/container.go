@@ -42,6 +42,11 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 		return nil, fmt.Errorf("failed to determine port bindings for service: %w", err)
 	}
 
+	exposedPorts := make(nat.PortSet)
+	for port := range portBindings {
+		exposedPorts[port] = struct{}{}
+	}
+
 	_, err = p.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -54,6 +59,7 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 				Timeout:  time.Second,
 				Retries:  3,
 			},
+			ExposedPorts: exposedPorts,
 			Labels: map[string]string{
 				"gardener.cloud/role":    "loadbalancer",
 				"gardener.cloud/service": client.ObjectKeyFromObject(service).String(),
