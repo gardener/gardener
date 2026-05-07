@@ -4,14 +4,14 @@
 
 //go:build linux
 
-package flow
+package signals
 
 import (
 	"os"
 	"syscall"
 )
 
-// InfoSignals returns the signals used for status dumping on macOS
-func infoSignals() []os.Signal {
+// Info returns the OS signals used for status dumping (SIGUSR1 on Linux).
+func Info() []os.Signal {
 	return []os.Signal{syscall.SIGUSR1}
 }

@@ -11,11 +11,16 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/bramvdbogaerde/go-scp"
 	"golang.org/x/crypto/ssh"
 	"k8s.io/utils/ptr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/gardener/gardener/pkg/utils/signals"
 )
 
 var _ = io.Closer(&Connection{})
@@ -34,6 +39,10 @@ type Connection struct {
 	// outputPrefix is an optional line prefix added to stdout and stderr in Run and RunWithStreams.
 	// This is useful when dealing with multiple connections for marking output with different connection information.
 	outputPrefix string
+
+	// signalProcessName is the name passed to pgrep to find the remote process to signal.
+	// If empty, signal forwarding and graceful termination via signals are disabled.
+	signalProcessName string
 }
 
 // Dial opens a new SSH Connection. Ensure to call Connection.Close() for cleanup.
@@ -82,6 +91,16 @@ func (c *Connection) WithOutputPrefix(prefix string) *Connection {
 	return c
 }
 
+// WithSignalProcess configures the process name used for signal forwarding in RunWithStreams.
+// When set, info signals (Ctrl+T / SIGUSR1) received locally are forwarded to the remote process
+// as SIGUSR1, and context cancellation sends SIGINT/SIGKILL to it. The remote process is located
+// via pgrep -n <name> on a separate SSH session each time a signal needs to be sent.
+// If not set, signal forwarding and graceful termination are disabled.
+func (c *Connection) WithSignalProcess(name string) *Connection {
+	c.signalProcessName = name
+	return c
+}
+
 // Run executes the given command on the remote host and returns stdout and stderr streams.
 func (c *Connection) Run(ctx context.Context, command string) (io.Reader, io.Reader, error) {
 	var stdout, stderr bytes.Buffer
@@ -121,10 +140,36 @@ func (c *Connection) RunWithStreams(ctx context.Context, stdin io.Reader, stdout
 		close(waitCh)
 	}()
 
+	if c.signalProcessName != "" {
+		// Forward info signals (Ctrl+T on macOS, SIGUSR1 on Linux) to the remote process as SIGUSR1.
+		// This allows the remote progress reporter to print its current status when triggered locally.
+		// We use a separate SSH session to run kill via pgrep, because OpenSSH's sshd rejects SSH
+		// signal channel requests when privilege separation is active (the default).
+		infoSigCh := make(chan os.Signal, 1)
+		signal.Notify(infoSigCh, signals.Info()...)
+		defer signal.Stop(infoSigCh)
+		sigFwdDone := make(chan struct{})
+		defer close(sigFwdDone)
+		go func() {
+			for {
+				select {
+				case _, ok := <-infoSigCh:
+					if !ok {
+						return
+					}
+					if err := c.signalRemote("USR1"); err != nil {
+						logf.FromContext(ctx).Error(err, "Failed to forward signal to remote process", "processName", c.signalProcessName)
+					}
+				case <-sigFwdDone:
+					return
+				}
+			}
+		}()
+	}
+
 	// Wait for the command to finish or the context to be done
 	select {
 	case err := <-waitCh:
-		// The command finished, return its error (if any).
 		return err
 
 	case <-ctx.Done():
@@ -133,7 +178,6 @@ func (c *Connection) RunWithStreams(ctx context.Context, stdin io.Reader, stdout
 		if err := session.Signal(ssh.SIGINT); err != nil {
 			return errors.Join(ctx.Err(), fmt.Errorf("failed sending SIGINT to remote process: %w", err))
 		}
-
 		const terminationGracePeriod = 30 * time.Second
 
 		select {
@@ -154,6 +198,29 @@ func (c *Connection) RunWithStreams(ctx context.Context, stdin io.Reader, stdout
 			return fmt.Errorf("killed remote process: %w", ctx.Err())
 		}
 	}
+}
+
+// signalRemote sends the named signal (e.g. "USR1", "INT", "KILL") to the most recently
+// started remote process whose name matches processName, found via pgrep -n.
+// A separate SSH session is used because OpenSSH's sshd rejects SSH signal channel requests
+// when privilege separation is active (the default).
+func (c *Connection) signalRemote(sig string) error {
+	s, err := c.NewSession()
+	if err != nil {
+		return fmt.Errorf("failed opening SSH session for kill: %w", err)
+	}
+	defer s.Close()
+
+	killCmd := "kill"
+	if c.runAsUser != "" {
+		killCmd = "sudo kill"
+	}
+	cmd := fmt.Sprintf("pid=$(pgrep -n %s) && echo \"pgrep found pid=$pid\" && %s -%s $pid", c.signalProcessName, killCmd, sig)
+	out, err := s.Output(cmd)
+	if err != nil {
+		return fmt.Errorf("remote command failed (output: %q): %w", string(out), err)
+	}
+	return nil
 }
 
 // Copy copies the given bytes to a file at remotePath with the given permissions.

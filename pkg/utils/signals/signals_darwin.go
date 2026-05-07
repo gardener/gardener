@@ -4,14 +4,14 @@
 
 //go:build darwin
 
-package flow
+package signals
 
 import (
 	"os"
 	"syscall"
 )
 
-// infoSignals returns the signals used for status dumping on macOS
-func infoSignals() []os.Signal {
+// Info returns the OS signals used for status dumping (Ctrl+T on macOS).
+func Info() []os.Signal {
 	return []os.Signal{syscall.SIGINFO}
 }

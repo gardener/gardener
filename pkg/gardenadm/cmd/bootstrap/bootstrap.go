@@ -293,12 +293,14 @@ func run(ctx context.Context, opts *Options) error {
 		bootstrapControlPlane = g.Add(flow.Task{
 			Name: "Bootstrapping control plane on the first control plane machine",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.SSHConnection().RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
-					fmt.Sprintf("%s%s init -d %q --log-level=%s",
-						botanist.ImageVectorOverrideEnv(),
-						nodeinit.GardenadmBinaryPath, botanist.ManifestsDir, opts.LogLevel,
-					),
-				)
+				return b.SSHConnection().
+					WithSignalProcess(nodeinit.GardenadmBinaryName).
+					RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
+						fmt.Sprintf("%s%s init -d %q --log-level=%s",
+							botanist.ImageVectorOverrideEnv(),
+							nodeinit.GardenadmBinaryPath, botanist.ManifestsDir, opts.LogLevel,
+						),
+					)
 			}).Timeout(30 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
 		})

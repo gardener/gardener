@@ -7,13 +7,15 @@ package flow
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	"os/signal"
 	"sync"
+	"text/template"
 
 	"github.com/fatih/color"
+
+	"github.com/gardener/gardener/pkg/utils/signals"
 )
 
 const infoTemplate = `
@@ -26,6 +28,7 @@ Running Tasks:
 {{ red "Last Error:" }} {{ . }}
 {{- end }}
 {{- end }}
+
 `
 
 var infoTpl = template.Must(template.New("").
@@ -74,7 +77,7 @@ func (p *progressReporterCommandline) Start(ctx context.Context) error {
 		sig = p.signalChan
 	} else {
 		c := make(chan os.Signal, 1)
-		signal.Notify(c, infoSignals()...)
+		signal.Notify(c, signals.Info()...)
 		sig = c
 	}
 	go func() {
