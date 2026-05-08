@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +25,7 @@ import (
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -269,8 +271,10 @@ var _ = Describe("operatingsystemconfig", func() {
 		JustBeforeEach(func() {
 			botanist.Shoot.ControlPlaneNamespace = namespace
 			botanist.Shoot.KubernetesVersion = semver.MustParse(kubernetesVersion)
+			credentialsBindingName := "credentials-binding"
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
+					CredentialsBindingName: &credentialsBindingName,
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
 							{
@@ -434,6 +438,54 @@ var _ = Describe("operatingsystemconfig", func() {
 					By("Assert expected deletion of no longer required ManagedResource secrets")
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(oldSecret1), oldSecret1)).To(BeNotFoundError())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(oldSecret2), oldSecret2)).To(BeNotFoundError())
+				})
+
+				It("should set the gardenlet-orchestrated annotation on OSC secrets for unmanaged-infrastructure shoots", func() {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Provider: gardencorev1beta1.Provider{
+								Workers: []gardencorev1beta1.Worker{
+									{Name: worker1Name},
+									{
+										Name:                  worker2Name,
+										KubeletDataVolumeName: &worker2KubeletDataVolumeName,
+										DataVolumes:           []gardencorev1beta1.DataVolume{{Name: worker2KubeletDataVolumeName}},
+										Kubernetes:            &gardencorev1beta1.WorkerKubernetes{Version: &worker2KubernetesVersion},
+									},
+								},
+							},
+						},
+					})
+
+					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(Succeed())
+
+					versions := schema.GroupVersions([]schema.GroupVersion{corev1.SchemeGroupVersion})
+					codec := kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+
+					for _, workerName := range []string{worker1Name, worker2Name} {
+						secretList := &corev1.SecretList{}
+						Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"managed-resource": "shoot-gardener-node-agent"})).To(Succeed())
+
+						var mrSecret *corev1.Secret
+						for i := range secretList.Items {
+							if strings.Contains(secretList.Items[i].Name, workerName) {
+								mrSecret = &secretList.Items[i]
+								break
+							}
+						}
+						Expect(mrSecret).NotTo(BeNil(), "MR secret for pool %s not found", workerName)
+
+						compressed := mrSecret.Data["data.yaml.br"]
+						Expect(compressed).NotTo(BeEmpty())
+						decompressed, err := test.BrotliDecompression(compressed)
+						Expect(err).NotTo(HaveOccurred())
+
+						oscSecret := &corev1.Secret{}
+						Expect(runtime.DecodeInto(codec, decompressed, oscSecret)).To(Succeed())
+						Expect(oscSecret.Annotations).To(HaveKeyWithValue(
+							v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true"),
+							"pool %s: gardenlet-orchestrated annotation missing or wrong", workerName)
+					}
 				})
 			})
 		})

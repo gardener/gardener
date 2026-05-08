@@ -238,7 +238,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.deleteRemainingPods(ctx, log, node)).To(Succeed())
+			Expect(reconciler.deleteRemainingPods(ctx, log, node, false)).To(Succeed())
 
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())
@@ -379,7 +379,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 		})
 
 		It("should return nil if node is nil", func() {
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, nil, &osVersion)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, nil, &osVersion, false)).To(Succeed())
 		})
 
 		It("should set the node to update-failed if the lastAttempted version is equal to the osc.Spec.InPlaceUpdates.OperatingSystemVersion", func() {
@@ -387,7 +387,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			osc.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.4"
 			oscChanges.InPlaceUpdates.OperatingSystem = true
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)
 			Expect(err).To(MatchError(ContainSubstring("OS update might have failed and rolled back to the previous version")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 
@@ -404,7 +404,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			Expect(c.Update(ctx, node)).To(Succeed())
 			oscChanges.InPlaceUpdates.OperatingSystem = true
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)
 			Expect(err).To(MatchError(ContainSubstring("OS update has failed with error")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 
@@ -441,7 +441,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).NotTo(HaveKey(machinev1alpha1.LabelKeyNodeUpdateResult))
@@ -481,7 +481,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)).To(Succeed())
 
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())
@@ -524,7 +524,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion, false)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
@@ -565,7 +565,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion, false)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
@@ -617,7 +617,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, new("1.1.0"))
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, new("1.1.0"), false)
 			Expect(err).To(MatchError(ContainSubstring("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: \"1.1.0\", Desired version: \"1.2.3\"")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 		})
