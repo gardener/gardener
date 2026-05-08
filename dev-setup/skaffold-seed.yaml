@@ -297,6 +297,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
+            - pkg/utils/signals
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups
@@ -438,6 +439,7 @@ build:
             - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
+            - pkg/utils/signals
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups
@@ -564,6 +566,7 @@ build:
             - pkg/utils/managedresources/builder
             - pkg/utils/retry
             - pkg/utils/secrets
+            - pkg/utils/signals
             - pkg/utils/structuredmap
             - pkg/utils/validation
             - pkg/utils/validation/kubernetesversion
@@ -597,7 +600,7 @@ build:
 profiles:
   - name: dev
     activation:
-    - command: dev
+      - command: dev
     patches:
       - op: replace
         path: /build/tagPolicy/customTemplate/template
