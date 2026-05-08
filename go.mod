@@ -42,7 +42,7 @@ require (
 	github.com/perses/perses-operator v0.3.2
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
 	github.com/prometheus/blackbox_exporter v0.28.0
-	github.com/prometheus/client_golang v1.23.2
+	github.com/prometheus/client_golang v1.23.3-0.20251103151724-a5ae20370e5e
 	github.com/prometheus/common v0.67.5
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.15.0
@@ -82,7 +82,7 @@ require (
 	k8s.io/kube-aggregator v0.35.4
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a
 	k8s.io/kube-proxy v0.35.4
-	k8s.io/kube-state-metrics/v2 v2.13.0
+	k8s.io/kube-state-metrics/v2 v2.18.0
 	k8s.io/kubelet v0.35.4
 	k8s.io/metrics v0.35.4
 	k8s.io/pod-security-admission v0.35.4
@@ -337,7 +337,7 @@ require (
 	k8s.io/controller-manager v0.35.4 // indirect
 	k8s.io/gengo/v2 v2.0.0-20251215205346-5ee0d033ba5b // indirect
 	k8s.io/kms v0.35.4 // indirect
-	k8s.io/sample-controller v0.30.3 // indirect
+	k8s.io/sample-controller v0.34.3 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.33.0 // indirect
 	sigs.k8s.io/gateway-api v1.5.0 // indirect
