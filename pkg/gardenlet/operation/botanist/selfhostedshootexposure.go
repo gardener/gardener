@@ -43,4 +43,3 @@ func (b *Botanist) DefaultSelfHostedShootExposure() extensionsselfhostedshootexp
 		extensionsselfhostedshootexposure.DefaultTimeout,
 	)
 }
-

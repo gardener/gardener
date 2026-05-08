@@ -723,4 +723,3 @@ func (s *Shoot) HasManagedInfrastructure() bool {
 func (s *Shoot) HasExtensionExposure() bool {
 	return v1beta1helper.HasExtensionExposure(s.GetInfo())
 }
-

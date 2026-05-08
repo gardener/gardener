@@ -164,4 +164,3 @@ func (s *selfHostedShootExposure) SetEndpoints(endpoints []extensionsv1alpha1.Co
 func (s *selfHostedShootExposure) GetIngress() []corev1.LoadBalancerIngress {
 	return s.exposure.Status.Ingress
 }
-

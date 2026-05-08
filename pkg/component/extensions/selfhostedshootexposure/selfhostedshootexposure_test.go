@@ -40,7 +40,7 @@ var _ = Describe("SelfHostedShootExposure", func() {
 		fakeClock *testclock.FakeClock
 		now       time.Time
 
-		values  *Values
+		values   *Values
 		deployer Interface
 
 		expected *extensionsv1alpha1.SelfHostedShootExposure
