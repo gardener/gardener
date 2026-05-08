@@ -380,14 +380,11 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		r.ensureRBAC,
 		r.ensureService,
 		func(ctx context.Context) error {
-			// The GRM deployment and webhook configs must be applied at the same step to avoid a situation
-			// where the GRM deployment is rolled out after a certificate (CA) rotation but the webhook configurations
-			// are not yet updated.
-			if err := r.ensureDeployment(ctx, configMap); err != nil {
-				return err
-			}
-			return r.ensureWebhookConfiguration(ctx)
+			return r.ensureDeployment(ctx, configMap)
 		},
+		// Webhook configs must be applied directly after the deployment to avoid a situation where the GRM deployment
+		// is rolled out after a certificate (CA) rotation but the webhook configurations are not yet updated.
+		r.ensureWebhookConfiguration,
 		r.ensurePodDisruptionBudget,
 		r.ensureVPA,
 		r.ensureServiceMonitor,
