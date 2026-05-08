@@ -432,6 +432,19 @@
       ],
     },
     {
+      // Do not update gardener/logging images until Vali is removed.
+      matchDatasources: [
+        'github-releases',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        'github.com/gardener/logging',
+      ],
+    },
+    {
       // Use Docker only for images from the Gardener registry that don't work with GitHub releases.
       matchDatasources: [
         'docker',
