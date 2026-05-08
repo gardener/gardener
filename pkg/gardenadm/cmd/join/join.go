@@ -469,7 +469,7 @@ func (e etcdRoleToTLSSecrets) writeToDisk(fs afero.Afero) error {
 
 			for key, value := range secret.Data {
 				path := filepath.Join(dir, key)
-				if err := fs.WriteFile(path, value, 0o640); err != nil {
+				if err := fs.WriteFile(path, value, 0640); err != nil {
 					return fmt.Errorf("failed to write file to %s: %w", path, err)
 				}
 			}
