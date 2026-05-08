@@ -213,6 +213,10 @@ func IPPoolName(shootNamespace, ipFamily string) string {
 }
 
 func ipPool(clusterMeta metav1.ObjectMeta, ipFamily, nodeCIDR string) (client.Object, error) {
+	ipipMode := "Always"
+	if ipFamily == string(gardencorev1beta1.IPFamilyIPv6) {
+		ipipMode = "Never"
+	}
 	return kubernetes.NewManifestReader([]byte(`apiVersion: crd.projectcalico.org/v1
 kind: IPPool
 metadata:
@@ -224,7 +228,7 @@ metadata:
     uid: ` + string(clusterMeta.UID) + `
 spec:
   cidr: ` + nodeCIDR + `
-  ipipMode: Always
+  ipipMode: ` + ipipMode + `
   natOutgoing: true
   nodeSelector: "!all()" # Without this, calico defaults nodeSelector to "all()" and can randomly pick this pool for
                          # IPAM for pods even if the pod does not explicitly request an IP from this pool via the
