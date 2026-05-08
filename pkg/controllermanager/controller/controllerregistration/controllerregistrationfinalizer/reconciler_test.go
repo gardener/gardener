@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,8 +28,7 @@ var _ = Describe("ControllerRegistration", func() {
 	var (
 		ctx = context.TODO()
 
-		ctrl *gomock.Controller
-		c    client.Client
+		c client.Client
 
 		reconciler             *Reconciler
 		controllerRegistration *gardencorev1beta1.ControllerRegistration
@@ -39,15 +37,10 @@ var _ = Describe("ControllerRegistration", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		c = fakeclient.NewClientBuilder().
 			WithScheme(kubernetes.GardenScheme).
 			WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, indexer.ControllerInstallationRegistrationRefNameIndexerFunc).
 			Build()
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("Reconciler", func() {

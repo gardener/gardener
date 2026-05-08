@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,7 +32,6 @@ import (
 
 var _ = Describe("ControlPlane", func() {
 	var (
-		ctrl       *gomock.Controller
 		fakeClient client.Client
 
 		fakeClock *testclock.FakeClock
@@ -58,7 +56,6 @@ var _ = Describe("ControlPlane", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
 
@@ -100,10 +97,6 @@ var _ = Describe("ControlPlane", func() {
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 		}
 		defaultDepWaiter = controlplane.New(log, fakeClient, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#Deploy", func() {

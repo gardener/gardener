@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,8 +34,6 @@ import (
 
 var _ = Describe("#BackupEntry", func() {
 	var (
-		ctrl *gomock.Controller
-
 		ctx              context.Context
 		c                client.Client
 		expected         *extensionsv1alpha1.BackupEntry
@@ -62,8 +59,6 @@ var _ = Describe("#BackupEntry", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
 		fakeClock = testclock.NewFakeClock(time.Unix(60, 0))
 
 		ctx = context.TODO()
@@ -108,10 +103,6 @@ var _ = Describe("#BackupEntry", func() {
 		}
 
 		defaultDepWaiter = backupentry.New(log, c, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#Deploy", func() {
