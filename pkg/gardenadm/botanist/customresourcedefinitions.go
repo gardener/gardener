@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
@@ -47,12 +48,18 @@ func (b *GardenadmBotanist) ReconcileCustomResourceDefinitions(ctx context.Conte
 		return fmt.Errorf("failed creating etcd CRD deployer: %w", err)
 	}
 
+	istioCRDDeployer, err := istio.NewCRD(b.SeedClientSet.Client())
+	if err != nil {
+		return fmt.Errorf("failed creating Istio CRD deployer: %w", err)
+	}
+
 	deployers := map[string]component.Deployer{
 		"VPA":        vpaCRDDeployer,
 		"Prometheus": prometheusCRDDeployer,
 		"Fluent":     fluentCRDDeployer,
 		"Extension":  extensionCRDDeployer,
 		"ETCD":       etcdCRDDeployer,
+		"Istio":      istioCRDDeployer,
 	}
 
 	if b.Shoot.HasManagedInfrastructure() {

@@ -344,7 +344,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyIstioCRDs = g.Add(flow.Task{
 			Name:         "Destroying Istio custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.istioCRD).Destroy,
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 		destroyVPACRDs = g.Add(flow.Task{

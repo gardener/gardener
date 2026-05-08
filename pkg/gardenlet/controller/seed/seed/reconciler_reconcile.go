@@ -214,7 +214,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		deployIstioCRDs = g.Add(flow.Task{
 			Name:   "Deploying Istio-related custom resource definitions",
 			Fn:     component.OpWait(c.istioCRD).Deploy,
-			SkipIf: seedIsGarden,
+			SkipIf: seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deployVPACRDs = g.Add(flow.Task{
 			Name:   "Deploying VPA-related custom resource definitions",
@@ -269,7 +269,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Waiting for custom resource definitions for Istio",
 			Fn:           c.istioCRD.Wait,
 			Dependencies: flow.NewTaskIDs(deployIstioCRDs),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
