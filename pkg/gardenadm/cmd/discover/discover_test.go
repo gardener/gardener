@@ -88,6 +88,8 @@ var _ = Describe("Discover", func() {
 			shoot             *gardencorev1beta1.Shoot
 			shootRaw          []byte
 			shootManifestPath = "some-path-to-shoot-manifest-file"
+
+			expectCommonExports func()
 		)
 
 		BeforeEach(func() {
@@ -247,47 +249,129 @@ var _ = Describe("Discover", func() {
 			shootRaw, err = runtime.Encode(&json.Serializer{}, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fs.WriteFile(shootManifestPath, shootRaw, 0600)).To(Succeed())
+
+			expectCommonExports = func() {
+				GinkgoHelper()
+
+				Eventually(func() string { return string(stdOut.Contents()) }).Should(SatisfyAll(
+					ContainSubstring("Computing required resources for Shoot..."),
+					ContainSubstring("Fetching required resources for from garden cluster..."),
+					ContainSubstring("Exported Namespace/"+namespace.Name),
+					ContainSubstring("Exported Project/"+project.Name),
+					ContainSubstring("Exported Secret/"+secret.Name),
+					ContainSubstring("Exported Secret/"+secretDNS.Name),
+					ContainSubstring("Exported SecretBinding/"+secretBinding.Name),
+					ContainSubstring("Exported CloudProfile/"+cloudProfile.Name),
+					ContainSubstring("Exported ControllerDeployment/"+controllerDeploymentProvider.Name),
+					ContainSubstring("Exported ControllerRegistration/"+controllerRegistrationProvider.Name),
+					ContainSubstring("Exported ControllerDeployment/"+controllerDeploymentNetwork.Name),
+					ContainSubstring("Exported ControllerRegistration/"+controllerRegistrationNetwork.Name),
+					ContainSubstring("Exported ControllerDeployment/"+controllerDeploymentDNS.Name),
+					ContainSubstring("Exported ControllerRegistration/"+controllerRegistrationDNS.Name),
+				))
+
+				for _, path := range []string{
+					fmt.Sprintf("namespace-%s.yaml", namespace.Name),
+					fmt.Sprintf("project-%s.yaml", project.Name),
+					fmt.Sprintf("secret-%s.yaml", secret.Name),
+					fmt.Sprintf("secret-%s.yaml", secretDNS.Name),
+					fmt.Sprintf("secretbinding-%s.yaml", secretBinding.Name),
+					fmt.Sprintf("cloudprofile-%s.yaml", cloudProfile.Name),
+					fmt.Sprintf("controllerdeployment-%s.yaml", controllerDeploymentProvider.Name),
+					fmt.Sprintf("controllerregistration-%s.yaml", controllerRegistrationProvider.Name),
+					fmt.Sprintf("controllerdeployment-%s.yaml", controllerDeploymentNetwork.Name),
+					fmt.Sprintf("controllerregistration-%s.yaml", controllerRegistrationNetwork.Name),
+					fmt.Sprintf("controllerdeployment-%s.yaml", controllerDeploymentDNS.Name),
+					fmt.Sprintf("controllerregistration-%s.yaml", controllerRegistrationDNS.Name),
+				} {
+					exists, err := fs.Exists(path)
+					Expect(err).NotTo(HaveOccurred(), "for path "+path)
+					Expect(exists).To(BeTrue(), "for path "+path)
+				}
+			}
 		})
 
-		It("should return the expected output", func() {
-			Expect(command.Flags().Set("kubeconfig", "some-path-to-kubeconfig")).To(Succeed())
-			Expect(command.RunE(command, []string{shootManifestPath})).To(Succeed())
+		Context("for new Shoot", func() {
+			It("should return the expected output", func() {
+				Expect(command.Flags().Set("kubeconfig", "some-path-to-kubeconfig")).To(Succeed())
+				Expect(command.RunE(command, []string{shootManifestPath})).To(Succeed())
 
-			Eventually(func() string { return string(stdOut.Contents()) }).Should(SatisfyAll(
-				ContainSubstring("Computing required resources for Shoot..."),
-				ContainSubstring("Fetching required resources for from garden cluster..."),
-				ContainSubstring("Exported Namespace/"+namespace.Name),
-				ContainSubstring("Exported Project/"+project.Name),
-				ContainSubstring("Exported Secret/"+secret.Name),
-				ContainSubstring("Exported Secret/"+secretDNS.Name),
-				ContainSubstring("Exported SecretBinding/"+secretBinding.Name),
-				ContainSubstring("Exported CloudProfile/"+cloudProfile.Name),
-				ContainSubstring("Exported ControllerDeployment/"+controllerDeploymentProvider.Name),
-				ContainSubstring("Exported ControllerRegistration/"+controllerRegistrationProvider.Name),
-				ContainSubstring("Exported ControllerDeployment/"+controllerDeploymentNetwork.Name),
-				ContainSubstring("Exported ControllerRegistration/"+controllerRegistrationNetwork.Name),
-				ContainSubstring("Exported ControllerDeployment/"+controllerDeploymentDNS.Name),
-				ContainSubstring("Exported ControllerRegistration/"+controllerRegistrationDNS.Name),
-			))
+				expectCommonExports()
+			})
+		})
 
-			for _, path := range []string{
-				fmt.Sprintf("namespace-%s.yaml", namespace.Name),
-				fmt.Sprintf("project-%s.yaml", project.Name),
-				fmt.Sprintf("secret-%s.yaml", secret.Name),
-				fmt.Sprintf("secret-%s.yaml", secretDNS.Name),
-				fmt.Sprintf("secretbinding-%s.yaml", secretBinding.Name),
-				fmt.Sprintf("cloudprofile-%s.yaml", cloudProfile.Name),
-				fmt.Sprintf("controllerdeployment-%s.yaml", controllerDeploymentProvider.Name),
-				fmt.Sprintf("controllerregistration-%s.yaml", controllerRegistrationProvider.Name),
-				fmt.Sprintf("controllerdeployment-%s.yaml", controllerDeploymentNetwork.Name),
-				fmt.Sprintf("controllerregistration-%s.yaml", controllerRegistrationNetwork.Name),
-				fmt.Sprintf("controllerdeployment-%s.yaml", controllerDeploymentDNS.Name),
-				fmt.Sprintf("controllerregistration-%s.yaml", controllerRegistrationDNS.Name),
-			} {
-				exists, err := fs.Exists(path)
-				Expect(err).NotTo(HaveOccurred(), "for path "+path)
-				Expect(exists).To(BeTrue(), "for path "+path)
-			}
+		Context("for already existing Shoot", func() {
+			var (
+				backupBucketSecret *corev1.Secret
+				backupBucket       *gardencorev1beta1.BackupBucket
+				backupEntry        *gardencorev1beta1.BackupEntry
+			)
+
+			BeforeEach(func() {
+				backupBucketSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-backup-secret",
+						Namespace: "garden",
+					},
+				}
+				backupBucket = &gardencorev1beta1.BackupBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-backup-bucket",
+					},
+					Spec: gardencorev1beta1.BackupBucketSpec{
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       backupBucketSecret.Name,
+							Namespace:  backupBucketSecret.Namespace,
+						},
+					},
+				}
+				backupEntry = &gardencorev1beta1.BackupEntry{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-backup-entry",
+						Namespace: namespaceName,
+					},
+					Spec: gardencorev1beta1.BackupEntrySpec{
+						BucketName: backupBucket.Name,
+						ShootRef: &corev1.ObjectReference{
+							APIVersion: "core.gardener.cloud/v1beta1",
+							Kind:       "Shoot",
+							Name:       shoot.Name,
+							Namespace:  shoot.Namespace,
+						},
+					},
+				}
+
+				Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+				Expect(fakeClient.Create(ctx, backupBucketSecret)).To(Succeed())
+				Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+				Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
+			})
+
+			It("should return the expected output", func() {
+				Expect(command.Flags().Set("kubeconfig", "some-path-to-kubeconfig")).To(Succeed())
+				Expect(command.RunE(command, []string{shootManifestPath})).To(Succeed())
+
+				expectCommonExports()
+
+				Eventually(func() string { return string(stdOut.Contents()) }).Should(SatisfyAll(
+					ContainSubstring("Exported Secret/"+backupBucketSecret.Name),
+					ContainSubstring("Exported BackupBucket/"+backupBucket.Name),
+					ContainSubstring("Exported BackupEntry/"+backupEntry.Name),
+				))
+
+				for _, path := range []string{
+					fmt.Sprintf("secret-%s.yaml", backupBucketSecret.Name),
+					fmt.Sprintf("backupbucket-%s.yaml", backupBucket.Name),
+					fmt.Sprintf("backupentry-%s.yaml", backupEntry.Name),
+				} {
+					exists, err := fs.Exists(path)
+					Expect(err).NotTo(HaveOccurred(), "for path "+path)
+					Expect(exists).To(BeTrue(), "for path "+path)
+				}
+			})
 		})
 	})
 })

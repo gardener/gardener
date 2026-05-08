@@ -23,7 +23,7 @@ func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer
 			if !ok {
 				return
 			}
-			g.handleBackupEntryCreateOrUpdate(backupEntry)
+			g.HandleBackupEntryCreateOrUpdate(backupEntry)
 		},
 
 		UpdateFunc: func(oldObj, newObj any) {
@@ -41,7 +41,7 @@ func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer
 				!apiequality.Semantic.DeepEqual(oldBackupEntry.Status.SeedName, newBackupEntry.Status.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldBackupEntry.OwnerReferences, newBackupEntry.OwnerReferences) ||
 				oldBackupEntry.Spec.BucketName != newBackupEntry.Spec.BucketName {
-				g.handleBackupEntryCreateOrUpdate(newBackupEntry)
+				g.HandleBackupEntryCreateOrUpdate(newBackupEntry)
 			}
 		},
 
@@ -59,7 +59,7 @@ func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer
 	return err
 }
 
-func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.BackupEntry) {
+func (g *graph) HandleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.BackupEntry) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("BackupEntry", "CreateOrUpdate").Observe(time.Since(start).Seconds())

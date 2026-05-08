@@ -93,6 +93,10 @@ func run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		return fmt.Errorf("failed reading binding for shoot: %w", err)
 	}
+	backupBucket, backupEntry, err := backupResourcesForShoot(ctx, clientSet.Client(), shoot)
+	if err != nil {
+		return fmt.Errorf("failed reading backup resources for shoot: %w", err)
+	}
 
 	fmt.Fprintf(opts.Out, "Computing required resources for Shoot...\n")
 
@@ -105,6 +109,12 @@ func run(ctx context.Context, opts *Options) error {
 		case *securityv1alpha1.CredentialsBinding:
 			g.HandleCredentialsBindingCreateOrUpdate(b)
 		}
+	}
+	if backupEntry != nil {
+		g.HandleBackupEntryCreateOrUpdate(backupEntry)
+	}
+	if backupBucket != nil {
+		g.HandleBackupBucketCreateOrUpdate(backupBucket)
 	}
 
 	var taskFns []flow.TaskFn
@@ -216,6 +226,45 @@ func requiredExtensions(ctx context.Context, c client.Client, shoot *gardencorev
 	}
 
 	return botanist.ComputeExtensions(resources, true, managedInfrastructure)
+}
+
+func backupResourcesForShoot(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.BackupBucket, *gardencorev1beta1.BackupEntry, error) {
+	backupEntryList := &gardencorev1beta1.BackupEntryList{}
+	if err := c.List(ctx, backupEntryList, client.InNamespace(shoot.Namespace)); err != nil {
+		return nil, nil, fmt.Errorf("failed listing BackupEntries in namespace %q: %w", shoot.Namespace, err)
+	}
+
+	var backupEntry *gardencorev1beta1.BackupEntry
+	for i := range backupEntryList.Items {
+		current := &backupEntryList.Items[i]
+
+		if current.Spec.ShootRef == nil {
+			continue
+		}
+		if current.Spec.ShootRef.Name != shoot.Name || current.Spec.ShootRef.Namespace != shoot.Namespace {
+			continue
+		}
+
+		if backupEntry != nil {
+			return nil, nil, fmt.Errorf("found more than one BackupEntry for Shoot %s", client.ObjectKeyFromObject(shoot))
+		}
+
+		backupEntry = current
+	}
+
+	if backupEntry == nil {
+		return nil, nil, nil
+	}
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := c.Get(ctx, client.ObjectKey{Name: backupEntry.Spec.BucketName}, backupBucket); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, backupEntry, nil
+		}
+		return nil, nil, fmt.Errorf("failed getting BackupBucket %q: %w", backupEntry.Spec.BucketName, err)
+	}
+
+	return backupBucket, backupEntry, nil
 }
 
 func getAndExportObject(ctx context.Context, c client.Client, fs afero.Afero, opts *Options, kind string, obj client.Object) error {
