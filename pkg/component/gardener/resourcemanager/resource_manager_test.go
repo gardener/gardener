@@ -499,6 +499,9 @@ var _ = Describe("ResourceManager", func() {
 					},
 					IngressControllerSelector: ingressControllerSelector,
 				}
+				config.Controllers.IstioClusterConfiguration = resourcemanagerconfigv1alpha1.IstioClusterConfigurationControllerConfig{
+					Enabled: true,
+				}
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.ExtensionValidation.Enabled = true
 				config.Webhooks.SeccompProfile.Enabled = true

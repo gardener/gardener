@@ -638,6 +638,10 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.ResponsibilityMode == ForRuntime {
+		config.Controllers.IstioClusterConfiguration = resourcemanagerconfigv1alpha1.IstioClusterConfigurationControllerConfig{
+			Enabled: true,
+		}
+
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
 	}
