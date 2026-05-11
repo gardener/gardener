@@ -17,7 +17,7 @@ require (
 	github.com/docker/go-connections v0.7.0
 	github.com/elastic/crd-ref-docs v0.3.0
 	github.com/elliotchance/orderedmap/v3 v3.1.0
-	github.com/fatih/color v1.18.0
+	github.com/fatih/color v1.19.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management v0.22.0
 	github.com/gardener/dependency-watchdog v1.7.0
