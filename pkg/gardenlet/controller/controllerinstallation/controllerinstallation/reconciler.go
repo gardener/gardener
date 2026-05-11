@@ -589,17 +589,13 @@ func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1b
 }
 
 func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, namespace string) (string, error) {
-	var (
-		address *string
-		caCert  []byte
-	)
+	var address *string
 
 	if gcc := r.Config.GardenClientConnection; gcc != nil {
 		address = gcc.GardenClusterAddress
-		caCert = gcc.GardenClusterCACert
 	}
 
-	restConfig := gardenerutils.PrepareGardenClientRestConfig(r.GardenConfig, address, caCert)
+	restConfig := gardenerutils.PrepareGardenClientRestConfig(r.GardenConfig, address)
 
 	kubeconfig, err := clientcmd.Write(clientcmdapi.Config{
 		Clusters: map[string]*clientcmdapi.Cluster{"garden": {

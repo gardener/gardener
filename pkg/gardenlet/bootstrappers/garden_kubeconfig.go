@@ -74,16 +74,12 @@ func (g *GardenKubeconfig) Start(ctx context.Context) (err error) {
 			"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
 	}
 
-	var gardenAPIReader client.Reader
-	if len(g.Config.GardenClientConnection.GardenClusterCACert) == 0 {
-		gardenClient, err := kubernetes.NewClientFromBytes(g.Result.Kubeconfig)
-		if err != nil {
-			return fmt.Errorf("unable to create garden client from kubeconfig: %w", err)
-		}
-		gardenAPIReader = gardenClient.APIReader()
+	gardenClient, err := NewClientFromBytes(g.Result.Kubeconfig)
+	if err != nil {
+		return fmt.Errorf("unable to create garden client from kubeconfig: %w", err)
 	}
 
-	g.Result.Kubeconfig, err = gardenletbootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, g.Log, gardenAPIReader, g.RuntimeClient, g.Result.Kubeconfig, g.Config.GardenClientConnection)
+	g.Result.Kubeconfig, err = gardenletbootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, g.Log, gardenClient.APIReader(), g.RuntimeClient, g.Result.Kubeconfig, g.Config.GardenClientConnection)
 	if err != nil {
 		return fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
 	}

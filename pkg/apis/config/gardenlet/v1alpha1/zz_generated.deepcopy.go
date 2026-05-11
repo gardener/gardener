@@ -363,11 +363,6 @@ func (in *GardenClientConnection) DeepCopyInto(out *GardenClientConnection) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.GardenClusterCACert != nil {
-		in, out := &in.GardenClusterCACert, &out.GardenClusterCACert
-		*out = make([]byte, len(*in))
-		copy(*out, *in)
-	}
 	if in.BootstrapKubeconfig != nil {
 		in, out := &in.BootstrapKubeconfig, &out.BootstrapKubeconfig
 		*out = new(corev1.SecretReference)

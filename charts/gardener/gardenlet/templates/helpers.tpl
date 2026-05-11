@@ -117,9 +117,6 @@ gardenClientConnection:
   {{- if .Values.config.gardenClientConnection.gardenClusterAddress }}
   gardenClusterAddress: {{ .Values.config.gardenClientConnection.gardenClusterAddress }}
   {{- end }}
-  {{- if .Values.config.gardenClientConnection.gardenClusterCACert }}
-  gardenClusterCACert: {{ .Values.config.gardenClientConnection.gardenClusterCACert }}
-  {{- end }}
   {{- if .Values.config.gardenClientConnection.bootstrapKubeconfig }}
   bootstrapKubeconfig:
     {{- if .Values.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
