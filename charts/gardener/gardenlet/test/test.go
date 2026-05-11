@@ -253,6 +253,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"selfhostedshootexposures.extensions.gardener.cloud",
 					"verticalpodautoscalers.autoscaling.k8s.io",
 					"verticalpodautoscalercheckpoints.autoscaling.k8s.io",
+					"persistentvolumeclaimautoscalers.autoscaling.gardener.cloud",
 					"perses.perses.dev",
 					"persesdashboards.perses.dev",
 					"persesdatasources.perses.dev",
@@ -278,6 +279,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"autoscaling.k8s.io"},
 				Resources: []string{"verticalpodautoscalers"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling.gardener.cloud"},
+				Resources: []string{"persistentvolumeclaimautoscalers.autoscaling.gardener.cloud"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{

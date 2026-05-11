@@ -193,6 +193,7 @@ rules:
   - selfhostedshootexposures.extensions.gardener.cloud
   - verticalpodautoscalers.autoscaling.k8s.io
   - verticalpodautoscalercheckpoints.autoscaling.k8s.io
+  - persistentvolumeclaimautoscalers.autoscaling.gardener.cloud
   - perses.perses.dev
   - persesdashboards.perses.dev
   - persesdatasources.perses.dev
@@ -237,6 +238,18 @@ rules:
   - autoscaling.k8s.io
   resources:
   - verticalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.gardener.cloud
+  resources:
+  - persistentvolumeclaimautoscalers.autoscaling.gardener.cloud
   verbs:
   - create
   - delete
