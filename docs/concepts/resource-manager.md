@@ -962,6 +962,24 @@ spec:
 > ℹ️ Note that `VirtualService` resources reference the service port while `NetworkPolicy`s reference the target port/container port.
 > The controller automatically translates this when reconciling the `NetworkPolicy` resources.
 
+### [`IstioClusterConfiguration` Controller](../../pkg/resourcemanager/controller/istioclusterconfiguration)
+
+This controller applies the [Envoy edge proxy best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge) for upstream clusters managed by Istio.
+It watches `DestinationRule`s in the target cluster and creates `EnvoyFilter` resources in all relevant istio-ingress namespaces to configure the corresponding Envoy clusters with:
+
+- `per_connection_buffer_limit_bytes`: Set to 32 KiB to limit per-connection memory consumption.
+- `initial_stream_window_size`: Set to 64 KiB for HTTP/2 clusters.
+- `initial_connection_window_size`: Set to 1 MiB for HTTP/2 clusters.
+
+The controller determines whether a cluster uses HTTP/2 by inspecting the `DestinationRule`'s traffic policy (e.g., `useClientProtocol`, `h2UpgradePolicy: UPGRADE`) and the referenced `Service` port (via `appProtocol` or port name convention following [Istio's protocol selection](https://istio.io/latest/docs/ops/configuration/traffic-management/protocol-selection/)).
+
+The reconciliation key is the namespace containing the `DestinationRule`s.
+For each namespace, the controller produces a single `EnvoyFilter` (named `<source-namespace>-cluster-configuration`) per istio-ingress namespace that aggregates the cluster patches for all `DestinationRule`s in the source namespace.
+The `exportTo` field of each `DestinationRule` is respected to determine which istio-ingress namespaces should receive the patches.
+
+The `EnvoyFilter` is owned by the source namespace and labeled with `resources.gardener.cloud/managed-by: istio-cluster-configuration` for lifecycle management.
+When all `DestinationRule`s in a namespace are deleted, the corresponding `EnvoyFilter`s are cleaned up.
+
 ### [`Node` Controller](../../pkg/resourcemanager/controller/node)
 
 #### [Critical Components Controller](../../pkg/resourcemanager/controller/node/criticalcomponents)
