@@ -432,7 +432,7 @@
       ],
     },
     {
-      // Do not update gardener/logging images until Vali is removed.
+      // Do not update gardener/logging images until Vali is removed. See: https://github.com/gardener/gardener/issues/13709
       matchDatasources: [
         'github-releases',
       ],
