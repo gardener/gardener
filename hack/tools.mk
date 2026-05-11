@@ -176,7 +176,7 @@ $(GO_TO_PROTOBUF): $(call tool_version_file,$(GO_TO_PROTOBUF),$(CODE_GENERATOR_V
 	go build -o $(GO_TO_PROTOBUF) k8s.io/code-generator/cmd/go-to-protobuf
 
 $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
-	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version $(HELM_VERSION)
+	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-4 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version $(HELM_VERSION)
 
 $(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(K8S_VERSION))
 	mkdir -p hack/tools/bin/work/import-boss
