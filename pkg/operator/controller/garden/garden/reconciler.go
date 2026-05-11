@@ -295,7 +295,9 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	}
 
 	// Start encryption rotation when encryption provider type is changed.
-	if helper.GetKubeAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) != helper.GetEncryptionProviderTypeInStatus(garden.Status) &&
+	currentEncryptionProviderType := helper.GetEncryptionProviderTypeInStatus(garden.Status)
+	if len(currentEncryptionProviderType) > 0 &&
+		helper.GetKubeAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) != currentEncryptionProviderType &&
 		(etcdEncryptionRotationPhase == gardencorev1beta1.RotationCompleted || len(etcdEncryptionRotationPhase) == 0) {
 		startRotationETCDEncryptionKey(garden, true, &now)
 	}
