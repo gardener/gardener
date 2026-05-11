@@ -614,7 +614,7 @@ func (h *Health) checkSystemComponents(
 		return exitCondition, nil
 	}
 
-	if !h.shoot.IsWorkerless {
+	if !h.shoot.IsWorkerless && !h.shoot.IsSelfHosted() {
 		podsList := &corev1.PodList{}
 		if err := shootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
 			return nil, err
