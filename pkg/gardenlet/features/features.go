@@ -20,7 +20,6 @@ func RegisterFeatureGates() {
 func GetFeatures() []featuregate.Feature {
 	return []featuregate.Feature{
 		features.DefaultSeccompProfile,
-		features.NewWorkerPoolHash,
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
 		features.OpenTelemetryCollector,
