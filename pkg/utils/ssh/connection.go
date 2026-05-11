@@ -93,9 +93,8 @@ func (c *Connection) WithOutputPrefix(prefix string) *Connection {
 
 // WithSignalProcess configures the process name used for signal forwarding in RunWithStreams.
 // When set, info signals (Ctrl+T / SIGUSR1) received locally are forwarded to the remote process
-// as SIGUSR1, and context cancellation sends SIGINT/SIGKILL to it. The remote process is located
-// via pgrep -n <name> on a separate SSH session each time a signal needs to be sent.
-// If not set, signal forwarding and graceful termination are disabled.
+// as SIGUSR1 via pkill on a separate SSH session each time a signal needs to be sent.
+// If not set, signal forwarding is disabled.
 func (c *Connection) WithSignalProcess(name string) *Connection {
 	c.signalProcessName = name
 	return c
