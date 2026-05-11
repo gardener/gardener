@@ -441,7 +441,7 @@
       ],
       enabled: false,
       matchPackageNames: [
-        'github.com/gardener/logging',
+        'gardener/logging',
       ],
     },
     {
