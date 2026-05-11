@@ -211,11 +211,11 @@ func (c *Connection) signalRemote(sig string) error {
 	}
 	defer s.Close()
 
-	killCmd := "kill"
+	killCmd := "pkill"
 	if c.runAsUser != "" {
-		killCmd = "sudo kill"
+		killCmd = "sudo pkill"
 	}
-	cmd := fmt.Sprintf("pid=$(pgrep -n %s) && echo \"pgrep found pid=$pid\" && %s -%s $pid", c.signalProcessName, killCmd, sig)
+	cmd := fmt.Sprintf("%s -%s %s", killCmd, sig, c.signalProcessName)
 	out, err := s.Output(cmd)
 	if err != nil {
 		return fmt.Errorf("remote command failed (output: %q): %w", string(out), err)
