@@ -148,7 +148,7 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{"", "events.k8s.io"},
 				Resources: []string{"events"},
 				Verbs:     []string{"create", "patch"},
 			},
@@ -259,7 +259,7 @@ func (o *openTelemetryOperator) role() *rbacv1.Role {
 				Verbs:     []string{"list", "patch", "create", "get", "watch"},
 			},
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{"", "events.k8s.io"},
 				Resources: []string{"events"},
 				Verbs:     []string{"create", "patch"},
 			},

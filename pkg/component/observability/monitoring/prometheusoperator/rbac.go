@@ -7,6 +7,7 @@ package prometheusoperator
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -84,7 +85,7 @@ func (p *prometheusOperator) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
-				APIGroups: []string{corev1.GroupName},
+				APIGroups: []string{corev1.GroupName, eventsv1.GroupName},
 				Resources: []string{"events"},
 				Verbs:     []string{"patch", "create"},
 			},

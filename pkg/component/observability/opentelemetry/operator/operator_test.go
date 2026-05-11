@@ -93,7 +93,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
-					APIGroups: []string{""},
+					APIGroups: []string{"", "events.k8s.io"},
 					Resources: []string{"events"},
 					Verbs:     []string{"create", "patch"},
 				},
@@ -198,7 +198,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					Verbs:     []string{"list", "patch", "create", "get", "watch"},
 				},
 				{
-					APIGroups: []string{""},
+					APIGroups: []string{"", "events.k8s.io"},
 					Resources: []string{"events"},
 					Verbs:     []string{"create", "patch"},
 				},

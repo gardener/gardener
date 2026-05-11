@@ -286,7 +286,7 @@ var _ = Describe("PrometheusOperator", func() {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					APIGroups: []string{""},
+					APIGroups: []string{"", "events.k8s.io"},
 					Resources: []string{"events"},
 					Verbs:     []string{"patch", "create"},
 				},
