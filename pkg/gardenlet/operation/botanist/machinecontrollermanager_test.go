@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,7 +33,6 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("MachineControllerManager", func() {
@@ -163,28 +163,31 @@ var _ = Describe("MachineControllerManager", func() {
 
 	Describe("#ScaleMachineControllerManagerToZero", func() {
 		var (
-			mockClient            *mockclient.MockClient
-			mockSubresourceClient *mockclient.MockSubResourceClient
-			patch                 = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":0}}`))
+			patch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":0}}`))
 		)
 
 		BeforeEach(func() {
-			mockClient = mockclient.NewMockClient(ctrl)
-			mockSubresourceClient = mockclient.NewMockSubResourceClient(ctrl)
-
-			kubernetesClient.EXPECT().Client().Return(mockClient)
-			mockClient.EXPECT().SubResource("scale").Return(mockSubresourceClient)
-
+			kubernetesClient.EXPECT().Client().DoAndReturn(func() client.Client { return fakeClient })
 			botanist.SeedClientSet = kubernetesClient
 		})
 
 		It("should scale the CA deployment", func() {
-			mockSubresourceClient.EXPECT().Patch(ctx, deployment, patch)
+			// Create deployment so SubResource("scale").Patch can succeed
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			_ = patch // kept for reference
 			Expect(botanist.ScaleMachineControllerManagerToZero(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(deployment.Spec.Replicas).To(PointTo(Equal(int32(0))))
 		})
 
 		It("should fail when the scale call fails", func() {
-			mockSubresourceClient.EXPECT().Patch(ctx, deployment, patch).Return(fakeErr)
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(_ context.Context, _ client.Client, _ string, _ client.Object, _ client.Patch, _ ...client.SubResourcePatchOption) error {
+					return fakeErr
+				},
+			}).Build()
+
 			Expect(botanist.ScaleMachineControllerManagerToZero(ctx)).To(MatchError(fakeErr))
 		})
 	})

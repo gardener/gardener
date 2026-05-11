@@ -13,21 +13,20 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes/fake"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/testing"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,30 +38,23 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Bootstrap", func() {
 	var (
-		ctrl          *gomock.Controller
-		reader        *mockclient.MockReader
-		writer        *mockclient.MockWriter
-		runtimeClient *mockclient.MockClient
+		runtimeClient client.Client
 		ctx           context.Context
 		ctxCancel     context.CancelFunc
 		testLogger    = logr.Discard()
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		reader = mockclient.NewMockReader(ctrl)
-		writer = mockclient.NewMockWriter(ctrl)
-		runtimeClient = mockclient.NewMockClient(ctrl)
+		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		ctx, ctxCancel = context.WithTimeout(context.Background(), 1*time.Minute)
 	})
 
 	AfterEach(func() {
-		ctrl.Finish()
 		ctxCancel()
 	})
 
@@ -71,7 +63,6 @@ var _ = Describe("Bootstrap", func() {
 			kubeClient            *fake.Clientset
 			bootstrapClientConfig *rest.Config
 
-			gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			kubeconfigKey          client.ObjectKey
 			bootstrapKubeconfigKey client.ObjectKey
 			selfHostedShootMeta    *types.NamespacedName
@@ -146,13 +137,6 @@ var _ = Describe("Bootstrap", func() {
 				},
 			}}
 
-			// gardenClientConnection with required bootstrap secret kubeconfig secret
-			// in a non-test environment we would use two different secrets
-			gardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-				BootstrapKubeconfig: &bootstrapSecretReference,
-				KubeconfigSecret:    &secretReference,
-			}
-
 			// rest config for the bootstrap client
 			bootstrapClientConfig = &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 				Insecure: false,
@@ -177,28 +161,17 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
-
-				runtimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
-						Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
-						Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
-						Expect(secret.Data).ToNot(BeNil())
-						Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
-						return nil
-					})
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      gardenClientConnection.BootstrapKubeconfig.Name,
-						Namespace: gardenClientConnection.BootstrapKubeconfig.Namespace,
-					},
-				})
-
 				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedConfig, selfHostedShootMeta, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeEmpty())
 				Expect(csrName).ToNot(BeEmpty())
+
+				secret := &corev1.Secret{}
+				Expect(runtimeClient.Get(ctx, kubeconfigKey, secret)).To(Succeed())
+				Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
+
+				Expect(runtimeClient.Get(ctx, bootstrapKubeconfigKey, &corev1.Secret{})).To(BeNotFoundError())
 			})
 
 			It("should return an error - the CSR got denied", func() {
@@ -260,28 +233,17 @@ var _ = Describe("Bootstrap", func() {
 					WithKubernetes(kubeClient).
 					Build()
 
-				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
-
-				runtimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
-						Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
-						Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
-						Expect(secret.Data).ToNot(BeNil())
-						Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
-						return nil
-					})
-				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      gardenClientConnection.BootstrapKubeconfig.Name,
-						Namespace: gardenClientConnection.BootstrapKubeconfig.Namespace,
-					},
-				})
-
 				kubeconfig, csrName, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, runtimeClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, nil, selfHostedShootMeta, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeEmpty())
 				Expect(csrName).ToNot(BeEmpty())
+
+				secret := &corev1.Secret{}
+				Expect(runtimeClient.Get(ctx, kubeconfigKey, secret)).To(Succeed())
+				Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
+
+				Expect(runtimeClient.Get(ctx, bootstrapKubeconfigKey, &corev1.Secret{})).To(BeNotFoundError())
 			})
 
 			It("should return an error - the CSR got denied", func() {
@@ -329,19 +291,13 @@ var _ = Describe("Bootstrap", func() {
 		)
 
 		It("should return an error because the CSR was not found", func() {
-			reader.EXPECT().
-				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-				Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
-
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).NotTo(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, runtimeClient, runtimeClient, csrName)).NotTo(Succeed())
 		})
 
 		It("should delete nothing because the username in the CSR does not match a known pattern", func() {
-			reader.EXPECT().
-				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-				Return(nil)
+			Expect(runtimeClient.Create(ctx, &certificatesv1.CertificateSigningRequest{ObjectMeta: metav1.ObjectMeta{Name: csrKey.Name}})).To(Succeed())
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, runtimeClient, runtimeClient, csrName)).To(Succeed())
 		})
 
 		It("should delete the bootstrap token secret", func() {
@@ -352,18 +308,13 @@ var _ = Describe("Bootstrap", func() {
 				bootstrapTokenSecret     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}}
 			)
 
-			gomock.InOrder(
-				reader.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = bootstrapTokenUserName
-						return nil
-					}),
-				writer.EXPECT().
-					Delete(ctx, bootstrapTokenSecret),
-			)
+			csr := &certificatesv1.CertificateSigningRequest{ObjectMeta: metav1.ObjectMeta{Name: csrKey.Name}, Spec: certificatesv1.CertificateSigningRequestSpec{Username: bootstrapTokenUserName}}
+			Expect(runtimeClient.Create(ctx, csr)).To(Succeed())
+			Expect(runtimeClient.Create(ctx, bootstrapTokenSecret)).To(Succeed())
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, runtimeClient, runtimeClient, csrName)).To(Succeed())
+
+			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(bootstrapTokenSecret), &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should delete the service account and cluster role binding", func() {
@@ -373,24 +324,18 @@ var _ = Describe("Bootstrap", func() {
 				serviceAccountNamespace = v1beta1constants.GardenNamespace
 				serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
 				serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
-
-				clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: gardenletbootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
+				clusterRoleBinding      = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: gardenletbootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
 			)
 
-			gomock.InOrder(
-				reader.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
-						csr.Spec.Username = serviceAccountUserName
-						return nil
-					}),
-				writer.EXPECT().
-					Delete(ctx, serviceAccount),
-				writer.EXPECT().
-					Delete(ctx, clusterRoleBinding),
-			)
+			csr := &certificatesv1.CertificateSigningRequest{ObjectMeta: metav1.ObjectMeta{Name: csrKey.Name}, Spec: certificatesv1.CertificateSigningRequestSpec{Username: serviceAccountUserName}}
+			Expect(runtimeClient.Create(ctx, csr)).To(Succeed())
+			Expect(runtimeClient.Create(ctx, serviceAccount)).To(Succeed())
+			Expect(runtimeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, runtimeClient, runtimeClient, csrName)).To(Succeed())
+
+			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
+			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 		})
 	})
 })

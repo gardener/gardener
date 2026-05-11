@@ -16,7 +16,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,14 +38,13 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Logging", func() {
 	var (
 		ctrl *gomock.Controller
-		c    *mockclient.MockClient
 
+		fakeClient            client.Client
 		k8sSeedClient         kubernetes.Interface
 		botanist              *Botanist
 		eventLoggerDeployer   *mockcomponent.MockDeployer
@@ -64,11 +65,11 @@ var _ = Describe("Logging", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&appsv1.Deployment{}).Build()
 
 		chartApplier = mock.NewMockChartApplier(ctrl)
 		k8sSeedClient = fake.NewClientSetBuilder().
-			WithClient(c).
+			WithClient(fakeClient).
 			WithChartApplier(chartApplier).
 			WithRESTConfig(&rest.Config{}).
 			Build()
@@ -77,7 +78,7 @@ var _ = Describe("Logging", func() {
 		otelCollectorDeployer = mockcollector.NewMockInterface(ctrl)
 		valiDeployer = mockvali.NewMockInterface(ctrl)
 		victoriaLogsDeployer = mockcomponent.NewMockDeployWaiter(ctrl)
-		fakeSecretManager = fakesecretsmanager.New(c, controlPlaneNamespace)
+		fakeSecretManager = fakesecretsmanager.New(fakeClient, controlPlaneNamespace)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -175,56 +176,49 @@ var _ = Describe("Logging", func() {
 
 		Context("When there are no control plane components yet", func() {
 			It("should successfully deploy the logging stack when it is enabled and there is no gardener-resource-manager", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-						deployment := &appsv1.Deployment{}
-						*obj.(*appsv1.Deployment) = *deployment
-						return nil
-					}),
-					victoriaLogsDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().WithAuthenticationProxy(false),
-					valiDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-				)
+				// No GRM deployment in fakeClient → Get returns NotFound → ReadyReplicas == 0
+				victoriaLogsDeployer.EXPECT().Deploy(ctx)
+				valiDeployer.EXPECT().WithAuthenticationProxy(false)
+				valiDeployer.EXPECT().Deploy(ctx)
+				otelCollectorDeployer.EXPECT().Destroy(ctx)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
 			It("should not deploy the logging stack when there is an error fetching gardener-resource-manager", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, _ runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+				fakeClientWithErr := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 						return fakeErr
-					}),
-				)
+					},
+				}).Build()
+				botanist.SeedClientSet = fake.NewClientSetBuilder().
+					WithClient(fakeClientWithErr).
+					WithChartApplier(chartApplier).
+					WithRESTConfig(&rest.Config{}).
+					Build()
 
 				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 		})
 
 		Context("When gardener-resource-manager is present in the control plane", func() {
+			BeforeEach(func() {
+				grm := &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+						Namespace: controlPlaneNamespace,
+					},
+				}
+				Expect(fakeClient.Create(ctx, grm)).To(Succeed())
+				grm.Status = appsv1.DeploymentStatus{ReadyReplicas: 1}
+				Expect(fakeClient.Status().Update(ctx, grm)).To(Succeed())
+			})
+
 			It("should successfully deploy all of the components except otel collector in the logging stack when it is enabled", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-						deployment := &appsv1.Deployment{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: controlPlaneNamespace,
-							},
-							Status: appsv1.DeploymentStatus{
-								ReadyReplicas: 1,
-							},
-						}
-						*obj.(*appsv1.Deployment) = *deployment
-						return nil
-					}),
-					victoriaLogsDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-					valiDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-				)
+				victoriaLogsDeployer.EXPECT().Deploy(ctx)
+				valiDeployer.EXPECT().WithAuthenticationProxy(true)
+				valiDeployer.EXPECT().Deploy(ctx)
+				otelCollectorDeployer.EXPECT().Destroy(ctx)
+				eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
@@ -236,28 +230,12 @@ var _ = Describe("Logging", func() {
 
 				It("should successfully deploy all of the components including otel collector in the logging stack when it is enabled", func() {
 					gardenletfeatures.RegisterFeatureGates()
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().WithAuthenticationProxy(false),
-						valiDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true),
-						otelCollectorDeployer.EXPECT().Deploy(ctx),
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx)
+					valiDeployer.EXPECT().WithAuthenticationProxy(false)
+					valiDeployer.EXPECT().Deploy(ctx)
+					otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true)
+					otelCollectorDeployer.EXPECT().Deploy(ctx)
+					eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
 				})
@@ -270,50 +248,18 @@ var _ = Describe("Logging", func() {
 
 				It("should successfully deploy all of the components including VictoriaLogs when it is enabled", func() {
 					gardenletfeatures.RegisterFeatureGates()
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-						valiDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().Destroy(ctx),
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx)
+					valiDeployer.EXPECT().WithAuthenticationProxy(true)
+					valiDeployer.EXPECT().Deploy(ctx)
+					otelCollectorDeployer.EXPECT().Destroy(ctx)
+					eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
 				})
 
 				It("should fail to deploy the logging stack when VictoriaLogs Deploy returns error", func() {
 					gardenletfeatures.RegisterFeatureGates()
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx).Return(fakeErr)
 
 					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 				})
@@ -327,28 +273,12 @@ var _ = Describe("Logging", func() {
 
 				It("should successfully deploy all components when both VictoriaLogs and OpenTelemetryCollector are enabled", func() {
 					gardenletfeatures.RegisterFeatureGates()
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().WithAuthenticationProxy(false),
-						valiDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true),
-						otelCollectorDeployer.EXPECT().Deploy(ctx),
-						eventLoggerDeployer.EXPECT().Deploy(ctx),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx)
+					valiDeployer.EXPECT().WithAuthenticationProxy(false)
+					valiDeployer.EXPECT().Deploy(ctx)
+					otelCollectorDeployer.EXPECT().WithAuthenticationProxy(true)
+					otelCollectorDeployer.EXPECT().Deploy(ctx)
+					eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 					Expect(botanist.DeployLogging(ctx)).To(Succeed())
 				})
@@ -356,108 +286,44 @@ var _ = Describe("Logging", func() {
 
 			It("should not deploy event logger when it is disabled", func() {
 				*botanist.Config.Logging.ShootEventLogging.Enabled = false
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-						deployment := &appsv1.Deployment{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: controlPlaneNamespace,
-							},
-							Status: appsv1.DeploymentStatus{
-								ReadyReplicas: 1,
-							},
-						}
-						*obj.(*appsv1.Deployment) = *deployment
-						return nil
-					}),
-					victoriaLogsDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-					valiDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					eventLoggerDeployer.EXPECT().Destroy(ctx),
-				)
+				victoriaLogsDeployer.EXPECT().Deploy(ctx)
+				valiDeployer.EXPECT().WithAuthenticationProxy(true)
+				valiDeployer.EXPECT().Deploy(ctx)
+				otelCollectorDeployer.EXPECT().Destroy(ctx)
+				eventLoggerDeployer.EXPECT().Destroy(ctx)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
 
 			It("should not deploy shoot node logging for workerless shoot", func() {
 				botanist.Shoot.IsWorkerless = true
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-						deployment := &appsv1.Deployment{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: controlPlaneNamespace,
-							},
-							Status: appsv1.DeploymentStatus{
-								ReadyReplicas: 1,
-							},
-						}
-						*obj.(*appsv1.Deployment) = *deployment
-						return nil
-					}),
-					victoriaLogsDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-					valiDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-				)
+				victoriaLogsDeployer.EXPECT().Deploy(ctx)
+				valiDeployer.EXPECT().WithAuthenticationProxy(true)
+				valiDeployer.EXPECT().Deploy(ctx)
+				otelCollectorDeployer.EXPECT().Destroy(ctx)
+				eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
 
 			It("should not deploy shoot node logging when it is disabled", func() {
 				botanist.Config.Logging.ShootNodeLogging = nil
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-						deployment := &appsv1.Deployment{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: controlPlaneNamespace,
-							},
-							Status: appsv1.DeploymentStatus{
-								ReadyReplicas: 1,
-							},
-						}
-						*obj.(*appsv1.Deployment) = *deployment
-						return nil
-					}),
-					victoriaLogsDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-					valiDeployer.EXPECT().Deploy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-				)
+				victoriaLogsDeployer.EXPECT().Deploy(ctx)
+				valiDeployer.EXPECT().WithAuthenticationProxy(true)
+				valiDeployer.EXPECT().Deploy(ctx)
+				otelCollectorDeployer.EXPECT().Destroy(ctx)
+				eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
 
 			It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
 				*botanist.Config.Logging.Vali.Enabled = false
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-						deployment := &appsv1.Deployment{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: controlPlaneNamespace,
-							},
-							Status: appsv1.DeploymentStatus{
-								ReadyReplicas: 1,
-							},
-						}
-						*obj.(*appsv1.Deployment) = *deployment
-						return nil
-					}),
-					victoriaLogsDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().WithAuthenticationProxy(true),
-					valiDeployer.EXPECT().Destroy(ctx),
-					otelCollectorDeployer.EXPECT().Destroy(ctx),
-					eventLoggerDeployer.EXPECT().Deploy(ctx),
-				)
+				victoriaLogsDeployer.EXPECT().Deploy(ctx)
+				valiDeployer.EXPECT().WithAuthenticationProxy(true)
+				valiDeployer.EXPECT().Destroy(ctx)
+				otelCollectorDeployer.EXPECT().Destroy(ctx)
+				eventLoggerDeployer.EXPECT().Deploy(ctx)
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
@@ -482,78 +348,29 @@ var _ = Describe("Logging", func() {
 				})
 
 				It("should fail to deploy the logging stack when ShootEventLoggerDeployer Deploy returns an error", func() {
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-						valiDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().Destroy(ctx),
-						eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx)
+					valiDeployer.EXPECT().WithAuthenticationProxy(true)
+					valiDeployer.EXPECT().Deploy(ctx)
+					otelCollectorDeployer.EXPECT().Destroy(ctx)
+					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr)
 
 					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 				})
 
 				It("should fail to deploy the logging stack when deploying of the shoot event logging fails", func() {
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-						valiDeployer.EXPECT().Deploy(ctx),
-						otelCollectorDeployer.EXPECT().Destroy(ctx),
-						eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx)
+					valiDeployer.EXPECT().WithAuthenticationProxy(true)
+					valiDeployer.EXPECT().Deploy(ctx)
+					otelCollectorDeployer.EXPECT().Destroy(ctx)
+					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr)
 
 					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 				})
 
 				It("should fail to deploy the logging stack when ValiDeployer Deploy returns error", func() {
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.
-							Context,
-							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
-							deployment := &appsv1.Deployment{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: controlPlaneNamespace,
-								},
-								Status: appsv1.DeploymentStatus{
-									ReadyReplicas: 1,
-								},
-							}
-							*obj.(*appsv1.Deployment) = *deployment
-							return nil
-						}),
-						victoriaLogsDeployer.EXPECT().Deploy(ctx),
-						valiDeployer.EXPECT().WithAuthenticationProxy(true),
-						valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-					)
+					victoriaLogsDeployer.EXPECT().Deploy(ctx)
+					valiDeployer.EXPECT().WithAuthenticationProxy(true)
+					valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr)
 
 					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 				})

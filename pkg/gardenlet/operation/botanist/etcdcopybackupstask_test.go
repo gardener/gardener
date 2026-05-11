@@ -16,10 +16,9 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -32,16 +31,13 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("EtcdCopyBackupsTask", func() {
 	var (
-		ctx              context.Context
-		ctrl             *gomock.Controller
-		c                *mockclient.MockClient
-		reader           *mockclient.MockReader
-		kubernetesClient kubernetes.Interface
+		ctx        context.Context
+		ctrl       *gomock.Controller
+		fakeClient client.Client
 
 		botanist        *Botanist
 		namespace       = "shoot--foo--bar"
@@ -54,11 +50,9 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-		reader = mockclient.NewMockReader(ctrl)
-		kubernetesClient = fakekubernetes.NewClientSetBuilder().
-			WithClient(c).
-			WithAPIReader(reader).
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		kubernetesClient := fakekubernetes.NewClientSetBuilder().
+			WithClient(fakeClient).
 			Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{}}
@@ -94,7 +88,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 
 		It("should create a new EtcdCopyBackupsTask with correct values", func() {
 			validator := &newEtcdCopyBackupsTaskValidator{
-				expectedClient: Equal(c),
+				expectedClient: Equal(fakeClient),
 				expectedLogger: BeAssignableToTypeOf(logr.Logger{}),
 				expectedValues: Equal(&etcdcopybackupstask.Values{
 					Name:      botanist.Shoot.GetInfo().Name,
@@ -124,9 +118,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 			sourceEtcdBackupSecret *corev1.Secret
 			sourceBackupEntry      *extensionsv1alpha1.BackupEntry
 
-			secretGroupResource      = schema.GroupResource{Resource: "Secrets"}
-			backupEntryGroupResource = schema.GroupResource{Resource: "BackupEntries"}
-			fakeErr                  = errors.New("fake err")
+			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {
@@ -166,11 +158,12 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		})
 
 		It("should properly deploy EtcdCopyBackupsTask resource", func() {
+			Expect(fakeClient.Create(ctx, sourceBackupEntry)).To(Succeed())
+			Expect(fakeClient.Create(ctx, sourceEtcdBackupSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
+
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret))
 			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
 			etcdCopyBackupsTask.EXPECT().SetTargetStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
 			etcdCopyBackupsTask.EXPECT().Deploy(ctx)
@@ -188,36 +181,37 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
 		})
 
-		It("should return an error if the etcd backup secret is not found", func() {
+		It("should return an error if the source etcd backup secret is not found", func() {
+			Expect(fakeClient.Create(ctx, sourceBackupEntry)).To(Succeed())
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret)).Return(apierrors.NewNotFound(secretGroupResource, sourceEtcdBackupSecret.Name))
+			// sourceEtcdBackupSecret not created → NotFound
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
 		})
 
 		It("should return an error if the source backup entry is not found", func() {
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry)).Return(apierrors.NewNotFound(backupEntryGroupResource, etcdBackupSecret.Name))
+			// sourceBackupEntry not created → NotFound
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
 		})
 
-		It("should return an error if the source etcd backup secret is not found", func() {
+		It("should return an error if the etcd backup secret is not found", func() {
+			Expect(fakeClient.Create(ctx, sourceBackupEntry)).To(Succeed())
+			Expect(fakeClient.Create(ctx, sourceEtcdBackupSecret)).To(Succeed())
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret)).Return(apierrors.NewNotFound(secretGroupResource, etcdBackupSecret.Name))
+			// etcdBackupSecret not created → NotFound
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
 		})
 
 		It("should return an error if the etcd copy backup task component Deploy fails", func() {
+			Expect(fakeClient.Create(ctx, sourceBackupEntry)).To(Succeed())
+			Expect(fakeClient.Create(ctx, sourceEtcdBackupSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
+
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret))
 			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
 			etcdCopyBackupsTask.EXPECT().SetTargetStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
 			etcdCopyBackupsTask.EXPECT().Deploy(ctx).Return(fakeErr)

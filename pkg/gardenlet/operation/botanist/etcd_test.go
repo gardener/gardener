@@ -44,14 +44,12 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Etcd", func() {
 	var (
 		ctrl             *gomock.Controller
 		kubernetesClient kubernetes.Interface
-		c                *mockclient.MockClient
 		fakeClient       client.Client
 		sm               secretsmanager.Interface
 		botanist         *Botanist
@@ -71,11 +69,10 @@ var _ = Describe("Etcd", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-		kubernetesClient = fakekubernetes.NewClientSetBuilder().
-			WithClient(c).
-			Build()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		kubernetesClient = fakekubernetes.NewClientSetBuilder().
+			WithClient(fakeClient).
+			Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		botanist = &Botanist{Operation: &operation.Operation{}}
 	})
@@ -105,7 +102,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			validator = &newEtcdValidator{
-				expectedClient:                    Equal(c),
+				expectedClient:                    Equal(fakeClient),
 				expectedLogger:                    BeAssignableToTypeOf(logr.Logger{}),
 				expectedNamespace:                 Equal(namespace),
 				expectedSecretsManager:            Equal(sm),
@@ -319,6 +316,10 @@ var _ = Describe("Etcd", func() {
 				backupProvider = "prov"
 				bucketName     = "container"
 				backupSecret   = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "etcd-backup",
+						Namespace: namespace,
+					},
 					Data: map[string][]byte{
 						"bucketName": []byte(bucketName),
 					},
@@ -327,14 +328,6 @@ var _ = Describe("Etcd", func() {
 					ReelectionPeriod: &metav1.Duration{Duration: 2 * time.Second},
 				}
 
-				expectGetBackupSecret = func() {
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "etcd-backup"}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-						func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							backupSecret.DeepCopyInto(obj.(*corev1.Secret))
-							return nil
-						},
-					)
-				}
 				expectSetBackupConfig = func() {
 					etcdMain.EXPECT().SetBackupConfig(&etcd.BackupConfig{
 						Provider:             backupProvider,
@@ -367,7 +360,8 @@ var _ = Describe("Etcd", func() {
 					},
 				}
 
-				expectGetBackupSecret()
+				Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
+
 				expectSetBackupConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
@@ -376,9 +370,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should fail when reading the backup secret fails", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "etcd-backup"}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
-
-				Expect(botanist.DeployEtcd(ctx)).To(MatchError(fakeErr))
+				Expect(botanist.DeployEtcd(ctx)).To(MatchError(ContainSubstring("secrets \"etcd-backup\" not found")))
 			})
 
 			It("should fail when the backup schedule cannot be determined", func() {
@@ -386,7 +378,7 @@ var _ = Describe("Etcd", func() {
 					Begin: "foobar",
 					End:   "barfoo",
 				}
-				expectGetBackupSecret()
+				Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 
 				Expect(botanist.DeployEtcd(ctx)).To(HaveOccurred())
 			})
@@ -405,7 +397,7 @@ var _ = Describe("Etcd", func() {
 					}
 
 					expectSetBackupConfig()
-					expectGetBackupSecret()
+					Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 				})
 
 				It("should properly restore multi-node etcd from backup if etcd main does not exist yet", func() {
