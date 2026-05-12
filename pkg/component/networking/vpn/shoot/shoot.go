@@ -112,6 +112,9 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
+	// AutoMTU enables automatic MTU configuration for the VPN connection.
+	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
+	AutoMTU *bool
 }
 
 // Interface contains functions for a VPNShoot deployer.
@@ -828,6 +831,13 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			}...)
 	}
 
+	if v.values.AutoMTU != nil {
+		envVariables = append(envVariables, corev1.EnvVar{
+			Name:  "OPENVPN_AUTO_MTU",
+			Value: strconv.FormatBool(*v.values.AutoMTU),
+		})
+	}
+
 	return envVariables
 }
 
@@ -977,6 +987,13 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				Value: "balance-rr",
 			})
 		}
+	}
+
+	if v.values.AutoMTU != nil {
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "OPENVPN_AUTO_MTU",
+			Value: strconv.FormatBool(*v.values.AutoMTU),
+		})
 	}
 
 	return []corev1.Container{container}
