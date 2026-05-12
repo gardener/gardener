@@ -60,23 +60,17 @@ var _ = Describe("CommandLineProgressReporter", func() {
 
 		debugChan <- os.Interrupt
 
-		Eventually(outBuf).Should(And(
-			gbytes.Say("Flow: Test-Flow"),
-			gbytes.Say("Succeeded: 2"),
-			gbytes.Say("Failed: 1"),
-		))
+		Eventually(outBuf).Should(gbytes.Say("Flow: Test-Flow"))
+		Eventually(outBuf).Should(gbytes.Say("Succeeded: 2"))
+		Eventually(outBuf).Should(gbytes.Say("Failed: 1"))
 
 		// Verify Running tasks section
-		Eventually(outBuf).Should(And(
-			gbytes.Say("Running Tasks:"),
-			gbytes.Say("== task_running_1"),
-		))
+		Eventually(outBuf).Should(gbytes.Say("Running Tasks:"))
+		Eventually(outBuf).Should(gbytes.Say("== task_running_1"))
 
 		// Verify Error reporting
-		Eventually(outBuf).Should(And(
-			gbytes.Say("Last Error:"),
-			gbytes.Say("connection timeout"),
-		))
+		Eventually(outBuf).Should(gbytes.Say("Last Error:"))
+		Eventually(outBuf).Should(gbytes.Say("connection timeout"))
 	})
 
 	It("should capture retry errors end-to-end when running a flow with RetryUntilTimeout", func() {
