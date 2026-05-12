@@ -179,21 +179,27 @@ jobs:
         args:
           - os: linux
             arch: amd64
+            archive_suffix: .tar.gz
             runner: ubuntu-latest
           - os: linux
             arch: arm64
+            archive_suffix: .tar.gz
             runner: ubuntu-24.04-arm
           - os: darwin
             arch: amd64
+            archive_suffix: .tar.gz
             runner: ubuntu-latest
           - os: darwin
             arch: arm64
+            archive_suffix: .tar.gz
             runner: ubuntu-24.04-arm
           - os: windows
             arch: amd64
+            archive_suffix: .zip
             runner: ubuntu-latest
           - os: windows
             arch: arm64
+            archive_suffix: .zip
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.args.runner }}
     steps:
@@ -209,20 +215,19 @@ jobs:
           ld_flags="$(hack/get-build-ld-flags.sh)"
           os=${{ matrix.args.os }}
           arch=${{ matrix.args.arch }}
+          archive_suffix=${{ matrix.args.archive_suffix }}
 
           if [ ${os} == 'windows' ]; then
             exe_suffix='.exe'
-            archive_suffix='.zip'
           else
             exe_suffix=''
-            archive_suffix='.tar.gz'
           fi
 
           mkdir -p /tmp/blobs.d
           prefix=/tmp/blobs.d/gardenadm
           platform_suffix="-${os}-${arch}"
-          outpath="${prefix}${platform_suffix}${exe_suffix}${archive_suffix}"
-          archive="${prefix}${platform_suffix}.archive"
+          outpath="${prefix}${platform_suffix}${exe_suffix}"
+          archive="${prefix}${platform_suffix}${archive_suffix}.archive"
 
           GOOS=${os} \
           GOARCH=${arch} \
@@ -256,4 +261,4 @@ jobs:
             access:
               type: localBlob
               localReference: >-
-                gardenadm-${{ matrix.args.os }}-${{ matrix.args.arch }}.archive
+                gardenadm-${{ matrix.args.os }}-${{ matrix.args.arch }}${{ matrix.args.archive_suffix }}.archive
