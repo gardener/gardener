@@ -43,7 +43,7 @@ require (
 	github.com/perses/perses-operator v0.4.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
 	github.com/prometheus/blackbox_exporter v0.28.0
-	github.com/prometheus/client_golang v1.23.3-0.20260506204903-0ac87e14c303
+	github.com/prometheus/client_golang v1.23.3-0.20260512195842-e839fbaf72ad
 	github.com/prometheus/common v0.67.6-0.20260224092343-e4c38a0aea47
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.15.0
