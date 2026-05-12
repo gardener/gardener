@@ -1064,7 +1064,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	ingressDomains := toDomainNames(helper.GetAllIngressDomains(garden))
+	ingressDomains := toDomainNames(helper.GetIngressWildcardDomains(garden))
 
 	return sharedcomponent.NewNginxIngress(
 		r.RuntimeClientSet.Client(),
