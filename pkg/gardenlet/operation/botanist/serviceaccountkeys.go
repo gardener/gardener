@@ -45,7 +45,7 @@ func (b *Botanist) SyncPublicServiceAccountKeys(ctx context.Context) error {
 			v1beta1constants.ProjectName:          b.Garden.Project.Name,
 			v1beta1constants.LabelShootName:       b.Shoot.GetInfo().Name,
 			v1beta1constants.LabelShootNamespace:  b.Shoot.GetInfo().Namespace,
-			v1beta1constants.LabelPublicKeys:      v1beta1constants.LabelPublicKeysServiceAccount, // TODO(vpnachev): Remove this label after v1.144 is released.
+			v1beta1constants.LabelPublicKeys:      v1beta1constants.LabelPublicKeysServiceAccount, // TODO(vpnachev): Remove this label after v1.145 is released.
 			v1beta1constants.LabelDiscoveryPublic: v1beta1constants.LabelPublicKeysServiceAccount,
 		}
 		secret.Data = map[string][]byte{
