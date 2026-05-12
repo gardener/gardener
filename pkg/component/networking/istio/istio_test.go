@@ -85,11 +85,6 @@ var _ = Describe("istiod", func() {
 			return strings.Split(string(data), "---\n")[i]
 		}
 
-		istiodDestinationRule = func() string {
-			data, _ := os.ReadFile("./test_charts/istiod_destinationrule.yaml")
-			return string(data)
-		}
-
 		istiodPodDisruptionBudget = func() string {
 			data, _ := os.ReadFile("./test_charts/istiod_poddisruptionbudget.yaml")
 			return string(data)
@@ -427,7 +422,6 @@ var _ = Describe("istiod", func() {
 				istiodClusterRoleBinding(0),
 				istiodClusterRoleBinding(1),
 				istiodClusterRoleBinding(2),
-				istiodDestinationRule(),
 				istiodRole(),
 				istiodRoleBinding(),
 				istiodServiceAccount(),
