@@ -98,6 +98,9 @@ func run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		return fmt.Errorf("failed reading backup resources for shoot: %w", err)
 	}
+	if backupBucket != nil && backupEntry == nil {
+		fmt.Fprintf(opts.Out, "WARNING: found BackupBucket without a corresponding BackupEntry for Shoot %s - backup restoration may not be possible\n", client.ObjectKeyFromObject(shoot))
+	}
 
 	fmt.Fprintf(opts.Out, "Computing required resources for Shoot...\n")
 
