@@ -874,12 +874,8 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		return "", err
 	}
 
-	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
-	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
-	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
-	// (e.g., in case of a rolling-update).
-
-	checkScaleUp := false
+	// First check if the MachineDeployments report failed machines. If false then check if there is a rolling update
+	// in progress. Then use the node count to determine whether we are scaling up or down.
 	checkRollingUpdate := false
 	for _, deployment := range machineDeploymentList.Items {
 		if len(deployment.Status.FailedMachines) > 0 {
@@ -892,9 +888,6 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 				checkRollingUpdate = true
 				break
 			}
-			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
-				checkScaleUp = true
-			}
 		}
 	}
 
@@ -905,21 +898,23 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		}
 	}
 
-	if checkScaleUp {
+	if registeredNodes < desiredMachines {
 		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
 			return "NodesScalingUp", err
 		}
 	}
 
-	if err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
-		return "NodesScalingDown", err
+	if registeredNodes > desiredMachines {
+		if err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
+			return "NodesScalingDown", err
+		}
 	}
 
 	return "", nil
 }
 
 func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
-	if readyNodes == desiredMachines {
+	if readyNodes >= desiredMachines {
 		return nil
 	}
 
@@ -953,7 +948,7 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 }
 
 func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []*corev1.Node, registeredNodes, desiredMachines int) error {
-	if registeredNodes == desiredMachines {
+	if registeredNodes <= desiredMachines {
 		return nil
 	}
 

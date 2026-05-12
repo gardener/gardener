@@ -749,6 +749,12 @@ var _ = Describe("health check", func() {
 								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineRunning},
 							},
 						},
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineRunning},
+							},
+						},
 					},
 				}
 				for _, machine := range machineList.Items {
@@ -759,10 +765,7 @@ var _ = Describe("health check", func() {
 					Items: []machinev1alpha1.MachineDeployment{
 						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
-							}},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(2)},
 						},
 					},
 				}
@@ -780,6 +783,12 @@ var _ = Describe("health check", func() {
 								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachinePending},
 							},
 						},
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachinePending},
+							},
+						},
 					},
 				}
 				for _, machine := range machineList.Items {
@@ -790,10 +799,7 @@ var _ = Describe("health check", func() {
 					Items: []machinev1alpha1.MachineDeployment{
 						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
-							}},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(2)},
 						},
 					},
 				}
@@ -806,6 +812,7 @@ var _ = Describe("health check", func() {
 				machineList := &machinev1alpha1.MachineList{
 					Items: []machinev1alpha1.Machine{
 						{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace}},
+						{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace}},
 					},
 				}
 				for _, machine := range machineList.Items {
@@ -816,10 +823,7 @@ var _ = Describe("health check", func() {
 					Items: []machinev1alpha1.MachineDeployment{
 						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
-							}},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(2)},
 						},
 					},
 				}
