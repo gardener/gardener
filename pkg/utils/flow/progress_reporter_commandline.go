@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/signal"
 	"sync"
@@ -33,7 +34,7 @@ Running Tasks:
 
 var infoTpl = template.Must(template.New("").
 	Option("missingkey=zero").
-	Funcs(map[string]interface{}{
+	Funcs(map[string]any{
 		"red":   color.RedString,
 		"green": color.GreenString,
 	}).
@@ -116,9 +117,15 @@ func (p *progressReporterCommandline) ReportRetry(_ context.Context, id TaskID, 
 }
 
 func (p *progressReporterCommandline) printInfo() {
-	if err := infoTpl.Execute(p.out, map[string]interface{}{
-		"stat":     p.lastStats,
-		"lastErrs": p.lastErrs,
+	p.lock.Lock()
+	stat := p.lastStats
+	lastErrs := make(map[TaskID]error, len(p.lastErrs))
+	maps.Copy(lastErrs, p.lastErrs)
+	p.lock.Unlock()
+
+	if err := infoTpl.Execute(p.out, map[string]any{
+		"stat":     stat,
+		"lastErrs": lastErrs,
 	}); err != nil {
 		fmt.Fprintf(p.out, "Failed to print progress: %v", err)
 	}
