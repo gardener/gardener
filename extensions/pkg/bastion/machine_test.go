@@ -184,6 +184,23 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(details.MachineTypeName).To(DeepEqual("smallerMachine"))
 		})
 
+		It("should ignore unusable machines", func() {
+			cloudProfile.Spec.Bastion.MachineType = nil
+			cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
+				CPU:          resource.MustParse("1"),
+				GPU:          resource.MustParse("1"),
+				Name:         "smallerMachine",
+				Usable:       ptr.To(false),
+				Architecture: ptr.To(desired.Architecture),
+				Capabilities: gardencorev1beta1.Capabilities{
+					"architecture": []string{v1beta1constants.ArchitectureAMD64},
+				},
+			})
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details).To(DeepEqual(desired))
+		})
+
 		It("should only use supported version", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationPreview, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
 			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
