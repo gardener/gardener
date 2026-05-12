@@ -10,7 +10,12 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,42 +148,42 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"configmaps", "pods", "serviceaccounts", "services"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
-				APIGroups: []string{"", "events.k8s.io"},
+				APIGroups: []string{corev1.GroupName, eventsv1.GroupName},
 				Resources: []string{"events"},
 				Verbs:     []string{"create", "patch"},
 			},
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"namespaces", "secrets"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
-				APIGroups: []string{"apps"},
+				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{"daemonsets", "deployments", "statefulsets"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
-				APIGroups: []string{"apps"},
+				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{"replicasets"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
-				APIGroups: []string{"autoscaling"},
+				APIGroups: []string{autoscalingv1.GroupName},
 				Resources: []string{"horizontalpodautoscalers"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
-				APIGroups: []string{"batch"},
+				APIGroups: []string{batchv1.GroupName},
 				Resources: []string{"jobs"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
-				APIGroups: []string{"coordination.k8s.io"},
+				APIGroups: []string{coordinationv1.GroupName},
 				Resources: []string{"leases"},
 				Verbs:     []string{"create", "get", "list", "update"},
 			},
@@ -188,12 +193,12 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
-				APIGroups: []string{"networking.k8s.io"},
+				APIGroups: []string{networkingv1.GroupName},
 				Resources: []string{"ingresses"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
-				APIGroups: []string{"networking.k8s.io"},
+				APIGroups: []string{networkingv1.GroupName},
 				Resources: []string{"networkpolicies"},
 				Verbs:     []string{"list", "watch"},
 			},
@@ -218,7 +223,7 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				Verbs:     []string{"get", "patch", "update"},
 			},
 			{
-				APIGroups: []string{"policy"},
+				APIGroups: []string{policyv1.GroupName},
 				Resources: []string{"poddisruptionbudgets"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
@@ -254,12 +259,12 @@ func (o *openTelemetryOperator) role() *rbacv1.Role {
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups: []string{""},
+				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"configmaps"},
 				Verbs:     []string{"list", "patch", "create", "get", "watch"},
 			},
 			{
-				APIGroups: []string{"", "events.k8s.io"},
+				APIGroups: []string{corev1.GroupName, eventsv1.GroupName},
 				Resources: []string{"events"},
 				Verbs:     []string{"create", "patch"},
 			},
