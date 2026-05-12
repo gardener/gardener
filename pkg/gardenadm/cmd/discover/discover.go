@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -93,7 +94,7 @@ func run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		return fmt.Errorf("failed reading binding for shoot: %w", err)
 	}
-	backupBucket, backupEntry, err := backupResourcesForShoot(ctx, clientSet.Client(), shoot)
+	backupEntry, backupBucket, err := backupResourcesForShoot(ctx, clientSet.Client(), shoot)
 	if err != nil {
 		return fmt.Errorf("failed reading backup resources for shoot: %w", err)
 	}
@@ -228,43 +229,39 @@ func requiredExtensions(ctx context.Context, c client.Client, shoot *gardencorev
 	return botanist.ComputeExtensions(resources, true, managedInfrastructure)
 }
 
-func backupResourcesForShoot(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.BackupBucket, *gardencorev1beta1.BackupEntry, error) {
+func backupResourcesForShoot(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.BackupEntry, *gardencorev1beta1.BackupBucket, error) {
+	var (
+		backupEntry  *gardencorev1beta1.BackupEntry
+		backupBucket *gardencorev1beta1.BackupBucket
+	)
+
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := c.List(ctx, backupEntryList, client.InNamespace(shoot.Namespace)); err != nil {
-		return nil, nil, fmt.Errorf("failed listing BackupEntries in namespace %q: %w", shoot.Namespace, err)
+	if err := c.List(ctx, backupEntryList, client.InNamespace(shoot.Namespace),
+		client.MatchingFields{gardencore.BackupEntryShootRefName: shoot.Name, gardencore.BackupEntryShootRefNamespace: shoot.Namespace}); err != nil {
+		return nil, nil, fmt.Errorf("failed listing BackupEntries for Shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
-	var backupEntry *gardencorev1beta1.BackupEntry
-	for i := range backupEntryList.Items {
-		current := &backupEntryList.Items[i]
-
-		if current.Spec.ShootRef == nil {
-			continue
-		}
-		if current.Spec.ShootRef.Name != shoot.Name || current.Spec.ShootRef.Namespace != shoot.Namespace {
-			continue
-		}
-
-		if backupEntry != nil {
-			return nil, nil, fmt.Errorf("found more than one BackupEntry for Shoot %s", client.ObjectKeyFromObject(shoot))
-		}
-
-		backupEntry = current
+	if len(backupEntryList.Items) > 1 {
+		return nil, nil, fmt.Errorf("found more than one BackupEntry for Shoot %s", client.ObjectKeyFromObject(shoot))
+	}
+	if len(backupEntryList.Items) == 1 {
+		backupEntry = &backupEntryList.Items[0]
 	}
 
-	if backupEntry == nil {
-		return nil, nil, nil
+	backupBucketList := &gardencorev1beta1.BackupBucketList{}
+	if err := c.List(ctx, backupBucketList,
+		client.MatchingFields{gardencore.BackupBucketShootRefName: shoot.Name, gardencore.BackupBucketShootRefNamespace: shoot.Namespace}); err != nil {
+		return nil, nil, fmt.Errorf("failed listing BackupBuckets for Shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
-	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := c.Get(ctx, client.ObjectKey{Name: backupEntry.Spec.BucketName}, backupBucket); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, backupEntry, nil
-		}
-		return nil, nil, fmt.Errorf("failed getting BackupBucket %q: %w", backupEntry.Spec.BucketName, err)
+	if len(backupBucketList.Items) > 1 {
+		return nil, nil, fmt.Errorf("found more than one BackupBucket for Shoot %s", client.ObjectKeyFromObject(shoot))
+	}
+	if len(backupBucketList.Items) == 1 {
+		backupBucket = &backupBucketList.Items[0]
 	}
 
-	return backupBucket, backupEntry, nil
+	return backupEntry, backupBucket, nil
 }
 
 func getAndExportObject(ctx context.Context, c client.Client, fs afero.Afero, opts *Options, kind string, obj client.Object) error {

@@ -54,6 +54,11 @@ var _ = Describe("Discover", func() {
 
 		fakeClient = fakeclient.NewClientBuilder().
 			WithScheme(kubernetes.GardenScheme).
+			WithStatusSubresource(&gardencorev1beta1.BackupBucket{}).
+			WithIndex(&gardencorev1beta1.BackupEntry{}, core.BackupEntryShootRefName, indexer.BackupEntryShootRefNameIndexerFunc).
+			WithIndex(&gardencorev1beta1.BackupEntry{}, core.BackupEntryShootRefNamespace, indexer.BackupEntryShootRefNamespaceIndexerFunc).
+			WithIndex(&gardencorev1beta1.BackupBucket{}, core.BackupBucketShootRefName, indexer.BackupBucketShootRefNameIndexerFunc).
+			WithIndex(&gardencorev1beta1.BackupBucket{}, core.BackupBucketShootRefNamespace, indexer.BackupBucketShootRefNamespaceIndexerFunc).
 			WithIndex(&gardencorev1beta1.Project{}, core.ProjectNamespace, indexer.ProjectNamespaceIndexerFunc).
 			Build()
 		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
@@ -302,15 +307,22 @@ var _ = Describe("Discover", func() {
 
 		Context("for already existing Shoot", func() {
 			var (
-				backupBucketSecret *corev1.Secret
-				backupBucket       *gardencorev1beta1.BackupBucket
-				backupEntry        *gardencorev1beta1.BackupEntry
+				backupBucketSecret          *corev1.Secret
+				backupBucketGeneratedSecret *corev1.Secret
+				backupBucket                *gardencorev1beta1.BackupBucket
+				backupEntry                 *gardencorev1beta1.BackupEntry
 			)
 
 			BeforeEach(func() {
 				backupBucketSecret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-backup-secret",
+						Namespace: "garden",
+					},
+				}
+				backupBucketGeneratedSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-backup-bucket-generated-secret",
 						Namespace: "garden",
 					},
 				}
@@ -324,6 +336,12 @@ var _ = Describe("Discover", func() {
 							Kind:       "Secret",
 							Name:       backupBucketSecret.Name,
 							Namespace:  backupBucketSecret.Namespace,
+						},
+						ShootRef: &corev1.ObjectReference{
+							APIVersion: "core.gardener.cloud/v1beta1",
+							Kind:       "Shoot",
+							Name:       shoot.Name,
+							Namespace:  shoot.Namespace,
 						},
 					},
 				}
@@ -346,7 +364,16 @@ var _ = Describe("Discover", func() {
 				Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 				Expect(fakeClient.Create(ctx, backupBucketSecret)).To(Succeed())
+				Expect(fakeClient.Create(ctx, backupBucketGeneratedSecret)).To(Succeed())
 				Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
+
+				patch := client.MergeFrom(backupBucket.DeepCopy())
+				backupBucket.Status.GeneratedSecretRef = &corev1.SecretReference{
+					Name:      backupBucketGeneratedSecret.Name,
+					Namespace: backupBucketGeneratedSecret.Namespace,
+				}
+				Expect(fakeClient.Status().Patch(ctx, backupBucket, patch)).To(Succeed())
+
 				Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 			})
 
@@ -358,12 +385,14 @@ var _ = Describe("Discover", func() {
 
 				Eventually(func() string { return string(stdOut.Contents()) }).Should(SatisfyAll(
 					ContainSubstring("Exported Secret/"+backupBucketSecret.Name),
+					ContainSubstring("Exported Secret/"+backupBucketGeneratedSecret.Name),
 					ContainSubstring("Exported BackupBucket/"+backupBucket.Name),
 					ContainSubstring("Exported BackupEntry/"+backupEntry.Name),
 				))
 
 				for _, path := range []string{
 					fmt.Sprintf("secret-%s.yaml", backupBucketSecret.Name),
+					fmt.Sprintf("secret-%s.yaml", backupBucketGeneratedSecret.Name),
 					fmt.Sprintf("backupbucket-%s.yaml", backupBucket.Name),
 					fmt.Sprintf("backupentry-%s.yaml", backupEntry.Name),
 				} {
