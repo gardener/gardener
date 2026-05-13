@@ -41,6 +41,7 @@ var _ = Describe("NginxIngress", func() {
 		secondWildcardIngress = "*.world.seed"
 		istioLabelKey         = "my"
 		istioLabelValue       = "istio"
+		istioNamespace        = "istio-ingress"
 
 		c            client.Client
 		nginxIngress component.DeployWaiter
@@ -89,17 +90,18 @@ var _ = Describe("NginxIngress", func() {
 			configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
 
 			values = Values{
-				ClusterType:               component.ClusterTypeSeed,
-				TargetNamespace:           namespace,
-				IngressClass:              v1beta1constants.SeedNginxIngressClass,
-				PriorityClassName:         v1beta1constants.PriorityClassNameSeedSystem600,
-				ImageController:           imageController,
-				ImageDefaultBackend:       imageDefaultBackend,
-				ConfigData:                configMapData,
-				LoadBalancerAnnotations:   loadBalancerAnnotations,
-				VPAEnabled:                true,
-				Domains:                   []string{firstWildcardIngress, secondWildcardIngress},
-				IstioIngressGatewayLabels: map[string]string{istioLabelKey: istioLabelValue},
+				ClusterType:                  component.ClusterTypeSeed,
+				TargetNamespace:              namespace,
+				IngressClass:                 v1beta1constants.SeedNginxIngressClass,
+				PriorityClassName:            v1beta1constants.PriorityClassNameSeedSystem600,
+				ImageController:              imageController,
+				ImageDefaultBackend:          imageDefaultBackend,
+				ConfigData:                   configMapData,
+				LoadBalancerAnnotations:      loadBalancerAnnotations,
+				VPAEnabled:                   true,
+				Domains:                      []string{firstWildcardIngress, secondWildcardIngress},
+				IstioIngressGatewayLabels:    map[string]string{istioLabelKey: istioLabelValue},
+				IstioIngressGatewayNamespace: istioNamespace,
 			}
 		})
 
@@ -566,7 +568,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   exportTo:
-  - '*'
+  - istio-ingress
   host: nginx-ingress-controller.` + namespace + `.svc.cluster.local
   trafficPolicy:
     connectionPool:

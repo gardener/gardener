@@ -732,7 +732,7 @@ frontend:
 				},
 			},
 			Spec: istioapinetworkingv1beta1.DestinationRule{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Host:     "gardener-dashboard.some-namespace.svc.cluster.local",
 				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 					LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{

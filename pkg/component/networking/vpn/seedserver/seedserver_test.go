@@ -432,7 +432,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return &istionetworkingv1beta1.DestinationRule{
 				ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server", Namespace: namespace, ResourceVersion: "1"},
 				Spec: istioapinetworkingv1beta1.DestinationRule{
-					ExportTo: []string{"*"},
+					ExportTo: []string{istioNamespace},
 					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", "vpn-seed-server", namespace),
 					TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 						ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{

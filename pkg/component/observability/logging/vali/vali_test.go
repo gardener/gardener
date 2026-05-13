@@ -132,19 +132,20 @@ var _ = Describe("Vali", func() {
 					namespace,
 					fakeSecretManager,
 					Values{
-						Replicas:                1,
-						Storage:                 &storage,
-						ShootNodeLoggingEnabled: true,
-						ValiImage:               valiImage,
-						CuratorImage:            curatorImage,
-						InitLargeDirImage:       initLargeDirImage,
-						TelegrafImage:           telegrafImage,
-						KubeRBACProxyImage:      kubeRBACProxyImage,
-						WithRBACProxy:           true,
-						PriorityClassName:       priorityClassName,
-						ClusterType:             "shoot",
-						IngressHost:             valiHost,
-						IsGardenCluster:         false,
+						Replicas:                     1,
+						Storage:                      &storage,
+						ShootNodeLoggingEnabled:      true,
+						ValiImage:                    valiImage,
+						CuratorImage:                 curatorImage,
+						InitLargeDirImage:            initLargeDirImage,
+						TelegrafImage:                telegrafImage,
+						KubeRBACProxyImage:           kubeRBACProxyImage,
+						WithRBACProxy:                true,
+						PriorityClassName:            priorityClassName,
+						ClusterType:                  "shoot",
+						IngressHost:                  valiHost,
+						IstioIngressGatewayNamespace: "istio-ingress",
+						IsGardenCluster:              false,
 					},
 				)
 
@@ -1052,7 +1053,7 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 			Labels:    getLabels(),
 		},
 		Spec: istionetworkingv1alpha3.DestinationRule{
-			ExportTo: []string{"*"},
+			ExportTo: []string{"istio-ingress"},
 			Host:     "logging.shoot--foo--bar.svc.cluster.local",
 			TrafficPolicy: &istionetworkingv1alpha3.TrafficPolicy{
 				LoadBalancer: &istionetworkingv1alpha3.LoadBalancerSettings{

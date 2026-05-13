@@ -26,6 +26,7 @@ func NewPlutono(
 	wildcardCertName *string,
 	onlyDeployDataSourcesAndDashboards bool,
 	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	plutono.Interface,
 	error,
@@ -53,6 +54,7 @@ func NewPlutono(
 			IncludeIstioDashboards:             includeIstioDashboards,
 			IsGardenCluster:                    isGardenCluster,
 			IstioIngressGatewayLabels:          istioIngressGatewayLabels,
+			IstioIngressGatewayNamespace:       istioIngressGatewayNamespace,
 			IsWorkerless:                       isWorkerless,
 			OnlyDeployDataSourcesAndDashboards: onlyDeployDataSourcesAndDashboards,
 			PriorityClassName:                  priorityClassName,

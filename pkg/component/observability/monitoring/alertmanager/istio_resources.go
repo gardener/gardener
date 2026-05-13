@@ -119,7 +119,7 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 	}}, virtualService.Spec.Http...)
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: a.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, a.getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, a.getLabels(), []string{ingressNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

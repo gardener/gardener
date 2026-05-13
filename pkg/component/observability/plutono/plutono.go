@@ -115,6 +115,8 @@ type Values struct {
 	IncludeIstioDashboards bool
 	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
 	// IsGardenCluster specifies whether the cluster is garden cluster.
@@ -896,7 +898,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	}}, virtualService.Spec.Http...)
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), []string{p.values.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

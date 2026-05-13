@@ -156,12 +156,8 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 func (i *istioBasicAuthServer) getEnvoyFilter(
 	configPatches []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch,
 	ownerReference *metav1.OwnerReference,
+	ingressNamespace string,
 ) *istionetworkingv1alpha3.EnvoyFilter {
-	// Currently, all observability components are exposed via the same istio ingress gateway.
-	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
-
 	return &istionetworkingv1alpha3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            fmt.Sprintf("%s-%s%s", i.namespace, i.getPrefix(), name),
@@ -174,11 +170,12 @@ func (i *istioBasicAuthServer) getEnvoyFilter(
 	}
 }
 
-func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secretName string) (*istionetworkingv1beta1.DestinationRule, error) {
+func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secretName string, ingressNamespace string) (*istionetworkingv1beta1.DestinationRule, error) {
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer, Namespace: i.namespace}}
 	if err := istio.DestinationRuleWithTLSTermination(
 		destinationRule,
 		i.getLabels(),
+		[]string{ingressNamespace},
 		destinationHost,
 		destinationHost,
 		secretName,

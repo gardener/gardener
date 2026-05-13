@@ -636,7 +636,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   exportTo:
-  - '*'
+  - ""
   host: plutono.` + namespace + `.svc.cluster.local
   trafficPolicy:
     connectionPool:

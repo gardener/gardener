@@ -131,7 +131,7 @@ var _ = Describe("#SNI", func() {
 				ResourceVersion: "1",
 			},
 			Spec: istioapinetworkingv1beta1.DestinationRule{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-foo"},
 				Host:     hostName,
 				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 					ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
@@ -485,6 +485,8 @@ var _ = Describe("#SNI", func() {
 					TLSSecret:           wildcardTLSSecret,
 					Hosts:               wildcardHosts,
 				}
+
+				expectedDestinationRule.Spec.ExportTo = []string{"istio-bar", "istio-foo"}
 			})
 
 			It("should succeed deploying", func() {
@@ -648,6 +650,7 @@ var _ = Describe("#SNI", func() {
 					Hosts:               wildcardHosts,
 				}
 
+				expectedDestinationRule.Spec.ExportTo = []string{istioWildcardNamespace, istioNamespace}
 				expectedDestinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
 					UseClientProtocol: true,
 				}

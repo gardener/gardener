@@ -204,7 +204,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.nginxIngressController, err = r.newNginxIngressController(seed, c.istioDefaultLabels, seedIsGarden)
+	c.nginxIngressController, err = r.newNginxIngressController(seed, c.istioDefaultLabels, c.istioDefaultNamespace, seedIsGarden)
 	if err != nil {
 		return
 	}
@@ -255,11 +255,11 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(c.istioDefaultLabels)
+	c.vali, err = r.newVali(c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, seedIsGarden, c.istioDefaultLabels)
+	c.plutono, err = r.newPlutono(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, seedIsGarden, c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -283,7 +283,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, seedIsGarden, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret, c.istioDefaultLabels)
+	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, seedIsGarden, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret, c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -562,7 +562,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 	), nil
 }
 
-func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string) (component.Deployer, error) {
+func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string, istioIngressGatewayNamespace string) (component.Deployer, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
@@ -580,6 +580,7 @@ func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string) (compo
 		"",
 		false,
 		istioIngressGatewayLabels,
+		istioIngressGatewayNamespace,
 	)
 	if err != nil {
 		return nil, err
@@ -631,6 +632,7 @@ func (r *Reconciler) newPlutono(
 	authSecret, wildcardCertSecret *corev1.Secret,
 	seedIsGarden bool,
 	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	plutono.Interface,
 	error,
@@ -662,6 +664,7 @@ func (r *Reconciler) newPlutono(
 		wildcardCertName,
 		seedIsGarden,
 		istioIngressGatewayLabels,
+		istioIngressGatewayNamespace,
 	)
 }
 
@@ -728,6 +731,7 @@ func (r *Reconciler) newAggregatePrometheus(
 	secretsManager secretsmanager.Interface,
 	globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret,
 	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -754,10 +758,11 @@ func (r *Reconciler) newAggregatePrometheus(
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-shoot", 9090):                                                     v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		Ingress: &prometheus.IngressValues{
-			Host:                      seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
-			SecretsManager:            secretsManager,
-			SigningCA:                 v1beta1constants.SecretNameCASeed,
-			IstioIngressGatewayLabels: istioIngressGatewayLabels,
+			Host:                         seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
+			SecretsManager:               secretsManager,
+			SigningCA:                    v1beta1constants.SecretNameCASeed,
+			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
+			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
 		},
 	}
 
@@ -999,7 +1004,7 @@ func (r *Reconciler) newBackupBucket(log logr.Logger, seed *gardencorev1beta1.Se
 	)
 }
 
-func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultLabels map[string]string, seedIsGarden bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultLabels map[string]string, istioDefaultNamespace string, seedIsGarden bool) (component.DeployWaiter, error) {
 	providerConfig, err := getConfig(seed.GetInfo())
 	if err != nil {
 		return nil, err
@@ -1020,6 +1025,7 @@ func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultL
 		v1beta1constants.SeedNginxIngressClass,
 		[]string{seed.GetIngressFQDN("*")},
 		istioDefaultLabels,
+		istioDefaultNamespace,
 		seedIsGarden,
 		features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInSeed),
 	)

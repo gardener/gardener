@@ -120,13 +120,14 @@ type Values struct {
 	InitLargeDirImage  string
 	IsGardenCluster    bool
 
-	ClusterType               component.ClusterType
-	Replicas                  int32
-	PriorityClassName         string
-	IngressHost               string
-	IstioIngressGatewayLabels map[string]string
-	ShootNodeLoggingEnabled   bool
-	Storage                   *resource.Quantity
+	ClusterType                  component.ClusterType
+	Replicas                     int32
+	PriorityClassName            string
+	IngressHost                  string
+	IstioIngressGatewayLabels    map[string]string
+	IstioIngressGatewayNamespace string
+	ShootNodeLoggingEnabled      bool
+	Storage                      *resource.Quantity
 }
 
 // Interface is the interface for the Vali deployer.
@@ -399,7 +400,7 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 	}}
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), []string{v.values.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

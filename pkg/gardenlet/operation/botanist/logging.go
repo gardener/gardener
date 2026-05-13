@@ -161,9 +161,13 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 
 // DefaultVali returns a deployer for Vali.
 func (b *Botanist) DefaultVali() (vali.Interface, error) {
-	var istioLabels map[string]string
+	var (
+		istioLabels    map[string]string
+		istioNamespace string
+	)
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
+		istioNamespace = b.WildcardIstioNamespace()
 	}
 
 	return shared.NewVali(
@@ -178,6 +182,7 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		b.ComputeValiHost(),
 		false,
 		istioLabels,
+		istioNamespace,
 	)
 }
 
@@ -193,28 +198,33 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 		return nil, err
 	}
 
-	var istioLabels map[string]string
+	var (
+		istioLabels    map[string]string
+		istioNamespace string
+	)
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
+		istioNamespace = b.WildcardIstioNamespace()
 	}
 
 	return collector.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		collector.Values{
-			Image:                     collectorImage.String(),
-			KubeRBACProxyImage:        kubeRBACProxyImage.String(),
-			LokiEndpoint:              "http://" + valiconstants.ServiceName + ":" + strconv.Itoa(valiconstants.ValiPort) + valiconstants.PushEndpoint,
-			Replicas:                  b.Shoot.GetReplicas(1),
-			ShootNodeLoggingEnabled:   b.isShootNodeLoggingEnabled(),
-			IngressHost:               b.ComputeOpenTelemetryCollectorHost(),
-			SecretNameServerCA:        v1beta1constants.SecretNameCACluster,
-			PriorityClassName:         v1beta1constants.PriorityClassNameShootControlPlane100,
-			ValiHost:                  b.ComputeValiHost(),
-			ClusterType:               component.ClusterTypeShoot,
-			IsGardenCluster:           false,
-			IstioIngressGatewayLabels: istioLabels,
-			VictoriaLogsBackend:       features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			Image:                        collectorImage.String(),
+			KubeRBACProxyImage:           kubeRBACProxyImage.String(),
+			LokiEndpoint:                 "http://" + valiconstants.ServiceName + ":" + strconv.Itoa(valiconstants.ValiPort) + valiconstants.PushEndpoint,
+			Replicas:                     b.Shoot.GetReplicas(1),
+			ShootNodeLoggingEnabled:      b.isShootNodeLoggingEnabled(),
+			IngressHost:                  b.ComputeOpenTelemetryCollectorHost(),
+			SecretNameServerCA:           v1beta1constants.SecretNameCACluster,
+			PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane100,
+			ValiHost:                     b.ComputeValiHost(),
+			ClusterType:                  component.ClusterTypeShoot,
+			IsGardenCluster:              false,
+			IstioIngressGatewayLabels:    istioLabels,
+			IstioIngressGatewayNamespace: istioNamespace,
+			VictoriaLogsBackend:          features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 		},
 		b.SecretsManager,
 	), nil

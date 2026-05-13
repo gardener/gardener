@@ -142,7 +142,7 @@ func (p *prometheus) istioResources(ctx context.Context) ([]client.Object, error
 	}
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, p.getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, p.getLabels(), []string{p.values.Ingress.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

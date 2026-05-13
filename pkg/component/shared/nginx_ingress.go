@@ -31,6 +31,7 @@ func NewNginxIngress(
 	ingressClass string,
 	domains []string,
 	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
 	seedIsGarden bool,
 	disabled bool,
 ) (
@@ -47,20 +48,21 @@ func NewNginxIngress(
 	}
 
 	values := nginxingress.Values{
-		ImageController:           imageController.String(),
-		ImageDefaultBackend:       imageDefaultBackend.String(),
-		IngressClass:              ingressClass,
-		ConfigData:                config,
-		LoadBalancerAnnotations:   loadBalancerAnnotations,
-		LoadBalancerSourceRanges:  loadBalancerSourceRanges,
-		PriorityClassName:         priorityClassName,
-		VPAEnabled:                vpaEnabled,
-		TargetNamespace:           targetNamespace,
-		ClusterType:               clusterType,
-		ExternalTrafficPolicy:     externalTrafficPolicy,
-		Domains:                   domains,
-		IstioIngressGatewayLabels: istioIngressGatewayLabels,
-		SeedIsGarden:              seedIsGarden,
+		ImageController:              imageController.String(),
+		ImageDefaultBackend:          imageDefaultBackend.String(),
+		IngressClass:                 ingressClass,
+		ConfigData:                   config,
+		LoadBalancerAnnotations:      loadBalancerAnnotations,
+		LoadBalancerSourceRanges:     loadBalancerSourceRanges,
+		PriorityClassName:            priorityClassName,
+		VPAEnabled:                   vpaEnabled,
+		TargetNamespace:              targetNamespace,
+		ClusterType:                  clusterType,
+		ExternalTrafficPolicy:        externalTrafficPolicy,
+		Domains:                      domains,
+		IstioIngressGatewayLabels:    istioIngressGatewayLabels,
+		IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
+		SeedIsGarden:                 seedIsGarden,
 	}
 
 	nginx := nginxingress.New(c, namespaceName, values)

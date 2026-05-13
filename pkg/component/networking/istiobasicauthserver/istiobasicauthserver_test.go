@@ -171,7 +171,7 @@ metadata:
   namespace: some-namespace
 spec:
   exportTo:
-  - '*'
+  - ` + prefix + `istio-ingress
   host: ` + prefix + `istio-basic-auth-server.some-namespace.svc.cluster.local
   trafficPolicy:
     connectionPool:

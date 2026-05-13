@@ -815,7 +815,7 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 	destinationRule := v.emptyDestinationRule(idx)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, destinationRule, func() error {
 		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"*"},
+			ExportTo: []string{v.istioNamespaceFunc()},
 			Host:     fmt.Sprintf("%s.%s.svc.cluster.local", v.indexedName(idx), v.namespace),
 			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{

@@ -13,15 +13,16 @@ import (
 )
 
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
-func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost string) func() error {
-	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, destinationHost, &istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE})
+func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {
+	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, exportTo, destinationHost, &istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE})
 }
 
 // DestinationRuleWithTLSTermination returns a function setting the given attributes to a destination rule object.
-func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost, sniHost, caSecret string, mode istioapinetworkingv1beta1.ClientTLSSettings_TLSmode) func() error {
+func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost, sniHost, caSecret string, mode istioapinetworkingv1beta1.ClientTLSSettings_TLSmode) func() error {
 	return destinationRuleWithTrafficPolicy(
 		destinationRule,
 		labels,
+		exportTo,
 		destinationHost,
 		&istioapinetworkingv1beta1.LoadBalancerSettings{
 			LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
@@ -42,10 +43,11 @@ func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.D
 }
 
 // DestinationRuleWithLocalityPreferenceAndTLS returns a function setting the given attributes to a destination rule object.
-func DestinationRuleWithLocalityPreferenceAndTLS(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost string, tls *istioapinetworkingv1beta1.ClientTLSSettings) func() error {
+func DestinationRuleWithLocalityPreferenceAndTLS(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string, tls *istioapinetworkingv1beta1.ClientTLSSettings) func() error {
 	return destinationRuleWithTrafficPolicy(
 		destinationRule,
 		labels,
+		exportTo,
 		destinationHost,
 		&istioapinetworkingv1beta1.LoadBalancerSettings{
 			LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
@@ -65,6 +67,7 @@ func DestinationRuleWithLocalityPreferenceAndTLS(destinationRule *istionetworkin
 func destinationRuleWithTrafficPolicy(
 	destinationRule *istionetworkingv1beta1.DestinationRule,
 	labels map[string]string,
+	exportTo []string,
 	destinationHost string,
 	loadbalancer *istioapinetworkingv1beta1.LoadBalancerSettings,
 	outlierDetection *istioapinetworkingv1beta1.OutlierDetection,
@@ -74,7 +77,7 @@ func destinationRuleWithTrafficPolicy(
 	return func() error {
 		destinationRule.Labels = labels
 		destinationRule.Spec = istioapinetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"*"},
+			ExportTo: exportTo,
 			Host:     destinationHost,
 			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{

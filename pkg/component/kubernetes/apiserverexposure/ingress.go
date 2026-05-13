@@ -71,7 +71,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 
 	destinationHost := kubernetesutils.FQDNForService(i.values.ServiceName, serviceNamespace)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), destinationHost, &tlsMode)); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, destinationHost, &tlsMode)); err != nil {
 		return err
 	}
 

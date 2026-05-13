@@ -428,7 +428,7 @@ var _ = Describe("Alertmanager", func() {
 					OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
 					Tls:              &istionetworkingv1alpha3.ClientTLSSettings{},
 				},
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-ingress"},
 			},
 		}
 		tlsSecret = &corev1.Secret{

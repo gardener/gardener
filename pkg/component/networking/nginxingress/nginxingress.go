@@ -101,6 +101,8 @@ type Values struct {
 	Domains []string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 	// SeedIsGarden controls whether only the Istio VirtualService and Gateway resources should be managed.
 	// In this case, it is assumed that this nginx-ingress-controller is already deployed in the cluster and managed by
 	// gardener-operator. This flag only has an effect if the ClusterType is Seed.
@@ -647,7 +649,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		destinationHost := kubernetesutils.FQDNForService(serviceController.Name, serviceController.Namespace)
 		destinationRule = &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}
-		if err := istio.DestinationRuleWithLocalityPreference(destinationRule, n.getLabels(LabelValueController, false), destinationHost)(); err != nil {
+		if err := istio.DestinationRuleWithLocalityPreference(destinationRule, n.getLabels(LabelValueController, false), []string{n.values.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 			return nil, err
 		}
 

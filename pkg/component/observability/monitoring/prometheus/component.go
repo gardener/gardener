@@ -189,6 +189,8 @@ type IngressValues struct {
 	IsGardenCluster bool
 	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface

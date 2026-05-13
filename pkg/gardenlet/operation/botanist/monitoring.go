@@ -97,9 +97,13 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		externalLabels = utils.MergeStringMaps(externalLabels, b.Config.Monitoring.Shoot.ExternalLabels)
 	}
 
-	var istioLabels map[string]string
+	var (
+		istioLabels    map[string]string
+		istioNamespace string
+	)
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
+		istioNamespace = b.WildcardIstioNamespace()
 	}
 
 	values := prometheus.Values{
@@ -136,6 +140,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			SigningCA:                         v1beta1constants.SecretNameCACluster,
 			BlockManagementAndTargetAPIAccess: true,
 			IstioIngressGatewayLabels:         istioLabels,
+			IstioIngressGatewayNamespace:      istioNamespace,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{
 			ServiceAccountName: shootprometheus.ServiceAccountName,

@@ -513,7 +513,7 @@ honor_labels: true`
 					OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
 					Tls:              &istionetworkingv1alpha3.ClientTLSSettings{},
 				},
-				ExportTo: []string{"*"},
+				ExportTo: []string{""},
 			},
 		}
 		tlsSecret = &corev1.Secret{
