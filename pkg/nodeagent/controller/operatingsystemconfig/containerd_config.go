@@ -62,6 +62,13 @@ var (
 			cniPluginPath:      {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
 			cniPluginsPaths:    {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"},
 		},
+		4: {
+			registryConfigPath: {"plugins", "io.containerd.cri.v1.images", "registry", "config_path"},
+			sandboxImagePath:   {"plugins", "io.containerd.cri.v1.images", "pinned_images", "sandbox"},
+			cgroupDriverPath:   {"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			cniPluginPath:      {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
+			cniPluginsPaths:    {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"},
+		},
 	}
 
 	// pluginPathReplacements is a map that contains replacements for paths brought in through an osc plugin config
@@ -84,7 +91,7 @@ func getContainerdConfigFileVersion(config map[string]any) (containerdConfigFile
 		return 0, fmt.Errorf("cannot assert containerd config file version \"%v\" as an int64", version)
 	}
 
-	if i < 1 || i > 3 {
+	if i < 1 || i > 4 {
 		return 0, fmt.Errorf("unsupported containerd config file version %d", i)
 	}
 
@@ -302,7 +309,7 @@ func replaceConfigPathPrefix(path, prefix, replace structuredmap.Path) structure
 }
 
 func replacePluginPath(path structuredmap.Path, replacementMap replacementMap, version containerdConfigFileVersion) structuredmap.Path {
-	if version != 3 {
+	if version < 3 {
 		return path
 	}
 
