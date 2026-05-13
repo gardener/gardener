@@ -529,7 +529,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should correctly compute the result for a shoot", func() {
-			Expect(computeKindTypesForShoots(ctx, log, fakeClient, seed, SeedKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
+			Expect(computeKindTypesForHostedShoots(ctx, log, fakeClient, seed, SeedKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
 				// seed types
 				extensionsv1alpha1.BackupBucketResource+"/"+type8,
 				extensionsv1alpha1.BackupEntryResource+"/"+type8,
@@ -588,7 +588,7 @@ var _ = Describe("Reconciler", func() {
 				},
 			}
 
-			Expect(computeKindTypesForShoots(ctx, log, fakeClient, seed, SeedKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
+			Expect(computeKindTypesForHostedShoots(ctx, log, fakeClient, seed, SeedKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
 				// seed types
 				extensionsv1alpha1.BackupBucketResource+"/"+type8,
 				extensionsv1alpha1.BackupEntryResource+"/"+type8,
@@ -610,7 +610,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("for self-hosted shoots", func() {
 			It("should correctly compute the result", func() {
-				Expect(computeKindTypesForShoots(ctx, log, fakeClient, shoot3, ShootKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
+				Expect(computeKindTypesForHostedShoots(ctx, log, fakeClient, shoot3, ShootKind, controllerRegistrationList, shootList)).To(Equal(sets.New(
 					extensionsv1alpha1.ControlPlaneResource+"/"+type6,
 					extensionsv1alpha1.InfrastructureResource+"/"+type6,
 					extensionsv1alpha1.WorkerResource+"/"+type6,
@@ -624,7 +624,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should correctly compute the result", func() {
 				shootWithDeletionTimestamp := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{}}}
-				Expect(computeKindTypesForShoots(ctx, log, fakeClient, shootWithDeletionTimestamp, ShootKind, controllerRegistrationList, shootList)).To(BeEmpty())
+				Expect(computeKindTypesForHostedShoots(ctx, log, fakeClient, shootWithDeletionTimestamp, ShootKind, controllerRegistrationList, shootList)).To(BeEmpty())
 			})
 		})
 	})

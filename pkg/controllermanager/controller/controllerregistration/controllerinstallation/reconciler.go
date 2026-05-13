@@ -124,11 +124,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 						Union(computeKindTypesForBackupEntries(log, backupEntryList, backupBucketNameToObject))
 	)
 
-	wantedKindTypeCombinationForShoots, err := computeKindTypesForShoots(ctx, log, r.Client, obj, r.Kind, controllerRegistrationList, shootList)
+	wantedKindTypeCombinationForHostedShoots, err := computeKindTypesForHostedShoots(ctx, log, r.Client, obj, r.Kind, controllerRegistrationList, shootList)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed computing kind/types for shoots: %w", err)
 	}
-	wantedKindTypeCombinations = wantedKindTypeCombinations.Union(wantedKindTypeCombinationForShoots)
+	wantedKindTypeCombinations = wantedKindTypeCombinations.Union(wantedKindTypeCombinationForHostedShoots)
 
 	// selfHostedShoot is non-nil when the seed being reconciled is a self-hosted shoot cluster. In that case the
 	// shoot reconciler already manages ControllerInstallations with .spec.shootRef for this shoot. The seed reconciler
@@ -136,15 +136,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// on this seed and not independently needed by the seed itself) to avoid creating duplicate ControllerInstallations
 	// for them. Kind/types needed by both the self-hosted shoot and hosted shoots or the seed itself remain so that
 	// the seed reconciler can set .spec.seedRef on the existing shoot-owned ControllerInstallations.
-	var selfHostedShoot *gardencorev1beta1.Shoot
-	var seedKindTypes sets.Set[string]
+	var (
+		selfHostedShoot                  *gardencorev1beta1.Shoot
+		wantedKindTypeCombinationForSeed sets.Set[string]
+	)
+
 	if r.Kind == SeedKind {
 		seed, ok := obj.(*gardencorev1beta1.Seed)
 		if !ok {
 			return reconcile.Result{}, fmt.Errorf("cannot convert object of type %T to *gardencorev1beta1.Seed", obj)
 		}
-		seedKindTypes = computeKindTypesForSeed(seed, controllerRegistrationList)
-		wantedKindTypeCombinations = wantedKindTypeCombinations.Union(seedKindTypes)
+		wantedKindTypeCombinationForSeed = computeKindTypesForSeed(seed, controllerRegistrationList)
+		wantedKindTypeCombinations = wantedKindTypeCombinations.Union(wantedKindTypeCombinationForSeed)
 
 		if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster) {
 			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: v1beta1constants.GardenNamespace}}
@@ -174,13 +177,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, fmt.Errorf("failed listing BackupEntries for self-hosted shoot: %w", err)
 		}
 
-		shootKindTypeCombinations := sets.New[string]().
+		wantedKindTypeCombinationForSelfHostedShoot := sets.New[string]().
 			Union(computeKindTypesForBackupBuckets(shootBackupBucketNameToObject, selfHostedShoot, ShootKind)).
 			Union(computeKindTypesForBackupEntries(log, shootBackupEntryList, shootBackupBucketNameToObject)).
 			Union(gardenerutils.ComputeRequiredExtensionsForShoot(selfHostedShoot, nil, controllerRegistrationList, nil, nil))
-		wantedKindTypeCombinations = wantedKindTypeCombinations.Difference(shootKindTypeCombinations.Difference(wantedKindTypeCombinationForShoots).Difference(seedKindTypes))
 
-		shootNeededRegistrationNames = registrationNamesForKindTypes(shootKindTypeCombinations, controllerRegistrations)
+		// Subtract kind/types that are exclusively needed by the self-hosted shoot (not shared with hosted
+		// shoots or the seed) since they must not be installed on the hosting seed.
+		kindTypesExclusivelyNeededBySelfHostedShoot := wantedKindTypeCombinationForSelfHostedShoot.
+			Difference(wantedKindTypeCombinationForHostedShoots).
+			Difference(wantedKindTypeCombinationForSeed)
+		wantedKindTypeCombinations = wantedKindTypeCombinations.Difference(kindTypesExclusivelyNeededBySelfHostedShoot)
+
+		shootNeededRegistrationNames = registrationNamesForKindTypes(wantedKindTypeCombinationForSelfHostedShoot, controllerRegistrations)
 	}
 
 	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), obj, r.Kind, selfHostedShoot)
@@ -245,9 +254,9 @@ func computeKindTypesForBackupEntries(
 	return wantedKindTypeCombinations
 }
 
-// computeKindTypesForShoots computes the list of wanted kind/type combinations for extension resources based on the
+// computeKindTypesForHostedShoots computes the list of wanted kind/type combinations for extension resources based on the
 // list of existing Shoot resources.
-func computeKindTypesForShoots(
+func computeKindTypesForHostedShoots(
 	ctx context.Context,
 	log logr.Logger,
 	reader client.Reader,

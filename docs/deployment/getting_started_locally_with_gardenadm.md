@@ -319,7 +319,7 @@ You can also observe that the self-hosted shoot cluster is now registered as a s
 ```shell
 kubectl --kubeconfig=./dev-setup/kubeconfigs/virtual-garden/kubeconfig get shoots -A
 NAMESPACE   NAME   CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION   STATUS    AGE
-garden      root   local          local      local    1.33.0        Awake         <pending>        healthy   42m
+garden      root   local          local      local    1.35.0        Awake         <pending>        healthy   42m
 ```
 
 ## Promoting the Self-Hosted Shoot to a Seed
@@ -355,6 +355,9 @@ root   Ready    Reconcile Succeeded (100%)   local      local    37m   vX.Y.Z-de
 Once the `Seed` is ready, you can create shoot clusters on top of it.
 
 ### Creating a (Hosted) `Shoot` Cluster
+
+> ![NOTE]
+> The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 In order to create a first (hosted) shoot cluster, just run:
 

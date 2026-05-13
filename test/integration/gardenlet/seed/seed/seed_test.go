@@ -1153,7 +1153,6 @@ var _ = Describe("Seed controller tests", func() {
 					}).WithTimeout(4 * time.Minute).Should(BeNotFoundError())
 				})
 			})
-
 		})
 	})
 })
