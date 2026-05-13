@@ -49,7 +49,6 @@ OIDC_METADATA              := $(TOOLS_BIN_DIR)/oidcmeta
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
-VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 TYPOS                      := $(TOOLS_BIN_DIR)/typos
 GOBUILDCACHE               := $(TOOLS_BIN_DIR)/gobuildcache
 
@@ -78,8 +77,6 @@ PROTOC_VERSION ?= v35.1
 SKAFFOLD_VERSION ?= v2.22.0
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.53.3
-# renovate: datasource=github-releases depName=ironcore-dev/vgopath
-VGOPATH_VERSION ?= v0.1.10
 # renovate: datasource=github-releases depName=crate-ci/typos
 TYPOS_VERSION ?= v1.47.2
 GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
@@ -261,10 +258,6 @@ $(SKAFFOLD): $(call tool_version_file,$(SKAFFOLD),$(SKAFFOLD_VERSION))
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(SYSTEM_NAME)_$(SYSTEM_ARCH)
 	chmod +x $(YQ)
-
-# TODO(LucaBernstein): Remove VGOPATH after gardener/gardener@v1.142 has been released.
-$(VGOPATH): $(call tool_version_file,$(VGOPATH),$(VGOPATH_VERSION))
-	go build -o $(VGOPATH) github.com/ironcore-dev/vgopath
 
 $(GOBUILDCACHE): $(call tool_version_file,$(GOBUILDCACHE),$(GOBUILDCACHE_VERSION))
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/saracen/gobuildcache@$(GOBUILDCACHE_VERSION)
