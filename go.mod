@@ -15,7 +15,6 @@ require (
 	github.com/docker/cli v29.5.3+incompatible
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.7.0
-	github.com/elastic/crd-ref-docs v0.3.0
 	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/fatih/color v1.19.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
@@ -60,7 +59,7 @@ require (
 	golang.org/x/crypto v0.53.0
 	golang.org/x/text v0.38.0
 	golang.org/x/time v0.15.0
-	golang.org/x/tools v0.46.0
+	golang.org/x/tools v0.46.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.11
@@ -77,7 +76,6 @@ require (
 	k8s.io/client-go v0.35.5
 	k8s.io/cloud-provider v0.35.5
 	k8s.io/cluster-bootstrap v0.35.5
-	k8s.io/code-generator v0.35.5
 	k8s.io/component-base v0.35.5
 	k8s.io/component-helpers v0.35.5
 	k8s.io/klog/v2 v2.140.0
@@ -90,7 +88,6 @@ require (
 	k8s.io/pod-security-admission v0.35.5
 	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
 	sigs.k8s.io/controller-runtime v0.23.3
-	sigs.k8s.io/controller-tools v0.20.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -325,7 +322,6 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260610154732-fb80ec83bdd9 // indirect
 	golang.org/x/term v0.44.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
@@ -338,7 +334,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
 	k8s.io/controller-manager v0.35.5 // indirect
-	k8s.io/gengo/v2 v2.0.0-20251215205346-5ee0d033ba5b // indirect
 	k8s.io/kms v0.35.5 // indirect
 	k8s.io/sample-controller v0.34.3 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect

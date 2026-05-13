@@ -108,6 +108,7 @@ docker-push:
 
 LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
 PKG_APIS_DIR := $(REPO_ROOT)/pkg/apis
+TOOLS_MOD_DIR := $(REPO_ROOT)/hack/tools/mod
 
 .PHONY: tidy
 tidy:
@@ -116,6 +117,7 @@ tidy:
 	@GO111MODULE=on go mod tidy
 	@cd $(LOGCHECK_DIR); go mod tidy
 	@cd $(PKG_APIS_DIR); go mod tidy
+	@cd $(TOOLS_MOD_DIR); go mod tidy
 
 .PHONY: clean
 clean:
