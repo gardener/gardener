@@ -282,6 +282,9 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	if vpnVPAUpdateDisabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNVPAUpdateDisabled]); err == nil {
 		shoot.VPNVPAUpdateDisabled = vpnVPAUpdateDisabled
 	}
+	if autoMTU, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNAutoMTU]); err == nil {
+		shoot.VPNAutoMTU = &autoMTU
+	}
 
 	shoot.WantsClusterAutoscaler = v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 
