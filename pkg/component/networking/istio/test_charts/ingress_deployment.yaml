@@ -1,6 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+    resources.gardener.cloud/deletion-propagation-on-invalid-update: "Orphan"
   name: istio-ingressgateway
   namespace: test-ingress
   labels:

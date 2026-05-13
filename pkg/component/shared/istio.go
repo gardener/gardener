@@ -52,6 +52,7 @@ func NewIstio(
 	priorityClassName string,
 	istiodEnabled bool,
 	labels map[string]string,
+	podLabels map[string]string, // TODO(maboehm): Remove this parameter after one release (v1.143)
 	networkPolicyLabels []string,
 	lbAnnotations map[string]string,
 	loadBalancerClass *string,
@@ -102,6 +103,7 @@ func NewIstio(
 		Ports:                              servicePorts,
 		LoadBalancerIP:                     serviceExternalIP,
 		Labels:                             labels,
+		PodLabels:                          podLabels,
 		NetworkPolicyLabels:                policyLabels,
 		Namespace:                          namePrefix + ingressNamespace,
 		PriorityClassName:                  priorityClassName,
@@ -222,7 +224,7 @@ const (
 	zoneInfix          = "--zone--"
 )
 
-// GetIstioZoneLabels returns the labels to be used for the seed istio with the mandatory zone label set.
+// GetIstioZoneLabels returns the labels to be used for istio with the mandatory zone label set.
 func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]string {
 	// Use "istio" for the default gateways and v1beta1constants.LabelExposureClassHandlerName for exposure classes
 	zonekey := istio.DefaultZoneKey
@@ -236,10 +238,7 @@ func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]strin
 	if zone != nil {
 		zoneValue = fmt.Sprintf("%s%s%s", zoneValue, zoneInfix, *zone)
 	}
-	return utils.MergeStringMaps(labels, map[string]string{
-		zonekey:       zoneValue,
-		istio.RoleKey: istio.RoleSeed,
-	})
+	return utils.MergeStringMaps(labels, map[string]string{zonekey: zoneValue})
 }
 
 // IsZonalIstioExtension indicates whether the namespace related to the given labels is a zonal istio extension.
