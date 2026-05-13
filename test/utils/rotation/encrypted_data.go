@@ -29,8 +29,17 @@ type EncryptedDataVerifier struct {
 // Before is called before the rotation is started.
 func (v *EncryptedDataVerifier) Before(ctx context.Context) {
 	By("Verify encrypted data before credentials rotation")
-	targetClient, err := v.NewTargetClientFunc(ctx)
-	Expect(err).NotTo(HaveOccurred())
+
+	var (
+		targetClient kubernetes.Interface
+		err          error
+	)
+
+	Eventually(func(g Gomega) {
+		targetClient, err = v.NewTargetClientFunc(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
+	}).Should(Succeed())
+
 	VerifyEncryptedData(ctx, targetClient.Client(), v.Resources)
 }
 
@@ -46,8 +55,17 @@ func (v *EncryptedDataVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *EncryptedDataVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify encrypted data after preparing credentials rotation")
-	targetClient, err := v.NewTargetClientFunc(ctx)
-	Expect(err).NotTo(HaveOccurred())
+
+	var (
+		targetClient kubernetes.Interface
+		err          error
+	)
+
+	Eventually(func(g Gomega) {
+		targetClient, err = v.NewTargetClientFunc(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
+	}).Should(Succeed())
+
 	VerifyEncryptedData(ctx, targetClient.Client(), v.Resources)
 }
 
@@ -57,7 +75,30 @@ func (v *EncryptedDataVerifier) ExpectCompletingStatus(_ Gomega) {}
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *EncryptedDataVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify encrypted data after credentials rotation")
-	targetClient, err := v.NewTargetClientFunc(ctx)
-	Expect(err).NotTo(HaveOccurred())
+
+	var (
+		targetClient kubernetes.Interface
+		err          error
+	)
+
+	Eventually(func(g Gomega) {
+		targetClient, err = v.NewTargetClientFunc(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
+	}).Should(Succeed())
+
 	VerifyEncryptedData(ctx, targetClient.Client(), v.Resources)
+}
+
+// VerifyEncryptedData creates and reads encrypted resources in the target cluster to verify encryption is working.
+func VerifyEncryptedData(ctx context.Context, c client.Client, resources []EncryptedResource) {
+	for _, resource := range resources {
+		obj := resource.NewObject()
+		Eventually(func(g Gomega) {
+			g.Expect(c.Create(ctx, obj)).To(Succeed())
+		}).Should(Succeed(), "creating resource should succeed for "+client.ObjectKeyFromObject(obj).String())
+
+		Eventually(func(g Gomega) {
+			g.Expect(c.List(ctx, resource.NewEmptyList())).To(Succeed())
+		}).Should(Succeed(), "reading all encrypted resources should succeed")
+	}
 }
