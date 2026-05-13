@@ -728,6 +728,9 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
+	destinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+		UseClientProtocol: true,
+	}
 
 	return []client.Object{tlsSecretInIstioNamespace, gateway, virtualService, destinationRule}, nil
 }
