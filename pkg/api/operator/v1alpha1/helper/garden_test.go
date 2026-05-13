@@ -454,11 +454,21 @@ var _ = Describe("helper", func() {
 							},
 						},
 					},
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						Gardener: operatorv1alpha1.Gardener{
+							DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
+								Domain: &operatorv1alpha1.DNSDomain{
+									Name:     "discovery.local.gardener.cloud",
+									Provider: ptr.To("primary"),
+								},
+							},
+						},
+					},
 				},
 			}
 		})
 
-		It("should return the ingress wildcard domains", func() {
+		It("should return the ingress wildcard domains only", func() {
 			Expect(GetIngressWildcardDomains(garden)).To(ConsistOf(
 				operatorv1alpha1.DNSDomain{
 					Name:     "*.ingress.local.gardener.cloud",
@@ -471,7 +481,7 @@ var _ = Describe("helper", func() {
 			))
 		})
 	})
-	// foo
+
 	Describe("#GetAllIngressDomains", func() {
 		var garden *operatorv1alpha1.Garden
 
