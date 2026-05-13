@@ -10,17 +10,22 @@ on:
         description: |
           the mode to use. either `snapshot` or `release`. Will affect effective version, as well
           as target-oci-registry.
+  pull_request:
+    branches:
+      - master
+      - 'release-v*'
 
 jobs:
   prepare:
     uses: gardener/cc-utils/.github/workflows/prepare.yaml@v1
     with:
-      mode: ${{ inputs.mode }}
+      mode: ${{ inputs.mode || 'snapshot' }}
     permissions:
       id-token: write
 
   tests:
     runs-on: ${{ github.repository_owner == 'gardener' && 'ubuntu-latest-large' || 'ubuntu-latest' }}
+    if: github.event_name != 'pull_request'
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
       - uses: gardener/cc-utils/.github/actions/setup-git-identity@v1
@@ -57,6 +62,7 @@ jobs:
 
   sast-lint:
     uses: gardener/cc-utils/.github/workflows/sastlint-ocm.yaml@v1
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
     with:
@@ -74,6 +80,7 @@ jobs:
 
   oci-images:
     name: Build OCI-Images
+    if: ${{ always() && needs.prepare.result == 'success' && needs.tests.result != 'failure' && needs.sast-lint.result != 'failure' }}
     needs:
       - prepare
       - tests
@@ -123,9 +130,11 @@ jobs:
       oci-platforms: linux/amd64,linux/arm64
       ocm-labels:
       extra-tags: latest
+      push: ${{ github.event_name != 'pull_request' && 'if-possible' || 'never' }}
 
   helmcharts:
     name: Build Helmcharts
+    if: github.event_name != 'pull_request'
     needs:
       - prepare
       - oci-images
@@ -169,6 +178,7 @@ jobs:
       ocm-mappings: ${{ toJSON(matrix.args.ocm-mappings) }}
 
   gardenadm:
+    if: ${{ always() && needs.tests.result != 'failure' && needs.sast-lint.result != 'failure' }}
     permissions:
       contents: read
     needs:
@@ -249,6 +259,7 @@ jobs:
 
           unlink ${outpath}
       - uses: gardener/cc-utils/.github/actions/export-ocm-fragments@v1
+        if: github.event_name != 'pull_request'
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
