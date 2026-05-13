@@ -7,7 +7,7 @@ package managedresource
 import (
 	"sort"
 
-	"helm.sh/helm/v3/pkg/releaseutil"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
