@@ -217,8 +217,10 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 	return data
 }
 
+var utf8bom = []byte{0xEF, 0xBB, 0xBF}
+
 // loadEmbeddedFS is a copy of helm.sh/helm/v4/pkg/chart/v2/loader.LoadDir with the difference that it uses an embed.FS.
-// Keep this func in sync with https://github.com/helm/helm/blob/v3.14.2/pkg/chart/loader/directory.go#L43-L120.
+// Keep this func in sync with https://github.com/helm/helm/blob/main/pkg/chart/v2/loader/directory.go
 func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, error) {
 	var (
 		rules = ignore.Empty()
@@ -233,6 +235,7 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 
 		rules = r
 	}
+	rules.AddDefaults()
 
 	if err := fs.WalkDir(embeddedFS, chartPath, func(path string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
@@ -274,10 +277,16 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 			return fmt.Errorf("cannot load irregular file %s as it has file mode type bits set", path)
 		}
 
+		if fileInfo.Size() > archive.MaxDecompressedFileSize {
+			return fmt.Errorf("chart file %q is larger than the maximum file size %d", fileInfo.Name(), archive.MaxDecompressedFileSize)
+		}
+
 		data, err := embeddedFS.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("error reading %s: %s", normalizedPath, err)
+			return fmt.Errorf("error reading %s: %w", normalizedPath, err)
 		}
+		data = bytes.TrimPrefix(data, utf8bom)
+
 		files = append(files, &archive.BufferedFile{Name: normalizedPath, Data: data})
 
 		return nil
