@@ -42,7 +42,7 @@ DefaultDependencies=no
 [Service]
 Type=simple
 Restart=always
-RestartSec=15
+RestartSec=5
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
@@ -79,7 +79,7 @@ DefaultDependencies=no
 [Service]
 Type=simple
 Restart=always
-RestartSec=15
+RestartSec=5
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
@@ -107,34 +107,42 @@ const (
 	enableScript = `#!/bin/bash -eu
 set -e
 
-# Unmask and enable sshd service if not enabled
-if ! systemctl is-enabled --quiet sshd.service ; then
-    systemctl unmask sshd.service
-    # When sshd.service is disabled on gardenlinux the service is deleted
-    # On gardenlinux sshd.service is enabled by enabling ssh.service
-    if ! systemctl enable sshd.service ; then
-        systemctl enable ssh.service
+while true; do
+    # Unmask and enable sshd service if not enabled
+    if ! systemctl is-enabled --quiet sshd.service ; then
+        systemctl unmask sshd.service
+        # When sshd.service is disabled on gardenlinux the service is deleted
+        # On gardenlinux sshd.service is enabled by enabling ssh.service
+        if ! systemctl enable sshd.service ; then
+            systemctl enable ssh.service
+        fi
     fi
-fi
 
-# Start sshd service if not active
-if ! systemctl is-active --quiet sshd.service ; then
-    systemctl start sshd.service
-fi
+    # Start sshd service if not active
+    if ! systemctl is-active --quiet sshd.service ; then
+        systemctl start sshd.service
+    fi
+
+    sleep 15
+done
 `
 	disableScript = `#!/bin/bash -eu
 set -e
 
-# Disable and mask sshd service if not masked
-if [ "$(systemctl is-enabled sshd.service)" != "masked" ] ; then
-    systemctl disable sshd.service || true
-    # Using the --now flag stops the selected service
-    systemctl mask --now sshd.service
-fi
+while true; do
+    # Disable and mask sshd service if not masked
+    if [ "$(systemctl is-enabled sshd.service)" != "masked" ] ; then
+        systemctl disable sshd.service || true
+        # Using the --now flag stops the selected service
+        systemctl mask --now sshd.service
+    fi
 
-# Stopping the sshd service with the --now flag does
-# not terminate already established connections
-# Kill all currently established orphaned ssh connections on the host
-pkill -P 1 -x sshd || true
+    # Stopping the sshd service with the --now flag does
+    # not terminate already established connections
+    # Kill all currently established orphaned ssh connections on the host
+    pkill -P 1 -x sshd || true
+
+    sleep 15
+done
 `
 )

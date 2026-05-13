@@ -92,7 +92,7 @@ DefaultDependencies=no
 [Service]
 Type=simple
 Restart=always
-RestartSec=15
+RestartSec=5
 ExecStart=` + pathScript + `
 [Install]
 WantedBy=multi-user.target`),
