@@ -22,10 +22,6 @@ REPO_ROOT                                  := $(shell dirname $(realpath $(lastw
 TARGET_PLATFORMS                           ?= linux/$(shell go env GOARCH)
 PRINT_HELP                                 ?=
 
-# Disable globally go workspaces until https://github.com/gardener/gardener/issues/8811 is resolved.
-# This resolves issues presented with error like 'pattern ./...: directory prefix . does not contain modules listed in go.work or their selected dependencies'
-export GOWORK=off
-
 ifndef ARTIFACTS
 	export ARTIFACTS=/tmp/artifacts
 endif
@@ -115,7 +111,8 @@ PKG_APIS_DIR := $(REPO_ROOT)/pkg/apis
 
 .PHONY: tidy
 tidy:
-	@unset GOWORK; go work use
+	@go work use
+	@go work sync
 	@GO111MODULE=on go mod tidy
 	@cd $(LOGCHECK_DIR); go mod tidy
 	@cd $(PKG_APIS_DIR); go mod tidy

@@ -19,7 +19,7 @@ set -o pipefail
 
 echo "> Check Imports"
 
-this_module=$(go list -m)
+this_module=$(go mod edit -json | jq -r .Module.Path)
 
 packages=()
 for p in "$@"; do

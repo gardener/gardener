@@ -6,8 +6,6 @@
 
 set -e
 
-export GOWORK=off
-
 skaffold_file=""
 binary_name=""
 skaffold_config_name=""
@@ -62,7 +60,7 @@ echo "$skaffold_yaml" |\
   uniq > "$path_current_skaffold_dependencies"
 
 echo "cmd/$binary_name" > "$path_actual_dependencies"
-module_name=$(go list -m)
+module_name=$(go mod edit -json | jq -r .Module.Path)
 module_prefix="$module_name/"
 go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
   grep "$module_prefix" |\

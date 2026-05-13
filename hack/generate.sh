@@ -57,7 +57,7 @@ parse_flags() {
   done
 }
 
-root_module=$(cd "$REPO_ROOT"; go list -m)
+root_module=$(cd "$REPO_ROOT"; go mod edit -json | jq -r .Module.Path)
 overwrite_paths() {
   local updated_paths=()
 
