@@ -465,7 +465,7 @@ honor_labels: true`
 				},
 			},
 			Spec: istionetworkingv1alpha3.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{""},
 				Gateways: []string{
 					"prometheus-" + name,
 				},

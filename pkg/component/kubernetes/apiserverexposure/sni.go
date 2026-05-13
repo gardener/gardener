@@ -375,9 +375,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
+		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), exportTo, allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
 		if values.IstioTLSTermination {
-			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, connectionUpgradeHostName, connectionUpgradeRouteName)
+			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), exportTo, allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, connectionUpgradeHostName, connectionUpgradeRouteName)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, configuration.virtualService, virtualServiceMutateFn); err != nil {

@@ -35,6 +35,7 @@ func (g *gardenerDiscoveryServer) istioResources() ([]client.Object, error) {
 	if err := istio.VirtualServiceWithSNIMatch(
 		virtualService,
 		labels(),
+		exportTo,
 		[]string{g.values.Domain},
 		deploymentName,
 		portServer,

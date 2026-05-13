@@ -84,6 +84,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		GetLabels(),
+		[]string{istioIngressGatewayNamespace},
 		g.ingressHosts(),
 		gatewayName,
 		portServer,

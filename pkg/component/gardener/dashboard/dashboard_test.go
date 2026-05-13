@@ -705,7 +705,7 @@ frontend:
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Gateways: []string{"gardener-dashboard"},
 				Hosts:    []string{"dashboard.first", "dashboard.second"},
 				Http: []*istioapinetworkingv1beta1.HTTPRoute{{

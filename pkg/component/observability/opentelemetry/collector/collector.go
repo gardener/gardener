@@ -688,6 +688,7 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		getLabels(),
+		[]string{o.values.IstioIngressGatewayNamespace},
 		[]string{o.values.IngressHost, o.values.ValiHost},
 		name,
 		uint32(collectorconstants.KubeRBACProxyOTLPReceiverPort),

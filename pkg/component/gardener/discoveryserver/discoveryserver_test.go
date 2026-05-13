@@ -456,7 +456,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 			Spec: istioapinetworkingv1alpha3.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Hosts:    []string{"discovery.local.gardener.cloud"},
 				Gateways: []string{"gardener-discovery-server"},
 				Tls: []*istioapinetworkingv1alpha3.TLSRoute{{

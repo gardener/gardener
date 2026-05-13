@@ -621,7 +621,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   exportTo:
-  - '*'
+  - istio-ingress
   gateways:
   - nginx-ingress-controller
   hosts:

@@ -874,6 +874,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		utils.MergeStringMaps(getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: credentialsSecretName}),
+		[]string{p.values.IstioIngressGatewayNamespace},
 		[]string{p.values.IngressHost},
 		gatewayName,
 		Port,

@@ -367,7 +367,7 @@ var _ = Describe("Alertmanager", func() {
 				},
 			},
 			Spec: istionetworkingv1alpha3.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-ingress"},
 				Gateways: []string{
 					"alertmanager-" + name,
 				},

@@ -1025,7 +1025,7 @@ func getVirtualService() *istionetworkingv1beta1.VirtualService {
 			Labels:    getLabels(),
 		},
 		Spec: istionetworkingv1alpha3.VirtualService{
-			ExportTo: []string{"*"},
+			ExportTo: []string{"istio-ingress"},
 			Gateways: []string{"vali"},
 			Hosts:    []string{"vali.foo.bar"},
 			Http: []*istionetworkingv1alpha3.HTTPRoute{{

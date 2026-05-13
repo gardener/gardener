@@ -882,7 +882,7 @@ func getVirtualService() *istionetworkingv1beta1.VirtualService {
 			Labels:    getLabels(),
 		},
 		Spec: istioapinetworkingv1beta1.VirtualService{
-			ExportTo: []string{"*"},
+			ExportTo: []string{"istio-ingress"},
 			Gateways: []string{"logging"},
 			Hosts:    []string{ingressHost, valiHost},
 			Http: []*istioapinetworkingv1beta1.HTTPRoute{

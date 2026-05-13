@@ -379,6 +379,7 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		getLabels(),
+		[]string{v.values.IstioIngressGatewayNamespace},
 		[]string{v.values.IngressHost},
 		gatewayName,
 		uint32(port),

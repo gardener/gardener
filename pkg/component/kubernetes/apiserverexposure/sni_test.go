@@ -249,7 +249,7 @@ var _ = Describe("#SNI", func() {
 				ResourceVersion: "1",
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-foo"},
 				Hosts:    hosts,
 				Gateways: []string{expectedGateway.Name},
 				Tls: []*istioapinetworkingv1beta1.TLSRoute{{
@@ -277,7 +277,7 @@ var _ = Describe("#SNI", func() {
 				ResourceVersion: "1",
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-bar", "istio-foo"},
 				Hosts:    wildcardHosts,
 				Gateways: []string{expectedWildcardGateway.Name},
 				Tls: []*istioapinetworkingv1beta1.TLSRoute{{
@@ -487,6 +487,7 @@ var _ = Describe("#SNI", func() {
 				}
 
 				expectedDestinationRule.Spec.ExportTo = []string{"istio-bar", "istio-foo"}
+				expectedVirtualService.Spec.ExportTo = []string{"istio-bar", "istio-foo"}
 			})
 
 			It("should succeed deploying", func() {
@@ -679,6 +680,7 @@ var _ = Describe("#SNI", func() {
 					CredentialName: namespace + "-kube-apiserver-wildcard-tls",
 				}
 
+				expectedVirtualService.Spec.ExportTo = []string{istioWildcardNamespace, istioNamespace}
 				expectedVirtualService.Spec.Tls = nil
 				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
 					{

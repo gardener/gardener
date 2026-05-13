@@ -661,7 +661,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		// If multiple domains overlap istio validation may complain => separate virtual services per domain solve this reliably
 		for i, domain := range n.values.Domains {
 			virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-%d", controllerName+n.nameSuffix(), i), Namespace: n.values.TargetNamespace}}
-			if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), []string{domain}, gateway.Name, uint32(ServicePortControllerHttps), destinationHost)(); err != nil {
+			if err := istio.VirtualServiceWithSNIMatch(virtualService, n.getLabels(LabelValueController, false), []string{n.values.IstioIngressGatewayNamespace}, []string{domain}, gateway.Name, uint32(ServicePortControllerHttps), destinationHost)(); err != nil {
 				return nil, err
 			}
 			virtualServices = append(virtualServices, virtualService)

@@ -95,6 +95,7 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		utils.MergeStringMaps(a.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: a.values.ExternalExposure.AuthSecretName}),
+		[]string{ingressNamespace},
 		[]string{a.values.ExternalExposure.Host},
 		gatewayName,
 		port,

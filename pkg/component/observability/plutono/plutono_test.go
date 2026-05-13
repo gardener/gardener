@@ -582,7 +582,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   exportTo:
-  - '*'
+  - ""
   gateways:
   - `
 				if values.IsGardenCluster {

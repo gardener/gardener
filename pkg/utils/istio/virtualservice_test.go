@@ -14,10 +14,10 @@ import (
 )
 
 var _ = Describe("VirtualService", func() {
-	DescribeTable("#VirtualServiceWithSNIMatch", func(labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost string) {
+	DescribeTable("#VirtualServiceWithSNIMatch", func(labels map[string]string, exportTo []string, hosts []string, gatewayName string, port uint32, destinationHost string) {
 		virtualService := &istionetworkingv1beta1.VirtualService{}
 
-		function := VirtualServiceWithSNIMatch(virtualService, labels, hosts, gatewayName, port, destinationHost)
+		function := VirtualServiceWithSNIMatch(virtualService, labels, exportTo, hosts, gatewayName, port, destinationHost)
 
 		Expect(function).NotTo(BeNil())
 
@@ -25,6 +25,7 @@ var _ = Describe("VirtualService", func() {
 
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(virtualService.Labels).To(Equal(labels))
+		Expect(virtualService.Spec.ExportTo).To(Equal(exportTo))
 		Expect(virtualService.Spec.Hosts).To(Equal(hosts))
 		Expect(virtualService.Spec.Gateways).To(HaveLen(1))
 		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
@@ -37,14 +38,14 @@ var _ = Describe("VirtualService", func() {
 		Expect(virtualService.Spec.Tls[0].Route[0].Destination.Port.Number).To(Equal(port))
 	},
 
-		Entry("Nil values", nil, nil, "", uint32(0), ""),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local"),
+		Entry("Nil values", nil, nil, nil, "", uint32(0), ""),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"foo-namespace"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local"),
 	)
 
-	DescribeTable("#VirtualServiceForTLSTermination", func(labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName string, withUpgrade bool) {
+	DescribeTable("#VirtualServiceForTLSTermination", func(labels map[string]string, exportTo []string, hosts []string, gatewayName string, port uint32, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName string, withUpgrade bool) {
 		virtualService := &istionetworkingv1beta1.VirtualService{}
 
-		function := VirtualServiceForTLSTermination(virtualService, labels, hosts, gatewayName, port, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName)
+		function := VirtualServiceForTLSTermination(virtualService, labels, exportTo, hosts, gatewayName, port, destinationHost, upgradeDestinationHost, connectionUpgradeRouteName)
 
 		Expect(function).NotTo(BeNil())
 
@@ -52,6 +53,7 @@ var _ = Describe("VirtualService", func() {
 
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(virtualService.Labels).To(Equal(labels))
+		Expect(virtualService.Spec.ExportTo).To(Equal(exportTo))
 		Expect(virtualService.Spec.Hosts).To(Equal(hosts))
 		Expect(virtualService.Spec.Gateways).To(HaveLen(1))
 		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
@@ -81,8 +83,8 @@ var _ = Describe("VirtualService", func() {
 		}
 	},
 
-		Entry("Nil values", nil, nil, "", uint32(0), "", "", "", false),
-		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "destination-upgrade.namespace.svc.cluster.local", "connection-upgrade", true),
-		Entry("Some values without upgrade", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "", "", false),
+		Entry("Nil values", nil, nil, nil, "", uint32(0), "", "", "", false),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"foo-namespace"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "destination-upgrade.namespace.svc.cluster.local", "connection-upgrade", true),
+		Entry("Some values without upgrade", map[string]string{"foo": "bar", "key": "value"}, []string{"foo-namespace"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "", "", false),
 	)
 })
