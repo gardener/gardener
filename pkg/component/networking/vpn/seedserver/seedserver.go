@@ -134,6 +134,9 @@ type Values struct {
 	HighAvailabilityNumberOfShootClients int
 	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
 	VPAUpdateDisabled bool
+	// AutoMTU enables automatic MTU configuration for the VPN connection.
+	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
+	AutoMTU *bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -555,6 +558,13 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 		}
 
 		template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
+	}
+
+	if v.values.AutoMTU != nil {
+		template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "OPENVPN_AUTO_MTU",
+			Value: strconv.FormatBool(*v.values.AutoMTU),
+		})
 	}
 
 	return template
