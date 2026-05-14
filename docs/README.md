@@ -115,7 +115,7 @@
 ## [API Reference](api-reference/README.md)
 
 * [`authentication.gardener.cloud` API Group](api-reference/authentication.md)
-* [`core.gardener.cloud` API Group](api-reference/core.md)
+* [`core.gardener.cloud/v1beta1` API Group](api-reference/core.md)
 * [`core.gardener.cloud/v1` API Group](api-reference/core-v1.md)
 * [`extensions.gardener.cloud` API Group](api-reference/extensions.md)
 * [`local.provider.extensions.gardener.cloud` API Group](api-reference/provider-local.md)
