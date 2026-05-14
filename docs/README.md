@@ -116,8 +116,11 @@
 
 * [`authentication.gardener.cloud` API Group](api-reference/authentication.md)
 * [`core.gardener.cloud` API Group](api-reference/core.md)
+* [`core.gardener.cloud/v1` API Group](api-reference/core-v1.md)
 * [`extensions.gardener.cloud` API Group](api-reference/extensions.md)
+* [`local.provider.extensions.gardener.cloud` API Group](api-reference/provider-local.md)
 * [`operations.gardener.cloud` API Group](api-reference/operations.md)
+* [`operator.gardener.cloud` API Group](api-reference/operator.md)
 * [`resources.gardener.cloud` API Group](api-reference/resources.md)
 * [`security.gardener.cloud` API Group](api-reference/security.md)
 * [`seedmanagement.gardener.cloud` API Group](api-reference/seedmanagement.md)

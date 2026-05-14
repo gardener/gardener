@@ -10,4 +10,3 @@
 * [`resources.gardener.cloud` API Group](resources.md)
 * [`security.gardener.cloud` API Group](security.md)
 * [`seedmanagement.gardener.cloud` API Group](seedmanagement.md)
-* [`settings.gardener.cloud` API Group](settings.md)
