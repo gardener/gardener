@@ -274,7 +274,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		}
 	}
 
-	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, encryptionProviderType, etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
+	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, encryptedResources, encryptionProviderType, etcdEncryptionKeyRotation, hibernationEnabled, newShoot.Status.LastOperation, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
 	allErrs = append(allErrs, ValidateShootWithOpts(newShoot, opts)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
@@ -739,7 +739,7 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networ
 }
 
 // ValidateEncryptionConfigUpdate validates the updates to the KubeAPIServer encryption configuration.
-func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[schema.GroupResource], currentEncryptionProviderType core.EncryptionProviderType, etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
+func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[schema.GroupResource], currentEncryptionProviderType core.EncryptionProviderType, etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, lastOperation *core.LastOperation, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                   = field.ErrorList{}
 		oldEncryptedResources     = sets.New[schema.GroupResource]()
@@ -778,6 +778,10 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 
 	if newEncryptionProviderType != oldEncryptionProviderType {
 		providerTypeFldPath := fldPath.Child("provider", "type")
+
+		if !isShootReadyForRotationStart(lastOperation) {
+			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, "provider type cannot be changed if resource was not yet created successfully or is not ready for reconciliation"))
+		}
 
 		if etcdEncryptionKeyRotation != nil && etcdEncryptionKeyRotation.Phase != core.RotationCompleted && etcdEncryptionKeyRotation.Phase != "" {
 			allErrs = append(allErrs, field.Forbidden(providerTypeFldPath, fmt.Sprintf("provider type cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not %q", string(core.RotationCompleted))))

@@ -3003,11 +3003,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeAESCBC
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = new(core.EncryptionProviderTypeSecretbox)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should deny changing provider type when shoot is not ready for reconciliation", func() {
+					resources := []string{"configmaps", "deployments.apps"}
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: resources,
+						Provider: core.EncryptionProvider{
+							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+						},
+					}
+					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
+					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeAESCBC
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateProcessing}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+							"Detail": Equal("provider type cannot be changed if resource was not yet created successfully or is not ready for reconciliation"),
+						})),
+					))
 				})
 
 				It("should deny changing provider type during ETCD encryption key rotation", func() {
@@ -3020,6 +3045,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeAESCBC
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)
@@ -3048,6 +3074,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeSecretbox
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)
@@ -3071,6 +3098,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeAESCBC
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile}
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 					newShoot := prepareShootForUpdate(shoot)
@@ -3095,6 +3123,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
 					shoot.Status.Credentials.EncryptionAtRest.Provider.Type = core.EncryptionProviderTypeAESCBC
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)

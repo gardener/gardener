@@ -3367,6 +3367,100 @@ var _ = Describe("Validation Tests", func() {
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 					})
+
+					It("should allow changing provider type when garden is ready for reconciliation", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+							},
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+									Provider: gardencorev1beta1.EncryptionProvider{
+										Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+									},
+								},
+							},
+						}
+						newGarden.Status.Credentials.EncryptionAtRest.Resources = append(oldResources, oldGardenerResources...)
+						newGarden.Status.Credentials.EncryptionAtRest.Provider.Type = gardencorev1beta1.EncryptionProviderTypeAESCBC
+						newGarden.Status.LastOperation = &gardencorev1beta1.LastOperation{
+							Type: gardencorev1beta1.LastOperationTypeReconcile,
+						}
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+							},
+						}
+						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldGardenerResources,
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+							},
+						}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
+					})
+
+					It("should deny changing provider type when garden is not ready for reconciliation", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+							},
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+									Provider: gardencorev1beta1.EncryptionProvider{
+										Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+									},
+								},
+							},
+						}
+						newGarden.Status.Credentials.EncryptionAtRest.Resources = append(oldResources, oldGardenerResources...)
+						newGarden.Status.Credentials.EncryptionAtRest.Provider.Type = gardencorev1beta1.EncryptionProviderTypeAESCBC
+						newGarden.Status.LastOperation = &gardencorev1beta1.LastOperation{
+							Type:  gardencorev1beta1.LastOperationTypeCreate,
+							State: gardencorev1beta1.LastOperationStateProcessing,
+						}
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+							},
+						}
+						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldGardenerResources,
+							Provider: gardencorev1beta1.EncryptionProvider{
+								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+							},
+						}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.provider.type"),
+								"Detail": Equal("provider type cannot be changed if resource was not yet created successfully or is not ready for reconciliation"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.provider.type"),
+								"Detail": Equal("provider type cannot be changed if resource was not yet created successfully or is not ready for reconciliation"),
+							})),
+						))
+					})
 				})
 
 				It("should allow invalid accepted issuer URLs on update if they are unchanged", func() {
