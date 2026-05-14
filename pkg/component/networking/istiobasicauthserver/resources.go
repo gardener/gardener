@@ -28,13 +28,13 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-func (i *istioBasicAuthServer) getService(isShootNamespace bool) *corev1.Service {
+func (i *istioBasicAuthServer) getService(isShootNamespace bool, ingressNamespace string) *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      i.getPrefix() + svcName,
 			Namespace: i.namespace,
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": ingressNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{

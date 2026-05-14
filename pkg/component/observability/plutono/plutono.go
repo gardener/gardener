@@ -584,7 +584,7 @@ func (p *plutono) getService() *corev1.Service {
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": p.values.IstioIngressGatewayNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{

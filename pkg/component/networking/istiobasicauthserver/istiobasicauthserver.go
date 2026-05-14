@@ -140,7 +140,7 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 
 	serializedResources, err := registry.AddAllAndSerialize(
 		i.getDeployment(volumes, volumeMounts),
-		i.getService(isShootNamespace),
+		i.getService(isShootNamespace, ingressNamespace),
 		destinationRule,
 		i.getEnvoyFilter(configPatches, ownerReference, ingressNamespace),
 		i.getTLSSecret(caBundle, secretNameInIstioNamespace, ownerReference),

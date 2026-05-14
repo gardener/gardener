@@ -104,13 +104,18 @@ type alertManager struct {
 func (a *alertManager) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	istioResources, err := a.istioResources(ctx)
+	// Currently, all observability components are exposed via the same istio ingress gateway.
+	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
+	// See https://github.com/gardener/gardener/issues/11860 for details.
+	var ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
+
+	istioResources, err := a.istioResources(ctx, ingressNamespace)
 	if err != nil {
 		return err
 	}
 
 	objects := append([]client.Object{
-		a.service(),
+		a.service(ingressNamespace),
 		a.alertManager(),
 		a.vpa(),
 		a.podDisruptionBudget(),

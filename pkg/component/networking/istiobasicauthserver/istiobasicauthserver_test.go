@@ -249,7 +249,7 @@ spec:` + spec + `status: {}
 kind: Service
 metadata:
   annotations:
-    networking.istio.io/exportTo: '*'
+    networking.istio.io/exportTo: ` + prefix + `istio-ingress
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
   name: ` + prefix + `istio-basic-auth-server
   namespace: some-namespace

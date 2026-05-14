@@ -24,18 +24,12 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, error) {
+func (a *alertManager) istioResources(ctx context.Context, ingressNamespace string) ([]client.Object, error) {
 	if a.values.ExternalExposure == nil {
 		return nil, nil
 	}
 
-	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
-		gatewayName      = a.name()
-	)
+	var gatewayName = a.name()
 
 	if a.values.ExternalExposure.IsGardenCluster {
 		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace

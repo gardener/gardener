@@ -22,16 +22,18 @@ func (p *prometheus) service() *corev1.Service {
 	var port = servicePorts.Web.TargetPort.IntVal
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        p.name(),
-			Namespace:   p.namespace,
-			Labels:      p.getLabels(),
-			Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
+			Name:      p.name(),
+			Namespace: p.namespace,
+			Labels:    p.getLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{"prometheus": p.values.Name},
 			Ports:    []corev1.ServicePort{servicePorts.Web},
 		},
+	}
+	if p.values.Ingress != nil {
+		service.Annotations = map[string]string{"networking.istio.io/exportTo": p.values.Ingress.IstioIngressGatewayNamespace}
 	}
 	if p.values.Cortex != nil {
 		service.Spec.Ports = append(service.Spec.Ports, servicePorts.Cortex)

@@ -288,7 +288,7 @@ subjects:
 kind: Service
 metadata:
   annotations:
-    networking.istio.io/exportTo: '*'
+    networking.istio.io/exportTo: istio-ingress
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
     some: value
   labels:

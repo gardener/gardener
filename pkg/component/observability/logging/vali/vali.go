@@ -416,7 +416,7 @@ func (v *vali) getService() *corev1.Service {
 				Namespace: v.namespace,
 				Labels:    getLabels(),
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": v.values.IstioIngressGatewayNamespace,
 				},
 			},
 			Spec: corev1.ServiceSpec{

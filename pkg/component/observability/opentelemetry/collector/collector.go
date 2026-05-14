@@ -640,7 +640,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`)
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", o.values.IstioIngressGatewayNamespace)
 	}
 
 	return obj

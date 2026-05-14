@@ -594,7 +594,7 @@ frontend:
 				},
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9050}]`,
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": "virtual-garden-istio-ingress",
 				},
 			},
 			Spec: corev1.ServiceSpec{

@@ -146,7 +146,7 @@ var _ = Describe("Alertmanager", func() {
 					"alertmanager": name,
 				},
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": "istio-ingress",
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9093}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
@@ -641,7 +641,7 @@ var _ = Describe("Alertmanager", func() {
 				values.ClusterType = component.ClusterTypeShoot
 
 				service.Annotations = map[string]string{
-					"networking.istio.io/exportTo":                                              "*",
+					"networking.istio.io/exportTo":                                              "istio-ingress",
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
 				}
 				alertManager.Labels["gardener.cloud/role"] = "monitoring"

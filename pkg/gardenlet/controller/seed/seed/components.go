@@ -226,7 +226,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret)
+	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret, c.istioDefaultNamespace)
 	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret, c.istioDefaultLabels, c.istioDefaultNamespace)
 	c.ingressDNSRecord, err = r.newIngressDNSRecord(ctx, log, seed, "")
 	if err != nil {
@@ -1031,8 +1031,8 @@ func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultL
 	)
 }
 
-func (r *Reconciler) newKubeAPIServerService(wildCardCertSecret *corev1.Secret) component.Deployer {
-	c := kubeapiserverexposure.NewInternalNameService(r.SeedClientSet.Client(), r.GardenNamespace)
+func (r *Reconciler) newKubeAPIServerService(wildCardCertSecret *corev1.Secret, istioDefaultNamespace string) component.Deployer {
+	c := kubeapiserverexposure.NewInternalNameService(r.SeedClientSet.Client(), r.GardenNamespace, istioDefaultNamespace)
 	if wildCardCertSecret == nil {
 		c = component.OpDestroy(c)
 	}

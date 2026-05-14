@@ -17,8 +17,10 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+const istioIngressGatewayNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+
 func (g *gardenerDiscoveryServer) istioResources() ([]client.Object, error) {
-	var exportTo = []string{operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace}
+	var exportTo = []string{istioIngressGatewayNamespace}
 
 	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: g.namespace}}
 	if err := istio.GatewayWithTLSPassthrough(

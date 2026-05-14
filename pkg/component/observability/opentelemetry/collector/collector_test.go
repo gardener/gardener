@@ -335,7 +335,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
 					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
 					resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
-					"networking.istio.io/exportTo":                             "*",
+					"networking.istio.io/exportTo":                             "istio-ingress",
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{

@@ -17,14 +17,14 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (a *alertManager) service() *corev1.Service {
+func (a *alertManager) service(ingressNamespace string) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      a.name(),
 			Namespace: a.namespace,
 			Labels:    a.getLabels(),
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": ingressNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{

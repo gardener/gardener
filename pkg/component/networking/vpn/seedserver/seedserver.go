@@ -646,7 +646,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 	service := v.emptyService(idx)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", v.istioNamespaceFunc())
 
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,

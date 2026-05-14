@@ -668,7 +668,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		serviceController.Spec.Type = corev1.ServiceTypeClusterIP
-		metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, "networking.istio.io/exportTo", n.values.IstioIngressGatewayNamespace)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(serviceController, []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 		}...))
