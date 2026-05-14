@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/inplaceupdate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/selfhostedshootexposure"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
@@ -111,6 +112,17 @@ func AddToManager(
 			ShootKey: client.ObjectKeyFromObject(selfHostedShoot),
 		}).AddToManager(mgr, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding selfhostedshootexposure reconciler: %w", err)
+		}
+
+		if selfHostedShoot != nil && !v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
+			reconciler := &inplaceupdate.Reconciler{
+				ShootNamespacedName: client.ObjectKeyFromObject(selfHostedShoot),
+				GardenClient:        gardenCluster.GetClient(),
+				Config:              *cfg.Controllers.ShootInPlaceUpdate,
+			}
+			if err := reconciler.AddToManager(mgr, seedCluster); err != nil {
+				return fmt.Errorf("failed adding in-place update reconciler: %w", err)
+			}
 		}
 	}
 
