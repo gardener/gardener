@@ -323,7 +323,7 @@ build:
     - image: local-skaffold/gardenlet/chart
       custom:
         buildCommand: |
-          ./dev-setup/push-helm.sh ./charts/gardener/gardenlet .image.ref
+          ./hack/push-helm.sh ./charts/gardener/gardenlet .image.ref
         dependencies:
           paths:
             - charts/gardener/gardenlet
