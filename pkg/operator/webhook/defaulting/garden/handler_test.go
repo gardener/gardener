@@ -35,7 +35,6 @@ var _ = Describe("Handler", func() {
 		var (
 			defaultKubeAPIServerConfig   *operatorv1alpha1.KubeAPIServerConfig
 			defaultGardenAPIServerConfig *operatorv1alpha1.GardenerAPIServerConfig
-			defaultStatus                operatorv1alpha1.GardenStatus
 		)
 
 		BeforeEach(func() {
@@ -63,15 +62,6 @@ var _ = Describe("Handler", func() {
 					},
 				},
 			}
-			defaultStatus = operatorv1alpha1.GardenStatus{
-				Credentials: &operatorv1alpha1.Credentials{
-					EncryptionAtRest: &operatorv1alpha1.EncryptionAtRest{
-						Provider: operatorv1alpha1.EncryptionProviderStatus{
-							Type: gardencorev1beta1.EncryptionProviderTypeAESCBC,
-						},
-					},
-				},
-			}
 		})
 
 		It("should default all expected fields", func() {
@@ -95,7 +85,6 @@ var _ = Describe("Handler", func() {
 						},
 					},
 				},
-				Status: defaultStatus,
 			}))
 		})
 
