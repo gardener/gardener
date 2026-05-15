@@ -13,15 +13,6 @@ The motivation for maintaining such extension is the following:
 - ⚙️ Development Experience: Develop Gardener entirely on a local machine without any external resources involved (improved costs 💰 and productivity 🚀)
 - 🤝 Open Source: Quick and easy setup for a first evaluation of Gardener and a good basis for first contributions
 
-## Current Limitations
-
-The following enlists the current limitations of the implementation.
-Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
-
-1. Machines/nodes are recreated during control plane migration.
-
-   _Since the machine provider creates `Pod`s for the shoot worker nodes in the shoot's control plane namespace, they get deleted and recreated on the other seed cluster during control plane migration._
-
 ## `ManagedSeed`s
 
 It is possible to deploy [`ManagedSeed`s](../operations/managed_seed.md) with `provider-local` by first creating a [`Shoot` in the `garden` namespace](../../example/provider-local/managedseeds/shoot-managedseed.yaml) and then creating a referencing [`ManagedSeed` object](../../example/provider-local/managedseeds/managedseed.yaml).
@@ -66,12 +57,12 @@ In e2e tests running in CI (prow), this is achieved by running `dnsmasq` in the 
 
 ### Credentials
 
-By default, provider-local doesn't require any cloud provider credentials in the shoot's `{Secret,Credentials}Binding` as all infrastructure resources are deployed in the cluster where it runs.
-For this, provider-local uses its in-cluster config to connect to the Kubernetes API server of the seed/bootstrap cluster.
-However, provider-local also supports overwriting the credentials by specifying a `kubeconfig` in the shoot credentials secret.
-This is used in the local setup for [self-hosted shoots with managed infrastructure](https://github.com/gardener/enhancements/tree/main/geps/0028-self-hosted-shoot-clusters#managed-infrastructure).
-Here, provider-local initially creates the infrastructure resources (e.g., Service, NetworkPolicies, machine Pods, etc.) in the kind cluster (during `gardenadm bootstrap`).
-Later on, `gardenadm init` restores the extension resources within the self-hosted shoot cluster itself, and provider-local – running in the shoot cluster now – needs credentials to access the kind cluster API server to keep managing those resources.
+The provider-local requires a credential secret that contains a kubeconfig at the key `kubeconfig`.
+It creates the infrastructure resources (most importantly machine Pods) in that cluster.
+Usually, this cluster is the `gardener-local` cluster created with `make kind-up`, so regardless of the scenario or seed cluster, all machine pods will be in dedicated namespaces in that cluster.
+
+In the dev-setup that `kubeconfig` as an admin kubeconfig, giving the controller full access.
+While this is certainly not recommended it is accepted to keep the local setup simpler.
 
 ### Controllers
 
@@ -94,8 +85,8 @@ The controller supports A, AAAA, and CNAME record types.
 
 #### `Infrastructure`
 
-This controller generates a `NetworkPolicy` which allows the control plane pods (like `kube-apiserver`) to communicate with the worker machine pods (see [`Worker` section](#worker)).
-It also deploys a `NetworkPolicy` which allows the bastion pods to communicate with the worker machine pods (see [`Bastion` section](#bastion)).
+This controller creates the machine Pod namespace (`machine-pods-<technical-id>`) and an `IPPool` that the machine Pods will use.
+These resources are created in cluster specified by the `kubeconfig` in the provider secret.
 
 #### `Network`
 
@@ -119,6 +110,7 @@ This is needed because the [local machine provider](#machine-controller-manager-
 #### `Bastion`
 
 This controller implements the `Bastion.extensions.gardener.cloud` resource by deploying a pod with the local machine image along with a `LoadBalancer` service.
+The Bastion "machine" is also a Pod that runs in the same namespace as the machine Pods.
 
 Note that this controller does not respect the `Bastion.spec.ingress` configuration as there is no way to perform client IP restrictions in the local setup.
 
@@ -215,9 +207,9 @@ This way, creating a `Service` of type `LoadBalancer` works even in shoots.
 Out of tree (controller-based) implementation for `local` as a new provider.
 The local out-of-tree provider implements the interface defined at [MCM OOT driver](https://github.com/gardener/machine-controller-manager/blob/master/pkg/util/provider/driver/driver.go).
 
-For every `Machine` object, the [local machine provider](../../pkg/provider-local/machine-provider) creates a `Pod` in the shoot control plane namespace.
+For every `Machine` object, the [local machine provider](../../pkg/provider-local/machine-provider) creates a `Pod` in a dedicated machine namespace in the kubernetes cluster specified in the provider secret.
 A machine pod uses an [image](../../pkg/provider-local/machine-provider/node) based on [kind's](https://github.com/kubernetes-sigs/kind) node image (`kindest/node`).
-The machine's user data is deployed as a `Secret` in the shoot control plane namespace and mounted into the machine pod.
+The machine's user data is deployed as a `Secret` in the machine namespace and mounted into the machine pod.
 In contrast to kind, the local machine image doesn't directly run kubelet as a systemd unit. Instead, it has a unit for running the user data script at `/etc/machine/userdata`.
 
 The local provider spec of the `MachineClass` supports the following fields:
@@ -241,15 +233,11 @@ It is determined from the `CloudProfile.spec.providerConfig.machineImages` field
 The `ipPoolNameV{4,6}` fields specify the name of the calico `IPPool`s to allocate IP addresses for the machine pods from (which are created by the [`Infrastructure` controller](#infrastructure)).
 The names are passed to the `cni.projectcalico.org/ipv{4,6}pools` annotations on the machine pods.
 The `namespace` field specifies the namespace in which the machine pods are created.
-Typically, this is the shoot control plane namespace.
-However, for self-hosted shoots with managed infrastructure, this is the kind cluster namespace where the infrastructure resources are created during `gardenadm bootstrap` (the control plane namespace is `kube-system` in this case).
 
 Typically, machines running in a cloud infrastructure environment can resolve the hostnames of other machines in the same cluster/network.
 To mimic this behavior in the local setup, the machine provider creates a `Service` for every `Machine` with the same name as the `Pod`.
 With this, local `Nodes` and `Bastions` can connect to other `Nodes` via their hostname.
 
 ## Future Work
-
-Future work could mostly focus on resolving the above listed [limitations](#limitations), i.e.:
 
 - Properly implement `.spec.machineTypes` in the `CloudProfile`s (i.e., configure `.spec.resources` properly for the created shoot worker machine pods).
