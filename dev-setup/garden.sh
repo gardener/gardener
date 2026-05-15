@@ -59,9 +59,11 @@ case "$COMMAND" in
     # cleanup the remaining resources required for successful deletion of the garden
     kubectl delete -k "$(dirname "$0")/garden/overlays/$SCENARIO" --ignore-not-found
 
-    # cleanup all PVCs in the garden namespace
-    echo "Cleaning up PVCs in garden namespace..."
-    kubectl delete pvc --all -n garden --ignore-not-found --timeout=120s
+    # cleanup all PVCs in the garden namespace (only needed for remote scenario where real infrastructure exists)
+    if [[ "$SCENARIO" == "remote" ]]; then
+      echo "Cleaning up PVCs in garden namespace..."
+      kubectl delete pvc --all -n garden --ignore-not-found --timeout=120s
+    fi
 
     # cleanup virtual garden kubconfig
     if [[ -f "$VIRTUAL_GARDEN_KUBECONFIG" ]]; then
