@@ -26,9 +26,6 @@ import (
 )
 
 type actuator struct {
-	// runtimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
-	// It's used to interact with extension objects. By default, it's also used as the provider client to interact with
-	// infrastructure resources, unless a kubeconfig is specified in the cloudprovider secret.
 	runtimeClient client.Client
 }
 
