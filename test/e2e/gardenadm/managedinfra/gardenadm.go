@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -118,7 +119,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			initialControlPlaneMachineName = machineList.Items[0].Name
 
 			podList := &corev1.PodList{}
-			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
+			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
@@ -294,7 +295,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, shootKomega.Object(&machinev1alpha1.Machine{ObjectMeta: metav1.ObjectMeta{Name: initialControlPlaneMachineName, Namespace: "kube-system"}})).
 				Should(HaveField("Status.CurrentStatus.Phase", machinev1alpha1.MachineRunning))
 
-			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: technicalID}})).
+			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: infrastructure.MachineNamespaceName(technicalID)}})).
 				Should(HaveField("Status.Phase", corev1.PodRunning))
 		}, SpecTimeout(time.Minute))
 

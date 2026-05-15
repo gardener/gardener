@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -19,9 +18,9 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -46,82 +45,24 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
 
-	// We don't need these resources in case we're operating in the kube-system namespace (only the case for self-hosted
-	// shoots) - we will never have machine pods there.
-	if infrastructure.Namespace != metav1.NamespaceSystem {
-		networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
-		networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
-			Ingress: []networkingv1.NetworkPolicyIngressRule{{
-				From: []networkingv1.NetworkPolicyPeer{
-					{
-						PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-					},
-					// Allow traffic from load balancer containers in the Docker kind network.
-					{
-						IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4},
-					},
-					{
-						IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6},
-					},
-				}},
-			},
-			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{
-					{
-						PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-					},
-					{
-						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
-						PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
-					},
-				},
-			}},
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "machine"},
-			},
-			PolicyTypes: []networkingv1.PolicyType{
-				networkingv1.PolicyTypeIngress,
-				networkingv1.PolicyTypeEgress,
-			},
-		}
+	// Apply the machine namespace first, so we can use its UUID as owner reference for the IPPools.
+	machineNamespace := namespace(cluster.Shoot.Status.TechnicalID)
+	if err := providerClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		return err
+	}
 
-		// The machines service is used to add NetworkPolicies for accessing the machine ports,
-		// e.g., access from the Bastion pod to port 22
-		service := emptyService(infrastructure.Namespace)
-		service.Spec = corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: map[string]string{"app": "machine"},
-			Ports: []corev1.ServicePort{
-				{
-					Name:        "ssh",
-					Port:        22,
-					Protocol:    corev1.ProtocolTCP,
-					AppProtocol: new("ssh"),
-				},
-			},
+	ipPools := []client.Object{}
+	for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
+		ipPoolObj, err := ipPool(machineNamespace, cluster.Shoot.Status.TechnicalID, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
+		if err != nil {
+			return err
 		}
+		ipPools = append(ipPools, ipPoolObj)
+	}
 
-		if cluster.Shoot.Spec.Networking == nil || cluster.Shoot.Spec.Networking.Nodes == nil {
-			return fmt.Errorf("shoot specification does not contain node network CIDR required for VPN tunnel")
-		}
-
-		objects := []client.Object{
-			networkPolicyAllowMachinePods,
-			service,
-		}
-
-		for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
-			ipPoolObj, err := ipPool(cluster.ObjectMeta, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
-			if err != nil {
-				return err
-			}
-			objects = append(objects, ipPoolObj)
-		}
-
-		for _, obj := range objects {
-			if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-				return err
-			}
+	for _, obj := range ipPools {
+		if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+			return err
 		}
 	}
 
@@ -145,27 +86,20 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 	return a.runtimeClient.Status().Patch(ctx, infrastructure, patch)
 }
 
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, infrastructure.Spec.SecretRef)
 	if err != nil {
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, providerClient,
-		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
-		emptyService(infrastructure.Namespace),
-		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv4))}},
-		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv6))}},
+		namespace(cluster.Shoot.Status.TechnicalID),
+		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(cluster.Shoot.Status.TechnicalID, string(gardencorev1beta1.IPFamilyIPv4))}},
+		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(cluster.Shoot.Status.TechnicalID, string(gardencorev1beta1.IPFamilyIPv6))}},
 	)
 }
 
 func (a *actuator) Migrate(context.Context, logr.Logger, *extensionsv1alpha1.Infrastructure, *extensionscontroller.Cluster) error {
-	// On migration, we don't explicitly delete objects, as we might still need them, e.g., for `gardenadm bootstrap`.
-	// After performing operation=migrate, the machine pods will keep running in the bootstrap cluster (kind), so we still
-	// need `NetworkPolicies`, etc.
-	// When performing an actual control plane migration of local shoots, we rely on the namespace controller to delete
-	// all namespaced objects and the garbage collector (owner references) to delete all cluster-scoped objects created by
-	// the Infrastructure controller.
 	return nil
 }
 
@@ -177,54 +111,40 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, infrastructure 
 	return a.Reconcile(ctx, log, infrastructure, cluster)
 }
 
-func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: networkingv1.SchemeGroupVersion.String(),
-			Kind:       "NetworkPolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-}
-
-func emptyService(namespace string) *corev1.Service {
-	return &corev1.Service{
+func namespace(technicalID string) *corev1.Namespace {
+	return &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Service",
+			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "machines",
-			Namespace: namespace,
+			Name: MachineNamespaceName(technicalID),
 			Labels: map[string]string{
-				"app": "machine",
+				v1beta1constants.GardenRole: "machine-pods",
 			},
 		},
 	}
 }
 
-// IPPoolName returns the name of the crd.projectcalico.org/v1.IPPool resource for the given shoot namespace.
-func IPPoolName(shootNamespace, ipFamily string) string {
-	return "shoot-machine-pods-" + shootNamespace + "-" + strings.ToLower(ipFamily)
+// MachineNamespaceName returns the name of the namespace for machine pods for the given shoot namespace.
+func MachineNamespaceName(technicalID string) string {
+	return "machine-pods-" + technicalID
 }
 
-func ipPool(clusterMeta metav1.ObjectMeta, ipFamily, nodeCIDR string) (client.Object, error) {
+// IPPoolName returns the name of the crd.projectcalico.org/v1.IPPool resource for the given shoot namespace.
+func IPPoolName(technicalID, ipFamily string) string {
+	return "shoot-machine-pods-" + technicalID + "-" + strings.ToLower(ipFamily)
+}
+
+func ipPool(machineNamespace *corev1.Namespace, technicalID string, ipFamily, nodeCIDR string) (client.Object, error) {
 	ipipMode := "Always"
 	if ipFamily == string(gardencorev1beta1.IPFamilyIPv6) {
 		ipipMode = "Never"
 	}
-	return kubernetes.NewManifestReader([]byte(`apiVersion: crd.projectcalico.org/v1
+	obj, err := kubernetes.NewManifestReader([]byte(`apiVersion: crd.projectcalico.org/v1
 kind: IPPool
 metadata:
-  name: ` + IPPoolName(clusterMeta.Name, ipFamily) + `
-  ownerReferences:
-  - apiVersion: extensions.gardener.cloud/v1alpha1
-    kind: Cluster
-    name: ` + clusterMeta.Name + `
-    uid: ` + string(clusterMeta.UID) + `
+  name: ` + IPPoolName(technicalID, ipFamily) + `
 spec:
   cidr: ` + nodeCIDR + `
   ipipMode: ` + ipipMode + `
@@ -234,4 +154,14 @@ spec:
                          # cni.projectcalico.org/IPv{4,6}Pools annotation.
                          # See https://github.com/projectcalico/calico/issues/7299#issuecomment-1446834103
 `)).Read()
+	if err != nil {
+		return nil, err
+	}
+	obj.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: machineNamespace.APIVersion,
+		Kind:       machineNamespace.Kind,
+		Name:       machineNamespace.Name,
+		UID:        machineNamespace.UID,
+	}})
+	return obj, nil
 }
