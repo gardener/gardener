@@ -305,7 +305,7 @@ func DiscoveryServerDomain(garden *operatorv1alpha1.Garden) string {
 func GetIngressWildcardDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSDomain {
 	runtimeDomains := garden.Spec.RuntimeCluster.Ingress.Domains
 
-	ingressDomains := make([]operatorv1alpha1.DNSDomain, 0, len(runtimeDomains)+1)
+	ingressDomains := make([]operatorv1alpha1.DNSDomain, 0, len(runtimeDomains))
 	for _, domain := range runtimeDomains {
 		ingressDomains = append(ingressDomains,
 			operatorv1alpha1.DNSDomain{
