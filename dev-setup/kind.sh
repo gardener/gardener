@@ -197,7 +197,7 @@ EOF
       # Prepare a kubeconfig that can be used by provider-local as the provider credentials to always talk to the "main" kind cluster cluster.
       # See docs/extensions/provider-local.md#credentials.
       if [[ "$CLUSTER_NAME" == "gardener-local" ]] ; then
-        sed "s/127\.0\.0\.1:[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$path_kubeconfig" > "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig"
+        sed "s/\(127\.0\.0\.1\|\[::1\]\):[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$path_kubeconfig" > "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig"
         cp "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-local/kubeconfig/kubeconfig"
       fi
     done
