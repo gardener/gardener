@@ -87,7 +87,6 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	}
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
-
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
