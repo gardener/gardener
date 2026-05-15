@@ -221,7 +221,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager)
+	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -524,7 +524,7 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	return
 }
 
-func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface, istioDefaultNamespace string) (component.DeployWaiter, error) {
 	return sharedcomponent.NewIstioBasicAuthServer(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
@@ -534,6 +534,7 @@ func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Inter
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		false,
 		v1beta1constants.SecretNameCAIstioBasicAuthServer,
+		istioDefaultNamespace,
 	)
 }
 

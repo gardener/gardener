@@ -76,6 +76,7 @@ var _ = Describe("Alertmanager", func() {
 		ingressAuthSecretName     = "foo"
 		ingressHost               = "some-host.example.com"
 		ingressWildcardSecretName = "bar"
+		ingressNamespace          = "istio-ingress"
 
 		fakeClient client.Client
 		deployer   component.DeployWaiter
@@ -146,7 +147,6 @@ var _ = Describe("Alertmanager", func() {
 					"alertmanager": name,
 				},
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "istio-ingress",
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9093}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
@@ -533,10 +533,12 @@ var _ = Describe("Alertmanager", func() {
 			When("ingress is configured", func() {
 				BeforeEach(func() {
 					values.ExternalExposure = &ExposureValues{
-						AuthSecretName:         ingressAuthSecretName,
-						Host:                   ingressHost,
-						WildcardCertSecretName: &ingressWildcardSecretName,
+						AuthSecretName:               ingressAuthSecretName,
+						Host:                         ingressHost,
+						WildcardCertSecretName:       &ingressWildcardSecretName,
+						IstioIngressGatewayNamespace: ingressNamespace,
 					}
+					service.Annotations["networking.istio.io/exportTo"] = ingressNamespace
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -641,7 +643,6 @@ var _ = Describe("Alertmanager", func() {
 				values.ClusterType = component.ClusterTypeShoot
 
 				service.Annotations = map[string]string{
-					"networking.istio.io/exportTo":                                              "istio-ingress",
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
 				}
 				alertManager.Labels["gardener.cloud/role"] = "monitoring"

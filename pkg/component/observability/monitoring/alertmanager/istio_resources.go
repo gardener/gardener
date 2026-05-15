@@ -24,15 +24,14 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-func (a *alertManager) istioResources(ctx context.Context, ingressNamespace string) ([]client.Object, error) {
+func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, error) {
 	if a.values.ExternalExposure == nil {
 		return nil, nil
 	}
 
-	var gatewayName = a.name()
+	gatewayName := a.name()
 
 	if a.values.ExternalExposure.IsGardenCluster {
-		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 		gatewayName = operatorv1alpha1.VirtualGardenNamePrefix + gatewayName
 	}
 
@@ -67,7 +66,7 @@ func (a *alertManager) istioResources(ctx context.Context, ingressNamespace stri
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", a.namespace, a.name(), tlsSecretName),
-			Namespace: ingressNamespace,
+			Namespace: a.values.ExternalExposure.IstioIngressGatewayNamespace,
 			Labels:    a.getLabels(),
 		},
 		Data: tlsSecret.Data,
@@ -89,7 +88,7 @@ func (a *alertManager) istioResources(ctx context.Context, ingressNamespace stri
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		utils.MergeStringMaps(a.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: a.values.ExternalExposure.AuthSecretName}),
-		[]string{ingressNamespace},
+		[]string{a.values.ExternalExposure.IstioIngressGatewayNamespace},
 		[]string{a.values.ExternalExposure.Host},
 		gatewayName,
 		port,
@@ -114,7 +113,7 @@ func (a *alertManager) istioResources(ctx context.Context, ingressNamespace stri
 	}}, virtualService.Spec.Http...)
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: a.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, a.getLabels(), []string{ingressNamespace}, destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, a.getLabels(), []string{a.values.ExternalExposure.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

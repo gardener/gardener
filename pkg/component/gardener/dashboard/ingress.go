@@ -22,6 +22,8 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+const istioIngressGatewayNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+
 func (g *gardenerDashboard) ingressHosts() []string {
 	hosts := make([]string, 0, len(g.values.Ingress.Domains))
 	for _, domain := range g.values.Ingress.Domains {
@@ -32,10 +34,9 @@ func (g *gardenerDashboard) ingressHosts() []string {
 
 func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object, error) {
 	var (
-		gatewayName                  = deploymentName
-		istioIngressGatewayNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
-		tlsSecretName                = ptr.Deref(g.values.Ingress.WildcardCertSecretName, "")
-		tlsSecret                    *corev1.Secret
+		gatewayName   = deploymentName
+		tlsSecretName = ptr.Deref(g.values.Ingress.WildcardCertSecretName, "")
+		tlsSecret     *corev1.Secret
 	)
 
 	if tlsSecretName == "" {

@@ -63,9 +63,10 @@ var _ = Describe("Plutono", func() {
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 
 		values = Values{
-			Image:              image,
-			ImageDataRefresher: imageDataRefresher,
-			Replicas:           int32(1),
+			Image:                        image,
+			ImageDataRefresher:           imageDataRefresher,
+			Replicas:                     int32(1),
+			IstioIngressGatewayNamespace: "istio-ingress",
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -492,7 +493,7 @@ metadata:
 kind: Service
 metadata:
   annotations:
-    networking.istio.io/exportTo: ""
+    networking.istio.io/exportTo: ` + values.IstioIngressGatewayNamespace + `
   labels:
     component: plutono
 `
@@ -582,7 +583,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   exportTo:
-  - ""
+  - ` + values.IstioIngressGatewayNamespace + `
   gateways:
   - `
 				if values.IsGardenCluster {
@@ -636,7 +637,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   exportTo:
-  - ""
+  - ` + values.IstioIngressGatewayNamespace + `
   host: plutono.` + namespace + `.svc.cluster.local
   trafficPolicy:
     connectionPool:
@@ -658,16 +659,12 @@ status: {}
 			}
 
 			tlsSecretMetaFor = func(values Values) metav1.ObjectMeta {
-				ns := "istio-ingress"
-				if values.IsGardenCluster {
-					ns = "virtual-garden-" + ns
-				}
 				return metav1.ObjectMeta{
 					Labels: map[string]string{
 						"component": "plutono",
 					},
 					Name:      namespace + "-plutono-plutono-tls",
-					Namespace: ns,
+					Namespace: values.IstioIngressGatewayNamespace,
 				}
 			}
 		)
@@ -798,6 +795,7 @@ status: {}
 			Context("Cluster is garden cluster", func() {
 				BeforeEach(func() {
 					values.IsGardenCluster = true
+					values.IstioIngressGatewayNamespace = "virtual-garden-istio-ingress"
 				})
 
 				Context("with VPAEnabled=true", func() {

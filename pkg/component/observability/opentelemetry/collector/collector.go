@@ -654,19 +654,13 @@ func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.Access
 }
 
 func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, error) {
-	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
-		name             = "logging"
-	)
+	name := "logging"
 
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", o.namespace, name, tlsSecret.Name),
-			Namespace: ingressNamespace,
+			Namespace: o.values.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,

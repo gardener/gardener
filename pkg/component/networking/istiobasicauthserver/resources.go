@@ -28,13 +28,13 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-func (i *istioBasicAuthServer) getService(isShootNamespace bool, ingressNamespace string) *corev1.Service {
+func (i *istioBasicAuthServer) getService(isShootNamespace bool) *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      i.getPrefix() + svcName,
 			Namespace: i.namespace,
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": ingressNamespace,
+				"networking.istio.io/exportTo": i.values.IstioIngressGatewayNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -156,12 +156,11 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 func (i *istioBasicAuthServer) getEnvoyFilter(
 	configPatches []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch,
 	ownerReference *metav1.OwnerReference,
-	ingressNamespace string,
 ) *istionetworkingv1alpha3.EnvoyFilter {
 	return &istionetworkingv1alpha3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            fmt.Sprintf("%s-%s%s", i.namespace, i.getPrefix(), name),
-			Namespace:       ingressNamespace,
+			Namespace:       i.values.IstioIngressGatewayNamespace,
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},
 		Spec: istioapinetworkingv1alpha3.EnvoyFilter{
@@ -170,12 +169,12 @@ func (i *istioBasicAuthServer) getEnvoyFilter(
 	}
 }
 
-func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secretName string, ingressNamespace string) (*istionetworkingv1beta1.DestinationRule, error) {
+func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secretName string) (*istionetworkingv1beta1.DestinationRule, error) {
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer, Namespace: i.namespace}}
 	if err := istio.DestinationRuleWithTLSTermination(
 		destinationRule,
 		i.getLabels(),
-		[]string{ingressNamespace},
+		[]string{i.values.IstioIngressGatewayNamespace},
 		destinationHost,
 		destinationHost,
 		secretName,
@@ -189,16 +188,11 @@ func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secret
 }
 
 func (i *istioBasicAuthServer) getTLSSecret(caSecret *corev1.Secret, secretName string, ownerReference *metav1.OwnerReference) *corev1.Secret {
-	// Currently, all observability components are exposed via the same istio ingress gateway.
-	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
-
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            secretName,
-			Namespace:       ingressNamespace,
+			Namespace:       i.values.IstioIngressGatewayNamespace,
 			Labels:          i.getLabels(),
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},

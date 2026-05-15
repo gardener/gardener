@@ -58,6 +58,8 @@ type Values struct {
 	IsGardenCluster bool
 	// SigningCA is the name of the CA that should be used to sign the server certificate.
 	SigningCA string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 }
 
 type istioBasicAuthServer struct {
@@ -108,10 +110,6 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 	}
 
 	secretNameInIstioNamespace := fmt.Sprintf("%s-%s", i.namespace, caBundle.Name)
-	// Currently, all observability components are exposed via the same istio ingress gateway.
-	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
 
 	ownerNamespace := &corev1.Namespace{}
 	if err := i.client.Get(ctx, client.ObjectKey{Name: i.namespace}, ownerNamespace); err != nil {
@@ -128,7 +126,7 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to calculate configuration for istio-basic-auth-server: %w", err)
 	}
 
-	destinationRule, err := i.getDestinationRule(destinationHost, secretNameInIstioNamespace, ingressNamespace)
+	destinationRule, err := i.getDestinationRule(destinationHost, secretNameInIstioNamespace)
 	if err != nil {
 		return fmt.Errorf("failed to create destination rule for istio-basic-auth-server: %w", err)
 	}
@@ -140,9 +138,9 @@ func (i *istioBasicAuthServer) Deploy(ctx context.Context) error {
 
 	serializedResources, err := registry.AddAllAndSerialize(
 		i.getDeployment(volumes, volumeMounts),
-		i.getService(isShootNamespace, ingressNamespace),
+		i.getService(isShootNamespace),
 		destinationRule,
-		i.getEnvoyFilter(configPatches, ownerReference, ingressNamespace),
+		i.getEnvoyFilter(configPatches, ownerReference),
 		i.getTLSSecret(caBundle, secretNameInIstioNamespace, ownerReference),
 		i.getVPA(),
 	)

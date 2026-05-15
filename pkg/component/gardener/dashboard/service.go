@@ -12,8 +12,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -25,7 +23,7 @@ func (g *gardenerDashboard) service() *corev1.Service {
 			Name:        serviceName,
 			Namespace:   g.namespace,
 			Labels:      GetLabels(),
-			Annotations: map[string]string{"networking.istio.io/exportTo": operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace},
+			Annotations: map[string]string{"networking.istio.io/exportTo": istioIngressGatewayNamespace},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,

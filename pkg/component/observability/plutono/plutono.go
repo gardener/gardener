@@ -787,10 +787,6 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 
 func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error) {
 	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace      = v1beta1constants.DefaultSNIIngressNamespace
 		credentialsSecretName = p.values.AuthSecretName
 		caName                = v1beta1constants.SecretNameCASeed
 		gatewayName           = name
@@ -804,7 +800,6 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 
 		credentialsSecretName = credentialsSecret.Name
 		caName = operatorv1alpha1.SecretNameCARuntime
-		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
@@ -852,7 +847,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", p.namespace, name, ingressTLSSecretName),
-			Namespace: ingressNamespace,
+			Namespace: p.values.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,

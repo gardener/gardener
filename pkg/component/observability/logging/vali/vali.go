@@ -339,17 +339,12 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 
 func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, error) {
 	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
-		gatewayName      = valiName
-		endpoint         = valiconstants.PushEndpoint
-		port             = kubeRBACProxyPort
+		gatewayName = valiName
+		endpoint    = valiconstants.PushEndpoint
+		port        = kubeRBACProxyPort
 	)
 
 	if v.values.IsGardenCluster {
-		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
@@ -357,7 +352,7 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, valiName, tlsSecret.Name),
-			Namespace: ingressNamespace,
+			Namespace: v.values.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,
