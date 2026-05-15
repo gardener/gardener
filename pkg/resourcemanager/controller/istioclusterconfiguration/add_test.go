@@ -187,6 +187,13 @@ var _ = Describe("Add", func() {
 				Expect(pred.Create(event.CreateEvent{Object: namespace})).To(BeTrue())
 			})
 
+			It("should return true for exposure class namespace", func() {
+				namespace.Labels = map[string]string{
+					v1beta1constants.LabelExposureClassHandlerName: "my-exposure-class",
+				}
+				Expect(pred.Create(event.CreateEvent{Object: namespace})).To(BeTrue())
+			})
+
 			It("should return false for non-istio-ingress namespace", func() {
 				namespace.Labels = nil
 				Expect(pred.Create(event.CreateEvent{Object: namespace})).To(BeFalse())
@@ -209,10 +216,35 @@ var _ = Describe("Add", func() {
 				newNamespace.Labels = nil
 				Expect(pred.Update(event.UpdateEvent{ObjectOld: namespace, ObjectNew: newNamespace})).To(BeTrue())
 			})
+
+			It("should return true if exposure class label was added", func() {
+				oldNamespace := namespace.DeepCopy()
+				oldNamespace.Labels = nil
+				namespace.Labels = map[string]string{
+					v1beta1constants.LabelExposureClassHandlerName: "my-exposure-class",
+				}
+				Expect(pred.Update(event.UpdateEvent{ObjectOld: oldNamespace, ObjectNew: namespace})).To(BeTrue())
+			})
+
+			It("should return true if exposure class label was removed", func() {
+				newNamespace := namespace.DeepCopy()
+				newNamespace.Labels = nil
+				namespace.Labels = map[string]string{
+					v1beta1constants.LabelExposureClassHandlerName: "my-exposure-class",
+				}
+				Expect(pred.Update(event.UpdateEvent{ObjectOld: namespace, ObjectNew: newNamespace})).To(BeTrue())
+			})
 		})
 
 		Describe("#Delete", func() {
 			It("should return true for istio-ingress namespace", func() {
+				Expect(pred.Delete(event.DeleteEvent{Object: namespace})).To(BeTrue())
+			})
+
+			It("should return true for exposure class namespace", func() {
+				namespace.Labels = map[string]string{
+					v1beta1constants.LabelExposureClassHandlerName: "my-exposure-class",
+				}
 				Expect(pred.Delete(event.DeleteEvent{Object: namespace})).To(BeTrue())
 			})
 
@@ -290,6 +322,44 @@ var _ = Describe("Add", func() {
 			))
 		})
 
+		It("should map service to namespaces of DRs that reference it by service.namespace", func() {
+			destinationRule := &istionetworkingv1beta1.DestinationRule{
+				ObjectMeta: metav1.ObjectMeta{Name: "dr1", Namespace: "shoot-ns"},
+				Spec: istioapinetworkingv1beta1.DestinationRule{
+					Host: "my-svc.shoot-ns",
+				},
+			}
+			Expect(fakeClient.Create(ctx, destinationRule)).To(Succeed())
+
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "shoot-ns"},
+			}
+
+			requests := reconciler.MapServiceToNamespaces(ctx, service)
+			Expect(requests).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot-ns"}},
+			))
+		})
+
+		It("should map service to namespaces of DRs that reference it by service.namespace.svc", func() {
+			destinationRule := &istionetworkingv1beta1.DestinationRule{
+				ObjectMeta: metav1.ObjectMeta{Name: "dr1", Namespace: "shoot-ns"},
+				Spec: istioapinetworkingv1beta1.DestinationRule{
+					Host: "my-svc.shoot-ns.svc",
+				},
+			}
+			Expect(fakeClient.Create(ctx, destinationRule)).To(Succeed())
+
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "shoot-ns"},
+			}
+
+			requests := reconciler.MapServiceToNamespaces(ctx, service)
+			Expect(requests).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot-ns"}},
+			))
+		})
+
 		It("should not match service when DR uses short name but is in a different namespace", func() {
 			destinationRule := &istionetworkingv1beta1.DestinationRule{
 				ObjectMeta: metav1.ObjectMeta{Name: "dr1", Namespace: "other-ns"},
@@ -305,6 +375,25 @@ var _ = Describe("Add", func() {
 
 			requests := reconciler.MapServiceToNamespaces(ctx, service)
 			Expect(requests).To(BeEmpty())
+		})
+
+		It("should match service cross-namespace when DR uses FQDN", func() {
+			destinationRule := &istionetworkingv1beta1.DestinationRule{
+				ObjectMeta: metav1.ObjectMeta{Name: "dr1", Namespace: "other-ns"},
+				Spec: istioapinetworkingv1beta1.DestinationRule{
+					Host: "my-svc.shoot-ns.svc.cluster.local",
+				},
+			}
+			Expect(fakeClient.Create(ctx, destinationRule)).To(Succeed())
+
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "shoot-ns"},
+			}
+
+			requests := reconciler.MapServiceToNamespaces(ctx, service)
+			Expect(requests).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: "other-ns"}},
+			))
 		})
 
 		It("should not return duplicates", func() {
@@ -330,6 +419,9 @@ var _ = Describe("Add", func() {
 
 			requests := reconciler.MapServiceToNamespaces(ctx, service)
 			Expect(requests).To(HaveLen(1))
+			Expect(requests).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: "shoot-ns"}},
+			))
 		})
 	})
 

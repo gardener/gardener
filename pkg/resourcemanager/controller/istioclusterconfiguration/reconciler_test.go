@@ -88,7 +88,7 @@ var _ = Describe("Reconciler", func() {
 				Namespace: sourceNamespace.Name,
 			},
 			Spec: istioapinetworkingv1beta1.DestinationRule{
-				Host:     service.Name + "." + sourceNamespace.Name + ".svc.cluster.local",
+				Host:     service.Name + "." + service.Namespace + ".svc.cluster.local",
 				ExportTo: []string{"*"},
 			},
 		}
@@ -408,6 +408,73 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(envoyFilter.Spec.ConfigPatches).To(HaveLen(1))
 			Expect(envoyFilter.Spec.ConfigPatches[0].Match.GetCluster().Name).To(Equal("outbound|443||" + service.Name + "." + sourceNamespace.Name + ".svc.cluster.local"))
+		})
+
+		Context("exposure class namespace", func() {
+			var exposureClassNamespace *corev1.Namespace
+
+			BeforeEach(func() {
+				exposureClassNamespace = &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "istio-ingress--exposure-class",
+						Labels: map[string]string{
+							v1beta1constants.LabelExposureClassHandlerName: "my-exposure-class",
+						},
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				Expect(fakeClient.Create(ctx, exposureClassNamespace)).To(Succeed())
+			})
+
+			It("should create EnvoyFilters in exposure class namespaces", func() {
+				destinationRule.Spec.ExportTo = []string{"*"}
+				Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: exposureClassNamespace.Name}, envoyFilter)).To(Succeed())
+				Expect(envoyFilter.Spec.ConfigPatches).To(HaveLen(1))
+				Expect(envoyFilter.Spec.ConfigPatches[0].Match.GetCluster().Name).To(Equal("outbound|443||" + service.Name + "." + sourceNamespace.Name + ".svc.cluster.local"))
+			})
+
+			It("should create EnvoyFilters in both istio-ingress and exposure class namespaces", func() {
+				destinationRule.Spec.ExportTo = []string{"*"}
+				Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilter1 := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter1)).To(Succeed())
+				Expect(envoyFilter1.Spec.ConfigPatches).To(HaveLen(1))
+
+				envoyFilter2 := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: exposureClassNamespace.Name}, envoyFilter2)).To(Succeed())
+				Expect(envoyFilter2.Spec.ConfigPatches).To(HaveLen(1))
+			})
+
+			It("should export only to the named exposure class namespace", func() {
+				destinationRule.Spec.ExportTo = []string{exposureClassNamespace.Name}
+				Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: exposureClassNamespace.Name}, envoyFilter)).To(Succeed())
+				Expect(envoyFilter.Spec.ConfigPatches).To(HaveLen(1))
+
+				envoyFilterList := &istionetworkingv1alpha3.EnvoyFilterList{}
+				Expect(fakeClient.List(ctx, envoyFilterList, client.InNamespace(istioIngressNamespace.Name))).To(Succeed())
+				Expect(envoyFilterList.Items).To(BeEmpty())
+			})
 		})
 
 		Context("exportTo resolution", func() {

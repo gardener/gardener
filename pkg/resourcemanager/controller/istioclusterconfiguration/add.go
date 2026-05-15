@@ -30,6 +30,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of the controller.
@@ -209,6 +210,9 @@ func (r *Reconciler) NamespacePredicate() predicate.Predicate {
 }
 
 func isIstioIngressNamespace(labels map[string]string) bool {
+	if _, exists := labels[v1beta1constants.LabelExposureClassHandlerName]; exists {
+		return true
+	}
 	return labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleIstioIngress
 }
 
@@ -217,11 +221,11 @@ func serviceAndDestinationRuleMatch(service *corev1.Service, destinationRule *is
 		return false
 	}
 
-	if destinationRule.Spec.Host == getServiceFQDN(service.Name, service.Namespace) {
-		return true
+	if service.Namespace != destinationRule.Namespace && destinationRule.Spec.Host == service.Name {
+		return false
 	}
 
-	if service.Namespace == destinationRule.Namespace && destinationRule.Spec.Host == service.Name {
+	if slices.Contains(kubernetesutils.DNSNamesForService(service.Name, service.Namespace), destinationRule.Spec.Host) {
 		return true
 	}
 

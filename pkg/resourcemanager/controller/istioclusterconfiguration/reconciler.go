@@ -18,6 +18,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	istioutils "github.com/gardener/gardener/pkg/utils/istio"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -87,19 +89,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) getIstioIngressNamespaces(ctx context.Context) ([]string, error) {
-	namespaces := &corev1.NamespaceList{}
-	if err := r.TargetClient.List(ctx, namespaces, client.MatchingLabels{
+	istioIngressNamespaces := &corev1.NamespaceList{}
+	if err := r.TargetClient.List(ctx, istioIngressNamespaces, client.MatchingLabels{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to list istio-ingress namespaces: %w", err)
 	}
 
-	var istioIngressNamespaces []string
-
-	for _, namespace := range namespaces.Items {
-		istioIngressNamespaces = append(istioIngressNamespaces, namespace.Name)
+	exposureClassNamespaces := &corev1.NamespaceList{}
+	if err := r.TargetClient.List(ctx, exposureClassNamespaces, client.HasLabels{
+		v1beta1constants.LabelExposureClassHandlerName,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to list exposure class namespaces: %w", err)
 	}
-	return istioIngressNamespaces, nil
+
+	namespaceSet := sets.NewString()
+	for _, namespace := range istioIngressNamespaces.Items {
+		namespaceSet.Insert(namespace.Name)
+	}
+	for _, namespace := range exposureClassNamespaces.Items {
+		namespaceSet.Insert(namespace.Name)
+	}
+
+	namespaces := namespaceSet.UnsortedList()
+	slices.Sort(namespaces)
+
+	return namespaces, nil
 }
 
 func (r *Reconciler) reconcileEnvoyFilters(ctx context.Context, destinationRules []*istionetworkingv1beta1.DestinationRule, sourceNamespace *corev1.Namespace, istioIngressNamespaces []string) error {
@@ -110,9 +125,13 @@ func (r *Reconciler) reconcileEnvoyFilters(ctx context.Context, destinationRules
 
 		targetNamespaces := resolveExportTo(destinationRule.Spec.ExportTo, destinationRule.Namespace, istioIngressNamespaces)
 
-		// We don't use subsets, so we skip those cases to simplify the logic.
+		// We don't use subsets and workload selectors, so we skip those cases to simplify the logic.
 		if len(destinationRule.Spec.Subsets) > 0 {
 			log.V(1).Info("DestinationRule has subsets, skipping")
+			continue
+		}
+		if destinationRule.Spec.WorkloadSelector != nil {
+			log.V(1).Info("DestinationRule has workloadSelector, skipping")
 			continue
 		}
 
@@ -127,7 +146,7 @@ func (r *Reconciler) reconcileEnvoyFilters(ctx context.Context, destinationRules
 
 		for _, port := range service.Spec.Ports {
 			protocolMode := istioutils.DetermineProtocolMode(destinationRule, port)
-			clusterName := fmt.Sprintf("outbound|%d||%s", port.Port, getServiceFQDN(service.Name, service.Namespace))
+			clusterName := fmt.Sprintf("outbound|%d||%s", port.Port, kubernetesutils.FQDNForService(service.Name, service.Namespace))
 			patch := getEnvoyConfigPatch(clusterName, protocolMode)
 
 			for _, targetNamespace := range targetNamespaces {
@@ -222,7 +241,6 @@ func (r *Reconciler) cleanupOrphanEnvoyFilters(ctx context.Context, sourceNamesp
 	log := logf.FromContext(ctx)
 
 	var envoyFilters istionetworkingv1alpha3.EnvoyFilterList
-
 	if err := r.TargetClient.List(ctx, &envoyFilters, client.MatchingLabels{managedByLabelKey: managedByLabelValue}); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilters: %w", err)
 	}
@@ -309,10 +327,6 @@ func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPP
 
 func getEnvoyFilterName(sourceNamespace string) string {
 	return sourceNamespace + "-cluster-configuration"
-}
-
-func getServiceFQDN(name, namespace string) string {
-	return fmt.Sprintf("%s.%s%s", name, namespace, serviceFQDNSuffix)
 }
 
 func resolveExportTo(exportTo []string, sourceNamespace string, istioIngressNamespaces []string) []string {

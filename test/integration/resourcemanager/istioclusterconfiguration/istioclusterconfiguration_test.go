@@ -169,7 +169,7 @@ var _ = Describe("IstioClusterConfiguration controller tests", Serial, func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-istio-ingress2-",
 				Labels: map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress,
+					v1beta1constants.LabelExposureClassHandlerName: "test-handler",
 				},
 			},
 		}
