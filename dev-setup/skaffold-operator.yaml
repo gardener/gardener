@@ -1363,7 +1363,7 @@ build:
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         buildCommand: |
-          ./dev-setup/push-helm.sh
+          ./hack/push-helm.sh
         dependencies:
           paths:
             - charts/gardener/provider-local
@@ -1373,7 +1373,7 @@ build:
     - image: local-skaffold/gardener-extension-admission-local/charts/runtime
       custom:
         buildCommand: |
-          ./dev-setup/push-helm.sh charts/gardener/admission-local/charts/runtime .image
+          ./hack/push-helm.sh charts/gardener/admission-local/charts/runtime .image
         dependencies:
           paths:
             - charts/gardener/admission-local/charts/runtime
@@ -1383,7 +1383,7 @@ build:
     - image: local-skaffold/gardener-extension-admission-local/charts/application
       custom:
         buildCommand: |
-          ./dev-setup/push-helm.sh charts/gardener/admission-local/charts/application .image
+          ./hack/push-helm.sh charts/gardener/admission-local/charts/application .image
         dependencies:
           paths:
             - charts/gardener/admission-local/charts/application
