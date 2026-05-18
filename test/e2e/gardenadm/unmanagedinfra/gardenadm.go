@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -117,6 +118,14 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
 					return namespace.Labels
 				}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
+			}, SpecTimeout(time.Minute))
+
+			It("should deploy the SelfHostedShootExposure", func(ctx SpecContext) {
+				Eventually(ctx, func(g Gomega) *extensionsv1alpha1.SelfHostedShootExposure {
+					exposure := &extensionsv1alpha1.SelfHostedShootExposure{}
+					g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: shootName, Namespace: controlPlaneNamespace}, exposure)).To(Succeed())
+					return exposure
+				}).Should(BeHealthy(health.CheckExtensionObject))
 			}, SpecTimeout(time.Minute))
 
 			It("should ensure extensions and gardener-resource-manager run in pod network", func(ctx SpecContext) {

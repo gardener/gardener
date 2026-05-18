@@ -278,6 +278,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			))
 		}, SpecTimeout(time.Minute))
 
+		It("should deploy the SelfHostedShootExposure in the shoot", func(ctx SpecContext) {
+			exposure := &extensionsv1alpha1.SelfHostedShootExposure{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: "kube-system"}}
+			Eventually(ctx, shootKomega.Object(exposure)).Should(BeHealthy(health.CheckExtensionObject))
+		}, SpecTimeout(time.Minute))
+
 		It("should deploy the cluster-autoscaler in the shoot", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: "kube-system"}}
 			Eventually(ctx, shootKomega.Object(deployment)).Should(BeHealthy(health.CheckDeployment))

@@ -76,6 +76,20 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.Worker.Deploy(ctx)
 }
 
+// ListControlPlaneNodes returns the Node objects that have the standard `node-role.kubernetes.io/control-plane` label.
+// It returns an error if no matching nodes are found.
+func (b *Botanist) ListControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
+	nodeList := &corev1.NodeList{}
+	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	if len(nodeList.Items) == 0 {
+		return nil, fmt.Errorf("no control plane nodes found")
+	}
+
+	return nodeList.Items, nil
+}
+
 // WorkerPoolToNodesMap lists all the nodes with the given client in the shoot cluster. It returns a map whose key is
 // the name of a worker pool and whose values are the corresponding nodes.
 func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[string][]corev1.Node, error) {

@@ -14,7 +14,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -97,22 +96,12 @@ var _ = Describe("DNSRecord", func() {
 	}
 
 	Describe("#RestoreExternalDNSRecord", func() {
-		It("should fail if there is no control plane worker pool", func(ctx SpecContext) {
-			shoot := b.Shoot.GetInfo()
-			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
-				Name: "worker",
-			}}
-			b.Shoot.SetInfo(shoot)
-
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("failed fetching the control plane worker pool for the shoot"))
-		})
-
 		It("should fail if there are no control plane nodes", func(ctx SpecContext) {
 			node := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker-1",
 					Labels: map[string]string{
-						v1beta1constants.LabelWorkerPool: "worker",
+						"worker.gardener.cloud/pool": "worker",
 					},
 				},
 			}
@@ -126,7 +115,7 @@ var _ = Describe("DNSRecord", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controlPlaneWorkerPoolName + "-1",
 					Labels: map[string]string{
-						v1beta1constants.LabelWorkerPool: controlPlaneWorkerPoolName,
+						"node-role.kubernetes.io/control-plane": "",
 					},
 				},
 			}
@@ -144,7 +133,7 @@ var _ = Describe("DNSRecord", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controlPlaneWorkerPoolName + "-1",
 					Labels: map[string]string{
-						v1beta1constants.LabelWorkerPool: controlPlaneWorkerPoolName,
+						"node-role.kubernetes.io/control-plane": "",
 					},
 				},
 				Status: corev1.NodeStatus{
@@ -164,7 +153,7 @@ var _ = Describe("DNSRecord", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controlPlaneWorkerPoolName + "-1",
 					Labels: map[string]string{
-						v1beta1constants.LabelWorkerPool: controlPlaneWorkerPoolName,
+						"node-role.kubernetes.io/control-plane": "",
 					},
 				},
 				Status: corev1.NodeStatus{
@@ -198,7 +187,7 @@ var _ = Describe("DNSRecord", func() {
 			node1 := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   controlPlaneWorkerPoolName + "-1",
-					Labels: map[string]string{v1beta1constants.LabelWorkerPool: controlPlaneWorkerPoolName},
+					Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 				},
 				Status: corev1.NodeStatus{
 					Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}},
@@ -207,7 +196,7 @@ var _ = Describe("DNSRecord", func() {
 			node2 := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   controlPlaneWorkerPoolName + "-2",
-					Labels: map[string]string{v1beta1constants.LabelWorkerPool: controlPlaneWorkerPoolName},
+					Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 				},
 				Status: corev1.NodeStatus{
 					Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "fd12::1"}},
@@ -238,7 +227,7 @@ var _ = Describe("DNSRecord", func() {
 			It("should fail if all ingress entries have neither IP nor hostname", func(ctx SpecContext) {
 				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{{IP: "", Hostname: ""}})
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("LoadBalancer ingress has neither IP nor hostname"))
+				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("SelfHostedShootExposure ingress has neither IP(s) nor hostname(s)"))
 			})
 
 			It("should use IPs when available", func(ctx SpecContext) {

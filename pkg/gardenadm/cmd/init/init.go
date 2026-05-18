@@ -307,8 +307,8 @@ func run(ctx context.Context, opts *Options) error {
 		)
 
 		// When extension-based exposure is configured, first deploy the SelfHostedShootExposure object
-		// so the extension controller provisions a LoadBalancer. The DNSRecord step then reads the
-		// resulting LB ingress from the status. For DNS-based exposure the SelfHostedShootExposure
+		// so the extension controller provisions the necessary resources. The DNSRecord step then reads the
+		// resulting ingress from the status. For DNS-based exposure the SelfHostedShootExposure
 		// step is skipped and the DNSRecord step points directly at the control-plane node addresses.
 		deploySelfHostedShootExposure = g.Add(flow.Task{
 			Name:         "Deploying SelfHostedShootExposure",

@@ -37,10 +37,10 @@ func (b *GardenadmBotanist) DeployBootstrapDNSRecord(ctx context.Context) error 
 }
 
 // RestoreExternalDNSRecord restores the external DNSRecord for the self-hosted shoot's API server.
-// For extension-based exposure the DNS target is set to the LoadBalancer ingress that is read
-// from the SelfHostedShootExposure status.
+// For extension-based exposure the DNS target is set to the ingress that is read from the
+// SelfHostedShootExposure status.
 // For DNS-based exposure the preferred address of each control-plane node is used directly.
-// For dual-stack LBs, IP families are preferred in the order they appear in spec.networking.ipFamilies.
+// For dual-stack setups, IP families are preferred in the order they appear in spec.networking.ipFamilies.
 func (b *GardenadmBotanist) RestoreExternalDNSRecord(ctx context.Context) error {
 	addresses, recordType, err := b.externalDNSRecordValues(ctx)
 	if err != nil {
@@ -81,17 +81,20 @@ func (b *GardenadmBotanist) extensionExposureDNSRecordValues() ([]string, extens
 	}
 	switch {
 	case len(ips) > 0:
-		return filterByIPFamily(ips, b.Shoot.GetInfo().Spec.Networking.IPFamilies,
-			fmt.Errorf("LoadBalancer ingress IPs %v do not match any configured IP family", ips))
+		filtered, recordType, ok := filterByIPFamily(ips, b.Shoot.GetInfo().Spec.Networking.IPFamilies)
+		if !ok {
+			return nil, "", fmt.Errorf("SelfHostedShootExposure ingress IPs %v do not match any configured IP family", ips)
+		}
+		return filtered, recordType, nil
 	case len(hostnames) > 0:
 		return hostnames, extensionsv1alpha1.DNSRecordTypeCNAME, nil
 	default:
-		return nil, "", fmt.Errorf("LoadBalancer ingress has neither IP nor hostname")
+		return nil, "", fmt.Errorf("SelfHostedShootExposure ingress has neither IP(s) nor hostname(s)")
 	}
 }
 
 func (b *GardenadmBotanist) nodeAddressDNSRecordValues(ctx context.Context) ([]string, extensionsv1alpha1.DNSRecordType, error) {
-	nodes, err := b.listControlPlaneNodes(ctx)
+	nodes, err := b.ListControlPlaneNodes(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -105,23 +108,26 @@ func (b *GardenadmBotanist) nodeAddressDNSRecordValues(ctx context.Context) ([]s
 		addresses = append(addresses, addr)
 	}
 
-	return filterByIPFamily(addresses, b.Shoot.GetInfo().Spec.Networking.IPFamilies,
-		fmt.Errorf("control plane node addresses %v do not match any configured IP family", addresses))
+	filtered, recordType, ok := filterByIPFamily(addresses, b.Shoot.GetInfo().Spec.Networking.IPFamilies)
+	if !ok {
+		return nil, "", fmt.Errorf("control plane node addresses %v do not match any configured IP family", addresses)
+	}
+	return filtered, recordType, nil
 }
 
-// filterByIPFamily returns the subset of addresses matching the first IP family in ipFamilies
-// that has at least one match, along with its DNS record type. noneMatchErr is returned if no family matches.
-func filterByIPFamily(addresses []string, ipFamilies []gardencorev1beta1.IPFamily, noneMatchErr error) ([]string, extensionsv1alpha1.DNSRecordType, error) {
+// filterByIPFamily returns the subset of addresses matching the first IP family in ipFamilies that has at least one
+// match, along with its DNS record type. The bool is false if no family matches.
+func filterByIPFamily(addresses []string, ipFamilies []gardencorev1beta1.IPFamily) ([]string, extensionsv1alpha1.DNSRecordType, bool) {
 	for _, family := range ipFamilies {
 		recordType := ipFamilyToDNSRecordType(family)
 		filtered := slices.DeleteFunc(slices.Clone(addresses), func(addr string) bool {
 			return extensionsv1alpha1helper.GetDNSRecordType(addr) != recordType
 		})
 		if len(filtered) > 0 {
-			return filtered, recordType, nil
+			return filtered, recordType, true
 		}
 	}
-	return nil, "", noneMatchErr
+	return nil, "", false
 }
 
 func ipFamilyToDNSRecordType(family gardencorev1beta1.IPFamily) extensionsv1alpha1.DNSRecordType {
