@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -37,19 +36,19 @@ var _ = Describe("SelfHostedShootExposure", func() {
 		ctx context.Context
 		c   client.Client
 
-		fakeClock *testclock.FakeClock
+		fakeClock *testclock.FakePassiveClock
 		now       time.Time
 
 		values   *Values
-		deployer Interface
+		deployer *SelfHostedShootExposure
 
 		expected *extensionsv1alpha1.SelfHostedShootExposure
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		now = time.Unix(60, 0)
-		fakeClock = testclock.NewFakeClock(now)
+		now = time.Date(2026, 05, 18, 0, 0, 0, 0, time.UTC)
+		fakeClock = testclock.NewFakePassiveClock(now)
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
@@ -60,7 +59,6 @@ var _ = Describe("SelfHostedShootExposure", func() {
 			Name:      name,
 			Namespace: namespace,
 			Type:      extType,
-			Port:      443,
 		}
 
 		expected = &extensionsv1alpha1.SelfHostedShootExposure{
@@ -80,13 +78,15 @@ var _ = Describe("SelfHostedShootExposure", func() {
 			},
 		}
 
-		deployer = New(logr.Discard(), c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+		deployer = New(logr.Discard(), c, values)
+		deployer.Clock = fakeClock
+		deployer.WaitInterval = time.Millisecond
+		deployer.WaitSevereThreshold = 250 * time.Millisecond
+		deployer.WaitTimeout = 500 * time.Millisecond
 	})
 
 	Describe("#Deploy", func() {
 		It("should create the resource with correct spec and annotations", func() {
-			defer test.WithVars(&TimeNow, fakeClock.Now)()
-
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 
 			actual := &extensionsv1alpha1.SelfHostedShootExposure{}
@@ -95,8 +95,6 @@ var _ = Describe("SelfHostedShootExposure", func() {
 		})
 
 		It("should include CredentialsRef when set", func() {
-			defer test.WithVars(&TimeNow, fakeClock.Now)()
-
 			credRef := &corev1.ObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
@@ -104,7 +102,6 @@ var _ = Describe("SelfHostedShootExposure", func() {
 				Namespace:  namespace,
 			}
 			values.CredentialsRef = credRef
-			deployer = New(logr.Discard(), c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 
@@ -114,8 +111,6 @@ var _ = Describe("SelfHostedShootExposure", func() {
 		})
 
 		It("should update endpoints set via SetEndpoints", func() {
-			defer test.WithVars(&TimeNow, fakeClock.Now)()
-
 			endpoints := []extensionsv1alpha1.ControlPlaneEndpoint{
 				{
 					NodeName: "node-1",

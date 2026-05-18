@@ -49,13 +49,14 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 		return nil, err
 	}
 
-	service := serviceForExposure(exposure)
+	providerNamespace := cluster.Shoot.Status.TechnicalID
+	service := serviceForExposure(exposure, providerNamespace)
 	if err := providerClient.Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 		return nil, fmt.Errorf("could not patch Service: %w", err)
 	}
 
 	for _, family := range endpointSliceFamiliesForCluster(cluster) {
-		slice, err := endpointSliceForExposure(exposure, family)
+		slice, err := endpointSliceForExposure(exposure, providerNamespace, family)
 		if err != nil {
 			return nil, fmt.Errorf("could not build %s EndpointSlice: %w", family, err)
 		}
@@ -81,9 +82,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 		return err
 	}
 
+	providerNamespace := cluster.Shoot.Status.TechnicalID
+
 	// Explicitly delete the Service and wait for it to be gone so the LoadBalancer is deprovisioned before
 	// releasing the SelfHostedShootExposure.
-	err = providerClient.Delete(ctx, serviceForExposure(exposure))
+	err = providerClient.Delete(ctx, serviceForExposure(exposure, providerNamespace))
 	if err == nil {
 		return &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
@@ -100,7 +103,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 		if err := providerClient.Delete(ctx, &discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      endpointSliceName(exposure, family),
-				Namespace: exposure.Namespace,
+				Namespace: providerNamespace,
 			},
 		}); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not delete %s EndpointSlice: %w", family, err)
@@ -141,7 +144,7 @@ func endpointSliceFamiliesForCluster(cluster *extensionscontroller.Cluster) []di
 	return families
 }
 
-func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *corev1.Service {
+func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, namespace string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -149,7 +152,7 @@ func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *c
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName(exposure),
-			Namespace: exposure.Namespace,
+			Namespace: namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
@@ -164,7 +167,7 @@ func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure) *c
 	}
 }
 
-func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, family discoveryv1.AddressType) (*discoveryv1.EndpointSlice, error) {
+func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, namespace string, family discoveryv1.AddressType) (*discoveryv1.EndpointSlice, error) {
 	var endpoints []discoveryv1.Endpoint
 	for _, endpoint := range exposure.Spec.Endpoints {
 		for _, address := range endpoint.Addresses {
@@ -200,7 +203,7 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      endpointSliceName(exposure, family),
-			Namespace: exposure.Namespace,
+			Namespace: namespace,
 			Labels:    map[string]string{discoveryv1.LabelServiceName: serviceName(exposure)},
 		},
 		AddressType: family,

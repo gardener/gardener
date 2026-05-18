@@ -11,37 +11,30 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 )
 
-const (
-	// DefaultInterval is the default interval for retry operations.
-	DefaultInterval = 5 * time.Second
-	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
-	DefaultSevereThreshold = 30 * time.Second
-	// DefaultTimeout is the default timeout for the SelfHostedShootExposure resource to become ready.
-	DefaultTimeout = 5 * time.Minute
-)
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
-
 // Interface manages a SelfHostedShootExposure extension resource.
 type Interface interface {
 	component.DeployWaiter
+	// SetEndpoints replaces the endpoints in the values; the next Deploy call will use the new list.
 	SetEndpoints([]extensionsv1alpha1.ControlPlaneEndpoint)
+	// GetIngress returns the LoadBalancer ingress from the in-memory exposure object's status.
+	// It is populated by Wait once the extension controller reports the resource as Ready.
 	GetIngress() []corev1.LoadBalancerIngress
 }
 
 // Values contains the values used to create a SelfHostedShootExposure resource.
 type Values struct {
-	// Namespace is the shoot's control-plane namespace on the seed.
+	// Namespace is the shoot's control-plane namespace.
 	Namespace string
 	// Name is the name of the SelfHostedShootExposure resource.
 	Name string
@@ -52,28 +45,40 @@ type Values struct {
 	// CredentialsRef is a reference to the cloud provider credentials.
 	// It is only set for shoots with managed infrastructure.
 	CredentialsRef *corev1.ObjectReference
-	// Port is the port the apiserver listens on and the load balancer should expose.
-	Port int32
-	// Endpoints lists the control-plane nodes that should be exposed.
+	// Endpoints contains the control-plane nodes that should be exposed.
 	Endpoints []extensionsv1alpha1.ControlPlaneEndpoint
 }
 
-// New creates a new instance of Interface.
+// SelfHostedShootExposure manages a SelfHostedShootExposure extension resource.
+type SelfHostedShootExposure struct {
+	log    logr.Logger
+	client client.Client
+	values *Values
+
+	// exposed for testing
+	Clock               clock.PassiveClock
+	WaitInterval        time.Duration
+	WaitSevereThreshold time.Duration
+	WaitTimeout         time.Duration
+
+	exposure *extensionsv1alpha1.SelfHostedShootExposure
+}
+
+// New creates a new SelfHostedShootExposure component with the default clock and wait settings.
 func New(
 	log logr.Logger,
 	c client.Client,
 	values *Values,
-	waitInterval time.Duration,
-	waitSevereThreshold time.Duration,
-	waitTimeout time.Duration,
-) Interface {
-	return &selfHostedShootExposure{
-		log:                 log,
-		client:              c,
-		values:              values,
-		waitInterval:        waitInterval,
-		waitSevereThreshold: waitSevereThreshold,
-		waitTimeout:         waitTimeout,
+) *SelfHostedShootExposure {
+	return &SelfHostedShootExposure{
+		log:    log,
+		client: c,
+		values: values,
+
+		Clock:               &clock.RealClock{},
+		WaitInterval:        5 * time.Second,
+		WaitSevereThreshold: 30 * time.Second,
+		WaitTimeout:         5 * time.Minute,
 
 		exposure: &extensionsv1alpha1.SelfHostedShootExposure{
 			ObjectMeta: metav1.ObjectMeta{
@@ -84,23 +89,12 @@ func New(
 	}
 }
 
-type selfHostedShootExposure struct {
-	log                 logr.Logger
-	client              client.Client
-	values              *Values
-	waitInterval        time.Duration
-	waitSevereThreshold time.Duration
-	waitTimeout         time.Duration
-
-	exposure *extensionsv1alpha1.SelfHostedShootExposure
-}
-
 // Deploy creates or updates the SelfHostedShootExposure resource and triggers a reconciliation
 // by setting the gardener.cloud/operation=reconcile annotation.
-func (s *selfHostedShootExposure) Deploy(ctx context.Context) error {
+func (s *SelfHostedShootExposure) Deploy(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, s.exposure, func() error {
 		metav1.SetMetaDataAnnotation(&s.exposure.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&s.exposure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
+		metav1.SetMetaDataAnnotation(&s.exposure.ObjectMeta, v1beta1constants.GardenerTimestamp, s.Clock.Now().UTC().Format(time.RFC3339Nano))
 
 		s.exposure.Spec = extensionsv1alpha1.SelfHostedShootExposureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -108,7 +102,7 @@ func (s *selfHostedShootExposure) Deploy(ctx context.Context) error {
 				Class: s.values.Class,
 			},
 			CredentialsRef: s.values.CredentialsRef,
-			Port:           s.values.Port,
+			Port:           kubeapiserverconstants.Port,
 			Endpoints:      s.values.Endpoints,
 		}
 		return nil
@@ -118,7 +112,7 @@ func (s *selfHostedShootExposure) Deploy(ctx context.Context) error {
 }
 
 // Destroy deletes the SelfHostedShootExposure resource.
-func (s *selfHostedShootExposure) Destroy(ctx context.Context) error {
+func (s *SelfHostedShootExposure) Destroy(ctx context.Context) error {
 	return extensions.DeleteExtensionObject(
 		ctx,
 		s.client,
@@ -127,40 +121,40 @@ func (s *selfHostedShootExposure) Destroy(ctx context.Context) error {
 }
 
 // Wait waits until the SelfHostedShootExposure resource is ready.
-func (s *selfHostedShootExposure) Wait(ctx context.Context) error {
+func (s *SelfHostedShootExposure) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		s.client,
 		s.log,
 		s.exposure,
 		extensionsv1alpha1.SelfHostedShootExposureResource,
-		s.waitInterval,
-		s.waitSevereThreshold,
-		s.waitTimeout,
+		s.WaitInterval,
+		s.WaitSevereThreshold,
+		s.WaitTimeout,
 		nil,
 	)
 }
 
 // WaitCleanup waits until the SelfHostedShootExposure resource is deleted.
-func (s *selfHostedShootExposure) WaitCleanup(ctx context.Context) error {
+func (s *SelfHostedShootExposure) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		s.client,
 		s.log,
 		s.exposure,
 		extensionsv1alpha1.SelfHostedShootExposureResource,
-		s.waitInterval,
-		s.waitTimeout,
+		s.WaitInterval,
+		s.WaitTimeout,
 	)
 }
 
 // SetEndpoints replaces the endpoints in the values; the next Deploy call will use the new list.
-func (s *selfHostedShootExposure) SetEndpoints(endpoints []extensionsv1alpha1.ControlPlaneEndpoint) {
+func (s *SelfHostedShootExposure) SetEndpoints(endpoints []extensionsv1alpha1.ControlPlaneEndpoint) {
 	s.values.Endpoints = endpoints
 }
 
 // GetIngress returns the LoadBalancer ingress from the in-memory exposure object's status.
 // It is populated by Wait once the extension controller reports the resource as Ready.
-func (s *selfHostedShootExposure) GetIngress() []corev1.LoadBalancerIngress {
+func (s *SelfHostedShootExposure) GetIngress() []corev1.LoadBalancerIngress {
 	return s.exposure.Status.Ingress
 }
