@@ -103,16 +103,13 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, gar
 		return nil, fmt.Errorf("invalid kubeconfig: currently set authinfo %s not found among authinfos", curContext.AuthInfo)
 	}
 
-	gardenClusterCACert := gardenClientConnection.GardenClusterCACert
-	if len(gardenClusterCACert) == 0 && gardenAPIReader != nil {
-		log.Info("Getting CA from the garden cluster")
-		kubeRootCA := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: core.GardenerSystemPublicNamespace, Name: "kube-root-ca.crt"}}
-		if err := gardenAPIReader.Get(ctx, client.ObjectKeyFromObject(kubeRootCA), kubeRootCA); err != nil {
-			return nil, fmt.Errorf("unable to get %q configmap: %w", kubeRootCA.Name, err)
-		}
-
-		gardenClusterCACert = []byte(kubeRootCA.Data["ca.crt"])
+	log.Info("Getting CA from the garden cluster")
+	kubeRootCA := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: core.GardenerSystemPublicNamespace, Name: "kube-root-ca.crt"}}
+	if err := gardenAPIReader.Get(ctx, client.ObjectKeyFromObject(kubeRootCA), kubeRootCA); err != nil {
+		return nil, fmt.Errorf("unable to get %q configmap: %w", kubeRootCA.Name, err)
 	}
+
+	gardenClusterCACert := []byte(kubeRootCA.Data["ca.crt"])
 
 	if bytes.Equal(curCluster.CertificateAuthorityData, gardenClusterCACert) {
 		// CAs are equal, nothing to do

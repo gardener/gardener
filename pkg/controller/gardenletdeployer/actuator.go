@@ -848,7 +848,7 @@ func prepareGardenClientConnectionWithBootstrap(
 		}
 	}
 
-	return createBootstrapKubeconfig(ctx, gardenClient, gardenRESTConfig, obj, bootstrap, bootstrapToken, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
+	return createBootstrapKubeconfig(ctx, gardenClient, gardenRESTConfig, obj, bootstrap, bootstrapToken, gcc.GardenClusterAddress)
 }
 
 // isAlreadyBootstrapped checks if the gardenlet already has a valid Garden cluster certificate through TLS bootstrapping
@@ -879,7 +879,6 @@ func createBootstrapKubeconfig(
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	bootstrapToken string,
 	address *string,
-	caCert []byte,
 ) (
 	string,
 	error,
@@ -889,7 +888,7 @@ func createBootstrapKubeconfig(
 		bootstrapKubeconfig []byte
 	)
 
-	gardenClientRestConfig := gardenerutils.PrepareGardenClientRestConfig(gardenRESTConfig, address, caCert)
+	gardenClientRestConfig := gardenerutils.PrepareGardenClientRestConfig(gardenRESTConfig, address)
 
 	switch bootstrap {
 	case seedmanagementv1alpha1.BootstrapServiceAccount:

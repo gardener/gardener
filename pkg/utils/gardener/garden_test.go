@@ -203,16 +203,15 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should copy the baseConfig if no overwrites are given", func() {
-			config := PrepareGardenClientRestConfig(baseConfig, nil, nil)
+			config := PrepareGardenClientRestConfig(baseConfig, nil)
 			Expect(config).NotTo(BeIdenticalTo(baseConfig))
 			Expect(config).To(Equal(baseConfig))
 		})
 
 		It("should use the overwrites but copy overthing else", func() {
-			config := PrepareGardenClientRestConfig(baseConfig, ptr.To("other"), []byte("ca2"))
+			config := PrepareGardenClientRestConfig(baseConfig, ptr.To("other"))
 			Expect(config).NotTo(BeIdenticalTo(baseConfig))
 			Expect(config.Host).To(Equal("other"))
-			Expect(config.CAData).To(BeEquivalentTo("ca2"))
 
 			// everything else should be equal
 			config.Host = baseConfig.Host

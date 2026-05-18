@@ -21,6 +21,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrappers"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -33,14 +34,17 @@ var _ = Describe("GardenKubeconfig", func() {
 		seedName           = "seed"
 		kubeconfigValidity = time.Hour
 
-		fakeClient client.Client
-		cfg        *gardenletconfigv1alpha1.GardenletConfiguration
-		result     *KubeconfigBootstrapResult
-		runner     *GardenKubeconfig
+		gardenFakeClient client.Client
+		fakeClient       client.Client
+		cfg              *gardenletconfigv1alpha1.GardenletConfiguration
+		result           *KubeconfigBootstrapResult
+		runner           *GardenKubeconfig
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		gardenFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+
 		cfg = &gardenletconfigv1alpha1.GardenletConfiguration{
 			GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
 				KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
@@ -113,7 +117,6 @@ var _ = Describe("GardenKubeconfig", func() {
 							CAData:   []byte("foo"),
 						},
 					}
-					runner.Config.GardenClientConnection.GardenClusterCACert = restConfig.CAData
 
 					var err error
 					existingKubeconfig, err = gardenletbootstraputil.CreateKubeconfigWithClientCertificate(restConfig, nil, nil)
@@ -127,6 +130,23 @@ var _ = Describe("GardenKubeconfig", func() {
 						Data: map[string][]byte{"kubeconfig": existingKubeconfig},
 					}
 					Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+					gardenFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+					Expect(gardenFakeClient.Create(ctx, &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-root-ca.crt",
+							Namespace: "gardener-system-public",
+						},
+						Data: map[string]string{
+							"ca.crt": string(restConfig.CAData),
+						},
+					})).To(Succeed())
+
+					DeferCleanup(test.WithVars(
+						&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+							return fakekubernetes.NewClientSetBuilder().WithAPIReader(gardenFakeClient).Build(), nil
+						},
+					))
 				})
 
 				It("should return the existing kubeconfig", func() {
@@ -135,10 +155,21 @@ var _ = Describe("GardenKubeconfig", func() {
 				})
 
 				It("should update the CA bundle if it changed", func() {
-					newCABundle := []byte("bar")
-					runner.Config.GardenClientConnection.GardenClusterCACert = newCABundle
+					newCAData := "bar"
 
-					restConfig.CAData = newCABundle
+					Expect(gardenFakeClient.Update(ctx, &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-root-ca.crt",
+							Namespace: "gardener-system-public",
+						},
+						Data: map[string]string{
+							"ca.crt": newCAData,
+						},
+					})).To(Succeed())
+
+					Expect(runner.Start(ctx)).To(Succeed())
+
+					restConfig.CAData = []byte(newCAData)
 					updatedKubeconfig, err := gardenletbootstraputil.CreateKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -179,7 +210,6 @@ var _ = Describe("GardenKubeconfig", func() {
 								CAData:   []byte("foo"),
 							},
 						}
-						runner.Config.GardenClientConnection.GardenClusterCACert = restConfig.CAData
 					})
 
 					It("should return an error when the bootstrap kubeconfig secret does not exist", func() {
@@ -215,9 +245,19 @@ var _ = Describe("GardenKubeconfig", func() {
 						}
 						Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
+						Expect(gardenFakeClient.Create(ctx, &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "kube-root-ca.crt",
+								Namespace: "gardener-system-public",
+							},
+							Data: map[string]string{
+								"ca.crt": string(restConfig.CAData),
+							},
+						})).To(Succeed())
+
 						DeferCleanup(test.WithVars(
 							&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-								return nil, nil
+								return fakekubernetes.NewClientSetBuilder().WithAPIReader(gardenFakeClient).Build(), nil
 							},
 							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, _ *gardenletconfigv1alpha1.SeedConfig, _ *types.NamespacedName, _ *metav1.Duration) ([]byte, string, error) {
 								return requestedKubeconfig, csrName, nil
