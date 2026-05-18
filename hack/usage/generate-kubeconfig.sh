@@ -121,6 +121,7 @@ cmd_self_hosted_shoot() {
   local shoot_namespace="${SHOOT_NAMESPACE:-garden}"
   local shoot_name="${SHOOT_NAME:-root}"
   local docker_container=""
+  local runtime_kubeconfig="${KUBECONFIG_RUNTIME_CLUSTER:-${SCRIPT_DIR}/../../dev-setup/kubeconfigs/runtime/kubeconfig}"
 
   while test $# -gt 0; do
     case "$1" in
@@ -130,18 +131,30 @@ cmd_self_hosted_shoot() {
         shift; shoot_name="${1:-$shoot_name}" ;;
       --docker)
         shift; docker_container="${1:-}" ;;
+      --runtime-kubeconfig)
+        shift; runtime_kubeconfig="${1:-$runtime_kubeconfig}" ;;
       --help|-h)
         cat <<EOF
 Usage: $(basename "$0") self-hosted-shoot [flags]
 
-Generate admin kubeconfig for a self-hosted shoot using a client certificate
-signed by the cluster's client CA.
+Print the admin kubeconfig for a self-hosted shoot.
+
+Without --docker (managed-infrastructure scenario):
+  Fetches the kubeconfig from the Secret 'shoot--<namespace>--<name>/kubeconfig'
+  on the bootstrap cluster pointed to by --runtime-kubeconfig.
+
+With --docker (unmanaged-infrastructure/gind scenario):
+  Generates a fresh admin client certificate by 'docker exec'ing into the
+  given container.
 
 Flags:
-  --shoot-namespace <ns>    Shoot namespace (default: garden, env: SHOOT_NAMESPACE)
-  --shoot-name <name>       Shoot name (default: root, env: SHOOT_NAME)
-  --docker <container>      Use 'docker exec' into the given container instead of
-                            'kubectl exec' into a machine pod
+  --shoot-namespace <ns>          Shoot namespace (default: garden, env: SHOOT_NAMESPACE)
+  --shoot-name <name>             Shoot name (default: root, env: SHOOT_NAME)
+  --docker <container>            Use 'docker exec' into the given container to
+                                  generate a client-cert kubeconfig
+  --runtime-kubeconfig <path>     Path to the bootstrap cluster kubeconfig
+                                  (default: dev-setup/kubeconfigs/runtime/kubeconfig,
+                                   env: KUBECONFIG_RUNTIME_CLUSTER)
 EOF
         exit 0 ;;
       *)
@@ -150,8 +163,12 @@ EOF
     shift
   done
 
-  generate_client_cert_kubeconfig "self-hosted-shoot--${shoot_namespace}--${shoot_name}" \
-    "$(get_self_hosted_shoot_certs "${shoot_namespace}" "${shoot_name}" "${docker_container}")"
+  if [[ -n "${docker_container}" ]]; then
+    generate_client_cert_kubeconfig "self-hosted-shoot--${shoot_namespace}--${shoot_name}" \
+      "$(get_self_hosted_shoot_certs "${shoot_namespace}" "${shoot_name}" "${docker_container}")"
+  else
+    kubectl --kubeconfig "${runtime_kubeconfig}" -n "shoot--${shoot_namespace}--${shoot_name}" get secret kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 -d
+  fi
 }
 
 # --- shared helpers for client-cert kubeconfigs --------------------------------
@@ -183,7 +200,7 @@ get_virtual_garden_certs() {
 get_self_hosted_shoot_certs() {
   local shoot_namespace="$1"
   local shoot_name="$2"
-  local docker_container="${3:-}"
+  local docker_container="$3"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -192,20 +209,9 @@ get_self_hosted_shoot_certs() {
   local client_ca_cert="${tmp_dir}/client-ca.crt"
   local client_ca_key="${tmp_dir}/client-ca.key"
 
-  if [[ -n "${docker_container}" ]]; then
-    remote_kubectl() {
-      docker exec "${docker_container}" kubectl --kubeconfig /etc/kubernetes/admin.conf "$@"
-    }
-  else
-    local machine_pod_ref
-    machine_pod_ref="$(kubectl get pod -A -l app=machine -o jsonpath='{.items[0].metadata.namespace}/{.items[0].metadata.name}')"
-    local machine_namespace="${machine_pod_ref%%/*}"
-    local machine_pod="${machine_pod_ref##*/}"
-
-    remote_kubectl() {
-      kubectl -n "${machine_namespace}" exec "${machine_pod}" -- kubectl --kubeconfig /etc/kubernetes/admin.conf "$@"
-    }
-  fi
+  remote_kubectl() {
+    docker exec "${docker_container}" kubectl --kubeconfig /etc/kubernetes/admin.conf "$@"
+  }
 
   remote_kubectl -n kube-system get secret -l name=ca        -o jsonpath='{..data.ca\.crt}' | base64 -d > "$cluster_ca_cert"
   remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.crt}' | base64 -d > "$client_ca_cert"
