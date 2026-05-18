@@ -321,7 +321,6 @@ func GetIngressWildcardDomains(garden *operatorv1alpha1.Garden) []operatorv1alph
 // the discovery server domain (Garden.spec.virtualCluster.gardener.gardenerDiscoveryServer.domain)
 // if specified and not already covered by the wildcard domains
 func GetAllIngressDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSDomain {
-	runtimeDomains := garden.Spec.RuntimeCluster.Ingress.Domains
 	allIngressDomains := GetIngressWildcardDomains(garden)
 
 	if discoveryServerConfig := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; discoveryServerConfig != nil && discoveryServerConfig.Domain != nil {
@@ -333,7 +332,7 @@ func GetAllIngressDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DN
 
 		// Check if the discovery server's domain is a subdomain of the ingress domains, i.e., if the domain is already
 		// covered by the wildcard domains. If not, add the discovery server domain as well.
-		if !slices.ContainsFunc(runtimeDomains, func(domain operatorv1alpha1.DNSDomain) bool {
+		if !slices.ContainsFunc(garden.Spec.RuntimeCluster.Ingress.Domains, func(domain operatorv1alpha1.DNSDomain) bool {
 			return domain.Name == discoveryServerParentDomain
 		}) {
 			allIngressDomains = append(allIngressDomains, *discoveryServerConfig.Domain.DeepCopy())
