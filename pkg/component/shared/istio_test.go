@@ -39,6 +39,7 @@ type istioTestValues struct {
 	priorityClassName                  string
 	istiodEnabled                      bool
 	labels                             map[string]string
+	podLabels                          map[string]string
 	kubeAPIServerPolicyLabel           string
 	lbAnnotations                      map[string]string
 	loadBalancerClass                  *string
@@ -71,7 +72,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.priorityClassName,
 		testValues.istiodEnabled,
 		testValues.labels,
-		nil,
+		testValues.podLabels,
 		[]string{testValues.kubeAPIServerPolicyLabel},
 		testValues.lbAnnotations,
 		testValues.loadBalancerClass,
@@ -130,6 +131,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				Ports:                              testValues.servicePorts,
 				LoadBalancerIP:                     testValues.serviceExternalIP,
 				Labels:                             testValues.labels,
+				PodLabels:                          testValues.podLabels,
 				NetworkPolicyLabels:                networkPolicyLabels,
 				Namespace:                          "shared-istio-test-some-istio-ingress",
 				PriorityClassName:                  testValues.priorityClassName,
@@ -228,6 +230,7 @@ var _ = Describe("Istio", func() {
 			priorityClassName:                  "some-high-priority-class",
 			istiodEnabled:                      true,
 			labels:                             map[string]string{"some": "labelValue"},
+			podLabels:                          map[string]string{"pod": "labels"},
 			kubeAPIServerPolicyLabel:           "to-all-test-kube-apiserver",
 			lbAnnotations:                      map[string]string{"some": "annotationValue"},
 			loadBalancerClass:                  ptr.To("non-default-load-balancer-class"),
