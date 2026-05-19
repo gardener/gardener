@@ -51,7 +51,6 @@ const (
 	labelValue = "vpn-shoot"
 
 	managedResourceName = "shoot-core-vpn-shoot"
-	name                = "vpn-shoot"
 	deploymentName      = "vpn-shoot"
 	containerName       = "vpn-shoot"
 	initContainerName   = "vpn-shoot-init"
