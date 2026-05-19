@@ -1003,6 +1003,10 @@ var _ = Describe("istiod", func() {
 									Type:   resourcesv1alpha1.ResourcesHealthy,
 									Status: gardencorev1beta1.ConditionTrue,
 								},
+								{
+									Type:   resourcesv1alpha1.ResourcesProgressing,
+									Status: gardencorev1beta1.ConditionFalse,
+								},
 							},
 						},
 					})).To(Succeed())
@@ -1036,6 +1040,7 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			IstiodNamespace:     "istio-test-system",
 			Annotations:         annotations,
 			Labels:              labels,
+			PodLabels:           map[string]string{"pod-label": "foo"},
 			NetworkPolicyLabels: networkPolicyLabels,
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt32(999)},

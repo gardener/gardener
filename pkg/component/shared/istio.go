@@ -52,6 +52,7 @@ func NewIstio(
 	priorityClassName string,
 	istiodEnabled bool,
 	labels map[string]string,
+	podLabels map[string]string, // TODO(maboehm): Remove this parameter after one release (v1.143)
 	networkPolicyLabels []string,
 	lbAnnotations map[string]string,
 	loadBalancerClass *string,
@@ -102,6 +103,7 @@ func NewIstio(
 		Ports:                              servicePorts,
 		LoadBalancerIP:                     serviceExternalIP,
 		Labels:                             labels,
+		PodLabels:                          podLabels,
 		NetworkPolicyLabels:                policyLabels,
 		Namespace:                          namePrefix + ingressNamespace,
 		PriorityClassName:                  priorityClassName,

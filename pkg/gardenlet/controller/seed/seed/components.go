@@ -360,6 +360,10 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 		v1beta1constants.PriorityClassNameSeedSystemCritical,
 		!seedIsGarden,
 		labels,
+		// TODO(maboehm): Always set this label in sharedcomponent.GetIstioZoneLabels() after on release (v1.143)
+		map[string]string{
+			istio.RoleKey: istio.RoleSeed,
+		},
 		[]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
 		},

@@ -37,6 +37,13 @@ import (
 const (
 	// DefaultZoneKey is the label key for the istio default ingress gateway.
 	DefaultZoneKey = "istio"
+	// RoleKey is the label key used to clearly differentiate between the istio ingress gateways deployed for
+	// the runtime cluster and the seed cluster.
+	RoleKey = "istio-role"
+	// RoleGarden is the label value for the virtual garden ingress gateway pods.
+	RoleGarden = "garden"
+	// RoleSeed is the label value for the seed ingress gateway pods.
+	RoleSeed = "seed"
 	// IstiodServiceName is the name of the istiod service.
 	IstiodServiceName = "istiod"
 	// IstiodPort is the port of the istiod service.
