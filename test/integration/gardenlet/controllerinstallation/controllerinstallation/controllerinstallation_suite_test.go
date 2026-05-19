@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -162,7 +161,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
+				Nodes:    new("10.2.0.0/16"),
 			},
 		},
 	}
@@ -170,7 +169,7 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Seed for test", "seed", seed.Name)
 
 	patch := client.MergeFrom(seed.DeepCopy())
-	seed.Status.ClusterIdentity = ptr.To(seedClusterIdentity)
+	seed.Status.ClusterIdentity = new(seedClusterIdentity)
 	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
 	DeferCleanup(func() {
@@ -229,7 +228,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -256,7 +255,7 @@ var _ = BeforeSuite(func() {
 		Config: gardenletconfigv1alpha1.GardenletConfiguration{
 			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
 				ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
-					ConcurrentSyncs: ptr.To(5),
+					ConcurrentSyncs: new(5),
 				},
 			},
 		},

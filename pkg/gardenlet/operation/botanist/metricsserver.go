@@ -5,8 +5,6 @@
 package botanist
 
 import (
-	"k8s.io/utils/ptr"
-
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
@@ -22,7 +20,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 
 	var kubeAPIServerHost *string
 	if b.ShootUsesDNS() {
-		kubeAPIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
+		kubeAPIServerHost = new(b.outOfClusterAPIServerFQDN())
 	}
 
 	values := metricsserver.Values{

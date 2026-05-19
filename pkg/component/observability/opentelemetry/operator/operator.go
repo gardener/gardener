@@ -136,7 +136,7 @@ func (o *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -320,7 +320,7 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 					ServiceAccountName: name,
 					PriorityClassName:  o.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
@@ -367,7 +367,7 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						},
 					},

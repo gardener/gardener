@@ -331,7 +331,7 @@ func (f *GardenerFramework) updateBinding(ctx context.Context, shoot *gardencore
 			return retry.MinorError(err)
 		}
 
-		updatedShoot.Spec.SeedName = ptr.To(seedName)
+		updatedShoot.Spec.SeedName = new(seedName)
 		if err := f.GardenClient.Client().SubResource("binding").Update(ctx, updatedShoot); err != nil {
 			log.Error(err, "Unable to update binding")
 			return retry.MinorError(err)

@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -157,7 +156,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		When("Zone is set", func() {
 			BeforeEach(func() {
 				zone = "zone-a"
-				b.Zone = ptr.To(zone)
+				b.Zone = new(zone)
 			})
 
 			It("should write zone file", func() {

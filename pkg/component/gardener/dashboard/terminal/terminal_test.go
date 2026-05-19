@@ -232,12 +232,12 @@ server:
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName:            "gardener-garden-system-200",
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
+							RunAsNonRoot: new(true),
 							RunAsUser:    ptr.To[int64](65532),
 						},
-						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						TerminationGracePeriodSeconds: new(int64(10)),
 						Containers: []corev1.Container{{
 							Name:            "terminal-controller-manager",
 							Image:           image,
@@ -257,7 +257,7 @@ server:
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							Ports: []corev1.ContainerPort{
 								{
@@ -350,7 +350,7 @@ server:
 				Labels:    map[string]string{"app": "terminal-controller-manager"},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   &metav1.LabelSelector{MatchLabels: map[string]string{"app": "terminal-controller-manager"}},
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
@@ -401,7 +401,7 @@ server:
 					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
@@ -436,7 +436,7 @@ server:
 			Webhooks: []admissionregistrationv1.MutatingWebhook{{
 				Name:                    "mutating-create-update-terminal.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: ptr.To("https://terminal-controller-manager." + namespace + ".svc/mutate-terminal")},
+				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: new("https://terminal-controller-manager." + namespace + ".svc/mutate-terminal")},
 				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
 				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -462,7 +462,7 @@ server:
 			Webhooks: []admissionregistrationv1.ValidatingWebhook{{
 				Name:                    "validating-create-update-terminal.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: ptr.To("https://terminal-controller-manager." + namespace + ".svc/validate-terminal")},
+				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: new("https://terminal-controller-manager." + namespace + ".svc/validate-terminal")},
 				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
 				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -646,9 +646,9 @@ server:
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -673,7 +673,7 @@ server:
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -700,11 +700,11 @@ server:
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 

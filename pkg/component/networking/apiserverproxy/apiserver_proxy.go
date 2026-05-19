@@ -238,7 +238,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getDefaultLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -299,7 +299,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 							{Effect: corev1.TaintEffectNoExecute, Operator: corev1.TolerationOpExists},
 						},
 						HostNetwork:                  true,
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -322,7 +322,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_ADMIN",
@@ -347,7 +347,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_ADMIN",
@@ -374,7 +374,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_BIND_SERVICE",

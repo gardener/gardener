@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -30,7 +29,7 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 		backupBucket = &gardencorev1beta1.BackupBucket{
 			Spec: gardencorev1beta1.BackupBucketSpec{
-				SeedName: ptr.To("seed"),
+				SeedName: new("seed"),
 			},
 		}
 	})

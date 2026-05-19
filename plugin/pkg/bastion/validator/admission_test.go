@@ -18,7 +18,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -58,7 +57,7 @@ var _ = Describe("Bastion", func() {
 					UID:       "shoot-uid",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: ptr.To(seedName),
+					SeedName: new(seedName),
 					Provider: gardencorev1beta1.Provider{
 						Type: provider,
 						Workers: []gardencorev1beta1.Worker{

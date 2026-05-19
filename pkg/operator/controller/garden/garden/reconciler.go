@@ -509,7 +509,7 @@ func startRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, autoComplet
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
-		rotation.AutoCompleteAfterPrepared = ptr.To(autoCompleteAfterPrepared)
+		rotation.AutoCompleteAfterPrepared = new(autoCompleteAfterPrepared)
 	})
 }
 

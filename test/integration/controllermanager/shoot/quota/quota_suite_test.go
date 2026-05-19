@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -104,7 +103,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -114,7 +113,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = &testclock.FakeClock{}
 	Expect((&quota.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,

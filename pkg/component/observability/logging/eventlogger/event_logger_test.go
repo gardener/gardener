@@ -303,7 +303,7 @@ var _ = Describe("EventLogger", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -313,7 +313,7 @@ var _ = Describe("EventLogger", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerServiceAccount), eventLoggerServiceAccount)).To(Succeed())
@@ -328,7 +328,7 @@ var _ = Describe("EventLogger", func() {
 					},
 					ResourceVersion: "1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 			}))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(seedEventLoggerRole), seedEventLoggerRole)).To(Succeed())
@@ -416,7 +416,7 @@ var _ = Describe("EventLogger", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -445,7 +445,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "generic-token-kubeconfig",
 														},
-														Optional: ptr.To(false),
+														Optional: new(false),
 													},
 												},
 												{
@@ -459,7 +459,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "shoot-access-" + name,
 														},
-														Optional: ptr.To(false),
+														Optional: new(false),
 													},
 												},
 											},

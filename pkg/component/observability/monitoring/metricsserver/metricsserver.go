@@ -132,7 +132,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Name:      serviceAccountName,
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -275,7 +275,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 					Spec: corev1.PodSpec{
 						PriorityClassName: "system-cluster-critical",
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
+							RunAsNonRoot:       new(true),
 							RunAsUser:          ptr.To[int64](65534),
 							FSGroup:            ptr.To[int64](65534),
 							SupplementalGroups: []int64{1},
@@ -338,7 +338,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      volumeMountNameServer,
@@ -365,7 +365,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Labels:    getLabels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   deployment.Spec.Selector,
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},

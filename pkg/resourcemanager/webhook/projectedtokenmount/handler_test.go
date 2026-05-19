@@ -57,7 +57,7 @@ var _ = Describe("Handler", func() {
 				Name:      serviceAccountName,
 				Namespace: namespace,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		expirationSeconds = 1337
@@ -106,7 +106,7 @@ var _ = Describe("Handler", func() {
 				serviceAccount.AutomountServiceAccountToken = nil
 			}),
 			Entry("ServiceAccount's automountServiceAccountToken=true", func() {
-				serviceAccount.AutomountServiceAccountToken = ptr.To(true)
+				serviceAccount.AutomountServiceAccountToken = new(true)
 			}),
 		)
 
@@ -116,7 +116,7 @@ var _ = Describe("Handler", func() {
 			})
 
 			It("should not mutate because pod explicitly disables the service account mount", func() {
-				pod.Spec.AutomountServiceAccountToken = ptr.To(false)
+				pod.Spec.AutomountServiceAccountToken = new(false)
 
 				Expect(handler.Default(ctx, pod)).To(Succeed())
 				Expect(pod.Spec.Volumes).To(BeEmpty())

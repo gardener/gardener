@@ -25,7 +25,6 @@ import (
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -799,12 +798,12 @@ var _ = Describe("Authorizer", func() {
 						Files: []extensionsv1alpha1.File{
 							{
 								Path:     "/host-specific/file",
-								HostName: ptr.To("other-hostname"),
+								HostName: new("other-hostname"),
 								Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "other-host-secret", DataKey: "data"}},
 							},
 							{
 								Path:     "/host-specific/file",
-								HostName: ptr.To("my-hostname"),
+								HostName: new("my-hostname"),
 								Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "my-host-secret", DataKey: "data"}},
 							},
 						},
@@ -922,12 +921,12 @@ var _ = Describe("Authorizer", func() {
 							Files: []extensionsv1alpha1.File{
 								{
 									Path:     "/host-specific/file",
-									HostName: ptr.To("other-hostname"),
+									HostName: new("other-hostname"),
 									Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "other-host-secret", DataKey: "data"}},
 								},
 								{
 									Path:     "/host-specific/file",
-									HostName: ptr.To("gardenadm-hostname"),
+									HostName: new("gardenadm-hostname"),
 									Content:  extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "my-host-secret", DataKey: "data"}},
 								},
 							},

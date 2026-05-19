@@ -573,7 +573,7 @@ func (h *HealthChecker) CheckPrometheuses(
 	}
 
 	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf("failed checking Prometheuses: %w", err)))
+		return new(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf("failed checking Prometheuses: %w", err)))
 	}
 
 	return firstNotNil(conditions)
@@ -595,7 +595,7 @@ func (h *HealthChecker) CheckPrometheus(ctx context.Context, condition gardencor
 	}
 
 	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return ptr.To(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf(`failed checking Prometheus "%s/%s" replicas: %w`, prometheus.Namespace, prometheus.Name, err)))
+		return new(v1beta1helper.NewConditionOrError(h.clock, condition, nil, fmt.Errorf(`failed checking Prometheus "%s/%s" replicas: %w`, prometheus.Namespace, prometheus.Name, err)))
 	}
 
 	return firstNotNil(conditions)
@@ -611,13 +611,13 @@ func (h *HealthChecker) checkPrometheusReplicaHealth(ctx context.Context, condit
 	if err != nil {
 		h.log.Error(err, "Prometheus health check errored", "endpoint", endpoint)
 		msg := fmt.Sprintf(`Querying Prometheus pod "%s/prometheus-%s-%d" for health checking returned an error: %v`, prometheus.Namespace, prometheus.Name, replica, err)
-		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", msg))
+		return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckError", msg))
 	}
 
 	if !result.IsHealthy {
 		h.log.Info("Prometheus health check failed", "endpoint", endpoint, "message", result.Message)
 		msg := fmt.Sprintf(`There are health issues in Prometheus pod "%s/prometheus-%s-%d". Access Prometheus UI and query for "healthcheck:up" for more details: %s`, prometheus.Namespace, prometheus.Name, replica, result.Message)
-		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
+		return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "PrometheusHealthCheckDown", msg))
 	}
 
 	return nil

@@ -11,7 +11,6 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -66,7 +65,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		FailurePolicy:     args.FailurePolicy,
 		Webhook: &admission.Webhook{
 			Handler:         handler,
-			RecoverPanic:    ptr.To(true),
+			RecoverPanic:    new(true),
 			WithContextFunc: injectRemoteAddrIntoContextFunc(args.Mutator),
 		},
 	}, nil

@@ -19,7 +19,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -102,7 +101,7 @@ var _ = Describe("ManagedSeed", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					DNS: &gardencorev1beta1.DNS{
-						Domain: ptr.To(domain),
+						Domain: new(domain),
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.33.3",
@@ -111,9 +110,9 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods:     ptr.To("100.96.0.0/11"),
-						Nodes:    ptr.To("10.250.0.0/16"),
-						Services: ptr.To("100.64.0.0/13"),
+						Pods:     new("100.96.0.0/11"),
+						Nodes:    new("10.250.0.0/16"),
+						Services: new("100.64.0.0/13"),
 					},
 					Provider: gardencorev1beta1.Provider{
 						Type: provider,
@@ -122,7 +121,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Region:   region,
-					SeedName: ptr.To("parent-seed"),
+					SeedName: new("parent-seed"),
 				},
 			}
 
@@ -179,7 +178,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: core.SeedNetworks{
-						Nodes:    ptr.To("10.250.0.0/16"),
+						Nodes:    new("10.250.0.0/16"),
 						Pods:     "100.96.0.0/11",
 						Services: "100.64.0.0/13",
 					},
@@ -231,7 +230,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: gardencorev1beta1.SeedNetworks{
-						Nodes:    ptr.To("10.250.0.0/16"),
+						Nodes:    new("10.250.0.0/16"),
 						Pods:     "100.96.0.0/11",
 						Services: "100.64.0.0/13",
 					},
@@ -381,8 +380,8 @@ var _ = Describe("ManagedSeed", func() {
 				seedExternal.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
-						Primary: ptr.To(true),
-						Type:    ptr.To("type"),
+						Primary: new(true),
+						Type:    new("type"),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -421,8 +420,8 @@ var _ = Describe("ManagedSeed", func() {
 				seedExternal.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
-						Primary: ptr.To(true),
-						Type:    ptr.To("type"),
+						Primary: new(true),
+						Type:    new("type"),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "security.gardener.cloud/v1alpha1",
 							Kind:       "WorkloadIdentity",
@@ -444,11 +443,11 @@ var _ = Describe("ManagedSeed", func() {
 				seedExternal.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
-						Primary: ptr.To(true),
-						Type:    ptr.To("type"),
+						Primary: new(true),
+						Type:    new("type"),
 					},
 				}
-				shoot.Spec.SecretBindingName = ptr.To(secretBinding.Name)
+				shoot.Spec.SecretBindingName = new(secretBinding.Name)
 
 				gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 				gardenletConfig.SeedConfig.Spec = seedExternal.Spec
@@ -483,11 +482,11 @@ var _ = Describe("ManagedSeed", func() {
 				seedExternal.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
-						Primary: ptr.To(true),
-						Type:    ptr.To("type"),
+						Primary: new(true),
+						Type:    new("type"),
 					},
 				}
-				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
+				shoot.Spec.CredentialsBindingName = new(credentialsBinding.Name)
 
 				gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 				gardenletConfig.SeedConfig.Spec = seedExternal.Spec
@@ -539,11 +538,11 @@ var _ = Describe("ManagedSeed", func() {
 				seedExternal.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
 					{
-						Primary: ptr.To(true),
-						Type:    ptr.To("type"),
+						Primary: new(true),
+						Type:    new("type"),
 					},
 				}
-				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
+				shoot.Spec.CredentialsBindingName = new(credentialsBinding.Name)
 
 				gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 				gardenletConfig.SeedConfig.Spec = seedExternal.Spec
@@ -614,7 +613,7 @@ var _ = Describe("ManagedSeed", func() {
 											},
 										},
 										Networks: gardencorev1beta1.SeedNetworks{
-											Nodes:    ptr.To("10.250.0.0/16"),
+											Nodes:    new("10.250.0.0/16"),
 											Pods:     "100.96.0.0/11",
 											Services: "100.64.0.0/13",
 										},
@@ -646,7 +645,7 @@ var _ = Describe("ManagedSeed", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					DNS: &gardencorev1beta1.DNS{
-						Domain: ptr.To(domain),
+						Domain: new(domain),
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.33.3",
@@ -655,9 +654,9 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods:     ptr.To("100.96.0.0/11"),
-						Nodes:    ptr.To("10.250.0.0/16"),
-						Services: ptr.To("100.64.0.0/13"),
+						Pods:     new("100.96.0.0/11"),
+						Nodes:    new("10.250.0.0/16"),
+						Services: new("100.64.0.0/13"),
 					},
 					Provider: gardencorev1beta1.Provider{
 						Type: provider,
@@ -849,7 +848,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: gardencorev1beta1.SeedNetworks{
-						Nodes:    ptr.To("10.251.0.0/16"),
+						Nodes:    new("10.251.0.0/16"),
 						Pods:     "100.97.0.0/11",
 						Services: "100.65.0.0/13",
 					},
@@ -1143,7 +1142,7 @@ var _ = Describe("ManagedSeed", func() {
 						Spec: gardencorev1beta1.ShootSpec{
 							SeedName: &newManagedSeed.Name,
 							DNS: &gardencorev1beta1.DNS{
-								Domain: ptr.To("my-shoot.another-default.com"),
+								Domain: new("my-shoot.another-default.com"),
 							},
 						},
 					}

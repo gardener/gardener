@@ -40,13 +40,13 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				},
 			},
 			Spec: core.ShootSpec{
-				CloudProfileName: ptr.To("foo"),
+				CloudProfileName: new("foo"),
 				Kubernetes: core.Kubernetes{
 					Version: "1.18.14",
 				},
 				Networking: &core.Networking{
-					Type:  ptr.To("foo"),
-					Nodes: ptr.To("10.181.0.0/18"),
+					Type:  new("foo"),
+					Nodes: new("10.181.0.0/18"),
 				},
 				Provider: core.Provider{
 					Type: "foo",
@@ -55,16 +55,16 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 							Name: "some-worker",
 							Machine: core.Machine{
 								Type:         "some-machine-type",
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 							Maximum:        2,
 							Minimum:        1,
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+							MaxUnavailable: new(intstr.FromInt32(1)),
 						},
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: ptr.To("shoot-operator-foo"),
+				SecretBindingName: new("shoot-operator-foo"),
 			},
 		}
 
@@ -172,9 +172,9 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		)
 
 		It("should forbid negative replicas, updateStrategy.rollingUpdate.partition, and revisionHistoryLimit", func() {
-			managedSeedSet.Spec.Replicas = ptr.To(int32(-1))
-			managedSeedSet.Spec.UpdateStrategy.RollingUpdate.Partition = ptr.To(int32(-1))
-			managedSeedSet.Spec.RevisionHistoryLimit = ptr.To(int32(-1))
+			managedSeedSet.Spec.Replicas = new(int32(-1))
+			managedSeedSet.Spec.UpdateStrategy.RollingUpdate.Partition = new(int32(-1))
+			managedSeedSet.Spec.RevisionHistoryLimit = new(int32(-1))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -399,7 +399,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should forbid changes to immutable fields in shootTemplate", func() {
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.Region = "other-region"
-			shootCopy.Spec.Networking.Nodes = ptr.To("10.181.0.0/16")
+			shootCopy.Spec.Networking.Nodes = new("10.181.0.0/16")
 			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
@@ -568,7 +568,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newManagedSeedSet.Status.PendingReplica = &seedmanagement.PendingReplica{
 				Name:    "foo",
 				Reason:  "unknown",
-				Retries: ptr.To(int32(-1)),
+				Retries: new(int32(-1)),
 			}
 
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)

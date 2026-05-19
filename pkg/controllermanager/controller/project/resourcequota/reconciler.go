@@ -14,7 +14,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -114,7 +113,7 @@ func (r *Reconciler) handleMissingAnnotation(ctx context.Context, log logr.Logge
 		return nil
 	}
 
-	currentQuota := ptr.To(currentQuotaResource).Value()
+	currentQuota := new(currentQuotaResource).Value()
 	requiredQuota := int64(expectedCount) * maximumShootsInProject
 
 	if currentQuota < requiredQuota {
@@ -138,7 +137,7 @@ func (r *Reconciler) handleAnnotationMismatch(ctx context.Context, log logr.Logg
 			return fmt.Errorf("could not get maximum shoots in project: %w", err)
 		}
 
-		newQuota := ptr.To(resourceQuota.Spec.Hard[usageSpecKey]).Value() + maximum*countDiff
+		newQuota := new(resourceQuota.Spec.Hard[usageSpecKey]).Value() + maximum*countDiff
 		newVal := strconv.Itoa(int(newQuota))
 		log.Info("Updating resource quota with value", "quotaType", usageSpecKey.String(), "value", newVal)
 		resourceQuota.Spec.Hard[usageSpecKey] = resource.MustParse(newVal)

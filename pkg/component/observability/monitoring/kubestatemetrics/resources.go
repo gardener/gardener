@@ -42,7 +42,7 @@ import (
 func (k *kubeStateMetrics) serviceAccount() *corev1.ServiceAccount {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 	serviceAccount.Labels = k.getLabels()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 	return serviceAccount
 }
 
@@ -128,7 +128,7 @@ func (k *kubeStateMetrics) service() *corev1.Service {
 	service.Labels = k.getLabels()
 
 	metricsPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
+		Port:     new(intstr.FromInt32(port)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
@@ -269,7 +269,7 @@ func (k *kubeStateMetrics) deployment(
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      customResourceStateConfigMapName,
@@ -295,7 +295,7 @@ func (k *kubeStateMetrics) deployment(
 		deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	}
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		deployment.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
+		deployment.Spec.Template.Spec.AutomountServiceAccountToken = new(false)
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
 	}
 
@@ -341,7 +341,7 @@ func (k *kubeStateMetrics) podDisruptionBudget(deployment *appsv1.Deployment) *p
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-pdb" + k.values.NameSuffix, Namespace: k.namespace}}
 	podDisruptionBudget.Labels = k.getLabels()
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-		MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+		MaxUnavailable:             new(intstr.FromInt32(1)),
 		Selector:                   deployment.Spec.Selector,
 		UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 	}
@@ -369,17 +369,17 @@ func (k *kubeStateMetrics) standardScrapeConfigSpec() monitoringv1alpha1.ScrapeC
 			{
 				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_" + labelKeyType},
 				Regex:        `(.+)`,
-				Replacement:  ptr.To(`${1}`),
+				Replacement:  new(`${1}`),
 				TargetLabel:  labelKeyType,
 			},
 			{
 				Action:      "replace",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 			},
 		},
 		MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -558,12 +558,12 @@ func (k *kubeStateMetrics) scrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
 			},
 			{
 				Action:      "replace",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 			},
 		},
 		MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -595,12 +595,12 @@ func (k *kubeStateMetrics) scrapeConfigGarden() *monitoringv1alpha1.ScrapeConfig
 			},
 			{
 				Action:      "replace",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 			},
 		},
 		MetricRelabelConfigs: []monitoringv1.RelabelConfig{

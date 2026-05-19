@@ -187,7 +187,7 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 			endpoints = append(endpoints, discoveryv1.Endpoint{
 				Addresses: []string{address.Address},
 				Conditions: discoveryv1.EndpointConditions{
-					Ready: ptr.To(true),
+					Ready: new(true),
 				},
 			})
 		}
@@ -209,8 +209,8 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 		AddressType: family,
 		Endpoints:   endpoints,
 		Ports: []discoveryv1.EndpointPort{{
-			Name:     ptr.To(portName),
-			Port:     ptr.To(exposure.Spec.Port),
+			Name:     new(portName),
+			Port:     new(exposure.Spec.Port),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}},
 	}, nil

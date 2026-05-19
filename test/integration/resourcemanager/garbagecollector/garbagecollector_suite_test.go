@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

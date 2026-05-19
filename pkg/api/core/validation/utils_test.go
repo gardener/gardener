@@ -560,7 +560,7 @@ var _ = Describe("Utils tests", func() {
 					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
 				},
 			},
-			MachineTypes: []core.MachineType{{Name: "valid", Architecture: ptr.To("amd64")}},
+			MachineTypes: []core.MachineType{{Name: "valid", Architecture: new("amd64")}},
 			VolumeTypes:  []core.VolumeType{{Class: "standard", Name: "valid"}},
 		}
 

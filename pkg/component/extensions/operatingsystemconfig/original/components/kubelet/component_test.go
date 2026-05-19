@@ -157,13 +157,13 @@ volumeStatsAggPeriod: 1m0s
 			ctx.Images = map[string]*imagevector.Image{
 				"hyperkube": {
 					Name:       "pause-container",
-					Repository: ptr.To(hyperkubeImageRepo),
-					Tag:        ptr.To(hyperkubeImageTag),
+					Repository: new(hyperkubeImageRepo),
+					Tag:        new(hyperkubeImageTag),
 				},
 				"pause-container": {
 					Name:       "pause-container",
-					Repository: ptr.To(pauseContainerImageRepo),
-					Tag:        ptr.To(pauseContainerImageTag),
+					Repository: new(pauseContainerImageRepo),
+					Tag:        new(pauseContainerImageTag),
 				},
 			}
 			ctx.NodeLabels = map[string]string{
@@ -212,8 +212,8 @@ func kubeletUnit(cliFlags []string) extensionsv1alpha1.Unit {
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet.service",
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=containerd.service

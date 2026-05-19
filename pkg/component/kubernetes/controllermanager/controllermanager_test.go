@@ -78,7 +78,7 @@ var _ = Describe("KubeControllerManager", func() {
 			DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 			InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 			SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
-			Tolerance:               ptr.To(float64(0.1)),
+			Tolerance:               new(float64(0.1)),
 		}
 
 		nodeCIDRMask           int32 = 24
@@ -93,26 +93,26 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 		clusterSigningDuration = ptr.To(time.Hour)
 		controllerWorkers      = ControllerWorkers{
-			StatefulSet:         ptr.To(1),
-			Deployment:          ptr.To(2),
-			ReplicaSet:          ptr.To(3),
-			Endpoint:            ptr.To(4),
-			GarbageCollector:    ptr.To(5),
-			Namespace:           ptr.To(6),
-			ResourceQuota:       ptr.To(7),
-			ServiceEndpoint:     ptr.To(8),
-			ServiceAccountToken: ptr.To(9),
+			StatefulSet:         new(1),
+			Deployment:          new(2),
+			ReplicaSet:          new(3),
+			Endpoint:            new(4),
+			GarbageCollector:    new(5),
+			Namespace:           new(6),
+			ResourceQuota:       new(7),
+			ServiceEndpoint:     new(8),
+			ServiceAccountToken: new(9),
 		}
 		controllerWorkersWithDisabledControllers = ControllerWorkers{
-			StatefulSet:         ptr.To(1),
-			Deployment:          ptr.To(2),
-			ReplicaSet:          ptr.To(3),
-			Endpoint:            ptr.To(4),
-			GarbageCollector:    ptr.To(5),
-			Namespace:           ptr.To(0),
-			ResourceQuota:       ptr.To(0),
-			ServiceEndpoint:     ptr.To(8),
-			ServiceAccountToken: ptr.To(0),
+			StatefulSet:         new(1),
+			Deployment:          new(2),
+			ReplicaSet:          new(3),
+			Endpoint:            new(4),
+			GarbageCollector:    new(5),
+			Namespace:           new(0),
+			ResourceQuota:       new(0),
+			ServiceEndpoint:     new(8),
+			ServiceAccountToken: new(0),
 		}
 		controllerSyncPeriods = ControllerSyncPeriods{
 			ResourceQuota: ptr.To(time.Minute),
@@ -154,7 +154,7 @@ var _ = Describe("KubeControllerManager", func() {
 				ResourceVersion: "1",
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":  "kubernetes",
@@ -245,7 +245,7 @@ var _ = Describe("KubeControllerManager", func() {
 						Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 						HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 							HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 								HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 									Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
@@ -341,10 +341,10 @@ var _ = Describe("KubeControllerManager", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: ptr.To(false),
+							AutomountServiceAccountToken: new(false),
 							PriorityClassName:            priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
+								RunAsNonRoot: new(true),
 								RunAsUser:    ptr.To[int64](65532),
 								RunAsGroup:   ptr.To[int64](65532),
 								FSGroup:      ptr.To[int64](65532),
@@ -398,7 +398,7 @@ var _ = Describe("KubeControllerManager", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -508,7 +508,7 @@ namespace: kube-system
 				DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
 				InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
 				SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
-				Tolerance:               ptr.To(float64(0.3)),
+				Tolerance:               new(float64(0.3)),
 			},
 			NodeCIDRMaskSize: nil,
 		}
@@ -569,7 +569,7 @@ namespace: kube-system
 					{Name: managedResourceSecretName},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(true),
+				KeepObjects:  new(true),
 			},
 		}
 
@@ -596,7 +596,7 @@ namespace: kube-system
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(true),
+					KeepObjects: new(true),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -605,7 +605,7 @@ namespace: kube-system
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
@@ -755,7 +755,7 @@ namespace: kube-system
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(true),
+						KeepObjects: new(true),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -764,7 +764,7 @@ namespace: kube-system
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}

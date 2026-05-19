@@ -37,7 +37,7 @@ func (g *gardenerMetricsExporter) service() *corev1.Service {
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(probePort)),
+		Port:     new(intstr.FromInt32(probePort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

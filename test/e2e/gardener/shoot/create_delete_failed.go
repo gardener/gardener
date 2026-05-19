@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/test/e2e"
@@ -24,7 +23,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			BeforeTestSetup(func() {
 				shoot := DefaultShoot("e2e-invalid-dns")
 				shoot.Spec.DNS = &gardencorev1beta1.DNS{
-					Domain: ptr.To("shoot.non-existing-domain"),
+					Domain: new("shoot.non-existing-domain"),
 				}
 
 				s = NewTestContext().ForShoot(shoot)

@@ -41,32 +41,32 @@ var _ = Describe("Utils", func() {
 					},
 					metric1, metric2,
 				)).To(Equal(monitoringv1alpha1.ScrapeConfigSpec{
-					HonorLabels: ptr.To(false),
+					HonorLabels: new(false),
 					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-					TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						APIServer:  ptr.To("https://kube-apiserver"),
+						APIServer:  new("https://kube-apiserver"),
 						Role:       "Pod",
 						Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
 						}},
-						TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+						TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To(jobName),
+							Replacement: new(jobName),
 							TargetLabel: "job",
 						},
 						{
 							TargetLabel: "type",
-							Replacement: ptr.To("shoot"),
+							Replacement: new("shoot"),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
@@ -92,13 +92,13 @@ var _ = Describe("Utils", func() {
 						},
 						{
 							TargetLabel: "__address__",
-							Replacement: ptr.To("kube-apiserver:443"),
+							Replacement: new("kube-apiserver:443"),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 							Regex:        `(.+);(.+)`,
 							TargetLabel:  "__metrics_path__",
-							Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+							Replacement:  new("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
 						},
 					},
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -126,32 +126,32 @@ var _ = Describe("Utils", func() {
 					},
 					metric1, metric2,
 				)).To(Equal(monitoringv1alpha1.ScrapeConfigSpec{
-					HonorLabels: ptr.To(false),
+					HonorLabels: new(false),
 					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-					TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						APIServer:  ptr.To("https://kube-apiserver"),
+						APIServer:  new("https://kube-apiserver"),
 						Role:       "Endpoints",
 						Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
 						}},
-						TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+						TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To(jobName),
+							Replacement: new(jobName),
 							TargetLabel: "job",
 						},
 						{
 							TargetLabel: "type",
-							Replacement: ptr.To("shoot"),
+							Replacement: new("shoot"),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
@@ -172,13 +172,13 @@ var _ = Describe("Utils", func() {
 						},
 						{
 							TargetLabel: "__address__",
-							Replacement: ptr.To("kube-apiserver:443"),
+							Replacement: new("kube-apiserver:443"),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 							Regex:        `(.+);(.+)`,
 							TargetLabel:  "__metrics_path__",
-							Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+							Replacement:  new("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
 						},
 					},
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{

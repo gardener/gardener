@@ -27,7 +27,7 @@ func (t *terminal) mutatingWebhookConfiguration(caBundle []byte) *admissionregis
 			Name:                    "mutating-create-update-terminal.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL:      ptr.To("https://" + name + "." + t.namespace + ".svc/mutate-terminal"),
+				URL:      new("https://" + name + "." + t.namespace + ".svc/mutate-terminal"),
 				CABundle: caBundle,
 			},
 			FailurePolicy: ptr.To(admissionregistrationv1.Fail),
@@ -47,7 +47,7 @@ func (t *terminal) validatingWebhookConfiguration(caBundle []byte) *admissionreg
 			Name:                    "validating-create-update-terminal.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL:      ptr.To("https://" + name + "." + t.namespace + ".svc/validate-terminal"),
+				URL:      new("https://" + name + "." + t.namespace + ".svc/validate-terminal"),
 				CABundle: caBundle,
 			},
 			FailurePolicy: ptr.To(admissionregistrationv1.Fail),

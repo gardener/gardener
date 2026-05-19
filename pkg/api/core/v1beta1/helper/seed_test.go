@@ -12,7 +12,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -53,78 +52,78 @@ var _ = Describe("Helper", func() {
 			false,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
-			[]gardencorev1beta1.Toleration{{Key: "foo", Value: ptr.To("bar")}},
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: new("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "foo", Value: new("bar")}},
 			true,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
-			[]gardencorev1beta1.Toleration{{Key: "bar", Value: ptr.To("foo")}},
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: new("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "bar", Value: new("foo")}},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
 				{Key: "bar"},
-				{Key: "foo", Value: ptr.To("baz")},
+				{Key: "foo", Value: new("baz")},
 			},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "foo", Value: ptr.To("bar")},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "foo", Value: new("bar")},
+				{Key: "bar", Value: new("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (not tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "foo", Value: ptr.To("bar")},
-				{Key: "bar", Value: ptr.To("foo")},
+				{Key: "foo", Value: new("bar")},
+				{Key: "bar", Value: new("foo")},
 			},
 			false,
 		),
 		Entry("taints > tolerations",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			false,
 		),
 		Entry("tolerations > taints",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]gardencorev1beta1.Toleration{
-				{Key: "foo", Value: ptr.To("bar")},
-				{Key: "bar", Value: ptr.To("baz")},
-				{Key: "baz", Value: ptr.To("foo")},
+				{Key: "foo", Value: new("bar")},
+				{Key: "bar", Value: new("baz")},
+				{Key: "baz", Value: new("foo")},
 			},
 			true,
 		),
@@ -138,8 +137,8 @@ var _ = Describe("Helper", func() {
 		Entry("setting is nil", nil, true),
 		Entry("excess capacity reservation is nil", &gardencorev1beta1.SeedSettings{}, true),
 		Entry("excess capacity reservation 'enabled' is nil", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
-		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(false)}}, false),
-		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(true)}}, true),
+		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: new(false)}}, false),
+		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: new(true)}}, true),
 	)
 
 	DescribeTable("#SeedSettingVerticalPodAutoscalerEnabled",
@@ -228,7 +227,7 @@ var _ = Describe("Helper", func() {
 			&gardencorev1beta1.SeedSettings{
 				LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
 					ZonalIngress: &gardencorev1beta1.SeedSettingLoadBalancerServicesZonalIngress{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 				},
 			},
@@ -238,7 +237,7 @@ var _ = Describe("Helper", func() {
 			&gardencorev1beta1.SeedSettings{
 				LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
 					ZonalIngress: &gardencorev1beta1.SeedSettingLoadBalancerServicesZonalIngress{
-						Enabled: ptr.To(false),
+						Enabled: new(false),
 					},
 				},
 			},
@@ -295,10 +294,10 @@ var _ = Describe("Helper", func() {
 				s := &gardencorev1beta1.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
-					s.Spec.SeedName = ptr.To(shoot.specSeedName)
+					s.Spec.SeedName = new(shoot.specSeedName)
 				}
 				if shoot.statusSeedName != "" {
-					s.Status.SeedName = ptr.To(shoot.statusSeedName)
+					s.Status.SeedName = new(shoot.statusSeedName)
 				}
 				shootList = append(shootList, s)
 			}

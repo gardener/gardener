@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -206,8 +205,8 @@ var _ = Describe("BackupEntry controller tests", func() {
 				UID:       "foo",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("test-sb"),
-				CloudProfileName:  ptr.To("test-cloudprofile"),
+				SecretBindingName: new("test-sb"),
+				CloudProfileName:  new("test-cloudprofile"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "provider",
@@ -220,7 +219,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
@@ -230,7 +229,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}
@@ -311,7 +310,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				BucketName: backupBucket.Name,
-				SeedName:   ptr.To(seed.Name),
+				SeedName:   new(seed.Name),
 			},
 		}
 
@@ -457,7 +456,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 					Networks: gardencorev1beta1.SeedNetworks{
 						Pods:     "10.0.0.0/16",
 						Services: "10.1.0.0/16",
-						Nodes:    ptr.To("10.2.0.0/16"),
+						Nodes:    new("10.2.0.0/16"),
 					},
 				},
 			}

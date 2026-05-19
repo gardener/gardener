@@ -376,7 +376,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				CredentialsBindingName: ptr.To("my-provider-account"),
+				CredentialsBindingName: new("my-provider-account"),
 				CloudProfile:           &gardencorev1beta1.CloudProfileReference{Name: cloudProfile.Name},
 				Region:                 "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -398,7 +398,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 							Machine: gardencorev1beta1.Machine{
 								Image:        &testMachineImage,
 								Type:         "large-arm",
-								Architecture: ptr.To("arm64"),
+								Architecture: new("arm64"),
 							},
 						},
 					},
@@ -407,12 +407,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 				Maintenance: &gardencorev1beta1.Maintenance{
 					AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 						KubernetesVersion:   false,
-						MachineImageVersion: ptr.To(false),
+						MachineImageVersion: new(false),
 					},
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: timewindow.NewMaintenanceTime(time.Now().Add(2*time.Hour).Hour(), 0, 0).Formatted(),
@@ -585,7 +585,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 		It("should update the maintenance status according to the changes made during maintenance", func() {
 			// expire the Shoot's Kubernetes version because autoupdate is set to false
 			patch := client.MergeFrom(shoot.DeepCopy())
-			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionLowPatchLowMinor.Version)}
+			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(testKubernetesVersionLowPatchLowMinor.Version)}
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 			By("Expire Shoot's kubernetes version in the CloudProfile")
@@ -636,7 +636,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchSameMinorAMD64
 				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &highestPatchSameMinorARM
-				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
+				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
 				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -765,15 +765,15 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			It("auto update to latest patch version in minor (update strategy: patch)", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestPatchSameMinorAMD64)}))
-					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestPatchSameMinorARM)}))
+					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: new(highestPatchSameMinorAMD64)}))
+					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: new(highestPatchSameMinorARM)}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorAMD64)))
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorARM)))
@@ -888,7 +888,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), cloneShoot)).ToNot(HaveOccurred())
 				patch := client.StrategicMergeFrom(cloneShoot.DeepCopy())
 
-				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
+				cloneShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
 				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchNextMinorAMD64
 				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &highestPatchNextMinorARM
 				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
@@ -897,8 +897,8 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestVersionForCurrentMajorAMD64)}))
-					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: ptr.To(highestVersionForCurrentMajorARM)}))
+					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: new(highestVersionForCurrentMajorAMD64)}))
+					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: new(highestVersionForCurrentMajorARM)}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorAMD64, highestVersionForCurrentMajorAMD64)))
 					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorARM, highestVersionForCurrentMajorARM)))
@@ -1278,7 +1278,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			It("Kubernetes version should be updated: force update minor version(>= v1.33) and set spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete to nil", func() {
 				shoot132.Spec.Kubernetes.Version = "1.32.0"
 				shoot132.Spec.Kubernetes.ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscaler{
-					MaxEmptyBulkDelete: ptr.To(int32(10)),
+					MaxEmptyBulkDelete: new(int32(10)),
 				}
 
 				By("Create k8s v1.32 Shoot")
@@ -1332,7 +1332,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionLowPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(testKubernetesVersionLowPatchLowMinor.Version)}
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -1350,7 +1350,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			It("Kubernetes version should be updated: force update patch version", func() {
 				// expire the Shoot's Kubernetes version because autoupdate is set to false
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionLowPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(testKubernetesVersionLowPatchLowMinor.Version)}
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				By("Expire Shoot's kubernetes version in the CloudProfile")
@@ -1375,7 +1375,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				// set the shoots Kubernetes version to be the highest patch version of the minor version
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(testKubernetesVersionHighestPatchLowMinor.Version)}
 
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -1427,7 +1427,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 				shoot130.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
 				shoot130.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
+					Version: new(testKubernetesVersionHighestPatchLowMinor.Version),
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{
@@ -1500,7 +1500,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				// set the shoots Kubernetes version to be the highest patch version of the minor version
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchConsecutiveMinor.Version
-				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(testKubernetesVersionHighestPatchLowMinor.Version)}
 
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -1552,7 +1552,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 				shoot130.Spec.Kubernetes.Version = testKubernetesVersionLowPatchConsecutiveMinor.Version
 				shoot130.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
+					Version: new(testKubernetesVersionHighestPatchLowMinor.Version),
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{
@@ -1565,7 +1565,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 				shoot130.Spec.Provider.Workers[1].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Version: ptr.To(testKubernetesVersionHighestPatchLowMinor.Version),
+					Version: new(testKubernetesVersionHighestPatchLowMinor.Version),
 					Kubelet: &gardencorev1beta1.KubeletConfig{
 						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{
@@ -1743,10 +1743,10 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 				shoot134.Spec.Kubernetes.KubeScheduler = &gardencorev1beta1.KubeSchedulerConfig{
-					KubeMaxPDVols: ptr.To("20"),
+					KubeMaxPDVols: new("20"),
 				}
 				shoot134.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-					EnableAnonymousAuthentication: ptr.To(true),
+					EnableAnonymousAuthentication: new(true),
 					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
 						Default: ptr.To[int32](50),
 					},
@@ -1755,7 +1755,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				shoot134.Spec.DNS = &gardencorev1beta1.DNS{
 					Providers: []gardencorev1beta1.DNSProvider{
 						{
-							Type:       ptr.To("test-dns"),
+							Type:       new("test-dns"),
 							SecretName: &dnsCredentialsSecretName,
 							CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 								APIVersion: "v1",
@@ -1847,22 +1847,22 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			},
 			Entry("ssh key pair", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 				SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
-					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 				},
 			}, "", "Credentials \"rotate-ssh-keypair\": SSH keypair rotation started", "rotate-ssh-keypair"),
 			Entry("observability credentials", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 				Observability: &gardencorev1beta1.MaintenanceRotationConfig{
-					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 				},
 			}, "", "Credentials \"rotate-observability-credentials\": Observability passwords rotation started", "rotate-observability-credentials"),
 			Entry("etcd encryption key", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 				ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 				},
 			}, "", "Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started", "rotate-etcd-encryption-key"),
 			Entry("etcd encryption key when encryption key rotation start maintenance operation is set", gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 				ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-					RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+					RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 				},
 			}, "rotate-etcd-encryption-key-start", "Credentials \"rotate-etcd-encryption-key\": ETCD Encryption key rotation started", "rotate-etcd-encryption-key-start"),
 		)
@@ -1872,13 +1872,13 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
 				Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 					SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
-						RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+						RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 					},
 					Observability: &gardencorev1beta1.MaintenanceRotationConfig{
-						RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+						RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 					},
 					ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-						RotationPeriod: ptr.To(metav1.Duration{Duration: time.Hour}),
+						RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
 					},
 				},
 			}

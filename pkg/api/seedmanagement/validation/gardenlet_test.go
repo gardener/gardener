@@ -34,7 +34,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 			Spec: core.SeedSpec{
 				Backup: &core.Backup{
 					Provider: "foo",
-					Region:   ptr.To("some-region"),
+					Region:   new("some-region"),
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -70,12 +70,12 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 					},
 				},
 				Networks: core.SeedNetworks{
-					Nodes:    ptr.To("10.250.0.0/16"),
+					Nodes:    new("10.250.0.0/16"),
 					Pods:     "100.96.0.0/11",
 					Services: "100.64.0.0/13",
 					ShootDefaults: &core.ShootNetworks{
-						Pods:     ptr.To("10.240.0.0/16"),
-						Services: ptr.To("10.241.0.0/16"),
+						Pods:     new("10.240.0.0/16"),
+						Services: new("10.241.0.0/16"),
 					},
 				},
 				Provider: core.SeedProvider{
@@ -102,7 +102,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 				Deployment: seedmanagement.GardenletSelfDeployment{
 					Helm: seedmanagement.GardenletHelm{
 						OCIRepository: core.OCIRepository{
-							Ref: ptr.To("some-ref:v0.0.0"),
+							Ref: new("some-ref:v0.0.0"),
 						},
 					},
 				},
@@ -204,7 +204,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 						},
 						Helm: seedmanagement.GardenletHelm{
 							OCIRepository: core.OCIRepository{
-								Ref: ptr.To("some-ref:v0.0.0"),
+								Ref: new("some-ref:v0.0.0"),
 							},
 						},
 					},
@@ -218,15 +218,15 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
 				seedx.Name = "foo"
-				seedx.Spec.Networks.Nodes = ptr.To("")
+				seedx.Spec.Networks.Nodes = new("")
 
 				gardenlet.Spec.Deployment.GardenletDeployment = seedmanagement.GardenletDeployment{
-					ReplicaCount:         ptr.To(int32(-1)),
-					RevisionHistoryLimit: ptr.To(int32(-1)),
-					ServiceAccountName:   ptr.To(""),
+					ReplicaCount:         new(int32(-1)),
+					RevisionHistoryLimit: new(int32(-1)),
+					ServiceAccountName:   new(""),
 					Image: &seedmanagement.Image{
-						Repository: ptr.To(""),
-						Tag:        ptr.To(""),
+						Repository: new(""),
+						Tag:        new(""),
 						PullPolicy: ptr.To[corev1.PullPolicy]("foo"),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
@@ -280,7 +280,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 
 			It("should forbid empty ref in image", func() {
 				gardenlet.Spec.Deployment.Image = &seedmanagement.Image{
-					Ref: ptr.To(""),
+					Ref: new(""),
 				}
 
 				Expect(ValidateGardenlet(gardenlet)).To(ConsistOf(
@@ -293,9 +293,9 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 
 			It("should forbid specifying both ref and repository/tag in image", func() {
 				gardenlet.Spec.Deployment.Image = &seedmanagement.Image{
-					Ref:        ptr.To("registry.example.com/gardenlet:v1.0.0"),
-					Repository: ptr.To("registry.example.com/gardenlet"),
-					Tag:        ptr.To("v1.0.0"),
+					Ref:        new("registry.example.com/gardenlet:v1.0.0"),
+					Repository: new("registry.example.com/gardenlet"),
+					Tag:        new("v1.0.0"),
 				}
 
 				Expect(ValidateGardenlet(gardenlet)).To(ConsistOf(

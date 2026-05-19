@@ -17,7 +17,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -506,7 +505,7 @@ func managedResource(name string, conditions []gardencorev1beta1.Condition) *res
 			Namespace: namespace,
 		},
 		Spec: resourcesv1alpha1.ManagedResourceSpec{
-			Class: ptr.To("seed"),
+			Class: new("seed"),
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
 			Conditions: conditions,

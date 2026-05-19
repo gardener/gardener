@@ -158,7 +158,7 @@ var _ = Describe("KubeControllerManager", func() {
 					var replicas int32 = 4
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
-						Spec:       appsv1.DeploymentSpec{Replicas: ptr.To(replicas)},
+						Spec:       appsv1.DeploymentSpec{Replicas: new(replicas)},
 					})).To(Succeed())
 
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)
@@ -176,7 +176,7 @@ var _ = Describe("KubeControllerManager", func() {
 							Namespace:   namespace,
 							Annotations: map[string]string{proberapi.MeltdownProtectionActive: ""},
 						},
-						Spec: appsv1.DeploymentSpec{Replicas: ptr.To(replicas)},
+						Spec: appsv1.DeploymentSpec{Replicas: new(replicas)},
 					})).To(Succeed())
 
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)

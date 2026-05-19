@@ -447,8 +447,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					worker1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
 					worker1.Minimum = 2
 					worker1.Maximum = 2
-					worker1.MaxUnavailable = ptr.To(intstr.FromInt(1))
-					worker1.MaxSurge = ptr.To(intstr.FromInt(0))
+					worker1.MaxUnavailable = new(intstr.FromInt(1))
+					worker1.MaxSurge = new(intstr.FromInt(0))
 
 					worker2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
 
@@ -491,8 +491,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					worker1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
 					worker1.Minimum = 2
 					worker1.Maximum = 2
-					worker1.MaxUnavailable = ptr.To(intstr.FromInt(1))
-					worker1.MaxSurge = ptr.To(intstr.FromInt(0))
+					worker1.MaxUnavailable = new(intstr.FromInt(1))
+					worker1.MaxSurge = new(intstr.FromInt(0))
 
 					worker2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
 

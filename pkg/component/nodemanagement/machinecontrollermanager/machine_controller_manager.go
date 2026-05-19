@@ -113,7 +113,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	)
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		return nil
 	}); err != nil {
 		return err
@@ -183,11 +183,11 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service,
 			networkingv1.NetworkPolicyPort{
-				Port:     ptr.To(intstr.FromInt32(portMetrics)),
+				Port:     new(intstr.FromInt32(portMetrics)),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			},
 			networkingv1.NetworkPolicyPort{
-				Port:     ptr.To(intstr.FromInt32(portProviderMetrics)),
+				Port:     new(intstr.FromInt32(portProviderMetrics)),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			}),
 		)
@@ -285,7 +285,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 				},
 				},
@@ -318,7 +318,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = utils.MergeStringMaps(podDisruptionBudget.Labels, getLabels())
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}

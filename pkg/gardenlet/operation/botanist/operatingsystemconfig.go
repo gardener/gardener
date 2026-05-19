@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -82,7 +81,7 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 
 	var region *string
 	if !b.Shoot.HasManagedInfrastructure() {
-		region = ptr.To(b.Shoot.GetInfo().Spec.Region)
+		region = new(b.Shoot.GetInfo().Spec.Region)
 	}
 
 	return &operatingsystemconfig.Values{

@@ -132,7 +132,7 @@ func CreateFromUnstructured(
 	if len(data) > 0 {
 		dataMap[name] = data
 	}
-	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, dataMap, &keepObjects, injectedLabels, ptr.To(false))
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, dataMap, &keepObjects, injectedLabels, new(false))
 }
 
 // Update updates a managed resource and its secret with the given name, class, key, and data in the given namespace.
@@ -410,7 +410,7 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, ptr.To(false), injectedLabels, &forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, new(false), injectedLabels, &forceOverwriteAnnotations)
 }
 
 // RenderChartAndCreateForSeed renders a chart and creates a ManagedResource for the gardener-resource-manager

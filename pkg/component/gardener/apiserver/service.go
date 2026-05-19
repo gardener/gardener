@@ -27,12 +27,12 @@ func (g *gardenerAPIServer) serviceRuntime() *corev1.Service {
 	gardenerutils.ReconcileTopologyAwareRoutingSettings(service, g.values.TopologyAwareRoutingEnabled, g.values.RuntimeVersion)
 	// allow gardener-apiserver being reached from kube-apiserver
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
+		Port:     new(intstr.FromInt32(port)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
+		Port:     new(intstr.FromInt32(port)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

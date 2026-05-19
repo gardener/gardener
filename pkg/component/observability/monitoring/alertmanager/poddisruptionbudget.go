@@ -23,7 +23,7 @@ func (a *alertManager) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 			Labels:    a.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: a.getLabels()},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},

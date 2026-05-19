@@ -24,7 +24,7 @@ func (t *terminal) serviceMonitor() *monitoringv1.ServiceMonitor {
 				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},

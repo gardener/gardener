@@ -588,7 +588,7 @@ func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook,
 }
 
 func (k *kubeAPIServer) EnableStaticTokenKubeconfig() {
-	k.values.StaticTokenKubeconfigEnabled = ptr.To(true)
+	k.values.StaticTokenKubeconfigEnabled = new(true)
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {

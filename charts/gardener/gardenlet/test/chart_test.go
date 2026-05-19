@@ -195,8 +195,8 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 
 			image := seedmanagement.Image{
-				Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
-				Tag:        ptr.To("latest"),
+				Repository: new("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
+				Tag:        new("latest"),
 			}
 
 			if deploymentConfiguration.ReplicaCount != nil {
@@ -333,11 +333,11 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 		},
 		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e03f6438"}),
-		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", ptr.To("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
+		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", new("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap":         "gardenlet-configmap-b09359e9",
 			"gardenlet-kubeconfig-garden": "gardenlet-kubeconfig-garden-8c9ae097",
 		}),
-		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, ptr.To("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
+		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, new("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap":       "gardenlet-configmap-916a9d6b",
 			"gardenlet-kubeconfig-seed": "gardenlet-kubeconfig-seed-662d92ae",
 		}),
@@ -347,7 +347,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		}, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig",
 			Namespace: v1beta1constants.GardenNamespace,
-		}, ptr.To("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil, map[string]string{
+		}, new("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil, map[string]string{
 			"gardenlet-configmap": "gardenlet-configmap-452f30b5",
 		}),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil,
@@ -404,11 +404,11 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					},
 				},
 			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-3a4b364a"}),
-		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, ptr.To("dummy-override-content"), nil, nil, map[string]string{
+		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, new("dummy-override-content"), nil, nil, map[string]string{
 			"gardenlet-configmap":             "gardenlet-configmap-e03f6438",
 			"gardenlet-imagevector-overwrite": "gardenlet-imagevector-overwrite-32ecb769",
 		}),
-		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, ptr.To("dummy-override-content"), nil, map[string]string{
+		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, new("dummy-override-content"), nil, map[string]string{
 			"gardenlet-configmap":                        "gardenlet-configmap-e03f6438",
 			"gardenlet-imagevector-overwrite-components": "gardenlet-imagevector-overwrite-components-53f94952",
 		}),
@@ -418,7 +418,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e03f6438"}),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			ServiceAccountName: ptr.To("ax"),
+			ServiceAccountName: new("ax"),
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e03f6438"}),
 
 		Entry("verify deployment with resources", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{

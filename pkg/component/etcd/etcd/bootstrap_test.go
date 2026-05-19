@@ -58,7 +58,7 @@ var _ = Describe("Etcd", func() {
 		namespace                = "shoot--foo--bar"
 		etcdDruidImage           = "etcd/druid:1.2.3"
 		imageVectorOverwrite     *string
-		imageVectorOverwriteFull = ptr.To("some overwrite")
+		imageVectorOverwriteFull = new("some overwrite")
 		secretNameCA             = "ca"
 
 		priorityClassName = "some-priority-class"
@@ -73,7 +73,7 @@ var _ = Describe("Etcd", func() {
 		managedResourceSecretName = "managedresource-" + managedResourceName
 
 		etcdOperatorConfigMountPath = "/operator_config/config.yaml"
-		etcdOperatorConfigYAML      = ptr.To(`apiVersion: config.druid.gardener.cloud/v1alpha1
+		etcdOperatorConfigYAML      = new(`apiVersion: config.druid.gardener.cloud/v1alpha1
 clientConnection:
   acceptContentTypes: ""
   burst: 150
@@ -148,7 +148,7 @@ webhooks:
 			},
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 				Workers:                   ptr.To[int64](3),
-				EnableBackupCompaction:    ptr.To(true),
+				EnableBackupCompaction:    new(true),
 				EventsThreshold:           ptr.To[int64](1000000),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: time.Second * 60},
 				ActiveDeadlineDuration:    &metav1.Duration{Duration: time.Hour * 3},
@@ -341,7 +341,7 @@ webhooks:
 				Data: map[string]string{
 					"images_overwrite.yaml": *imageVectorOverwriteFull,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 			}
 
 			configMapOperatorConfig = &corev1.ConfigMap{
@@ -356,7 +356,7 @@ webhooks:
 				Data: map[string]string{
 					"config.yaml": *etcdOperatorConfigYAML,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 			}
 
 			deploymentWithoutImageVectorOverwriteFor = &appsv1.Deployment{
@@ -414,7 +414,7 @@ webhooks:
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -522,7 +522,7 @@ webhooks:
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -630,7 +630,7 @@ webhooks:
 							Service: &admissionregistrationv1.ServiceReference{
 								Name:      "etcd-druid",
 								Namespace: namespace,
-								Path:      ptr.To("/webhooks/etcdcomponents"),
+								Path:      new("/webhooks/etcdcomponents"),
 								Port:      ptr.To[int32](443),
 							},
 							CABundle: nil,
@@ -713,7 +713,7 @@ webhooks:
 							Service: &admissionregistrationv1.ServiceReference{
 								Name:      "etcd-druid",
 								Namespace: namespace,
-								Path:      ptr.To("/webhooks/etcdcomponents"),
+								Path:      new("/webhooks/etcdcomponents"),
 								Port:      ptr.To[int32](443),
 							},
 							CABundle: nil,
@@ -721,7 +721,7 @@ webhooks:
 						FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
 						MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
 						SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-						TimeoutSeconds:          ptr.To(int32(10)),
+						TimeoutSeconds:          new(int32(10)),
 						AdmissionReviewVersions: []string{"v1", "v1beta1"},
 						Rules: []admissionregistrationv1.RuleWithOperations{
 							{
@@ -747,7 +747,7 @@ webhooks:
 					},
 				},
 				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					MaxUnavailable: new(intstr.FromInt32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
@@ -814,11 +814,11 @@ webhooks:
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -839,7 +839,7 @@ webhooks:
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			manifests, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])

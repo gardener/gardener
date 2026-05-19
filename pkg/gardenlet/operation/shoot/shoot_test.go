@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -39,9 +38,9 @@ var _ = Describe("shoot", func() {
 				shoot = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: &gardencorev1beta1.Networking{
-							Pods:     ptr.To("10.0.0.0/24"),
-							Services: ptr.To("20.0.0.0/24"),
-							Nodes:    ptr.To("30.0.0.0/24"),
+							Pods:     new("10.0.0.0/24"),
+							Services: new("20.0.0.0/24"),
+							Nodes:    new("30.0.0.0/24"),
 						},
 					},
 				}
@@ -156,14 +155,14 @@ var _ = Describe("shoot", func() {
 				Entry("services is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Services = nil }),
 				Entry("pods is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = nil }),
 				Entry("services is invalid", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = ptr.To("foo")
+					s.Spec.Networking.Services = new("foo")
 				}),
-				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = ptr.To("foo") }),
+				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = new("foo") }),
 				Entry("apiserver cannot be calculated", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = ptr.To("10.0.0.0/32")
+					s.Spec.Networking.Services = new("10.0.0.0/32")
 				}),
 				Entry("coreDNS cannot be calculated", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = ptr.To("10.0.0.0/29")
+					s.Spec.Networking.Services = new("10.0.0.0/29")
 				}),
 			)
 		})
@@ -225,7 +224,7 @@ var _ = Describe("shoot", func() {
 				unmanaged := "unmanaged"
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: ptr.To(internalDomain),
+					InternalClusterDomain: new(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -243,7 +242,7 @@ var _ = Describe("shoot", func() {
 			It("should return the internal domain as requested (shoot's external domain is not unmanaged)", func() {
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: ptr.To(internalDomain),
+					InternalClusterDomain: new(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 
@@ -253,7 +252,7 @@ var _ = Describe("shoot", func() {
 			It("should return the internal domain when shoot's external domain is not set (even if not requested)", func() {
 				internalDomain := "foo"
 				s := &Shoot{
-					InternalClusterDomain: ptr.To(internalDomain),
+					InternalClusterDomain: new(internalDomain),
 				}
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 
@@ -317,12 +316,12 @@ var _ = Describe("shoot", func() {
 			})
 
 			It("should return true when CredentialsBindingName is set", func() {
-				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{CredentialsBindingName: ptr.To("binding")}})
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{CredentialsBindingName: new("binding")}})
 				Expect(shoot.HasManagedInfrastructure()).To(BeTrue())
 			})
 
 			It("should return true when SecretBindingName is set", func() {
-				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SecretBindingName: ptr.To("binding")}})
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SecretBindingName: new("binding")}})
 				Expect(shoot.HasManagedInfrastructure()).To(BeTrue())
 			})
 		})
@@ -391,7 +390,7 @@ var _ = Describe("shoot", func() {
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						DNS: &gardencorev1beta1.DNS{
-							Domain: ptr.To("shoot.example.com"),
+							Domain: new("shoot.example.com"),
 						},
 						Kubernetes: gardencorev1beta1.Kubernetes{
 							Version: "v1.35.0",
@@ -428,7 +427,7 @@ var _ = Describe("shoot", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(shoot.GetInfo().Spec.DNS).To(Equal(&gardencorev1beta1.DNS{
-					Domain: ptr.To("shoot.example.com"),
+					Domain: new("shoot.example.com"),
 				}))
 			})
 		})

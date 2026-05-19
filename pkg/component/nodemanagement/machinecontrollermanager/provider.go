@@ -75,7 +75,7 @@ func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamesp
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 		},
 	}
 

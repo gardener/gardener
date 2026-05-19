@@ -6,7 +6,6 @@ package validation
 
 import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	gardencorevalidation "github.com/gardener/gardener/pkg/api/core/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -162,7 +161,7 @@ func convertToCoreResources(resources []gardencorev1beta1.ControllerResource) ([
 
 		// Imitate defaulting of ControllerRegistration, since defaulting for extensions was only added later.
 		if oldCoreResource.Primary == nil {
-			oldCoreResource.Primary = ptr.To(true)
+			oldCoreResource.Primary = new(true)
 		}
 		coreResources = append(coreResources, *oldCoreResource)
 	}

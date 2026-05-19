@@ -349,7 +349,7 @@ func (o *Options) Run(ctx context.Context) error {
 			}
 			if clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] == "" && clusterIdentity.Data[v1beta1constants.ClusterIdentity] == o.ExtraOptions.ClusterIdentity {
 				clusterIdentity.Data[v1beta1constants.ClusterIdentityOrigin] = v1beta1constants.ClusterIdentityOriginGardenerAPIServer
-				clusterIdentity.Immutable = ptr.To(true)
+				clusterIdentity.Immutable = new(true)
 				if _, err = kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Update(ctx, clusterIdentity, kubernetesclient.DefaultUpdateOptions()); err != nil {
 					return err
 				}
@@ -362,7 +362,7 @@ func (o *Options) Run(ctx context.Context) error {
 				Name:      v1beta1constants.ClusterIdentity,
 				Namespace: metav1.NamespaceSystem,
 			},
-			Immutable: ptr.To(true),
+			Immutable: new(true),
 			Data: map[string]string{
 				v1beta1constants.ClusterIdentity:       o.ExtraOptions.ClusterIdentity,
 				v1beta1constants.ClusterIdentityOrigin: v1beta1constants.ClusterIdentityOriginGardenerAPIServer,

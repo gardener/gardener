@@ -244,8 +244,8 @@ var _ = Describe("Actuator", func() {
 					{Name: ControlPlaneShootChartResourceName},
 				},
 				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
-				KeepObjects:               ptr.To(false),
-				ForceOverwriteAnnotations: ptr.To(false),
+				KeepObjects:               new(false),
+				ForceOverwriteAnnotations: new(false),
 			},
 		}
 
@@ -262,8 +262,8 @@ var _ = Describe("Actuator", func() {
 					{Name: ControlPlaneShootCRDsChartResourceName},
 				},
 				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
-				KeepObjects:               ptr.To(false),
-				ForceOverwriteAnnotations: ptr.To(false),
+				KeepObjects:               new(false),
+				ForceOverwriteAnnotations: new(false),
 			},
 		}
 
@@ -280,8 +280,8 @@ var _ = Describe("Actuator", func() {
 					{Name: StorageClassesChartResourceName},
 				},
 				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
-				KeepObjects:               ptr.To(false),
-				ForceOverwriteAnnotations: ptr.To(true),
+				KeepObjects:               new(false),
+				ForceOverwriteAnnotations: new(true),
 			},
 		}
 

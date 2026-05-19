@@ -280,7 +280,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			}),
 		},
 		Spec: corev1.PodSpec{
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 			PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
 			DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 			InitContainers: []corev1.Container{
@@ -293,7 +293,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						"setup",
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -372,7 +372,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{
 								"NET_ADMIN",
@@ -543,7 +543,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 				Capabilities: &corev1.Capabilities{
 					Drop: []corev1.Capability{
 						"all",
@@ -580,7 +580,7 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		sts.Labels = labels
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			Replicas:             ptr.To(v.values.Replicas),
+			Replicas:             new(v.values.Replicas),
 			RevisionHistoryLimit: ptr.To[int32](1),
 			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
@@ -603,7 +603,7 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pdb, func() error {
 		pdb.Labels = podLabels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: podLabels},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
@@ -623,7 +623,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             ptr.To(v.values.Replicas),
+			Replicas:             new(v.values.Replicas),
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: deploymentName,
@@ -653,7 +653,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(metricsPort)), Protocol: ptr.To(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(metricsPort)), Protocol: ptr.To(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
@@ -775,7 +775,7 @@ func (v *vpnSeedServer) deployScrapeConfig(ctx context.Context) error {
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(jobName),
+					Replacement: new(jobName),
 					TargetLabel: "job",
 				},
 				{

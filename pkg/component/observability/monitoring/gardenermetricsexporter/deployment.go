@@ -45,7 +45,7 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem100,
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					Containers: []corev1.Container{
 						{
 							Name:            deploymentName,
@@ -58,8 +58,8 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 								"--port=" + strconv.Itoa(probePort),
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{

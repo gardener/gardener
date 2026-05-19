@@ -45,12 +45,12 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(serverPort)),
+		Port:     new(intstr.FromInt32(serverPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(svc, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(metricsPort)),
+		Port:     new(intstr.FromInt32(metricsPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

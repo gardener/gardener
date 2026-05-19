@@ -428,7 +428,7 @@ func (v *vali) getService() *corev1.Service {
 		}
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
-			Port:     ptr.To(intstr.FromInt32(valiconstants.ValiPort)),
+			Port:     new(intstr.FromInt32(valiconstants.ValiPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}}
 	)
@@ -450,7 +450,7 @@ func (v *vali) getService() *corev1.Service {
 		)
 
 		networkPolicyPorts = append(networkPolicyPorts, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(telegrafServicePort)),
+			Port:     new(intstr.FromInt32(telegrafServicePort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		})
 	}
@@ -523,7 +523,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas: ptr.To(v.values.Replicas),
+				Replicas: new(v.values.Replicas),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
@@ -534,9 +534,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 						}),
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							FSGroup:             ptr.To(valiUserAndGroupId),
+							FSGroup:             new(valiUserAndGroupId),
 							FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 						},
 						PriorityClassName: v.values.PriorityClassName,
@@ -550,9 +550,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									valiMountPathInitScript + valiDataKeyInitScript + " || true",
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged:   ptr.To(true),
+									Privileged:   new(true),
 									RunAsUser:    ptr.To[int64](0),
-									RunAsNonRoot: ptr.To(false),
+									RunAsNonRoot: new(false),
 									RunAsGroup:   ptr.To[int64](0),
 								},
 								VolumeMounts: []corev1.VolumeMount{
@@ -615,11 +615,11 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									RunAsUser:                ptr.To(valiUserAndGroupId),
-									RunAsGroup:               ptr.To(valiUserAndGroupId),
-									RunAsNonRoot:             ptr.To(true),
-									ReadOnlyRootFilesystem:   ptr.To(true),
+									AllowPrivilegeEscalation: new(false),
+									RunAsUser:                new(valiUserAndGroupId),
+									RunAsGroup:               new(valiUserAndGroupId),
+									RunAsNonRoot:             new(true),
+									ReadOnlyRootFilesystem:   new(true),
 								},
 							},
 							{
@@ -649,11 +649,11 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									RunAsUser:                ptr.To(valiUserAndGroupId),
-									RunAsGroup:               ptr.To(valiUserAndGroupId),
-									RunAsNonRoot:             ptr.To(true),
-									ReadOnlyRootFilesystem:   ptr.To(true),
+									AllowPrivilegeEscalation: new(false),
+									RunAsUser:                new(valiUserAndGroupId),
+									RunAsGroup:               new(valiUserAndGroupId),
+									RunAsNonRoot:             new(true),
+									ReadOnlyRootFilesystem:   new(true),
 								},
 							},
 						},
@@ -719,7 +719,7 @@ wait
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 				Capabilities: &corev1.Capabilities{
 					Add: []corev1.Capability{"NET_ADMIN"},
 				},
@@ -775,11 +775,11 @@ wait
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 					RunAsUser:                ptr.To[int64](65532),
 					RunAsGroup:               ptr.To[int64](65534),
-					RunAsNonRoot:             ptr.To(true),
-					ReadOnlyRootFilesystem:   ptr.To(true),
+					RunAsNonRoot:             new(true),
+					ReadOnlyRootFilesystem:   new(true),
 				},
 				Ports: []corev1.ContainerPort{{
 					Name:          kubeRBACProxyName,
@@ -892,7 +892,7 @@ func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
 					// job label, prometheus-operator would choose job=logging (service name).
 					{
 						Action:      "replace",
-						Replacement: ptr.To("vali"),
+						Replacement: new("vali"),
 						TargetLabel: "job",
 					},
 					{
@@ -939,7 +939,7 @@ func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
 				// job label, prometheus-operator would choose job=logging (service name).
 				{
 					Action:      "replace",
-					Replacement: ptr.To("vali-" + telegrafName),
+					Replacement: new("vali-" + telegrafName),
 					TargetLabel: "job",
 				},
 				{
@@ -952,7 +952,7 @@ func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
 				TargetLabel:  "__name__",
 				Regex:        `iptables_(.+)`,
 				Action:       "replace",
-				Replacement:  ptr.To("shoot_node_logging_incoming_$1"),
+				Replacement:  new("shoot_node_logging_incoming_$1"),
 			}},
 		})
 	}

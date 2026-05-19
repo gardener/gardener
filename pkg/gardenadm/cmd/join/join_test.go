@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -230,7 +229,7 @@ var _ = Describe("Join", func() {
 
 			When("zone validation with managed infrastructure", func() {
 				BeforeEach(func() {
-					shoot.Spec.CredentialsBindingName = ptr.To("test-credentials")
+					shoot.Spec.CredentialsBindingName = new("test-credentials")
 					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 						{
 							Name:         "control-plane",

@@ -126,14 +126,14 @@ var _ = Describe("#Wait", func() {
 		)()
 		delete(expected.Annotations, v1beta1constants.GardenerOperation)
 		expected.Status.LastErrors = []druidapicommon.LastError{}
-		expected.Status.ObservedGeneration = ptr.To(expected.Generation)
+		expected.Status.ObservedGeneration = new(expected.Generation)
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
 				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(false)
+		expected.Status.Ready = new(false)
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
 		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("is not ready yet")))
@@ -161,7 +161,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -192,7 +192,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionUnknown,
 			},
 		}
-		expected.Status.Ready = ptr.To(false)
+		expected.Status.Ready = new(false)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -216,7 +216,7 @@ var _ = Describe("#Wait", func() {
 		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -246,7 +246,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionFalse,
 			},
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -276,7 +276,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(false)
+		expected.Status.Ready = new(false)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -307,7 +307,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -365,7 +365,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj.Spec.Replicas = 0
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
-		obj.Status.Ready = ptr.To(false)
+		obj.Status.Ready = new(false)
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 
@@ -374,7 +374,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj.Annotations = map[string]string{"druid.gardener.cloud/disable-etcd-runtime-component-creation": ""}
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
-		obj.Status.Ready = ptr.To(false)
+		obj.Status.Ready = new(false)
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 
@@ -402,7 +402,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
-		obj.Status.Ready = ptr.To(false)
+		obj.Status.Ready = new(false)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
@@ -410,7 +410,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
-		obj.Status.Ready = ptr.To(true)
+		obj.Status.Ready = new(true)
 		obj.Status.Replicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})

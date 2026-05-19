@@ -32,8 +32,8 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				Name: "kube-kubelet-seed",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorTimestamps: ptr.To(false),
-				MetricsPath:     ptr.To("/federate"),
+				HonorTimestamps: new(false),
+				MetricsPath:     new("/federate"),
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					Role:       monitoringv1alpha1.KubernetesRoleService,
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"garden"}},
@@ -57,13 +57,13 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("kube-kubelet-seed"),
+						Replacement: new("kube-kubelet-seed"),
 						TargetLabel: "job",
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					// "shoot-control-plane" references the namespace of the shoot control-plane pods in the seed
-					Replacement: ptr.To("shoot-control-plane"),
+					Replacement: new("shoot-control-plane"),
 					TargetLabel: "namespace",
 				}},
 			},
@@ -73,16 +73,16 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				Name: "annotated-seed-service-endpoints",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
+				HonorLabels: new(false),
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					Role:       monitoringv1alpha1.KubernetesRoleEndpoint,
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 				}},
-				SampleLimit: ptr.To(uint64(500)),
+				SampleLimit: new(uint64(500)),
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("annotated-seed-service-endpoints"),
+						Replacement: new("annotated-seed-service-endpoints"),
 						TargetLabel: "job",
 					},
 					{
@@ -106,7 +106,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						SourceLabels: []monitoringv1.LabelName{"__address__", "__meta_kubernetes_service_annotation_prometheus_io_port"},
 						Action:       "replace",
 						Regex:        `([^:]+)(?::\d+)?;(\d+)`,
-						Replacement:  ptr.To("$1:$2"),
+						Replacement:  new("$1:$2"),
 						TargetLabel:  "__address__",
 					},
 					{
@@ -141,14 +141,14 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				Name: "prometheus-" + Label,
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
+				HonorLabels: new(false),
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("prometheus-" + Label),
+						Replacement: new("prometheus-" + Label),
 						TargetLabel: "job",
 					},
 					{
@@ -171,8 +171,8 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					Name: "cadvisor",
 				},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
-					HonorLabels:     ptr.To(false),
-					HonorTimestamps: ptr.To(false),
+					HonorLabels:     new(false),
+					HonorTimestamps: new(false),
 					Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -184,9 +184,9 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					}}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 						Role:            monitoringv1alpha1.KubernetesRoleNode,
-						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+						APIServer:       new("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
-						FollowRedirects: ptr.To(false),
+						FollowRedirects: new(false),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 							Key:                  resourcesv1alpha1.DataKeyToken,
@@ -199,7 +199,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To("cadvisor"),
+							Replacement: new("cadvisor"),
 							TargetLabel: "job",
 						},
 						{
@@ -208,17 +208,17 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						},
 						{
 							TargetLabel: "__address__",
-							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+							Replacement: new(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 							Regex:        `(.+)`,
-							Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
+							Replacement:  new(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
 							TargetLabel:  "__metrics_path__",
 						},
 						{
 							TargetLabel: "type",
-							Replacement: ptr.To("shoot"),
+							Replacement: new("shoot"),
 						},
 					},
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -233,7 +233,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							SourceLabels: []monitoringv1.LabelName{"id"},
 							Action:       "replace",
 							Regex:        `^/system\.slice/(.+)\.service$`,
-							Replacement:  ptr.To(`$1`),
+							Replacement:  new(`$1`),
 							TargetLabel:  "container",
 						},
 						monitoringutils.StandardMetricRelabelConfig(
@@ -277,7 +277,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						{
 							SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
 							Regex:        `container_network.+;/`,
-							Replacement:  ptr.To("true"),
+							Replacement:  new("true"),
 							TargetLabel:  "host_network",
 						},
 						{
@@ -292,7 +292,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					Name: "kube-kubelet",
 				},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
-					HonorLabels: ptr.To(false),
+					HonorLabels: new(false),
 					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -305,7 +305,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 						Role:            monitoringv1alpha1.KubernetesRoleNode,
 						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
-						FollowRedirects: ptr.To(true),
+						FollowRedirects: new(true),
 						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -319,7 +319,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To("kube-kubelet"),
+							Replacement: new("kube-kubelet"),
 							TargetLabel: "job",
 						},
 						{
@@ -332,17 +332,17 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						},
 						{
 							TargetLabel: "__address__",
-							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+							Replacement: new(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 							Regex:        `(.+)`,
-							Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
+							Replacement:  new(`/api/v1/nodes/${1}/proxy/metrics`),
 							TargetLabel:  "__metrics_path__",
 						},
 						{
 							TargetLabel: "type",
-							Replacement: ptr.To("shoot"),
+							Replacement: new("shoot"),
 						},
 					},
 					MetricRelabelConfigs: append(monitoringutils.StandardMetricRelabelConfig(
@@ -373,7 +373,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						Name: "opentelemetry-collector-nodes",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorLabels: ptr.To(false),
+						HonorLabels: new(false),
 						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -386,7 +386,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:            monitoringv1alpha1.KubernetesRoleNode,
 							APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
-							FollowRedirects: ptr.To(true),
+							FollowRedirects: new(true),
 							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -400,7 +400,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: ptr.To("opentelemetry-collector-nodes"),
+								Replacement: new("opentelemetry-collector-nodes"),
 								TargetLabel: "job",
 							},
 							{
@@ -413,17 +413,17 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							},
 							{
 								TargetLabel: "__address__",
-								Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+								Replacement: new(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 								Regex:        `(.+)`,
-								Replacement:  ptr.To(nodeMetricsURL),
+								Replacement:  new(nodeMetricsURL),
 								TargetLabel:  "__metrics_path__",
 							},
 							{
 								TargetLabel: "type",
-								Replacement: ptr.To("shoot"),
+								Replacement: new("shoot"),
 							},
 						},
 						MetricRelabelConfigs: append(monitoringutils.StandardMetricRelabelConfig(

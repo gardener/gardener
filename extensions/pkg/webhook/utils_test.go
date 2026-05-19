@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -571,11 +570,11 @@ var _ = Describe("Utils", func() {
 				units = []extensionsv1alpha1.Unit{
 					{
 						Name:    "foo.service",
-						Content: ptr.To("foo"),
+						Content: new("foo"),
 					},
 					{
 						Name:    "bar.service",
-						Content: ptr.To("bar"),
+						Content: new("bar"),
 					},
 				}
 			})
@@ -583,7 +582,7 @@ var _ = Describe("Utils", func() {
 			It("should append unit when unit with such name does not exist", func() {
 				newUnit := extensionsv1alpha1.Unit{
 					Name:    "baz.service",
-					Content: ptr.To("bar"),
+					Content: new("bar"),
 				}
 
 				actual := webhook.EnsureUnitWithName(units, newUnit)
@@ -593,18 +592,18 @@ var _ = Describe("Utils", func() {
 			It("should update unit when unit with such name exists", func() {
 				newUnit := extensionsv1alpha1.Unit{
 					Name:    "foo.service",
-					Content: ptr.To("baz"),
+					Content: new("baz"),
 				}
 
 				actual := webhook.EnsureUnitWithName(units, newUnit)
 				Expect(actual).To(Equal([]extensionsv1alpha1.Unit{
 					{
 						Name:    "foo.service",
-						Content: ptr.To("baz"),
+						Content: new("baz"),
 					},
 					{
 						Name:    "bar.service",
-						Content: ptr.To("bar"),
+						Content: new("bar"),
 					},
 				}))
 			})

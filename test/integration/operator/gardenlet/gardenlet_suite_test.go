@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -57,7 +56,7 @@ var (
 	testRunID     string
 
 	fakeRegistry  *ocifake.Registry
-	ociRepository = gardencorev1.OCIRepository{Repository: ptr.To("gardenlet"), Tag: ptr.To("test")}
+	ociRepository = gardencorev1.OCIRepository{Repository: new("gardenlet"), Tag: new("test")}
 )
 
 var _ = BeforeSuite(func() {

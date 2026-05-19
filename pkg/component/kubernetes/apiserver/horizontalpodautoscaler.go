@@ -62,7 +62,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
 							// The chosen value of 6 CPU is aligned with the average value for memory - 24G. Preserve the cpu:memory ratio of 1:4.
-							AverageValue: ptr.To(resource.MustParse("6")),
+							AverageValue: new(resource.MustParse("6")),
 						},
 					},
 				},
@@ -73,7 +73,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
 							// The chosen value of 24G is aligned with the average value for cpu - 6 CPU cores. Preserve the cpu:memory ratio of 1:4.
-							AverageValue: ptr.To(resource.MustParse("24G")),
+							AverageValue: new(resource.MustParse("24G")),
 						},
 					},
 				},

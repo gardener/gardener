@@ -545,7 +545,7 @@ var _ = Describe("Extension", func() {
 			extensions := make([]gardencorev1beta1.ExtensionResourceState, 0, len(requiredExtensions))
 			for _, ext := range requiredExtensions {
 				extensions = append(extensions, gardencorev1beta1.ExtensionResourceState{
-					Name:  ptr.To(ext.Name),
+					Name:  new(ext.Name),
 					Kind:  extensionsv1alpha1.ExtensionResource,
 					State: &runtime.RawExtension{Raw: state},
 				})

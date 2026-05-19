@@ -250,7 +250,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		networkPolicyPort := networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
+			Port:     new(intstr.FromInt32(port)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
@@ -308,12 +308,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				PriorityClassName:            k.values.PriorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-					RunAsNonRoot: ptr.To(true),
+					RunAsNonRoot: new(true),
 					RunAsUser:    ptr.To[int64](65532),
 					RunAsGroup:   ptr.To[int64](65532),
 					FSGroup:      ptr.To[int64](65532),
@@ -352,7 +352,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
@@ -440,7 +440,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
@@ -527,7 +527,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: k.prometheusAccessSecretName()},

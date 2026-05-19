@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -102,7 +101,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -131,7 +130,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&project.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 			Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{{
 				Config:          defaultResourceQuota,
 				ProjectSelector: &metav1.LabelSelector{},
@@ -146,14 +145,14 @@ var _ = BeforeSuite(func() {
 	By("Register CloudProfile controller")
 	Expect((&cloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Register NamespacedCloudProfile controller")
 	Expect((&namespacedcloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

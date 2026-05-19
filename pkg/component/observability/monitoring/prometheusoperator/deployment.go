@@ -44,7 +44,7 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 					ServiceAccountName: serviceAccountName,
 					PriorityClassName:  p.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot:   ptr.To(true),
+						RunAsNonRoot:   new(true),
 						RunAsUser:      ptr.To[int64](65532),
 						SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 					},
@@ -72,9 +72,9 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 							Ports: []corev1.ContainerPort{{
 								Name:          portName,

@@ -1110,7 +1110,7 @@ var GetOSVersion = func(inPlaceUpdates *extensionsv1alpha1.InPlaceUpdates, fs af
 	if version == "" {
 		return nil, fmt.Errorf("unable to find version in %q with regex: %s", os, nodeagentconfigv1alpha1.OSVersionRegex.String())
 	}
-	return ptr.To(version), nil
+	return new(version), nil
 }
 
 // ExecCommandCombinedOutput executes the given command with the given arguments and returns the combined output. Exposed for testing.

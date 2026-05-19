@@ -125,32 +125,32 @@ var _ = Describe("KubeProxy", func() {
 				ResourceVersion: "1",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
+				HonorLabels: new(false),
 				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 					Key:                  "token",
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					APIServer:  ptr.To("https://kube-apiserver"),
+					APIServer:  new("https://kube-apiserver"),
 					Role:       "Endpoints",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
-					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("kube-proxy"),
+						Replacement: new("kube-proxy"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "type",
-						Replacement: ptr.To("shoot"),
+						Replacement: new("shoot"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
@@ -171,13 +171,13 @@ var _ = Describe("KubeProxy", func() {
 					},
 					{
 						TargetLabel: "__address__",
-						Replacement: ptr.To("kube-apiserver:443"),
+						Replacement: new("kube-apiserver:443"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 						Regex:        `(.+);(.+)`,
 						TargetLabel:  "__metrics_path__",
-						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+						Replacement:  new("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -333,7 +333,7 @@ var _ = Describe("KubeProxy", func() {
 				Data: map[string][]byte{
 					"kubeconfig": kubeconfig,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Type:      corev1.SecretTypeOpaque,
 			}
 
@@ -454,7 +454,7 @@ winkernel:
 						Name:      configMapNameFor(mode),
 						Namespace: "kube-system",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data: map[string]string{
 						"config.yaml": out,
 					},
@@ -475,7 +475,7 @@ winkernel:
 						"role": "proxy",
 					},
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"conntrack_fix.sh": `#!/bin/sh -e
 trap "kill -s INT 1" TERM
@@ -517,7 +517,7 @@ done
 						"role": "proxy",
 					},
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"cleanup.sh": `#!/bin/sh -e
 OLD_KUBE_PROXY_MODE="$(cat "$1")"
@@ -646,7 +646,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											},
 										},
 										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
+											AllowPrivilegeEscalation: new(false),
 											Capabilities: &corev1.Capabilities{
 												Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
 											},
@@ -665,7 +665,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "conntrack-fix",
 										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
+											AllowPrivilegeEscalation: new(false),
 											Capabilities: &corev1.Capabilities{
 												Add: []corev1.Capability{"NET_ADMIN"},
 											},
@@ -686,7 +686,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "cleanup",
 										SecurityContext: &corev1.SecurityContext{
-											Privileged: ptr.To(true),
+											Privileged: new(true),
 										},
 										VolumeMounts: []corev1.VolumeMount{
 											{MountPath: "/script", Name: "kube-proxy-cleanup-script"},
@@ -709,7 +709,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											},
 										},
 										SecurityContext: &corev1.SecurityContext{
-											Privileged: ptr.To(true),
+											Privileged: new(true),
 										},
 										VolumeMounts: []corev1.VolumeMount{
 											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
@@ -905,7 +905,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 
@@ -927,7 +927,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				"component": "kube-proxy",
 				"origin":    "gardener",
 			}))
-			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(new(true)))
 			expectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecretCentral.Name}}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResourceCentral).To(DeepEqual(expectedMr))
@@ -953,7 +953,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 				}
 
@@ -973,7 +973,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			}
 		})
 
@@ -997,7 +997,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 			Expect(managedResourceCentral).To(contain(configMapFor(values.ProxyMode)))
@@ -1009,7 +1009,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecretCentral.Labels).To(Equal(map[string]string{
 				"resources.gardener.cloud/garbage-collectable-reference": "true",
 				"component": "kube-proxy",
@@ -1040,7 +1040,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 				}
 
@@ -1060,7 +1060,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"role": "pool",
 				}))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
 				Expect(managedResource).To(DeepEqual(poolExpectedMr))
@@ -1088,7 +1088,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 			Expect(managedResourceCentral).To(contain(configMapFor(values.ProxyMode)))
@@ -1100,7 +1100,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecretCentral.Labels).To(Equal(map[string]string{
 				"resources.gardener.cloud/garbage-collectable-reference": "true",
 				"component": "kube-proxy",
@@ -1131,7 +1131,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 				}
 
@@ -1151,7 +1151,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"role": "pool",
 				}))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
 				Expect(managedResource).To(DeepEqual(poolExpectedMr))
@@ -1193,7 +1193,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -1202,7 +1202,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				// assertions for resources specific to the major/minor parts only of the Kubernetes version
@@ -1228,7 +1228,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResourceForMajorMinorVersionOnly.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMrForMajorMinorVersionOnly))
@@ -1236,7 +1236,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				managedResourceSecretForMajorMinorVersionOnly.Name = managedResourceForMajorMinorVersionOnly.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretForMajorMinorVersionOnly), managedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretForMajorMinorVersionOnly.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretForMajorMinorVersionOnly.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceForMajorMinorVersionOnly).To(consistOf(vpaFor(pool)))
 				Expect(managedResource).To(DeepEqual(expectedMr))
@@ -1262,7 +1262,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 			Expect(managedResourceCentral).To(contain(configMapFor(values.ProxyMode)))
@@ -1274,7 +1274,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecretCentral.Labels).To(Equal(map[string]string{
 				"resources.gardener.cloud/garbage-collectable-reference": "true",
 				"component": "kube-proxy",
@@ -1305,7 +1305,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 				}
 
@@ -1325,7 +1325,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 					"role": "pool",
 				}))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
 				Expect(managedResource).To(DeepEqual(poolExpectedMr))

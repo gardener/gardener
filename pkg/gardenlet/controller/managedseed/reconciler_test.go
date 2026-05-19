@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -93,7 +92,7 @@ var _ = Describe("Reconciler", func() {
 
 		gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 			GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
-				GardenClusterAddress: ptr.To(gardenClusterAddress),
+				GardenClusterAddress: new(gardenClusterAddress),
 			},
 		}
 		gardenletConfigRaw, err := encoding.EncodeGardenletConfiguration(gardenletConfig)

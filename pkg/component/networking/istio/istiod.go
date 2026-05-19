@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -288,7 +287,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 						Action:       "replace",
 						TargetLabel:  "__address__",
 						Regex:        `(.+)`,
-						Replacement:  ptr.To("${1}:15090"),
+						Replacement:  new("${1}:15090"),
 					}},
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						"envoy_cluster_upstream_cx_active",

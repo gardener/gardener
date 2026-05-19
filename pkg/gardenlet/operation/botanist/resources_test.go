@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -134,7 +133,7 @@ var _ = Describe("Resources", func() {
 			}
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Data).To(HaveKey("referenced-resources"))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			var (
@@ -337,7 +336,7 @@ var _ = Describe("Resources", func() {
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: secretNamePrefix + secret1.Name}, copiedSecret1)).To(Succeed())
 				Expect(copiedSecret1.Type).To(Equal(secret1.Type))
 				Expect(copiedSecret1.Data).To(Equal(secret1.Data))
-				Expect(copiedSecret1.Immutable).To(Equal(ptr.To(false)))
+				Expect(copiedSecret1.Immutable).To(Equal(new(false)))
 				Expect(copiedSecret1.Labels).To(HaveKeyWithValue("gardener.cloud/purpose", "shoot-static-manifest"))
 
 				copiedSecret2 := &corev1.Secret{}

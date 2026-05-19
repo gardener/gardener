@@ -101,7 +101,7 @@ var _ = Describe("Extension", func() {
 							DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 								Helm: &operatorv1alpha1.ExtensionHelm{
 									OCIRepository: &gardencorev1.OCIRepository{
-										Ref: ptr.To("garden.local/extension:test"),
+										Ref: new("garden.local/extension:test"),
 									},
 								},
 							},
@@ -112,7 +112,7 @@ var _ = Describe("Extension", func() {
 							SeedSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{"deploy-extension": "test"},
 							},
-							InjectGardenKubeconfig: ptr.To(true),
+							InjectGardenKubeconfig: new(true),
 						},
 					},
 				},

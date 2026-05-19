@@ -55,12 +55,12 @@ var _ = Describe("ResourceManager", func() {
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Shoot = &shootpkg.Shoot{
 				KubernetesVersion:     semver.MustParse("1.32.1"),
-				ExternalClusterDomain: ptr.To("foo.local.gardener.cloud"),
+				ExternalClusterDomain: new("foo.local.gardener.cloud"),
 				ControlPlaneNamespace: "shoot--foo--bar",
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					CredentialsBindingName: ptr.To("foo-credentials"),
+					CredentialsBindingName: new("foo-credentials"),
 				},
 			})
 		})
@@ -273,7 +273,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: ptr.To(true),
+								Enabled: new(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -309,7 +309,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: ptr.To(true),
+								Enabled: new(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{
@@ -330,7 +330,7 @@ var _ = Describe("ResourceManager", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: ptr.To(true),
+								Enabled: new(true),
 							},
 						},
 						Status: gardencorev1beta1.ShootStatus{

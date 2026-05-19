@@ -103,14 +103,14 @@ func GetEnvoyProxyContainer(image string) *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{
 					"all",
 				},
 			},
 			RunAsGroup:   ptr.To(int64(v1beta1constants.EnvoyVPNGroupId)),
-			RunAsNonRoot: ptr.To(true),
+			RunAsNonRoot: new(true),
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{

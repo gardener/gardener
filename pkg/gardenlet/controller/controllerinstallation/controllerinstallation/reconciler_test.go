@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 )
@@ -110,7 +109,7 @@ var _ = Describe("Reconciler", func() {
 						}},
 						{deployment, func() {
 							if bootstrapControlPlaneNode {
-								Expect(deployment.Spec.Replicas).To(Equal(ptr.To(int32(1))))
+								Expect(deployment.Spec.Replicas).To(Equal(new(int32(1))))
 								Expect(deployment.Spec.Strategy.Type).To(Equal(appsv1.RecreateDeploymentStrategyType))
 								Expect(deployment.Spec.Strategy.RollingUpdate).To(BeNil())
 							}

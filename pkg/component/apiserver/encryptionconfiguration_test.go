@@ -82,7 +82,7 @@ resources:
 					},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data:      expectedSecretETCDEncryptionConfiguration.Data,
 			}))
 
@@ -152,7 +152,7 @@ resources:
 					},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data:      expectedSecretETCDEncryptionConfiguration.Data,
 			}))
 
@@ -253,7 +253,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
@@ -339,7 +339,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 

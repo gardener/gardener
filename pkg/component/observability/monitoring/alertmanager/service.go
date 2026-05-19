@@ -42,7 +42,7 @@ func (a *alertManager) service() *corev1.Service {
 	}
 
 	networkPolicyPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
+		Port:     new(intstr.FromInt32(port)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 

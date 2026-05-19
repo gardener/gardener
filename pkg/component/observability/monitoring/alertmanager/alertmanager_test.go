@@ -308,11 +308,11 @@ var _ = Describe("Alertmanager", func() {
 					{
 						Name: "email-kubernetes-ops",
 						EmailConfigs: []monitoringv1alpha1.EmailConfig{{
-							To:           ptr.To(string(alertingSMTPSecret.Data["to"])),
-							From:         ptr.To(string(alertingSMTPSecret.Data["from"])),
-							Smarthost:    ptr.To(string(alertingSMTPSecret.Data["smarthost"])),
-							AuthUsername: ptr.To(string(alertingSMTPSecret.Data["auth_username"])),
-							AuthIdentity: ptr.To(string(alertingSMTPSecret.Data["auth_identity"])),
+							To:           new(string(alertingSMTPSecret.Data["to"])),
+							From:         new(string(alertingSMTPSecret.Data["from"])),
+							Smarthost:    new(string(alertingSMTPSecret.Data["smarthost"])),
+							AuthUsername: new(string(alertingSMTPSecret.Data["auth_username"])),
+							AuthIdentity: new(string(alertingSMTPSecret.Data["auth_identity"])),
 							AuthPassword: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",
@@ -453,7 +453,7 @@ var _ = Describe("Alertmanager", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"component":    "alertmanager",
 					"role":         "monitoring",
@@ -502,9 +502,9 @@ var _ = Describe("Alertmanager", func() {
 					},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:       ptr.To("seed"),
+					Class:       new("seed"),
 					SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 				Status: healthyManagedResourceStatus,
 			}
@@ -515,7 +515,7 @@ var _ = Describe("Alertmanager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
@@ -580,22 +580,22 @@ var _ = Describe("Alertmanager", func() {
 
 					config.Spec.Receivers[1].EmailConfigs = []monitoringv1alpha1.EmailConfig{
 						{
-							To:           ptr.To(values.EmailReceivers[0]),
-							From:         ptr.To(string(alertingSMTPSecret.Data["from"])),
-							Smarthost:    ptr.To(string(alertingSMTPSecret.Data["smarthost"])),
-							AuthUsername: ptr.To(string(alertingSMTPSecret.Data["auth_username"])),
-							AuthIdentity: ptr.To(string(alertingSMTPSecret.Data["auth_identity"])),
+							To:           new(values.EmailReceivers[0]),
+							From:         new(string(alertingSMTPSecret.Data["from"])),
+							Smarthost:    new(string(alertingSMTPSecret.Data["smarthost"])),
+							AuthUsername: new(string(alertingSMTPSecret.Data["auth_username"])),
+							AuthIdentity: new(string(alertingSMTPSecret.Data["auth_identity"])),
 							AuthPassword: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",
 							},
 						},
 						{
-							To:           ptr.To(values.EmailReceivers[1]),
-							From:         ptr.To(string(alertingSMTPSecret.Data["from"])),
-							Smarthost:    ptr.To(string(alertingSMTPSecret.Data["smarthost"])),
-							AuthUsername: ptr.To(string(alertingSMTPSecret.Data["auth_username"])),
-							AuthIdentity: ptr.To(string(alertingSMTPSecret.Data["auth_identity"])),
+							To:           new(values.EmailReceivers[1]),
+							From:         new(string(alertingSMTPSecret.Data["from"])),
+							Smarthost:    new(string(alertingSMTPSecret.Data["smarthost"])),
+							AuthUsername: new(string(alertingSMTPSecret.Data["auth_username"])),
+							AuthIdentity: new(string(alertingSMTPSecret.Data["auth_identity"])),
 							AuthPassword: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",

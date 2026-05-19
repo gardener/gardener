@@ -315,7 +315,7 @@ func newGardenletDeployer(b *botanist.GardenadmBotanist, gardenClientSet kuberne
 			}
 			gardenletChartImage.WithOptionalTag(version.Get().GitVersion)
 
-			archive, err := oci.NewHelmRegistry(b.GardenClient).Pull(ctx, &gardencorev1.OCIRepository{Ref: ptr.To(gardenletChartImage.String())})
+			archive, err := oci.NewHelmRegistry(b.GardenClient).Pull(ctx, &gardencorev1.OCIRepository{Ref: new(gardenletChartImage.String())})
 			if err != nil {
 				return fmt.Errorf("failed pulling Helm chart %s from OCI repository: %w", gardenletChartImage.String(), err)
 			}

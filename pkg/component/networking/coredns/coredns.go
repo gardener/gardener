@@ -243,7 +243,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -423,8 +423,8 @@ import custom/*.server
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       ptr.To(intstr.FromInt32(1)),
-						MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+						MaxSurge:       new(intstr.FromInt32(1)),
+						MaxUnavailable: new(intstr.FromInt32(0)),
 					},
 				},
 				Selector: &metav1.LabelSelector{
@@ -440,7 +440,7 @@ import custom/*.server
 						ServiceAccountName: serviceAccount.Name,
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
+							RunAsNonRoot:       new(true),
 							RunAsUser:          ptr.To[int64](65534),
 							FSGroup:            ptr.To[int64](1),
 							SupplementalGroups: []int64{1},
@@ -507,12 +507,12 @@ import custom/*.server
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 									Drop: []corev1.Capability{"all"},
 								},
-								ReadOnlyRootFilesystem: ptr.To(true),
+								ReadOnlyRootFilesystem: new(true),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -550,7 +550,7 @@ import custom/*.server
 											Name: configMapCustom.Name,
 										},
 										DefaultMode: ptr.To[int32](420),
-										Optional:    ptr.To(true),
+										Optional:    new(true),
 									},
 								},
 							},
@@ -565,7 +565,7 @@ import custom/*.server
 				Name:      "coredns-autoscaler",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterProportionalDNSAutoscalerClusterRole = &rbacv1.ClusterRole{
@@ -633,7 +633,7 @@ import custom/*.server
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
+							RunAsNonRoot:       new(true),
 							RunAsUser:          ptr.To[int64](65534),
 							SupplementalGroups: []int64{65534},
 							FSGroup:            ptr.To[int64](65534),
@@ -664,11 +664,11 @@ import custom/*.server
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"all"},
 								},
-								ReadOnlyRootFilesystem: ptr.To(true),
+								ReadOnlyRootFilesystem: new(true),
 							},
 						}},
 					},
@@ -712,7 +712,7 @@ import custom/*.server
 				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   deployment.Spec.Selector,
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},

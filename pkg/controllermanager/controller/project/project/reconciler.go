@@ -109,7 +109,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// set the created namespace in spec.namespace
 	if project.Spec.Namespace == nil {
-		project.Spec.Namespace = ptr.To(namespace.Name)
+		project.Spec.Namespace = new(namespace.Name)
 		if err := r.Client.Update(ctx, project); err != nil {
 			r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, err.Error())
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {

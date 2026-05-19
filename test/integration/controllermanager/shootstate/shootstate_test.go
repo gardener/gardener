@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,8 +31,8 @@ var _ = Describe("ShootState controller test", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("secretbinding"),
-				CloudProfileName:  ptr.To("cloudprofile1"),
+				SecretBindingName: new("secretbinding"),
+				CloudProfileName:  new("cloudprofile1"),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -46,22 +45,22 @@ var _ = Describe("ShootState controller test", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("some-domain.example.com"),
+					Domain: new("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.32.0",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
-				SeedName: ptr.To("source-seed"),
+				SeedName: new("source-seed"),
 			},
 		}
 

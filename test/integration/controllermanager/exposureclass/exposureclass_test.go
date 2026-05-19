@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -46,9 +45,9 @@ var _ = Describe("ExposureClass controller test", func() {
 				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				ExposureClassName: ptr.To(exposureClass.Name),
-				CloudProfileName:  ptr.To("test-cloudprofile"),
-				SecretBindingName: ptr.To("my-provider-account"),
+				ExposureClassName: new(exposureClass.Name),
+				CloudProfileName:  new("test-cloudprofile"),
+				SecretBindingName: new("my-provider-account"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "test-provider",
@@ -61,14 +60,14 @@ var _ = Describe("ExposureClass controller test", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
-				Networking: &gardencorev1beta1.Networking{Type: ptr.To("foo-networking")},
+				Networking: &gardencorev1beta1.Networking{Type: new("foo-networking")},
 			},
 		}
 	})

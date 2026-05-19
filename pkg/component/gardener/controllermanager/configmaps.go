@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -57,20 +56,20 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 		},
 		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			Project: &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 				Quotas:          g.values.Quotas,
 			},
 			SecretBinding: &controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			CredentialsBinding: &controllermanagerconfigv1alpha1.CredentialsBindingControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			Seed: &controllermanagerconfigv1alpha1.SeedControllerConfiguration{
-				ConcurrentSyncs:    ptr.To(20),
+				ConcurrentSyncs:    new(20),
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
@@ -86,18 +85,18 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 				}},
 			},
 			Event: &controllermanagerconfigv1alpha1.EventControllerConfiguration{
-				ConcurrentSyncs:   ptr.To(10),
+				ConcurrentSyncs:   new(10),
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			ShootReference: &controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
+			LeaderElect:       new(true),
 			ResourceName:      controllermanagerconfigv1alpha1.ControllerManagerDefaultLockObjectName,
 			ResourceNamespace: metav1.NamespaceSystem,
 		},

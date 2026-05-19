@@ -207,7 +207,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods: ptr.To("100.64.0.0/12"),
+					Pods: new("100.64.0.0/12"),
 				},
 			}}
 			_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
@@ -249,13 +249,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		It("should return the CloudProfile limit if it is lower than the network limit", func() {
 
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 10)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = new(maxNetworks - 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the network limit if it is lower than the CloudProfile limit", func() {
 
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks + 10)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = new(maxNetworks + 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks))
 		})
 
@@ -272,7 +272,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithMachines).Build()
 
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 100)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = new(maxNetworks - 100)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks - 50))
 		})
 	})
@@ -328,7 +328,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods: ptr.To("100.64.0.0/12"),
+					Pods: new("100.64.0.0/12"),
 				},
 			}},
 			4096,
@@ -342,8 +342,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:  ptr.To("100.64.0.0/11"),
-					Nodes: ptr.To("10.250.0.0/16"),
+					Pods:  new("100.64.0.0/11"),
+					Nodes: new("10.250.0.0/16"),
 				},
 			}},
 			8192,
@@ -357,8 +357,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:  ptr.To("100.64.0.0/12"),
-					Nodes: ptr.To("10.250.0.0/16"),
+					Pods:  new("100.64.0.0/12"),
+					Nodes: new("10.250.0.0/16"),
 				},
 			}},
 			4096,
@@ -372,8 +372,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:  ptr.To("100.64.0.0/11"),
-					Nodes: ptr.To("10.250.0.0/20"),
+					Pods:  new("100.64.0.0/11"),
+					Nodes: new("10.250.0.0/20"),
 				},
 			}},
 			4094,
@@ -387,8 +387,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:       ptr.To("2001:db8:1::/48"),
-					Nodes:      ptr.To("2001:db8:2::/48"),
+					Pods:       new("2001:db8:1::/48"),
+					Nodes:      new("2001:db8:2::/48"),
 					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
 				},
 			}},
@@ -404,7 +404,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods: ptr.To("100.64.0.0/12"),
+						Pods: new("100.64.0.0/12"),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -425,8 +425,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods:  ptr.To("100.64.0.0/12"),
-						Nodes: ptr.To("10.250.0.0/16"),
+						Pods:  new("100.64.0.0/12"),
+						Nodes: new("10.250.0.0/16"),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -448,8 +448,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods:  ptr.To("100.64.0.0/11"),
-						Nodes: ptr.To("10.250.0.0/20"),
+						Pods:  new("100.64.0.0/11"),
+						Nodes: new("10.250.0.0/20"),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{

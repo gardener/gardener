@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -160,7 +159,7 @@ users:
 					},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(false),
+				KeepObjects:  new(false),
 			},
 		}
 		expectedManagedResourceSecret = &corev1.Secret{
@@ -195,7 +194,7 @@ users:
 			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-3cb55785", Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
 			Expect(reconciledManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(reconciledManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(reconciledManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(reconciledManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			manifest, err := test.ExtractManifestsFromManagedResourceData(reconciledManagedResourceSecret.Data)

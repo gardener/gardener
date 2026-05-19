@@ -156,7 +156,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									Key:  secrets.DataKeyKubeconfig,
 									Path: secrets.DataKeyKubeconfig,
 								}},
-								Optional: ptr.To(false),
+								Optional: new(false),
 							},
 						},
 						{
@@ -168,7 +168,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									Key:  resourcesv1alpha1.DataKeyToken,
 									Path: resourcesv1alpha1.DataKeyToken,
 								}},
-								Optional: ptr.To(false),
+								Optional: new(false),
 							},
 						},
 					},
@@ -188,7 +188,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		kubeRBACProxyValiContainer = corev1.Container{
@@ -208,11 +208,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 				RunAsUser:                ptr.To[int64](65532),
 				RunAsGroup:               ptr.To[int64](65534),
-				RunAsNonRoot:             ptr.To(true),
-				ReadOnlyRootFilesystem:   ptr.To(true),
+				RunAsNonRoot:             new(true),
+				ReadOnlyRootFilesystem:   new(true),
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
@@ -237,11 +237,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 				RunAsUser:                ptr.To[int64](65532),
 				RunAsGroup:               ptr.To[int64](65534),
-				RunAsNonRoot:             ptr.To(true),
-				ReadOnlyRootFilesystem:   ptr.To(true),
+				RunAsNonRoot:             new(true),
+				ReadOnlyRootFilesystem:   new(true),
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
@@ -301,7 +301,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						// job label, prometheus-operator would choose job=logging (service name).
 						{
 							Action:      "replace",
-							Replacement: ptr.To("opentelemetry-collector"),
+							Replacement: new("opentelemetry-collector"),
 							TargetLabel: "job",
 						},
 						{
@@ -351,7 +351,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					Replicas:          ptr.To[int32](1),
 					PriorityClassName: "gardener-system-100",
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
@@ -569,11 +569,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -598,7 +598,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "logging-tls", Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
@@ -630,11 +630,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -653,7 +653,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
@@ -669,7 +669,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResourceTarget.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
@@ -685,7 +685,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "logging-tls", Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretTarget.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 		})

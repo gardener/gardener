@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -65,7 +64,7 @@ func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ extensi
 }
 
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
-	newObj.FailSwapOn = ptr.To(false)
+	newObj.FailSwapOn = new(false)
 	return nil
 }
 

@@ -55,19 +55,19 @@ var _ = Describe("Shoot Status controller tests", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SeedName:          &seedName,
-				SecretBindingName: ptr.To("test-sb"),
-				CloudProfileName:  ptr.To("test-cloudprofile"),
+				SecretBindingName: new("test-sb"),
+				CloudProfileName:  new("test-cloudprofile"),
 				Region:            "foo-region",
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.32.4",
 					Kubelet: &gardencorev1beta1.KubeletConfig{
-						CPUManagerPolicy: ptr.To("static"),
+						CPUManagerPolicy: new("static"),
 						EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-							MemoryAvailable: ptr.To("100Mi"),
+							MemoryAvailable: new("100Mi"),
 						},
 						KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-							CPU:    ptr.To(resource.MustParse("100m")),
-							Memory: ptr.To(resource.MustParse("100Mi")),
+							CPU:    new(resource.MustParse("100m")),
+							Memory: new(resource.MustParse("100Mi")),
 						},
 					},
 				},
@@ -82,15 +82,15 @@ var _ = Describe("Shoot Status controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "image-1",
-									Version: ptr.To("1.1.2"),
+									Version: new("1.1.2"),
 								},
 							},
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To("1.32.1"),
+								Version: new("1.32.1"),
 								Kubelet: &gardencorev1beta1.KubeletConfig{
-									CPUManagerPolicy: ptr.To("static"),
+									CPUManagerPolicy: new("static"),
 									EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-										MemoryAvailable: ptr.To("200Mi"),
+										MemoryAvailable: new("200Mi"),
 									},
 								},
 							},
@@ -104,11 +104,11 @@ var _ = Describe("Shoot Status controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "image-2",
-									Version: ptr.To("1.3.0"),
+									Version: new("1.3.0"),
 								},
 							},
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To("1.31.1"),
+								Version: new("1.31.1"),
 							},
 							UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
 						},
@@ -120,14 +120,14 @@ var _ = Describe("Shoot Status controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "image-2",
-									Version: ptr.To("1.2.1"),
+									Version: new("1.2.1"),
 								},
 							},
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To("1.31.1"),
+								Version: new("1.31.1"),
 								Kubelet: &gardencorev1beta1.KubeletConfig{
 									KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-										CPU: ptr.To(resource.MustParse("200m")),
+										CPU: new(resource.MustParse("200m")),
 									},
 								},
 							},
@@ -141,11 +141,11 @@ var _ = Describe("Shoot Status controller tests", func() {
 								Type: "small",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "image-3",
-									Version: ptr.To("1.2.0"),
+									Version: new("1.2.0"),
 								},
 							},
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To("1.30.1"),
+								Version: new("1.30.1"),
 							},
 							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
 						},
@@ -157,15 +157,15 @@ var _ = Describe("Shoot Status controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "image-3",
-									Version: ptr.To("1.1.0"),
+									Version: new("1.1.0"),
 								},
 							},
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To("1.32.3"),
+								Version: new("1.32.3"),
 								Kubelet: &gardencorev1beta1.KubeletConfig{
-									CPUManagerPolicy: ptr.To("none"),
+									CPUManagerPolicy: new("none"),
 									KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-										Memory: ptr.To(resource.MustParse("200Mi")),
+										Memory: new(resource.MustParse("200Mi")),
 									},
 								},
 							},
@@ -174,7 +174,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}
@@ -257,7 +257,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Maximum:           2,
 						MachineType:       "large",
 						UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
-						KubernetesVersion: ptr.To("1.32.1"),
+						KubernetesVersion: new("1.32.1"),
 					},
 					{
 						Name:              "worker2",
@@ -265,7 +265,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Maximum:           2,
 						MachineType:       "large",
 						UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-						KubernetesVersion: ptr.To("1.31.1"),
+						KubernetesVersion: new("1.31.1"),
 					},
 					{
 						Name:              "worker3",
@@ -273,7 +273,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Maximum:           2,
 						MachineType:       "large",
 						UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
-						KubernetesVersion: ptr.To("1.31.1"),
+						KubernetesVersion: new("1.31.1"),
 					},
 					{
 						Name:              "worker4",
@@ -281,7 +281,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Maximum:           2,
 						MachineType:       "large",
 						UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-						KubernetesVersion: ptr.To("1.30.1"),
+						KubernetesVersion: new("1.30.1"),
 					},
 				},
 			},

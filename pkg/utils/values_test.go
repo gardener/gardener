@@ -42,24 +42,24 @@ var _ = Describe("Values", func() {
 			Objects: []object{
 				{
 					Object: &object{
-						String: ptr.To("foo"),
+						String: new("foo"),
 					},
 					Int: ptr.To[int32](42),
 				},
 			},
-			Bool: ptr.To(true),
+			Bool: new(true),
 		}
 
 		objUpper = &objectUpperCase{
 			Objects: []objectUpperCase{
 				{
 					Object: &objectUpperCase{
-						String: ptr.To("foo"),
+						String: new("foo"),
 					},
 					Int: ptr.To[int32](42),
 				},
 			},
-			Bool: ptr.To(true),
+			Bool: new(true),
 		}
 
 		values = map[string]any{
@@ -113,7 +113,7 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map with lower-case keys - only the first letter should be changed", func() {
-			objUpper.BoolWithMe = ptr.To(true)
+			objUpper.BoolWithMe = new(true)
 			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
 			Expect(err).ToNot(HaveOccurred())
 			values["boolWithMe"] = true
@@ -125,20 +125,20 @@ var _ = Describe("Values", func() {
 				Objects: []objectUpperCase{
 					{
 						Object: &objectUpperCase{
-							String: ptr.To("foo"),
+							String: new("foo"),
 						},
 						Objects: []objectUpperCase{
 							{
 								Int: ptr.To[int32](50),
 								Object: &objectUpperCase{
-									String: ptr.To("bar"),
+									String: new("bar"),
 								},
 							},
 						},
 						Int: ptr.To[int32](42),
 					},
 				},
-				Bool: ptr.To(true),
+				Bool: new(true),
 			}
 
 			values = map[string]any{
@@ -167,14 +167,14 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map removing entries with zero values", func() {
-			obj.String = ptr.To("")
+			obj.String = new("")
 			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: true})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(values))
 		})
 
 		It("should convert an object to a values map containing empty entries", func() {
-			obj.String = ptr.To("")
+			obj.String = new("")
 
 			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: false})
 			Expect(err).ToNot(HaveOccurred())
@@ -183,25 +183,25 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map with nested slices", func() {
-			obj.String = ptr.To("")
+			obj.String = new("")
 
 			obj = &object{
 				Objects: []object{
 					{
 						Object: &object{
-							String: ptr.To("one"),
+							String: new("one"),
 							Objects: []object{
 								{
-									String: ptr.To("two-l1"),
+									String: new("two-l1"),
 									Objects: []object{
 										{
-											String: ptr.To(""),
+											String: new(""),
 											Int:    ptr.To[int32](3),
 										},
 									},
 								},
 								{
-									String: ptr.To("two-l2"),
+									String: new("two-l2"),
 									Objects: []object{
 										{
 											Int: ptr.To[int32](4),
@@ -213,7 +213,7 @@ var _ = Describe("Values", func() {
 						Int: ptr.To[int32](42),
 					},
 				},
-				Bool: ptr.To(true),
+				Bool: new(true),
 			}
 
 			values = map[string]any{

@@ -12,7 +12,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -87,7 +86,7 @@ var _ = Describe("Associations", func() {
 
 		Entry("should return shoots associated to cloudprofile by cloudprofilename",
 			&gardencorev1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "cloudprofile"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
-				s.Spec.CloudProfileName = ptr.To(obj.GetName())
+				s.Spec.CloudProfileName = new(obj.GetName())
 			}, BeNil()),
 		Entry("should return shoots associated to cloudprofile by cloudprofile reference",
 			&gardencorev1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "cloudprofile"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
@@ -101,19 +100,19 @@ var _ = Describe("Associations", func() {
 			}, BeNil()),
 		Entry("should return shoots associated to seed",
 			&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
-				s.Spec.SeedName = ptr.To(obj.GetName())
+				s.Spec.SeedName = new(obj.GetName())
 			}, BeNil()),
 		Entry("should return shoots associated to secretbinding",
 			&gardencorev1beta1.SecretBinding{ObjectMeta: metav1.ObjectMeta{Name: "secretbinding", Namespace: namespace}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
-				s.Spec.SecretBindingName = ptr.To(obj.GetName())
+				s.Spec.SecretBindingName = new(obj.GetName())
 			}, BeNil()),
 		Entry("should return shoots associated to credentialsbinding",
 			&securityv1alpha1.CredentialsBinding{ObjectMeta: metav1.ObjectMeta{Name: "credentialsbinding", Namespace: namespace}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
-				s.Spec.CredentialsBindingName = ptr.To(obj.GetName())
+				s.Spec.CredentialsBindingName = new(obj.GetName())
 			}, BeNil()),
 		Entry("should return shoots associated to exposureclass",
 			&gardencorev1beta1.ExposureClass{ObjectMeta: metav1.ObjectMeta{Name: "exposureclass"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
-				s.Spec.ExposureClassName = ptr.To(obj.GetName())
+				s.Spec.ExposureClassName = new(obj.GetName())
 			}, BeNil()),
 		Entry("should return error if the object is of not supported type",
 			&gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "backupbucket"}}, func(_ *gardencorev1beta1.Shoot, _ client.Object) {}, HaveOccurred()),
@@ -164,7 +163,7 @@ var _ = Describe("Associations", func() {
 					Name: "backupbucket",
 				},
 				Spec: gardencorev1beta1.BackupBucketSpec{
-					SeedName: ptr.To("test"),
+					SeedName: new("test"),
 				},
 			}
 

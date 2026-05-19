@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
@@ -24,10 +23,10 @@ var _ = Describe("ComputeOperationType", func() {
 	BeforeEach(func() {
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To("seed"),
+				SeedName: new("seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName:      ptr.To("seed"),
+				SeedName:      new("seed"),
 				LastOperation: &gardencorev1beta1.LastOperation{},
 			},
 		}
@@ -75,7 +74,7 @@ var _ = Describe("ComputeOperationType", func() {
 	})
 
 	It("should return Migrate if spec.seedName and status.seedName differ", func() {
-		shoot.Spec.SeedName = ptr.To("other")
+		shoot.Spec.SeedName = new("other")
 		Expect(ComputeOperationType(shoot)).To(Equal(gardencorev1beta1.LastOperationTypeMigrate))
 	})
 

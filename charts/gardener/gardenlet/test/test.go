@@ -684,8 +684,8 @@ func ComputeExpectedGardenletConfiguration(
 				LeaseResyncMissThreshold: ptr.To[int32](10),
 			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
-				ReconcileInMaintenanceOnly: ptr.To(false),
-				RespectSyncPeriodOverwrite: ptr.To(false),
+				ReconcileInMaintenanceOnly: new(false),
+				RespectSyncPeriodOverwrite: new(false),
 				ConcurrentSyncs:            &twenty,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Hour,
@@ -697,7 +697,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
-				JitterUpdates:   ptr.To(false),
+				JitterUpdates:   new(false),
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
@@ -750,7 +750,7 @@ func ComputeExpectedGardenletConfiguration(
 						},
 					},
 				},
-				WebhookRemediatorEnabled: ptr.To(false),
+				WebhookRemediatorEnabled: new(false),
 			},
 			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
@@ -797,7 +797,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
+			LeaderElect:       new(true),
 			LeaseDuration:     metav1.Duration{Duration: 15 * time.Second},
 			RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
 			RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
@@ -808,21 +808,21 @@ func ComputeExpectedGardenletConfiguration(
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
 		Logging: &gardenletconfigv1alpha1.Logging{
-			Enabled: ptr.To(false),
+			Enabled: new(false),
 			Vali: &gardenletconfigv1alpha1.Vali{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 				Garden: &gardenletconfigv1alpha1.GardenVali{
 					Storage: &gardenletconfigv1alpha1.DefaultCentralValiStorage,
 				},
 			},
 			VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 				Garden: &gardenletconfigv1alpha1.GardenVictoriaLogs{
 					Storage: &gardenletconfigv1alpha1.DefaultCentralVictoriaLogsStorage,
 				},
 			},
 			ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 			},
 		},
 		Server: gardenletconfigv1alpha1.ServerConfiguration{
@@ -834,8 +834,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		Debugging: &componentbaseconfigv1alpha1.DebuggingConfiguration{
-			EnableProfiling:           ptr.To(false),
-			EnableContentionProfiling: ptr.To(false),
+			EnableProfiling:           new(false),
+			EnableContentionProfiling: new(false),
 		},
 		FeatureGates: featureGates,
 		Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
@@ -850,12 +850,12 @@ func ComputeExpectedGardenletConfiguration(
 		}},
 		Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
 			Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 			},
 		},
 		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
-				EnableBackupCompaction:    ptr.To(false),
+				EnableBackupCompaction:    new(false),
 				EventsThreshold:           ptr.To[int64](1000000),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
 				Workers:                   ptr.To[int64](3),
@@ -975,7 +975,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystemCritical,
 				ServiceAccountName: "gardenlet",
 				SecurityContext: &corev1.PodSecurityContext{
-					RunAsNonRoot: ptr.To(true),
+					RunAsNonRoot: new(true),
 					RunAsUser:    ptr.To[int64](65532),
 					RunAsGroup:   ptr.To[int64](65532),
 					FSGroup:      ptr.To[int64](65532),
@@ -1020,7 +1020,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						TerminationMessagePath:   "/dev/termination-log",
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
@@ -1237,7 +1237,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 			},
 		})
 		deployment.Template.Spec.ServiceAccountName = ""
-		deployment.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
+		deployment.Template.Spec.AutomountServiceAccountToken = new(false)
 	}
 
 	deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

@@ -74,7 +74,7 @@ func GardenadmConfig(sshPublicKey string) ([]extensionsv1alpha1.Unit, []extensio
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: machinecontroller.MachineNamePlaceholder,
 				},
-				TransmitUnencoded: ptr.To(true),
+				TransmitUnencoded: new(true),
 			},
 		},
 	}...)

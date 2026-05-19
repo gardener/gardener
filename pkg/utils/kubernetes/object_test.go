@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -318,7 +317,7 @@ var _ = Describe("Object", func() {
 			)
 
 			expectedConfigMap.Name += "-ec321de5"
-			expectedConfigMap.Immutable = ptr.To(true)
+			expectedConfigMap.Immutable = new(true)
 			expectedConfigMap.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
 			Expect(MakeUnique(configMap)).To(Succeed())
@@ -339,7 +338,7 @@ var _ = Describe("Object", func() {
 			)
 
 			expectedSecret.Name += "ec321de5"
-			expectedSecret.Immutable = ptr.To(true)
+			expectedSecret.Immutable = new(true)
 			expectedSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
 			Expect(MakeUnique(secret)).To(Succeed())

@@ -69,8 +69,8 @@ var _ = Describe("DNSRecord validation tests", func() {
 		})
 
 		It("should forbid non-nil but empty region or zone", func() {
-			dns.Spec.Region = ptr.To("")
-			dns.Spec.Zone = ptr.To("")
+			dns.Spec.Region = new("")
+			dns.Spec.Zone = new("")
 
 			errorList := ValidateDNSRecord(dns)
 
@@ -153,7 +153,7 @@ var _ = Describe("DNSRecord validation tests", func() {
 		})
 
 		It("should forbid negative ttl", func() {
-			dns.Spec.TTL = ptr.To(int64(-1))
+			dns.Spec.TTL = new(int64(-1))
 
 			errorList := ValidateDNSRecord(dns)
 
@@ -164,7 +164,7 @@ var _ = Describe("DNSRecord validation tests", func() {
 		})
 
 		It("should forbid ttl exceeding max uint32", func() {
-			dns.Spec.TTL = ptr.To(int64(1 << 32))
+			dns.Spec.TTL = new(int64(1 << 32))
 
 			errorList := ValidateDNSRecord(dns)
 
@@ -270,8 +270,8 @@ var _ = Describe("DNSRecord validation tests", func() {
 		It("should allow updating everything else", func() {
 			newDNSRecord := prepareDNSRecordForUpdate(dns)
 			newDNSRecord.Spec.SecretRef.Name = "changed-secretref-name"
-			newDNSRecord.Spec.Region = ptr.To("region")
-			newDNSRecord.Spec.Zone = ptr.To("zone")
+			newDNSRecord.Spec.Region = new("region")
+			newDNSRecord.Spec.Zone = new("zone")
 			newDNSRecord.Spec.Values = []string{"5.6.7.8"}
 			newDNSRecord.Spec.TTL = ptr.To[int64](300)
 

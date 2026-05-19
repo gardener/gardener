@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -173,7 +172,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -182,7 +181,7 @@ var _ = BeforeSuite(func() {
 	Expect((&certificatesigningrequestcontroller.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: controllermanagerconfigv1alpha1.CertificateSigningRequestControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

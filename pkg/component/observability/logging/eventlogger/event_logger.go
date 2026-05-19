@@ -187,7 +187,7 @@ func (l *eventLogger) reconcileRBACForSeed(ctx context.Context) error {
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, l.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		serviceAccount.Labels = getLabels()
 		return nil
 	}); err != nil {
@@ -236,7 +236,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 		deployment.Labels = getLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
 			RevisionHistoryLimit: ptr.To[int32](1),
-			Replicas:             ptr.To(l.values.Replicas),
+			Replicas:             new(l.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -264,7 +264,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						},
 					},

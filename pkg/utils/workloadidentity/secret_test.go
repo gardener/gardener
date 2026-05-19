@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -60,7 +59,7 @@ var _ = Describe("#Secret", func() {
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "shoot-name",
-				Namespace:  ptr.To("shoot-namespace"),
+				Namespace:  new("shoot-namespace"),
 				UID:        "12345678-94af-4960-9774-0e9987654321",
 			}),
 			workloadidentity.WithProviderConfig(&runtime.RawExtension{
@@ -149,7 +148,7 @@ var _ = Describe("#Secret", func() {
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "new-name",
-				Namespace:  ptr.To("new-namespace"),
+				Namespace:  new("new-namespace"),
 				UID:        "12345678-94af-4960-9774-0e9987654321",
 			}),
 		)
@@ -308,7 +307,7 @@ var _ = Describe("#Secret", func() {
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "shoot-name",
-				Namespace:  ptr.To("shoot-namespace"),
+				Namespace:  new("shoot-namespace"),
 				UID:        "12345678-94af-4960-9774-0e9987654321",
 			}),
 		)
@@ -490,7 +489,7 @@ var _ = Describe("#Secret", func() {
 			Expect(contextObj.Kind).To(Equal("Shoot"))
 			Expect(contextObj.APIVersion).To(Equal(gardencorev1beta1.SchemeGroupVersion.String()))
 			Expect(contextObj.Name).To(Equal("test-shoot"))
-			Expect(contextObj.Namespace).To(Equal(ptr.To("garden-test")))
+			Expect(contextObj.Namespace).To(Equal(new("garden-test")))
 			Expect(contextObj.UID).To(Equal(referringObj.UID))
 		})
 

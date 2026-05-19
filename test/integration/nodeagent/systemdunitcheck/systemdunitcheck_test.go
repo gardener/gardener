@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -72,8 +71,8 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "kubelet.service", Enable: ptr.To(true)},
-					{Name: "containerd.service", Enable: ptr.To(true)},
+					{Name: "kubelet.service", Enable: new(true)},
+					{Name: "containerd.service", Enable: new(true)},
 				},
 			},
 		})
@@ -96,8 +95,8 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "kubelet.service", Enable: ptr.To(true)},
-					{Name: "bad.service", Enable: ptr.To(true)},
+					{Name: "kubelet.service", Enable: new(true)},
+					{Name: "bad.service", Enable: new(true)},
 				},
 			},
 		})
@@ -121,7 +120,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "stuck.service", Enable: ptr.To(true)},
+					{Name: "stuck.service", Enable: new(true)},
 				},
 			},
 		})
@@ -145,7 +144,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "starting.service", Enable: ptr.To(true)},
+					{Name: "starting.service", Enable: new(true)},
 				},
 			},
 		})
@@ -168,7 +167,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "sshd-ensurer.service", Enable: ptr.To(true)},
+					{Name: "sshd-ensurer.service", Enable: new(true)},
 				},
 			},
 		})
@@ -190,7 +189,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "stopped.service", Enable: ptr.To(true)},
+					{Name: "stopped.service", Enable: new(true)},
 				},
 			},
 		})
@@ -213,8 +212,8 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "gardener-user.service", Enable: ptr.To(true)},
-					{Name: "kubelet.service", Enable: ptr.To(true)},
+					{Name: "gardener-user.service", Enable: new(true)},
+					{Name: "kubelet.service", Enable: new(true)},
 				},
 			},
 		})
@@ -238,7 +237,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "updatecacerts.service", Enable: ptr.To(true)},
+					{Name: "updatecacerts.service", Enable: new(true)},
 				},
 			},
 		})
@@ -261,7 +260,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "should-be-off.service", Enable: ptr.To(false)},
+					{Name: "should-be-off.service", Enable: new(false)},
 				},
 			},
 		})
@@ -284,7 +283,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "optional.service", Enable: ptr.To(false)},
+					{Name: "optional.service", Enable: new(false)},
 				},
 			},
 		})
@@ -306,7 +305,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "optional.service", Enable: ptr.To(false)},
+					{Name: "optional.service", Enable: new(false)},
 				},
 			},
 		})
@@ -328,9 +327,9 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: nodeagentconfigv1alpha1.UnitName, Enable: ptr.To(true)},
-					{Name: nodeagentconfigv1alpha1.InitUnitName, Enable: ptr.To(true)},
-					{Name: "kubelet.service", Enable: ptr.To(true)},
+					{Name: nodeagentconfigv1alpha1.UnitName, Enable: new(true)},
+					{Name: nodeagentconfigv1alpha1.InitUnitName, Enable: new(true)},
+					{Name: "kubelet.service", Enable: new(true)},
 				},
 			},
 		})
@@ -354,7 +353,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "missing.service", Enable: ptr.To(true)},
+					{Name: "missing.service", Enable: new(true)},
 				},
 			},
 		})
@@ -373,7 +372,7 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "recovering.service", Enable: ptr.To(true)},
+					{Name: "recovering.service", Enable: new(true)},
 				},
 			},
 		})
@@ -407,13 +406,13 @@ var _ = Describe("SystemdUnitCheck controller tests", func() {
 		writeOSC(&extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Units: []extensionsv1alpha1.Unit{
-					{Name: "base.service", Enable: ptr.To(true)},
+					{Name: "base.service", Enable: new(true)},
 				},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionUnits: []extensionsv1alpha1.Unit{
-					{Name: "base.service", Enable: ptr.To(false)},
-					{Name: "extension.service", Enable: ptr.To(true)},
+					{Name: "base.service", Enable: new(false)},
+					{Name: "extension.service", Enable: new(true)},
 				},
 			},
 		})

@@ -74,8 +74,8 @@ var _ = Describe("merger", func() {
 				Kind:               "Namespace",
 				Name:               "default",
 				UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(true),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(true),
 			}})
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false)).NotTo(HaveOccurred(), "merge should be successful")
@@ -88,8 +88,8 @@ var _ = Describe("merger", func() {
 				Kind:               "Namespace",
 				Name:               "default",
 				UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(true),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(true),
 			}})
 
 			desired.SetOwnerReferences([]metav1.OwnerReference{{
@@ -97,8 +97,8 @@ var _ = Describe("merger", func() {
 				Kind:               "Deployment",
 				Name:               "default",
 				UID:                "28590d53-3e4d-4616-b411-99212dc69ac6",
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(true),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(true),
 			}})
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false)).NotTo(HaveOccurred(), "merge should be successful")
@@ -570,7 +570,7 @@ var _ = Describe("merger", func() {
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						VolumeName:       "pvc-foo",
-						StorageClassName: ptr.To("ultra-fast"),
+						StorageClassName: new("ultra-fast"),
 					},
 				},
 			}
@@ -588,7 +588,7 @@ var _ = Describe("merger", func() {
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						VolumeName:       "pvc-foo",
-						StorageClassName: ptr.To("ultra-fast"),
+						StorageClassName: new("ultra-fast"),
 					},
 				},
 			}

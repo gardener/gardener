@@ -39,7 +39,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			Spec: core.SeedSpec{
 				Backup: &core.Backup{
 					Provider: "foo",
-					Region:   ptr.To("some-region"),
+					Region:   new("some-region"),
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -75,12 +75,12 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 				},
 				Networks: core.SeedNetworks{
-					Nodes:    ptr.To("10.250.0.0/16"),
+					Nodes:    new("10.250.0.0/16"),
 					Pods:     "100.96.0.0/11",
 					Services: "100.64.0.0/13",
 					ShootDefaults: &core.ShootNetworks{
-						Pods:     ptr.To("10.240.0.0/16"),
-						Services: ptr.To("10.241.0.0/16"),
+						Pods:     new("10.240.0.0/16"),
+						Services: new("10.241.0.0/16"),
 					},
 				},
 				Provider: core.SeedProvider{
@@ -227,7 +227,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
-					MergeWithParent: ptr.To(true),
+					MergeWithParent: new(true),
 				}
 			})
 
@@ -239,15 +239,15 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
 				seedx.Name = "foo"
-				seedx.Spec.Networks.Nodes = ptr.To("")
+				seedx.Spec.Networks.Nodes = new("")
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
-					ReplicaCount:         ptr.To(int32(-1)),
-					RevisionHistoryLimit: ptr.To(int32(-1)),
-					ServiceAccountName:   ptr.To(""),
+					ReplicaCount:         new(int32(-1)),
+					RevisionHistoryLimit: new(int32(-1)),
+					ServiceAccountName:   new(""),
 					Image: &seedmanagement.Image{
-						Repository: ptr.To(""),
-						Tag:        ptr.To(""),
+						Repository: new(""),
+						Tag:        new(""),
 						PullPolicy: ptr.To(corev1.PullPolicy("foo")),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
@@ -309,7 +309,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should forbid empty ref in image", func() {
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
 					Image: &seedmanagement.Image{
-						Ref: ptr.To(""),
+						Ref: new(""),
 					},
 				}
 
@@ -326,9 +326,9 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should forbid specifying both ref and repository/tag in image", func() {
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
 					Image: &seedmanagement.Image{
-						Ref:        ptr.To("registry.example.com/gardenlet:v1.0.0"),
-						Repository: ptr.To("registry.example.com/gardenlet"),
-						Tag:        ptr.To("v1.0.0"),
+						Ref:        new("registry.example.com/gardenlet:v1.0.0"),
+						Repository: new("registry.example.com/gardenlet"),
+						Tag:        new("v1.0.0"),
 					},
 				}
 
@@ -373,7 +373,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 						},
 					})
 				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.BootstrapNone)
-				managedSeed.Spec.Gardenlet.MergeWithParent = ptr.To(false)
+				managedSeed.Spec.Gardenlet.MergeWithParent = new(false)
 
 				errorList := ValidateManagedSeed(managedSeed)
 
@@ -484,7 +484,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
-					MergeWithParent: ptr.To(true),
+					MergeWithParent: new(true),
 				}
 
 				newManagedSeed = managedSeed.DeepCopy()
@@ -503,7 +503,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 				newManagedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedxCopy, nil)
 				newManagedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.BootstrapServiceAccount)
-				newManagedSeed.Spec.Gardenlet.MergeWithParent = ptr.To(false)
+				newManagedSeed.Spec.Gardenlet.MergeWithParent = new(false)
 
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 

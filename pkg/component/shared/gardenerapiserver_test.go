@@ -118,8 +118,8 @@ var _ = Describe("GardenerAPIServer", func() {
 				Entry("default plugins and skipping configured plugins if disabled",
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "Foo"},
-						{Name: "Bar", Disabled: ptr.To(true)},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: ptr.To(true)},
+						{Name: "Bar", Disabled: new(true)},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: new(true)},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
@@ -141,36 +141,36 @@ var _ = Describe("GardenerAPIServer", func() {
 						{Name: "Priority"},
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "LimitRanger"},
-						{Name: "ServiceAccount", Disabled: ptr.To(true)},
+						{Name: "ServiceAccount", Disabled: new(true)},
 						{Name: "NodeRestriction"},
 						{Name: "DefaultStorageClass"},
-						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: new(true)},
 						{Name: "ResourceQuota"},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "ServiceAccount", Disabled: ptr.To(true)},
-						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
+						{Name: "ServiceAccount", Disabled: new(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: new(true)},
 					}
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
 					apiServerConfig.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "Priority"},
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: new(true)},
 						{Name: "LimitRanger"},
 						{Name: "ServiceAccount"},
 						{Name: "NodeRestriction"},
-						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
+						{Name: "DefaultStorageClass", Disabled: new(true)},
 						{Name: "DefaultTolerationSeconds"},
 						{Name: "ResourceQuota"},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: new(true)},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
-						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: new(true)},
+						{Name: "DefaultStorageClass", Disabled: new(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: new(true)},
 					}
 				})
 			})
@@ -318,11 +318,11 @@ var _ = Describe("GardenerAPIServer", func() {
 								},
 							},
 						}
-						auditWebhookConfig = &apiserver.AuditWebhook{Version: ptr.To("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: new("audit-version")}
 					},
 					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &apiserver.AuditWebhook{Version: ptr.To("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: new("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),

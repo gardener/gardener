@@ -109,7 +109,7 @@ func (r *Reconciler) renewLease(ctx context.Context, obj client.Object) error {
 			Name:       obj.GetName(),
 			UID:        obj.GetUID(),
 		}}
-		lease.Spec.HolderIdentity = ptr.To(obj.GetName())
+		lease.Spec.HolderIdentity = new(obj.GetName())
 		lease.Spec.LeaseDurationSeconds = &r.LeaseResyncSeconds
 		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.Clock.Now()}
 		return nil

@@ -166,7 +166,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		serviceMonitor                 = b.getServiceMonitor()
 
 		portMetrics = networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(metricsPort)),
+			Port:     new(intstr.FromInt32(metricsPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 	)
@@ -299,13 +299,13 @@ func (b *bootstrapper) getEtcdOperatorConfig() *druidconfigv1alpha1.OperatorConf
 		},
 		Controllers: druidconfigv1alpha1.ControllerConfiguration{
 			Etcd: druidconfigv1alpha1.EtcdControllerConfiguration{
-				ConcurrentSyncs:                    ptr.To(int(*b.etcdConfig.ETCDController.Workers)),
+				ConcurrentSyncs:                    new(int(*b.etcdConfig.ETCDController.Workers)),
 				DisableEtcdServiceAccountAutomount: true,
 				EnableEtcdSpecAutoReconcile:        false,
 			},
 			Compaction: druidconfigv1alpha1.CompactionControllerConfiguration{
 				Enabled:         *b.etcdConfig.BackupCompactionController.EnableBackupCompaction,
-				ConcurrentSyncs: ptr.To(int(*b.etcdConfig.BackupCompactionController.Workers)),
+				ConcurrentSyncs: new(int(*b.etcdConfig.BackupCompactionController.Workers)),
 				EventsThreshold: *b.etcdConfig.BackupCompactionController.EventsThreshold,
 			},
 			EtcdCopyBackupsTask: druidconfigv1alpha1.EtcdCopyBackupsTaskControllerConfiguration{
@@ -313,7 +313,7 @@ func (b *bootstrapper) getEtcdOperatorConfig() *druidconfigv1alpha1.OperatorConf
 				Enabled: true,
 			},
 			EtcdOpsTask: druidconfigv1alpha1.EtcdOpsTaskControllerConfiguration{
-				ConcurrentSyncs: ptr.To(3),
+				ConcurrentSyncs: new(3),
 				RequeueInterval: &metav1.Duration{Duration: 15 * time.Second},
 			},
 		},
@@ -355,7 +355,7 @@ func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
 			Namespace: b.namespace,
 			Labels:    b.labels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -537,7 +537,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 		Service: &admissionregistrationv1.ServiceReference{
 			Name:      druidServiceName,
 			Namespace: b.namespace,
-			Path:      ptr.To("/webhooks/etcdcomponents"),
+			Path:      new("/webhooks/etcdcomponents"),
 			Port:      ptr.To[int32](webhookServerServicePort),
 		},
 		CABundle: caBundle,
@@ -697,7 +697,7 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 								ContainerPort: metricsPort,
 							}},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -770,7 +770,7 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 			Labels:    b.labels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},

@@ -120,7 +120,7 @@ func (v *victoriaOperator) serviceAccount() *corev1.ServiceAccount {
 			Namespace: v.namespace,
 			Labels:    GetLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -222,9 +222,9 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 								PeriodSeconds:       10,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-								RunAsNonRoot:             ptr.To(true),
+								RunAsNonRoot:             new(true),
 							},
 						},
 					},
@@ -357,7 +357,7 @@ func (v *victoriaOperator) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 			Labels:    GetLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: GetLabels()},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},

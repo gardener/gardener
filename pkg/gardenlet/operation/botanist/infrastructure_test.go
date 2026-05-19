@@ -13,7 +13,6 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -143,8 +142,8 @@ var _ = Describe("Infrastructure", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
 						// Nodes:    ptr.To(nodesCIDRs[0]),
-						Pods:     ptr.To(podsCIDRs[0]),
-						Services: ptr.To(servicesCIDRs[0]),
+						Pods:     new(podsCIDRs[0]),
+						Services: new(servicesCIDRs[0]),
 					},
 				},
 			}
@@ -182,7 +181,7 @@ var _ = Describe("Infrastructure", func() {
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 
 			updatedShoot := botanist.Shoot.GetInfo()
-			Expect(updatedShoot.Spec.Networking.Nodes).To(Equal(ptr.To(nodesCIDRs[0])))
+			Expect(updatedShoot.Spec.Networking.Nodes).To(Equal(new(nodesCIDRs[0])))
 			Expect(updatedShoot.Status.Networking).To(Equal(&gardencorev1beta1.NetworkingStatus{
 				Nodes:       nodesCIDRs,
 				Pods:        podsCIDRs,
@@ -201,7 +200,7 @@ var _ = Describe("Infrastructure", func() {
 			// Get the shoot from fake client to get its current ResourceVersion
 			storedShoot := &gardencorev1beta1.Shoot{}
 			Expect(gardenFakeClient.Get(ctx, client.ObjectKey{Name: shootName, Namespace: shootNamespace}, storedShoot)).To(Succeed())
-			storedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
+			storedShoot.Spec.Networking.Nodes = new(nodesCIDRs[0])
 			Expect(gardenFakeClient.Update(ctx, storedShoot)).To(Succeed())
 			// Also update botanist's in-memory shoot
 			botanist.Shoot.SetInfo(storedShoot)

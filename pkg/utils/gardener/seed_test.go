@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -191,7 +190,7 @@ var _ = Describe("utils", func() {
 
 		It("should not return auto-enabled extensions that are explicitly disabled", func() {
 			seed.Spec.Extensions = []gardencorev1beta1.Extension{
-				{Type: extensionType1, Disabled: ptr.To(true)},
+				{Type: extensionType1, Disabled: new(true)},
 			}
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
 				Items: []gardencorev1beta1.ControllerRegistration{
@@ -297,7 +296,7 @@ var _ = Describe("utils", func() {
 		It("should handle multiple controller registrations with mixed settings", func() {
 			seed.Spec.Extensions = []gardencorev1beta1.Extension{
 				{Type: extensionType1},
-				{Type: extensionType4, Disabled: ptr.To(true)},
+				{Type: extensionType4, Disabled: new(true)},
 			}
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
 				Items: []gardencorev1beta1.ControllerRegistration{
@@ -346,8 +345,8 @@ var _ = Describe("utils", func() {
 		It("should handle disabled extensions that override auto-enabled ones", func() {
 			seed.Spec.Extensions = []gardencorev1beta1.Extension{
 				{Type: extensionType1},
-				{Type: extensionType2, Disabled: ptr.To(false)},
-				{Type: extensionType3, Disabled: ptr.To(true)},
+				{Type: extensionType2, Disabled: new(false)},
+				{Type: extensionType3, Disabled: new(true)},
 			}
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
 				Items: []gardencorev1beta1.ControllerRegistration{
@@ -531,7 +530,7 @@ var _ = Describe("utils", func() {
 			})
 
 			It("should exclude disabled extensions", func() {
-				seed.Spec.Extensions = append(seed.Spec.Extensions, gardencorev1beta1.Extension{Type: "extension3", Disabled: ptr.To(true)})
+				seed.Spec.Extensions = append(seed.Spec.Extensions, gardencorev1beta1.Extension{Type: "extension3", Disabled: new(true)})
 
 				Expect(ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList).UnsortedList()).To(ConsistOf(
 					"Extension/extensionA",

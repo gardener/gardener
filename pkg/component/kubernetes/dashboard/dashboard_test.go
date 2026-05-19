@@ -189,7 +189,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 					"k8s-app": "kubernetes-dashboard",
 				},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		secretCerts = &corev1.Secret{
@@ -260,8 +260,8 @@ var _ = Describe("Kubernetes Dashboard", func() {
 					Strategy: appsv1.DeploymentStrategy{
 						Type: appsv1.RollingUpdateDeploymentStrategyType,
 						RollingUpdate: &appsv1.RollingUpdateDeployment{
-							MaxSurge:       ptr.To(intstr.IntOrString{IntVal: 0}),
-							MaxUnavailable: ptr.To(intstr.IntOrString{IntVal: 1}),
+							MaxSurge:       new(intstr.IntOrString{IntVal: 0}),
+							MaxUnavailable: new(intstr.IntOrString{IntVal: 1}),
 						},
 					},
 					Template: corev1.PodTemplateSpec{
@@ -299,8 +299,8 @@ var _ = Describe("Kubernetes Dashboard", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
-										ReadOnlyRootFilesystem:   ptr.To(true),
+										AllowPrivilegeEscalation: new(false),
+										ReadOnlyRootFilesystem:   new(true),
 									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
@@ -326,7 +326,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 								},
 							},
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot:       ptr.To(true),
+								RunAsNonRoot:       new(true),
 								RunAsUser:          ptr.To[int64](1001),
 								RunAsGroup:         ptr.To[int64](2001),
 								FSGroup:            ptr.To[int64](1),
@@ -416,9 +416,9 @@ var _ = Describe("Kubernetes Dashboard", func() {
 								},
 								Resources: corev1.ResourceRequirements{},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									ReadOnlyRootFilesystem:   ptr.To(true),
-									RunAsNonRoot:             ptr.To(true),
+									AllowPrivilegeEscalation: new(false),
+									ReadOnlyRootFilesystem:   new(true),
+									RunAsNonRoot:             new(true),
 									RunAsUser:                ptr.To[int64](1001),
 									RunAsGroup:               ptr.To[int64](2001),
 									SeccompProfile: &corev1.SeccompProfile{
@@ -565,7 +565,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -592,7 +592,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 		})
 
 		Context("w/o apiserver host, w/o authentication mode, w/o vpa", func() {

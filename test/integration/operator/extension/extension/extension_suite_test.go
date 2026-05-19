@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -159,7 +158,7 @@ var _ = BeforeSuite(func() {
 	By("Setup fake OCI registry with provider-local chart")
 	fakeRegistry = ocifake.NewRegistry()
 
-	ociRepositoryProviderLocalChart = gardencorev1.OCIRepository{Repository: ptr.To("provider-local"), Tag: ptr.To("test")}
+	ociRepositoryProviderLocalChart = gardencorev1.OCIRepository{Repository: new("provider-local"), Tag: new("test")}
 
 	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "..", "charts", "gardener", "provider-local"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {
@@ -171,8 +170,8 @@ var _ = BeforeSuite(func() {
 	fakeRegistry.AddArtifact(&ociRepositoryProviderLocalChart, providerLocalChart)
 
 	By("Setup fake OCI registry with admission-local charts")
-	ociRepositoryAdmissionApplicationChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-application"), Tag: ptr.To("test")}
-	ociRepositoryAdmissionRuntimeChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-runtime"), Tag: ptr.To("test")}
+	ociRepositoryAdmissionApplicationChart = gardencorev1.OCIRepository{Repository: new("admission-local-application"), Tag: new("test")}
+	ociRepositoryAdmissionRuntimeChart = gardencorev1.OCIRepository{Repository: new("admission-local-runtime"), Tag: new("test")}
 
 	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "application"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {

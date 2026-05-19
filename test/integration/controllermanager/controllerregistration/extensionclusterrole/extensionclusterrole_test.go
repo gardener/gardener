@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -273,8 +272,8 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 			Kind:               "ClusterRole",
 			Name:               clusterRole.Name,
 			UID:                clusterRole.UID,
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(false),
+			Controller:         new(true),
+			BlockOwnerDeletion: new(false),
 		}))
 		Expect(clusterRoleBinding.RoleRef).To(Equal(rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,

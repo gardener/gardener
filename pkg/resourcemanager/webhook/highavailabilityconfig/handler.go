@@ -327,7 +327,7 @@ func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureTole
 		if err != nil {
 			return nil, err
 		}
-		replicas = ptr.To(int32(v)) // #nosec: G109 G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
+		replicas = new(int32(v)) // #nosec: G109 G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
 	}
 	return replicas, nil
 }

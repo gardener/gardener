@@ -136,7 +136,7 @@ func (s *service) Deploy(ctx context.Context) error {
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
 		}
-		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(kubeapiserverconstants.Port)), Protocol: ptr.To(corev1.ProtocolTCP)}
+		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(kubeapiserverconstants.Port)), Protocol: ptr.To(corev1.ProtocolTCP)}
 
 		// For shoot namespaces the kube-apiserver service needs extra labels and annotations to create required network policies
 		// which allow a connection from istio-ingress components to kube-apiserver.

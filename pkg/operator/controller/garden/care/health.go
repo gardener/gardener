@@ -12,7 +12,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -147,7 +146,7 @@ func (h *health) checkRuntimeComponents(condition gardencorev1beta1.Condition, m
 		return exitCondition
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."))
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."))
 }
 
 func (h *health) checkVirtualComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) (*gardencorev1beta1.Condition, error) {
@@ -168,7 +167,7 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 		return exitCondition, nil
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy.")), nil
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy.")), nil
 }
 
 // checkObservabilityComponents checks whether the observability components are healthy.
@@ -189,7 +188,7 @@ func (h *health) checkObservabilityComponents(ctx context.Context, condition gar
 		}
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."))
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."))
 }
 
 // GardenConditions contains all conditions of the garden status subresource.

@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -303,8 +302,8 @@ status: {}
 				},
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion:         "v1",
-					BlockOwnerDeletion: ptr.To(true),
-					Controller:         ptr.To(true),
+					BlockOwnerDeletion: new(true),
+					Controller:         new(true),
 					Kind:               "Namespace",
 					Name:               "some-namespace",
 					UID:                "",
@@ -399,11 +398,11 @@ status: {}
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -412,7 +411,7 @@ status: {}
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)

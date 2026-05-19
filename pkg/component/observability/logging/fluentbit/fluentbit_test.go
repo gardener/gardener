@@ -76,7 +76,7 @@ var _ = Describe("Fluent Bit", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							TargetLabel: "__metrics_path__",
-							Replacement: ptr.To("/api/v2/metrics/prometheus"),
+							Replacement: new("/api/v2/metrics/prometheus"),
 						},
 						{
 							Action: "labelmap",
@@ -112,7 +112,7 @@ var _ = Describe("Fluent Bit", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To("fluent-bit-output-plugin"),
+							Replacement: new("fluent-bit-output-plugin"),
 							TargetLabel: "job",
 						},
 						{
@@ -256,11 +256,11 @@ var _ = Describe("Fluent Bit", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -278,7 +278,7 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(manifests).To(HaveLen(12))
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			test.ExpectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config", namespace)

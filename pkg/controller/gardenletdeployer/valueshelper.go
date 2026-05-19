@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -296,7 +295,7 @@ func getParentImageVectorOverwrite() (*string, error) {
 		if err != nil {
 			return nil, err
 		}
-		imageVectorOverwrite = ptr.To(string(data))
+		imageVectorOverwrite = new(string(data))
 	}
 	return imageVectorOverwrite, nil
 }
@@ -308,7 +307,7 @@ func getParentComponentImageVectorOverwrites() (*string, error) {
 		if err != nil {
 			return nil, err
 		}
-		componentImageVectorOverwrites = ptr.To(string(data))
+		componentImageVectorOverwrites = new(string(data))
 	}
 	return componentImageVectorOverwrites, nil
 }

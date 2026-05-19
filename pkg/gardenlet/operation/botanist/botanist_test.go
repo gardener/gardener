@@ -133,7 +133,7 @@ var _ = Describe("Botanist", func() {
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.32.0",
 						Kubelet: &gardencorev1beta1.KubeletConfig{
-							CPUManagerPolicy: ptr.To("static"),
+							CPUManagerPolicy: new("static"),
 						},
 					},
 					Provider: gardencorev1beta1.Provider{
@@ -144,7 +144,7 @@ var _ = Describe("Botanist", func() {
 								Machine: gardencorev1beta1.Machine{
 									Image: &gardencorev1beta1.ShootMachineImage{
 										Name:    "image-1",
-										Version: ptr.To("1592.0"),
+										Version: new("1592.0"),
 									},
 								},
 							},
@@ -152,15 +152,15 @@ var _ = Describe("Botanist", func() {
 								Name:           "pool-2",
 								UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
 								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-									Version: ptr.To("1.31.0"),
+									Version: new("1.31.0"),
 									Kubelet: &gardencorev1beta1.KubeletConfig{
-										CPUManagerPolicy: ptr.To("none"),
+										CPUManagerPolicy: new("none"),
 									},
 								},
 								Machine: gardencorev1beta1.Machine{
 									Image: &gardencorev1beta1.ShootMachineImage{
 										Name:    "image-2",
-										Version: ptr.To("1593.0"),
+										Version: new("1593.0"),
 									},
 								},
 							},

@@ -58,7 +58,7 @@ var _ = Describe("Helper Functions", func() {
 					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
-					KubeletVersionConstraint: ptr.To("< 1.27"),
+					KubeletVersionConstraint: new("< 1.27"),
 				},
 				{
 					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -70,10 +70,10 @@ var _ = Describe("Helper Functions", func() {
 					CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{
 						Capabilities: gardencorev1beta1.Capabilities{"someCapability": []string{"supported"}},
 					}},
-					KubeletVersionConstraint: ptr.To(">= 1.32.0"),
+					KubeletVersionConstraint: new(">= 1.32.0"),
 					InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 						Supported:           true,
-						MinVersionForUpdate: ptr.To("1.0.0"),
+						MinVersionForUpdate: new("1.0.0"),
 					},
 				},
 			},
@@ -81,10 +81,10 @@ var _ = Describe("Helper Functions", func() {
 
 		worker = gardencorev1beta1.Worker{
 			Machine: gardencorev1beta1.Machine{
-				Architecture: ptr.To("amd64"),
+				Architecture: new("amd64"),
 				Image: &gardencorev1beta1.ShootMachineImage{
 					Name:    "CoreOS",
-					Version: ptr.To("1.0.0"),
+					Version: new("1.0.0"),
 				},
 			},
 			CRI:            &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD},
@@ -93,7 +93,7 @@ var _ = Describe("Helper Functions", func() {
 
 		shootMachineImage = &gardencorev1beta1.ShootMachineImage{
 			Name:    "CoreOS",
-			Version: ptr.To("1.0.0"),
+			Version: new("1.0.0"),
 		}
 	})
 
@@ -122,7 +122,7 @@ var _ = Describe("Helper Functions", func() {
 				}},
 				InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 					Supported:           true,
-					MinVersionForUpdate: ptr.To("1.0.0"),
+					MinVersionForUpdate: new("1.0.0"),
 				},
 			},
 				gardencorev1beta1.MachineImageVersion{
@@ -141,14 +141,14 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		It("should return an empty machine image if no versions found with matching architecture", func() {
-			worker.Machine.Architecture = ptr.To("arm64")
+			worker.Machine.Architecture = new("arm64")
 			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
 		})
 
 		It("should return an empty machine image if no versions found with matching kubelet version", func() {
-			worker.Machine.Image.Version = ptr.To("1.1.0")
+			worker.Machine.Image.Version = new("1.1.0")
 			kubeletVersion = semver.MustParse("1.31.0")
 			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
@@ -163,7 +163,7 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		It("should return an empty machine image if no versions found with in-place update constraint", func() {
-			worker.Machine.Image.Version = ptr.To("0.1.0")
+			worker.Machine.Image.Version = new("0.1.0")
 			worker.UpdateStrategy = ptr.To(gardencorev1beta1.AutoInPlaceUpdate)
 			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 

@@ -98,7 +98,7 @@ var _ = Describe("Etcd", func() {
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidcorev1alpha1.GzipCompression
 		compressionSpec         = druidcorev1alpha1.CompressionSpec{
-			Enabled: ptr.To(true),
+			Enabled: new(true),
 			Policy:  &compressionPolicy,
 		}
 		snapshotCompactionSpec = druidcorev1alpha1.SnapshotCompactionSpec{
@@ -229,7 +229,7 @@ var _ = Describe("Etcd", func() {
 									Name:      caSecretName,
 									Namespace: testNamespace,
 								},
-								DataKey: ptr.To("bundle.crt"),
+								DataKey: new("bundle.crt"),
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      serverSecretName,
@@ -259,7 +259,7 @@ var _ = Describe("Etcd", func() {
 									Name:      caSecretName,
 									Namespace: testNamespace,
 								},
-								DataKey: ptr.To("bundle.crt"),
+								DataKey: new("bundle.crt"),
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      serverSecretName,
@@ -279,7 +279,7 @@ var _ = Describe("Etcd", func() {
 					},
 					StorageCapacity:     &storageCapacityQuantity,
 					StorageClass:        &storageClassName,
-					VolumeClaimTemplate: ptr.To(etcdName),
+					VolumeClaimTemplate: new(etcdName),
 				},
 			}
 
@@ -295,7 +295,7 @@ var _ = Describe("Etcd", func() {
 					},
 				}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
-				obj.Spec.VolumeClaimTemplate = ptr.To(role + "-etcd")
+				obj.Spec.VolumeClaimTemplate = new(role + "-etcd")
 			case ClassNormal:
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
 			}
@@ -369,7 +369,7 @@ var _ = Describe("Etcd", func() {
 
 			if staticPodConfig != nil {
 				obj.Annotations["druid.gardener.cloud/disable-etcd-runtime-component-creation"] = ""
-				obj.Spec.RunAsRoot = ptr.To(true)
+				obj.Spec.RunAsRoot = new(true)
 
 				if role == "events" {
 					obj.Spec.Backup.Port = ptr.To[int32](8081)
@@ -478,7 +478,7 @@ var _ = Describe("Etcd", func() {
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-										InsecureSkipVerify: ptr.To(true),
+										InsecureSkipVerify: new(true),
 										Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 											LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
 											Key:                  secretsutils.DataKeyCertificate,
@@ -497,7 +497,7 @@ var _ = Describe("Etcd", func() {
 								},
 								{
 									Action:      "replace",
-									Replacement: ptr.To(jobNameEtcd),
+									Replacement: new(jobNameEtcd),
 									TargetLabel: "job",
 								},
 							},
@@ -512,7 +512,7 @@ var _ = Describe("Etcd", func() {
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-										InsecureSkipVerify: ptr.To(true),
+										InsecureSkipVerify: new(true),
 										Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 											LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
 											Key:                  secretsutils.DataKeyCertificate,
@@ -532,7 +532,7 @@ var _ = Describe("Etcd", func() {
 
 								{
 									Action:      "replace",
-									Replacement: ptr.To(jobNameBackupRestore),
+									Replacement: new(jobNameBackupRestore),
 									TargetLabel: "job",
 								},
 							},
@@ -573,7 +573,7 @@ var _ = Describe("Etcd", func() {
 							{
 								Alert: "KubeEtcd" + serviceMonitorAlertName(role) + "Down",
 								Expr:  intstr.FromString(`sum(up{job="` + jobNameEtcd + `"}) < ` + strconv.Itoa(int(replicas/2)+1)),
-								For:   ptr.To(monitoringv1.Duration(alertFor1)),
+								For:   new(monitoringv1.Duration(alertFor1)),
 								Labels: map[string]string{
 									"service":    "etcd",
 									"severity":   severity1,
@@ -589,7 +589,7 @@ var _ = Describe("Etcd", func() {
 							{
 								Alert: "KubeEtcd3" + serviceMonitorAlertName(role) + "NoLeader",
 								Expr:  intstr.FromString(`sum(etcd_server_has_leader{job="` + jobNameEtcd + `"}) < count(etcd_server_has_leader{job="` + jobNameEtcd + `"})`),
-								For:   ptr.To(monitoringv1.Duration(alertFor2)),
+								For:   new(monitoringv1.Duration(alertFor2)),
 								Labels: map[string]string{
 									"service":    "etcd",
 									"severity":   "critical",
@@ -1009,7 +1009,7 @@ var _ = Describe("Etcd", func() {
 					CARotationPhase:         "",
 					MaintenanceTimeWindow:   maintenanceTimeWindow,
 					PriorityClassName:       priorityClassName,
-					EvictionRequirement:     ptr.To(evictionRequirement),
+					EvictionRequirement:     new(evictionRequirement),
 				})
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1462,7 +1462,7 @@ var _ = Describe("Etcd", func() {
 
 				expected := etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)
 				expected.Name = etcdName
-				expected.Spec.VolumeClaimTemplate = ptr.To(testRole + "-virtual-garden-etcd")
+				expected.Spec.VolumeClaimTemplate = new(testRole + "-virtual-garden-etcd")
 				delete(expected.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports")
 				expected.Spec.Etcd.ClientService.Annotations["networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`
 				delete(expected.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/namespace-selectors")
@@ -1743,7 +1743,7 @@ var _ = Describe("Etcd", func() {
 					},
 					Status: druidcorev1alpha1.EtcdStatus{
 						ObservedGeneration: ptr.To[int64](1),
-						Ready:              ptr.To(true),
+						Ready:              new(true),
 						Conditions: []druidcorev1alpha1.Condition{
 							{
 								Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,

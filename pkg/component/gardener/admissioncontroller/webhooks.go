@@ -479,5 +479,5 @@ func buildWebhookConfigRulesForResourceSize(config *admissioncontrollerconfigv1a
 }
 
 func buildClientConfigURL(webhookPath, namespace string) *string {
-	return ptr.To(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
+	return new(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
 }

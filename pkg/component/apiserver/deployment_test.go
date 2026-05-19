@@ -40,8 +40,8 @@ var _ = Describe("Deployment", func() {
 					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
 						Default: ptr.To[int32](6),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
-							{APIGroup: ptr.To("foo"), Resource: "bar"},
-							{APIGroup: ptr.To("baz"), Resource: "foo", CacheSize: 7},
+							{APIGroup: new("foo"), Resource: "bar"},
+							{APIGroup: new("baz"), Resource: "foo", CacheSize: 7},
 						},
 					},
 				}

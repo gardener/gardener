@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -743,7 +742,7 @@ func workloadIdentitySecretChanged(backupEntry *gardencorev1beta1.BackupEntry, s
 	opts := []workloadidentity.SecretOption{
 		workloadidentity.For(workloadIdentity.GetName(), workloadIdentity.GetNamespace(), workloadIdentity.Spec.TargetSystem.Type),
 		workloadidentity.WithProviderConfig(workloadIdentity.Spec.TargetSystem.ProviderConfig),
-		workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: gvk.GroupVersion().String(), Kind: gvk.Kind, Namespace: ptr.To(backupEntry.GetNamespace()), Name: backupEntry.GetName(), UID: backupEntry.GetUID()}),
+		workloadidentity.WithContextObject(securityv1alpha1.ContextObject{APIVersion: gvk.GroupVersion().String(), Kind: gvk.Kind, Namespace: new(backupEntry.GetNamespace()), Name: backupEntry.GetName(), UID: backupEntry.GetUID()}),
 	}
 	if val, ok := secretToCompareTo.Annotations[v1beta1constants.GardenerTimestamp]; ok {
 		opts = append(opts, workloadidentity.WithAnnotations(map[string]string{v1beta1constants.GardenerTimestamp: val}))

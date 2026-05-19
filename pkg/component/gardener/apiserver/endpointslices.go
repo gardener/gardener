@@ -39,7 +39,7 @@ func (g *gardenerAPIServer) endpointSlice(clusterIP string) *discoveryv1.Endpoin
 		},
 		AddressType: GetAddressType(clusterIP),
 		Ports: []discoveryv1.EndpointPort{{
-			Port:     ptr.To(int32(servicePort)),
+			Port:     new(int32(servicePort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}},
 		Endpoints: []discoveryv1.Endpoint{{

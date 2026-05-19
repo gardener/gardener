@@ -16,7 +16,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -72,7 +71,7 @@ var _ = Describe("deleteconfirmation", func() {
 					Name: "dummy",
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: ptr.To("dummy"),
+					Namespace: new("dummy"),
 				},
 			}
 			shootState = gardencorev1beta1.ShootState{
@@ -284,7 +283,7 @@ var _ = Describe("deleteconfirmation", func() {
 							project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, gardencorev1beta1.DualApprovalForDeletion{
 								Resource:               "shoots",
 								Selector:               metav1.LabelSelector{MatchLabels: labels},
-								IncludeServiceAccounts: ptr.To(false),
+								IncludeServiceAccounts: new(false),
 							})
 						})
 
@@ -347,7 +346,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 								When("ServiceAccounts are excluded", func() {
 									BeforeEach(func() {
-										project.Spec.DualApprovalForDeletion[0].IncludeServiceAccounts = ptr.To(false)
+										project.Spec.DualApprovalForDeletion[0].IncludeServiceAccounts = new(false)
 									})
 
 									It("should succeed even if the same ServiceAccount confirmed the deletion", func() {
@@ -369,7 +368,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 								When("ServiceAccounts are included", func() {
 									BeforeEach(func() {
-										project.Spec.DualApprovalForDeletion[0].IncludeServiceAccounts = ptr.To(true)
+										project.Spec.DualApprovalForDeletion[0].IncludeServiceAccounts = new(true)
 									})
 
 									It("should fail if the same ServiceAccount confirmed the deletion", func() {

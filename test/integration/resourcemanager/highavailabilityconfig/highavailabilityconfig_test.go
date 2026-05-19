@@ -669,7 +669,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 										maxReplicas = &hpa.Spec.MaxReplicas
 									}
 
-									minDomains := ptr.To(int32(len(zones)))
+									minDomains := new(int32(len(zones)))
 									if ptr.Deref(maxReplicas, *minDomains) < *minDomains {
 										minDomains = maxReplicas
 									}
@@ -714,13 +714,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(defaultNotReadyTolerationSeconds),
+									TolerationSeconds: new(defaultNotReadyTolerationSeconds),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
+									TolerationSeconds: new(defaultUnreachableTolerationSeconds),
 								},
 							))
 						})
@@ -764,13 +764,13 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(defaultNotReadyTolerationSeconds),
+									TolerationSeconds: new(defaultNotReadyTolerationSeconds),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
+									TolerationSeconds: new(defaultUnreachableTolerationSeconds),
 								},
 							)
 
@@ -804,7 +804,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/unreachable",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
+									TolerationSeconds: new(defaultUnreachableTolerationSeconds),
 								},
 							))
 						})
@@ -831,7 +831,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Operator:          "Exists",
 									Effect:            "NoExecute",
 									Value:             "",
-									TolerationSeconds: ptr.To(defaultNotReadyTolerationSeconds),
+									TolerationSeconds: new(defaultNotReadyTolerationSeconds),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",

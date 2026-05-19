@@ -27,27 +27,27 @@ var _ = Describe("Helper", func() {
 			"insert",
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("bar")},
 			},
-			gardencorev1beta1.LastError{TaskID: ptr.To("foo"), Description: "error"},
+			gardencorev1beta1.LastError{TaskID: new("foo"), Description: "error"},
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("bar")},
-				{TaskID: ptr.To("foo"), Description: "error"},
+				{TaskID: new("bar")},
+				{TaskID: new("foo"), Description: "error"},
 			},
 		),
 		Entry(
 			"update",
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("foo"), Description: "error"},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("foo"), Description: "error"},
+				{TaskID: new("bar")},
 			},
-			gardencorev1beta1.LastError{TaskID: ptr.To("foo"), Description: "new-error"},
+			gardencorev1beta1.LastError{TaskID: new("foo"), Description: "new-error"},
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("foo"), Description: "new-error"},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("foo"), Description: "new-error"},
+				{TaskID: new("bar")},
 			},
 		),
 	)
@@ -61,25 +61,25 @@ var _ = Describe("Helper", func() {
 			"task id not found",
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("bar")},
 			},
 			"foo",
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("bar")},
 			},
 		),
 		Entry(
 			"task id found",
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("foo")},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("foo")},
+				{TaskID: new("bar")},
 			},
 			"foo",
 			[]gardencorev1beta1.LastError{
 				{},
-				{TaskID: ptr.To("bar")},
+				{TaskID: new("bar")},
 			},
 		),
 	)

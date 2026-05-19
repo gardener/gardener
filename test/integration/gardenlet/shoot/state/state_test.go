@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -45,7 +44,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Region:           "local",
-				CloudProfileName: ptr.To("local"),
+				CloudProfileName: new("local"),
 				Kubernetes:       gardencorev1beta1.Kubernetes{Version: "1.33.1"},
 				Provider:         gardencorev1beta1.Provider{Type: "local"},
 				SeedName:         &seedName,
@@ -124,7 +123,7 @@ var _ = Describe("Shoot State controller tests", func() {
 	Context("when no periodic backup should be performed", func() {
 		Context("seed name does not match", func() {
 			BeforeEach(func() {
-				shoot.Spec.SeedName = ptr.To("some-seed-name")
+				shoot.Spec.SeedName = new("some-seed-name")
 			})
 
 			It("should do nothing", func() {

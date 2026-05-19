@@ -227,7 +227,7 @@ func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machi
 
 		if minCpu == nil || machine.CPU.Value() < *minCpu &&
 			(supportedArchitectures == nil || slices.Contains(supportedArchitectures, arch)) {
-			minCpu = ptr.To(machine.CPU.Value())
+			minCpu = new(machine.CPU.Value())
 			machineName = machine.Name
 			machineArch = arch
 			capabilities = machine.Capabilities

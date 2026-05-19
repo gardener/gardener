@@ -414,7 +414,7 @@ func createCleanupConfigMap(ctx context.Context, shootClient client.Client) erro
 		cm.Data = map[string]string{
 			dataKeyCleanupScript: cleanupScript,
 		}
-		cm.Immutable = ptr.To(true)
+		cm.Immutable = new(true)
 		return nil
 	})
 	return err
@@ -498,7 +498,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 								Capabilities: &corev1.Capabilities{
 									Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"},
 								},
-								Privileged: ptr.To(false),
+								Privileged: new(false),
 							},
 						},
 					},

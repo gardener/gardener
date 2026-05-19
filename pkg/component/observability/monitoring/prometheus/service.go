@@ -49,11 +49,11 @@ func (p *prometheus) service() *corev1.Service {
 
 	default:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
+			Port:     new(intstr.FromInt32(port)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
+			Port:     new(intstr.FromInt32(port)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{

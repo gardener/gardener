@@ -73,8 +73,8 @@ ExecStart=/opt/bin/opentelemetry-collector --config=` + PathConfig
 			otelDaemonUnit := extensionsv1alpha1.Unit{
 				Name:    UnitName,
 				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(unitContent),
+				Enable:  new(true),
+				Content: new(unitContent),
 			}
 
 			otelConfigFile := extensionsv1alpha1.File{

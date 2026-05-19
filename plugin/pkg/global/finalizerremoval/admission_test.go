@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -50,8 +49,8 @@ var _ = Describe("finalizerremoval", func() {
 					Namespace: namespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					CredentialsBindingName: ptr.To(credentialsBindingName),
-					SecretBindingName:      ptr.To(secretBindingName),
+					CredentialsBindingName: new(credentialsBindingName),
+					SecretBindingName:      new(secretBindingName),
 				},
 			}
 
@@ -93,7 +92,7 @@ var _ = Describe("finalizerremoval", func() {
 
 				secondShoot := shoot.DeepCopy()
 				secondShoot.Name = shootName + "-2"
-				secondShoot.Spec.SecretBindingName = ptr.To(secretBindingName + "-2")
+				secondShoot.Spec.SecretBindingName = new(secretBindingName + "-2")
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(secondShoot)).To(Succeed())
@@ -138,7 +137,7 @@ var _ = Describe("finalizerremoval", func() {
 
 				secondShoot := shoot.DeepCopy()
 				secondShoot.Name = shootName + "-2"
-				secondShoot.Spec.CredentialsBindingName = ptr.To(secretBindingName + "-2")
+				secondShoot.Spec.CredentialsBindingName = new(secretBindingName + "-2")
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(secondShoot)).To(Succeed())

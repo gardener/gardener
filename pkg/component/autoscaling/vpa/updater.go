@@ -111,7 +111,7 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 
 func (v *vpa) reconcileUpdaterServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 }
 
 func (v *vpa) reconcileUpdaterClusterRole(clusterRole *rbacv1.ClusterRole) {
@@ -207,7 +207,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(ptr.Deref(v.values.Updater.Replicas, 1)),
+		Replicas:             new(ptr.Deref(v.values.Updater.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{
@@ -241,7 +241,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 				}},
 			},
@@ -315,7 +315,7 @@ func (v *vpa) computeUpdaterArgs() []string {
 
 func (v *vpa) reconcileUpdaterService(service *corev1.Service) {
 	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(updaterPortMetrics)),
+		Port:     new(intstr.FromInt32(updaterPortMetrics)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
@@ -349,7 +349,7 @@ func (v *vpa) reconcileUpdaterServiceMonitor(serviceMonitor *monitoringv1.Servic
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(updater),
+					Replacement: new(updater),
 					TargetLabel: "job",
 				},
 				{

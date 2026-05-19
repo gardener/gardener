@@ -189,7 +189,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Namespace: n.values.TargetNamespace,
 				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		serviceAnnotations                      = n.values.LoadBalancerAnnotations
@@ -437,7 +437,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						PriorityClassName: n.values.PriorityClassName,
 						NodeSelector:      nodeSelector,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
+							RunAsNonRoot: new(true),
 							RunAsUser:    ptr.To[int64](65534),
 							FSGroup:      ptr.To[int64](65534),
 						},
@@ -470,7 +470,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						}},
 						TerminationGracePeriodSeconds: ptr.To[int64](60),
@@ -513,9 +513,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									Drop: []corev1.Capability{"ALL"},
 									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
-								RunAsNonRoot:             ptr.To(true),
+								RunAsNonRoot:             new(true),
 								RunAsUser:                ptr.To[int64](101),
-								AllowPrivilegeEscalation: ptr.To(true),
+								AllowPrivilegeEscalation: new(true),
 								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},
 							},
 							Env: []corev1.EnvVar{
@@ -640,7 +640,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, false),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.FromInt32(1)),
+				MinAvailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},

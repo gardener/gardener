@@ -325,7 +325,7 @@ var _ = Describe("#Interface", func() {
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
 			oldNodes := "9.8.7.6/5"
-			expected.Status.NodesCIDR = ptr.To(oldNodes)
+			expected.Status.NodesCIDR = new(oldNodes)
 			expected.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{
 				Nodes:    nodesCIDRs,
 				Services: servicesCIDRs,
@@ -484,7 +484,7 @@ var _ = Describe("#Interface", func() {
 
 			var (
 				providerStatus = &runtime.RawExtension{Raw: []byte(`{"some":"status"}`)}
-				nodesCIDR      = ptr.To("1.2.3.4")
+				nodesCIDR      = new("1.2.3.4")
 			)
 
 			infra := empty.DeepCopy()

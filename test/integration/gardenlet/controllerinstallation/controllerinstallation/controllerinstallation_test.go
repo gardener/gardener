@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
@@ -73,7 +72,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			Helm: &gardencorev1.HelmControllerDeployment{
 				RawChart: chartWithGardenKubeconfig,
 			},
-			InjectGardenKubeconfig: ptr.To(true),
+			InjectGardenKubeconfig: new(true),
 		}
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -163,8 +162,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
 
 			oci := &gardencorev1.OCIRepository{
-				Repository: ptr.To("test"),
-				Tag:        ptr.To("0.1.0"),
+				Repository: new("test"),
+				Tag:        new("0.1.0"),
 			}
 			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
 				OCIRepository: oci,
@@ -515,7 +514,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 
 			It("should remove the garden access secret and kubeconfig injection when disabled via ControllerDeployment", func() {
 				By("Disable garden kubeconfig injection")
-				controllerDeployment.InjectGardenKubeconfig = ptr.To(false)
+				controllerDeployment.InjectGardenKubeconfig = new(false)
 				Expect(testClient.Update(ctx, controllerDeployment)).To(Succeed())
 
 				test()
@@ -546,7 +545,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 						Namespace: gardenNamespace.Name,
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						CloudProfileName: ptr.To("test-cloudprofile"),
+						CloudProfileName: new("test-cloudprofile"),
 						Region:           "foo-region",
 						Provider: gardencorev1beta1.Provider{
 							Type: "foo-provider",
@@ -556,14 +555,14 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 								Maximum: 1,
 								Machine: gardencorev1beta1.Machine{
 									Type:  "large",
-									Image: &gardencorev1beta1.ShootMachineImage{Name: "gardenlinux", Version: ptr.To("1.0.0")},
+									Image: &gardencorev1beta1.ShootMachineImage{Name: "gardenlinux", Version: new("1.0.0")},
 								},
 								Zones:        []string{"zone-a"},
 								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
 							}},
 						},
 						Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
-						Networking: &gardencorev1beta1.Networking{Type: ptr.To("foo-networking")},
+						Networking: &gardencorev1beta1.Networking{Type: new("foo-networking")},
 					},
 				}
 				Expect(testClient.Create(ctx, selfHostedShoot)).To(Succeed())
@@ -578,7 +577,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					Helm: &gardencorev1.HelmControllerDeployment{
 						RawChart: chartWithGardenKubeconfig,
 					},
-					InjectGardenKubeconfig: ptr.To(true),
+					InjectGardenKubeconfig: new(true),
 				}
 				Expect(testClient.Create(ctx, selfHostedControllerDeployment)).To(Succeed())
 				DeferCleanup(func() {
@@ -597,7 +596,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					SeedClientSet:         testClientSet,
 					HelmRegistry:          fakeRegistry,
 					Clock:                 clock.RealClock{},
-					Config:                gardenletconfigv1alpha1.GardenletConfiguration{Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{ConcurrentSyncs: ptr.To(5)}}},
+					Config:                gardenletconfigv1alpha1.GardenletConfiguration{Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{ConcurrentSyncs: new(5)}}},
 					Identity:              identity,
 					GardenClusterIdentity: gardenClusterIdentity,
 					GardenNamespace:       "garden",
@@ -747,7 +746,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 						Namespace: projectNamespace.Name,
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						CloudProfileName: ptr.To("test-cloudprofile"),
+						CloudProfileName: new("test-cloudprofile"),
 						Region:           "foo-region",
 						Provider:         gardencorev1beta1.Provider{Type: "foo-provider"},
 						Kubernetes:       gardencorev1beta1.Kubernetes{Version: "1.31.1"},
@@ -766,7 +765,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					Helm: &gardencorev1.HelmControllerDeployment{
 						RawChart: chartWithGardenKubeconfig,
 					},
-					InjectGardenKubeconfig: ptr.To(true),
+					InjectGardenKubeconfig: new(true),
 				}
 				Expect(testClient.Create(ctx, selfHostedControllerDeployment)).To(Succeed())
 				DeferCleanup(func() {
@@ -806,7 +805,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					SeedClientSet:         testClientSet,
 					HelmRegistry:          fakeRegistry,
 					Clock:                 clock.RealClock{},
-					Config:                gardenletconfigv1alpha1.GardenletConfiguration{Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{ConcurrentSyncs: ptr.To(5)}}},
+					Config:                gardenletconfigv1alpha1.GardenletConfiguration{Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{ConcurrentSyncs: new(5)}}},
 					Identity:              identity,
 					GardenClusterIdentity: gardenClusterIdentity,
 					GardenNamespace:       v1beta1constants.GardenNamespace,

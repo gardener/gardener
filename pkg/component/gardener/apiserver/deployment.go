@@ -78,8 +78,8 @@ func (g *gardenerAPIServer) deployment(
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge:       ptr.To(intstr.FromString("100%")),
-					MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+					MaxSurge:       new(intstr.FromString("100%")),
+					MaxUnavailable: new(intstr.FromInt32(0)),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -94,12 +94,12 @@ func (g *gardenerAPIServer) deployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem500,
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
@@ -144,7 +144,7 @@ func (g *gardenerAPIServer) deployment(
 							TimeoutSeconds:      15,
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					}},
 				},

@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -35,7 +34,7 @@ func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, e
 
 func setCacheOptionsDefaults(options *cache.Options) {
 	if options.SyncPeriod == nil {
-		options.SyncPeriod = ptr.To(defaultCacheSyncPeriod)
+		options.SyncPeriod = new(defaultCacheSyncPeriod)
 	}
 }
 

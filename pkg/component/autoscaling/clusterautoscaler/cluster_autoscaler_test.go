@@ -60,22 +60,22 @@ var _ = Describe("ClusterAutoscaler", func() {
 		machineDeployment1Name           = "pool1"
 		machineDeployment1Min      int32 = 2
 		machineDeployment1Max      int32 = 4
-		machineDeployment1Priority       = ptr.To(int32(0))
+		machineDeployment1Priority       = new(int32(0))
 		machineDeployment2Name           = "pool2"
 		machineDeployment2Min      int32 = 3
 		machineDeployment2Max      int32 = 5
-		machineDeployment2Priority       = ptr.To(int32(40))
+		machineDeployment2Priority       = new(int32(40))
 		machineDeployment3Name           = "pool3"
 		machineDeployment3Min      int32 = 3
 		machineDeployment3Max      int32 = 5
 		machineDeployment4Name           = "pool4"
 		machineDeployment4Min      int32 = 3
 		machineDeployment4Max      int32 = 5
-		workerPool4Priority              = ptr.To(int32(50))
+		workerPool4Priority              = new(int32(50))
 		machineDeployment5Name           = "irregular-machine-deployment-name"
 		machineDeployment5Min      int32 = 3
 		machineDeployment5Max      int32 = 5
-		workerPool5Priority              = ptr.To(int32(60))
+		workerPool5Priority              = new(int32(60))
 		machineDeployments               = []extensionsv1alpha1.MachineDeployment{
 			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: machineDeployment1Priority},
 			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: machineDeployment2Priority},
@@ -127,7 +127,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownDelayAfterDelete             = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterFailure            = &metav1.Duration{Duration: time.Second}
 		configScaleDownUnneededTime                 = &metav1.Duration{Duration: time.Second}
-		configScaleDownUtilizationThreshold         = ptr.To(float64(1.2345))
+		configScaleDownUtilizationThreshold         = new(float64(1.2345))
 		configScanInterval                          = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization           = true
 		configEmitPerNodeGroupMetrics               = true
@@ -229,8 +229,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(true),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(true),
 				}},
 				ResourceVersion: "1",
 			},
@@ -251,7 +251,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace:       namespace,
 				ResourceVersion: "1",
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -445,7 +445,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 								},
 							},
@@ -677,7 +677,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(false),
+				KeepObjects:  new(false),
 			},
 		}
 	)
@@ -704,7 +704,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					// Copy `configFull` so that te test doesn't overwrite it.
 					config = configFull.DeepCopy()
 					if withPriorityExpander {
-						config.Expander = ptr.To(gardencorev1beta1.ClusterAutoscalerExpanderPriority + "," + configExpander)
+						config.Expander = new(gardencorev1beta1.ClusterAutoscalerExpanderPriority + "," + configExpander)
 					}
 				}
 

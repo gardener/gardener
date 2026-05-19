@@ -8,7 +8,6 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/parser"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 // GetClusterParsers returns the ClusterParsers used by the Fluent Operator.
@@ -24,7 +23,7 @@ func GetClusterParsers(labels map[string]string) []*fluentbitv1alpha2.ClusterPar
 					Regex:      "^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$",
 					TimeKey:    "time",
 					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-					TimeKeep:   ptr.To(true),
+					TimeKeep:   new(true),
 				},
 				Decoders: []fluentbitv1alpha2.Decorder{ // spellchecker:disable-line
 					{

@@ -96,8 +96,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	kubeletUnit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=` + containerd.UnitName + `

@@ -124,7 +124,7 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: kubeAPIServer,
 						},
 					},
-					InternalClusterDomain: ptr.To(internalClusterDomain),
+					InternalClusterDomain: new(internalClusterDomain),
 					ExternalClusterDomain: &externalClusterDomain,
 					Networks: &shootpkg.Networks{
 						APIServer: apiServerNetwork,
@@ -335,7 +335,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("no need for external DNS",
 					func() {
-						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: ptr.To("unmanaged")}}
+						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: new("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
@@ -347,9 +347,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
-						botanist.Shoot.ExternalClusterDomain = ptr.To("some-domain")
+						botanist.Shoot.ExternalClusterDomain = new("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
-							Domain:    ptr.To("some-domain"),
+							Domain:    new("some-domain"),
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
 					},
@@ -409,8 +409,8 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:                ptr.To("foo"),
-								ExtendTokenExpiration: ptr.To(false),
+								Issuer:                new("foo"),
+								ExtendTokenExpiration: new(false),
 								MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 								AcceptedIssuers:       []string{"aa", "bb"},
 							},
@@ -418,7 +418,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:                "foo",
-						ExtendTokenExpiration: ptr.To(false),
+						ExtendTokenExpiration: new(false),
 						MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 						AcceptedIssuers:       []string{"aa", "bb", "https://api.internal.foo.bar.com"},
 					},
@@ -432,14 +432,14 @@ var _ = Describe("KubeAPIServer", func() {
 								},
 							},
 						}
-						botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("foo.bar.example.cloud")
+						botanist.Shoot.ServiceAccountIssuerHostname = new("foo.bar.example.cloud")
 						botanist.Shoot.GetInfo().UID = "some-uuid"
 						botanist.Shoot.GetInfo().Annotations = map[string]string{
 							"authentication.gardener.cloud/issuer": "managed",
 						}
 						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								ExtendTokenExpiration: ptr.To(false),
+								ExtendTokenExpiration: new(false),
 								MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 								AcceptedIssuers:       []string{"aa", "bb"},
 							},
@@ -447,10 +447,10 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:                "https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer",
-						ExtendTokenExpiration: ptr.To(false),
+						ExtendTokenExpiration: new(false),
 						MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 						AcceptedIssuers:       []string{"aa", "bb", "https://api.internal.foo.bar.com"},
-						JWKSURI:               ptr.To("https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer/jwks"),
+						JWKSURI:               new("https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer/jwks"),
 					},
 				),
 			)

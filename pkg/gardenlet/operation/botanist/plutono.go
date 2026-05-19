@@ -7,8 +7,6 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/ptr"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
@@ -55,7 +53,7 @@ func (b *Botanist) DeployPlutono(ctx context.Context) error {
 	}
 
 	if b.ControlPlaneWildcardCert != nil {
-		b.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
+		b.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(new(b.ControlPlaneWildcardCert.GetName()))
 	}
 
 	return b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx)

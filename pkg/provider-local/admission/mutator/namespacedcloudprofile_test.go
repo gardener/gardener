@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -144,7 +143,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 		})
 
 		It("should skip if NamespacedCloudProfile is in deletion phase", func() {
-			namespacedCloudProfile.DeletionTimestamp = ptr.To(metav1.Now())
+			namespacedCloudProfile.DeletionTimestamp = new(metav1.Now())
 			expectedProfile := namespacedCloudProfile.DeepCopy()
 
 			Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())

@@ -49,7 +49,7 @@ var _ = Describe("Reconciler", func() {
 			Client: fakeClient,
 			Clock:  clock.RealClock{},
 			Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
-				ConcurrentSyncs: ptr.To(1),
+				ConcurrentSyncs: new(1),
 				SyncPeriod:      &metav1.Duration{},
 			},
 		}
@@ -86,7 +86,7 @@ var _ = Describe("Reconciler", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: namespace, CreationTimestamp: metav1.Now()},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("test-secretbinding"),
+				SecretBindingName: new("test-secretbinding"),
 			},
 		}
 	})

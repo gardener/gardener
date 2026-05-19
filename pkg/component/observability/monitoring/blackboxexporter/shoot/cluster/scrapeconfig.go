@@ -25,15 +25,15 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 	return []*monitoringv1alpha1.ScrapeConfig{{
 		ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-exporter-k8s-service-check", namespace, shootprometheus.Label),
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
-			HonorLabels: ptr.To(false),
+			HonorLabels: new(false),
 			Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 			Params: map[string][]string{
 				"module": {moduleName},
 				"target": {"https://kubernetes.default.svc.cluster.local/healthz"},
 			},
-			MetricsPath: ptr.To("/probe"),
+			MetricsPath: new("/probe"),
 			// This is needed because we do not fetch the correct cluster CA bundle right now
-			TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+			TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 			Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{Name: shootprometheus.AccessSecretName},
 				Key:                  resourcesv1alpha1.DataKeyToken,
@@ -41,9 +41,9 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 				Role:       monitoringv1alpha1.KubernetesRoleService,
 				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
-				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+				APIServer:  new("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 				// This is needed because we do not fetch the correct cluster CA bundle right now
-				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: shootprometheus.AccessSecretName},
 					Key:                  resourcesv1alpha1.DataKeyToken,
@@ -52,7 +52,7 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					TargetLabel: "type",
-					Replacement: ptr.To("shoot"),
+					Replacement: new("shoot"),
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
@@ -61,14 +61,14 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 				},
 				{
 					TargetLabel: "__address__",
-					Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+					Replacement: new(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 					Action:      "replace",
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
 					Regex:        `(.+)`,
 					TargetLabel:  "__metrics_path__",
-					Replacement:  ptr.To(`/api/v1/namespaces/kube-system/services/${1}:probe/proxy/probe`),
+					Replacement:  new(`/api/v1/namespaces/kube-system/services/${1}:probe/proxy/probe`),
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__param_target"},
@@ -77,7 +77,7 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 				},
 				{
 					Action:      "replace",
-					Replacement: ptr.To("blackbox-exporter-k8s-service-check"),
+					Replacement: new("blackbox-exporter-k8s-service-check"),
 					TargetLabel: "job",
 				},
 			},

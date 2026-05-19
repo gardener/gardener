@@ -108,9 +108,9 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 				},
 				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
-					DisableSelfServiceScrape: ptr.To(true),
-					UseStrictSecurity:        ptr.To(true),
-					UseDefaultResources:      ptr.To(false),
+					DisableSelfServiceScrape: new(true),
+					UseStrictSecurity:        new(true),
+					UseDefaultResources:      new(false),
 					Image: victoriametricsv1beta1.Image{
 						Repository: "europe-docker.pkg.dev/gardener-project/releases/some-image",
 						Tag:        "some-tag",
@@ -124,7 +124,7 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 				},
 				CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
-					ReplicaCount: ptr.To(int32(0)),
+					ReplicaCount: new(int32(0)),
 				},
 				RetentionPeriod: "15d",
 				Storage: &corev1.PersistentVolumeClaimSpec{
@@ -183,7 +183,7 @@ var _ = Describe("VictoriaLogs", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To("victoria-logs"),
+							Replacement: new("victoria-logs"),
 							TargetLabel: "job",
 						},
 						{
@@ -239,11 +239,11 @@ var _ = Describe("VictoriaLogs", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -259,7 +259,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 

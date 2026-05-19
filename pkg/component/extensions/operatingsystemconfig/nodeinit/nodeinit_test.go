@@ -50,8 +50,8 @@ var _ = Describe("Init", func() {
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 					Name:    nodeagentconfigv1alpha1.InitUnitName,
 					Command: ptr.To(extensionsv1alpha1.CommandStart),
-					Enable:  ptr.To(true),
-					Content: ptr.To(`[Unit]
+					Enable:  new(true),
+					Content: new(`[Unit]
 Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.
 Requires=containerd.service
 After=containerd.service
@@ -78,7 +78,7 @@ WantedBy=multi-user.target`),
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Data: "<<BOOTSTRAP_TOKEN>>",
 							},
-							TransmitUnencoded: ptr.To(true),
+							TransmitUnencoded: new(true),
 						},
 					},
 					extensionsv1alpha1.File{
@@ -156,7 +156,7 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Data: "<<MACHINE_NAME>>",
 							},
-							TransmitUnencoded: ptr.To(true),
+							TransmitUnencoded: new(true),
 						},
 					},
 				))
@@ -165,7 +165,7 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 
 		When("kubelet data volume is configured", func() {
 			BeforeEach(func() {
-				worker.KubeletDataVolumeName = ptr.To("kubelet-data-vol")
+				worker.KubeletDataVolumeName = new("kubelet-data-vol")
 				worker.DataVolumes = []gardencorev1beta1.DataVolume{{
 					Name:       *worker.KubeletDataVolumeName,
 					VolumeSize: "1337Ki",

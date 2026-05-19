@@ -75,8 +75,8 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 				valitailDaemonUnit := extensionsv1alpha1.Unit{
 					Name:    UnitName,
 					Command: ptr.To(extensionsv1alpha1.CommandStart),
-					Enable:  ptr.To(true),
-					Content: ptr.To(unitContent),
+					Enable:  new(true),
+					Content: new(unitContent),
 				}
 
 				valitailConfigFile := extensionsv1alpha1.File{

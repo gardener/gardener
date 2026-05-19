@@ -23,7 +23,6 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	csrutil "k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -150,7 +149,7 @@ func requestCertificate(
 
 	var requestedDuration *time.Duration
 	if validityDuration != nil {
-		requestedDuration = ptr.To(validityDuration.Duration)
+		requestedDuration = new(validityDuration.Duration)
 	}
 
 	log = log.WithValues("certificateSigningRequestName", name)

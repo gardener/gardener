@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -76,7 +75,7 @@ var _ = BeforeSuite(func() {
 		Scheme:  resourcemanagerclient.CombinedScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -85,7 +84,7 @@ var _ = BeforeSuite(func() {
 	Expect((&istioclusterconfiguration.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.IstioClusterConfigurationControllerConfig{
 			Enabled:         true,
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())
 

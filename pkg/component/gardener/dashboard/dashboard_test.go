@@ -185,7 +185,7 @@ var _ = Describe("GardenerDashboard", func() {
 				},
 			},
 			Type:      corev1.SecretTypeOpaque,
-			Immutable: ptr.To(true),
+			Immutable: new(true),
 			Data: map[string][]byte{
 				"password": []byte("________________________________"),
 				"username": []byte("admin"),
@@ -358,9 +358,9 @@ frontend:
 						},
 						Spec: corev1.PodSpec{
 							PriorityClassName:            "gardener-garden-system-200",
-							AutomountServiceAccountToken: ptr.To(false),
+							AutomountServiceAccountToken: new(false),
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
+								RunAsNonRoot: new(true),
 								RunAsUser:    ptr.To[int64](65532),
 								RunAsGroup:   ptr.To[int64](65532),
 								FSGroup:      ptr.To[int64](65532),
@@ -451,7 +451,7 @@ frontend:
 										PeriodSeconds:       10,
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -627,7 +627,7 @@ frontend:
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "dashboard",
@@ -1007,9 +1007,9 @@ frontend:
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -1034,7 +1034,7 @@ frontend:
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -1063,11 +1063,11 @@ frontend:
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
@@ -1092,7 +1092,7 @@ frontend:
 							},
 						},
 						Type:      corev1.SecretTypeOpaque,
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data: map[string][]byte{
 							"password": []byte("____________previous____________"),
 							"username": []byte("admin"),
@@ -1125,7 +1125,7 @@ frontend:
 						DashboardTerminal: operatorv1alpha1.DashboardTerminal{
 							Container: operatorv1alpha1.DashboardTerminalContainer{
 								Image:       "some-image:latest",
-								Description: ptr.To("cool image"),
+								Description: new("cool image"),
 							},
 							AllowedHosts: []string{"first", "second"},
 						},
@@ -1212,7 +1212,7 @@ frontend:
 
 			When("frontend is configured", func() {
 				BeforeEach(func() {
-					frontendConfigMapName = ptr.To("frontend")
+					frontendConfigMapName = new("frontend")
 
 					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: *frontendConfigMapName, Namespace: namespace},
@@ -1237,7 +1237,7 @@ themes:
 
 			When("assets are configured", func() {
 				BeforeEach(func() {
-					assetsConfigMapName = ptr.To("assets")
+					assetsConfigMapName = new("assets")
 
 					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: *assetsConfigMapName, Namespace: namespace},

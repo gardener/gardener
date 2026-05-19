@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -116,8 +115,8 @@ var _ = Describe("#SNI", func() {
 			Kind:               "Namespace",
 			Name:               "test-namespace",
 			UID:                "foo",
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(true),
+			Controller:         new(true),
+			BlockOwnerDeletion: new(true),
 		}}
 
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
@@ -302,8 +301,8 @@ var _ = Describe("#SNI", func() {
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:       ptr.To("seed"),
-				KeepObjects: ptr.To(false),
+				Class:       new("seed"),
+				KeepObjects: new(false),
 			},
 		}
 		expectedManagedResourceTLSSecrets = &resourcesv1alpha1.ManagedResource{
@@ -314,8 +313,8 @@ var _ = Describe("#SNI", func() {
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:       ptr.To("seed"),
-				KeepObjects: ptr.To(false),
+				Class:       new("seed"),
+				KeepObjects: new(false),
 			},
 		}
 	})
@@ -823,7 +822,7 @@ func validateManagedResourceAndGetData(ctx context.Context, c client.Client, exp
 	managedResourceSecret := &corev1.Secret{}
 	ExpectWithOffset(1, c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Spec.SecretRefs[0].Name}, managedResourceSecret)).To(Succeed())
 	ExpectWithOffset(1, managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-	ExpectWithOffset(1, managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+	ExpectWithOffset(1, managedResourceSecret.Immutable).To(Equal(new(true)))
 	ExpectWithOffset(1, managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 	ExpectWithOffset(1, managedResourceSecret.Data).To(HaveLen(1))
 	ExpectWithOffset(1, managedResourceSecret.Data).To(HaveKey("data.yaml.br"))

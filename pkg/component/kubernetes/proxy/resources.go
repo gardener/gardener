@@ -107,7 +107,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				Name:      "kube-proxy",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		// This ClusterRoleBinding is similar to 'system:node-proxier' with the difference that it binds the kube-proxy's
@@ -214,7 +214,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool, ptr.To(false)),
+				Name:      name(pool, new(false)),
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(
 					getSystemComponentLabels(),
@@ -273,7 +273,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 									fmt.Sprintf("%s/%s", volumeMountPathConntrackFixScript, dataKeyConntrackFixScript),
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"NET_ADMIN"},
 									},
@@ -402,14 +402,14 @@ func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool Worker
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool, ptr.To(true)),
+				Name:      name(pool, new(true)),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "DaemonSet",
-					Name:       name(pool, ptr.To(false)),
+					Name:       name(pool, new(false)),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -514,7 +514,7 @@ func (k *kubeProxy) getInitContainers(image string, controlPlaneNode bool, kuber
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				Privileged: ptr.To(true),
+				Privileged: new(true),
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -563,7 +563,7 @@ func (k *kubeProxy) getKubeProxyContainer(image string, init, controlPlaneNode b
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
 			},
@@ -596,7 +596,7 @@ func (k *kubeProxy) getKubeProxyContainer(image string, init, controlPlaneNode b
 	if init {
 		container.Name += "-init"
 		container.SecurityContext = &corev1.SecurityContext{
-			Privileged: ptr.To(true),
+			Privileged: new(true),
 		}
 	} else {
 		container.Ports = []corev1.ContainerPort{{

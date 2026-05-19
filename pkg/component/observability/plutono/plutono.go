@@ -537,7 +537,7 @@ func (p *plutono) getServiceAccount() *corev1.ServiceAccount {
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -618,7 +618,7 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 		},
 		Spec: appsv1.DeploymentSpec{
 			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To(p.values.Replicas),
+			Replicas:             new(p.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -673,7 +673,7 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						},
 						p.refresherSidecar("dashboard", p.dashboardLabel(), volumeMountPathDashboards, corev1.VolumeMount{Name: volumeNameStorage, MountPath: volumeMountPathStorage}),
@@ -710,7 +710,7 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 							Name: volumeNameStorage,
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
-									SizeLimit: ptr.To(resource.MustParse("100Mi")),
+									SizeLimit: new(resource.MustParse("100Mi")),
 								},
 							},
 						},
@@ -781,7 +781,7 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 		},
 	}
 }
@@ -825,7 +825,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{p.values.IngressHost},
 			CertType:                    secretsutils.ServerCert,
-			Validity:                    ptr.To(ingressTLSCertificateValidity),
+			Validity:                    new(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(caName))
 		if err != nil {

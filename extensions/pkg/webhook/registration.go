@@ -187,7 +187,7 @@ func ReconcileSeedWebhookConfig(ctx context.Context, c client.Client, webhookCon
 			return err
 		}
 		ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-		ownerReference.BlockOwnerDeletion = ptr.To(false)
+		ownerReference.BlockOwnerDeletion = new(false)
 	}
 
 	desiredWebhookConfig := webhookConfig.DeepCopyObject().(client.Object)
@@ -365,15 +365,15 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, d
 
 	switch mode {
 	case ModeURL:
-		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s%s", url, path))
+		clientConfig.URL = new(fmt.Sprintf("https://%s%s", url, path))
 	case ModeURLWithServiceName:
-		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName, doNotPrefixComponentName), namespace, servicePort, path))
+		clientConfig.URL = new(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName, doNotPrefixComponentName), namespace, servicePort, path))
 	case ModeService:
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Namespace: namespace,
 			Name:      PrefixedName(componentName, doNotPrefixComponentName),
 			Path:      &path,
-			Port:      ptr.To(int32(servicePort)), // #nosec: G115 - Port is validated on Kubernetes level
+			Port:      new(int32(servicePort)), // #nosec: G115 - Port is validated on Kubernetes level
 		}
 	}
 

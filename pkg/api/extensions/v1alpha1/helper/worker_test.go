@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -53,16 +52,16 @@ var _ = Describe("Helper", func() {
 				extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation:             "",
 				extensionsv1alpha1.MaxNodeProvisionTimeAnnotation:             "",
 			}
-			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(ptr.To(extensionsv1alpha1.ClusterAutoscalerOptions{}))).To(Equal(expectedValues))
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(new(extensionsv1alpha1.ClusterAutoscalerOptions{}))).To(Equal(expectedValues))
 		})
 
 		It("should return correctly populated map when all options are passed", func() {
 			caOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{
-				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
-				ScaleDownGpuUtilizationThreshold: ptr.To("0.6"),
-				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
-				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
-				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+				ScaleDownUtilizationThreshold:    new("0.5"),
+				ScaleDownGpuUtilizationThreshold: new("0.6"),
+				ScaleDownUnneededTime:            new(metav1.Duration{Duration: time.Minute}),
+				ScaleDownUnreadyTime:             new(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             new(metav1.Duration{Duration: 3 * time.Minute}),
 			}
 			expectedValues := map[string]string{
 				extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "0.5",
@@ -76,8 +75,8 @@ var _ = Describe("Helper", func() {
 
 		It("should return correctly populated map when partial options are passed", func() {
 			caOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{
-				ScaleDownGpuUtilizationThreshold: ptr.To("0.6"),
-				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
+				ScaleDownGpuUtilizationThreshold: new("0.6"),
+				ScaleDownUnneededTime:            new(metav1.Duration{Duration: time.Minute}),
 			}
 			expectedValues := map[string]string{
 				extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "",

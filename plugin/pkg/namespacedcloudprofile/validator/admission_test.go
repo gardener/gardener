@@ -84,11 +84,11 @@ var _ = Describe("Admission", func() {
 
 			machineType = gardencorev1beta1.MachineType{
 				Name:         "my-machine",
-				Architecture: ptr.To("arm64"),
+				Architecture: new("arm64"),
 			}
 			machineTypeCore = gardencore.MachineType{
 				Name:         "my-machine",
-				Architecture: ptr.To("arm64"),
+				Architecture: new("arm64"),
 			}
 
 			admissionHandler, _ = New()
@@ -206,7 +206,7 @@ var _ = Describe("Admission", func() {
 							namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{}
 
 							namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine",
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 								Capabilities: gardencore.Capabilities{constants.ArchitectureName: []string{"arm64"}},
 							}}
 
@@ -432,7 +432,7 @@ var _ = Describe("Admission", func() {
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 
 				oldNamespacedCloudProfile := *namespacedCloudProfile.DeepCopy()
-				machineType.Usable = ptr.To(false)
+				machineType.Usable = new(false)
 				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
 
 				attrs = admission.NewAttributesRecord(namespacedCloudProfile, &oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
@@ -443,7 +443,7 @@ var _ = Describe("Admission", func() {
 			It("should allow creating a NamespacedCloudProfile that defines a different machineType than the parent CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
-				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine", Architecture: ptr.To("amd64")}}
+				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine", Architecture: new("amd64")}}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
@@ -479,7 +479,7 @@ var _ = Describe("Admission", func() {
 					{
 						Name:           "test-image",
 						UpdateStrategy: ptr.To(gardencore.UpdateStrategyPatch),
-						Versions:       []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Now())}}},
+						Versions:       []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Now())}}},
 					},
 				}
 
@@ -528,7 +528,7 @@ var _ = Describe("Admission", func() {
 					{
 						Name: "another-image",
 						Versions: []gardencore.MachineImageVersion{
-							{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
+							{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
 						},
 						UpdateStrategy: ptr.To(gardencore.UpdateStrategyMajor),
 					},
@@ -567,7 +567,7 @@ var _ = Describe("Admission", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
-					{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}}}},
+					{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: new(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}}}},
 				}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -623,7 +623,7 @@ var _ = Describe("Admission", func() {
 							CRI:                      []gardencore.CRI{{Name: "containerd"}},
 							Architectures:            []string{"amd64"},
 							CapabilityFlavors:        []gardencore.MachineImageFlavor{{Capabilities: gardencore.Capabilities{"architecture": []string{"amd64"}}}},
-							KubeletVersionConstraint: ptr.To(">=1.31.0"),
+							KubeletVersionConstraint: new(">=1.31.0"),
 							InPlaceUpdates:           &gardencore.InPlaceUpdates{Supported: true},
 						},
 					}},
@@ -761,10 +761,10 @@ var _ = Describe("Admission", func() {
 		Describe("limits", func() {
 			BeforeEach(func() {
 				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-					MaxNodesTotal: ptr.To(int32(5)),
+					MaxNodesTotal: new(int32(5)),
 				}
 				namespacedCloudProfile.Spec.Limits = &gardencore.Limits{
-					MaxNodesTotal: ptr.To(int32(5)),
+					MaxNodesTotal: new(int32(5)),
 				}
 			})
 
@@ -801,7 +801,7 @@ var _ = Describe("Admission", func() {
 
 			It("should allow creating a NamespacedCloudProfile with a lower limit than in the CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(int32(4))
+				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = new(int32(4))
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
@@ -809,7 +809,7 @@ var _ = Describe("Admission", func() {
 
 			It("should allow creating a NamespacedCloudProfile with a higher limit than in the CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(int32(6))
+				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = new(int32(6))
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
@@ -817,7 +817,7 @@ var _ = Describe("Admission", func() {
 
 			It("should allow updating a NamespacedCloudProfile without changing the already higher value compared to the CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(int32(6))
+				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = new(int32(6))
 				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
@@ -852,7 +852,7 @@ var _ = Describe("Admission", func() {
 					CPU:          resource.MustParse("2"),
 					GPU:          resource.MustParse("0"),
 					Memory:       resource.MustParse("100Gi"),
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				}
 				machineTypesConstraint = []gardencorev1beta1.MachineType{
 					machineType,

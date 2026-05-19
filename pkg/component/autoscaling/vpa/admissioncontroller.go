@@ -95,7 +95,7 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 
 func (v *vpa) reconcileAdmissionControllerServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 }
 
 func (v *vpa) reconcileAdmissionControllerClusterRole(clusterRole *rbacv1.ClusterRole) {
@@ -150,7 +150,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	case component.ClusterTypeSeed:
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
 		metricNetworkPolicyPort := networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(admissionControllerMetricsPort)),
+			Port:     new(intstr.FromInt32(admissionControllerMetricsPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 		if v.values.IsGardenCluster {
@@ -160,11 +160,11 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 		}
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(vpaconstants.AdmissionControllerPort)),
+			Port:     new(intstr.FromInt32(vpaconstants.AdmissionControllerPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(admissionControllerMetricsPort)),
+			Port:     new(intstr.FromInt32(admissionControllerMetricsPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 	}
@@ -191,7 +191,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(ptr.Deref(v.values.AdmissionController.Replicas, 1)),
+		Replicas:             new(ptr.Deref(v.values.AdmissionController.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(admissionController)},
 		Template: corev1.PodTemplateSpec{
@@ -226,7 +226,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 					Ports: []corev1.ContainerPort{
 						{
@@ -358,7 +358,7 @@ func (v *vpa) reconcileAdmissionControllerServiceMonitor(serviceMonitor *monitor
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(admissionController),
+					Replacement: new(admissionController),
 					TargetLabel: "job",
 				},
 				{

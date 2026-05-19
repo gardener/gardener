@@ -37,17 +37,17 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			},
 			Controllers: operatorconfigv1alpha1.ControllerConfiguration{
 				Garden: operatorconfigv1alpha1.GardenControllerConfig{
-					ConcurrentSyncs: ptr.To(5),
+					ConcurrentSyncs: new(5),
 					SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 				},
 				GardenCare: operatorconfigv1alpha1.GardenCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: time.Minute},
 				},
 				GardenletDeployer: operatorconfigv1alpha1.GardenletDeployerControllerConfig{
-					ConcurrentSyncs: ptr.To(5),
+					ConcurrentSyncs: new(5),
 				},
 				NetworkPolicy: operatorconfigv1alpha1.NetworkPolicyControllerConfiguration{
-					ConcurrentSyncs: ptr.To(5),
+					ConcurrentSyncs: new(5),
 				},
 			},
 		}
@@ -115,7 +115,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 		})
 
 		It("should allow disabling leader election", func() {
-			conf.LeaderElection.LeaderElect = ptr.To(false)
+			conf.LeaderElection.LeaderElect = new(false)
 
 			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
 		})
@@ -159,7 +159,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 	Context("controller configuration", func() {
 		Context("garden", func() {
 			It("should return errors because concurrent syncs are <= 0", func() {
-				conf.Controllers.Garden.ConcurrentSyncs = ptr.To(0)
+				conf.Controllers.Garden.ConcurrentSyncs = new(0)
 				conf.Controllers.Garden.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
@@ -171,7 +171,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should return errors because sync period is nil", func() {
-				conf.Controllers.Garden.ConcurrentSyncs = ptr.To(5)
+				conf.Controllers.Garden.ConcurrentSyncs = new(5)
 				conf.Controllers.Garden.SyncPeriod = nil
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
@@ -183,7 +183,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should return errors because sync period is < 15s", func() {
-				conf.Controllers.Garden.ConcurrentSyncs = ptr.To(5)
+				conf.Controllers.Garden.ConcurrentSyncs = new(5)
 				conf.Controllers.Garden.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
@@ -221,7 +221,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		Context("network policy", func() {
 			It("should return errors because concurrent syncs are <= 0", func() {
-				conf.Controllers.NetworkPolicy.ConcurrentSyncs = ptr.To(0)
+				conf.Controllers.NetworkPolicy.ConcurrentSyncs = new(0)
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -274,8 +274,8 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		It("should fail with invalid toleration options", func() {
 			conf.NodeToleration = &operatorconfigv1alpha1.NodeTolerationConfiguration{
-				DefaultNotReadyTolerationSeconds:    ptr.To(int64(-1)),
-				DefaultUnreachableTolerationSeconds: ptr.To(int64(-2)),
+				DefaultNotReadyTolerationSeconds:    new(int64(-1)),
+				DefaultUnreachableTolerationSeconds: new(int64(-2)),
 			}
 
 			errorList := ValidateOperatorConfiguration(conf)

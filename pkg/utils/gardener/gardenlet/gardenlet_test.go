@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -145,7 +144,7 @@ var _ = Describe("Gardenlet", func() {
 			BeforeEach(func() {
 				gardenletConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
 					GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
-						GardenClusterAddress: ptr.To("existing-address"),
+						GardenClusterAddress: new("existing-address"),
 					},
 				}
 			})
@@ -156,7 +155,7 @@ var _ = Describe("Gardenlet", func() {
 				newGardenletConfig, err := encoding.DecodeGardenletConfiguration(&newGardenletConfigRaw, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(newGardenletConfig.GardenClientConnection).NotTo(BeNil())
-				Expect(newGardenletConfig.GardenClientConnection.GardenClusterAddress).To(Equal(ptr.To("existing-address")))
+				Expect(newGardenletConfig.GardenClientConnection.GardenClusterAddress).To(Equal(new("existing-address")))
 			})
 		})
 	})

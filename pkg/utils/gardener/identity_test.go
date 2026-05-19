@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -19,8 +18,8 @@ var _ = Describe("Identity", func() {
 		It("should maintain the labels", func() {
 			obj := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"name.seed.gardener.cloud/old-seed": "true"}},
-				Spec:       gardencorev1beta1.ShootSpec{SeedName: ptr.To("spec-seed")},
-				Status:     gardencorev1beta1.ShootStatus{SeedName: ptr.To("status-seed")},
+				Spec:       gardencorev1beta1.ShootSpec{SeedName: new("spec-seed")},
+				Status:     gardencorev1beta1.ShootStatus{SeedName: new("status-seed")},
 			}
 
 			MaintainSeedNameLabels(obj, obj.Spec.SeedName, obj.Status.SeedName)
@@ -33,8 +32,8 @@ var _ = Describe("Identity", func() {
 
 		It("should maintain the labels when spec and status names are equal", func() {
 			obj := &gardencorev1beta1.Shoot{
-				Spec:   gardencorev1beta1.ShootSpec{SeedName: ptr.To("seed")},
-				Status: gardencorev1beta1.ShootStatus{SeedName: ptr.To("seed")},
+				Spec:   gardencorev1beta1.ShootSpec{SeedName: new("seed")},
+				Status: gardencorev1beta1.ShootStatus{SeedName: new("seed")},
 			}
 
 			MaintainSeedNameLabels(obj, obj.Spec.SeedName, obj.Status.SeedName)

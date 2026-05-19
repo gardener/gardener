@@ -90,9 +90,9 @@ func (p *persesOperator) deployment() *appsv1.Deployment {
 								PeriodSeconds:       10,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 						},
 					},

@@ -161,7 +161,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
 						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
 						Architectures:            []string{"arm64"},
-						KubeletVersionConstraint: ptr.To("==1.30.0"),
+						KubeletVersionConstraint: new("==1.30.0"),
 					}},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -375,7 +375,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
 						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
 						Architectures:            []string{"amd64"},
-						KubeletVersionConstraint: ptr.To("==1.30.0"),
+						KubeletVersionConstraint: new("==1.30.0"),
 					}},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -390,7 +390,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
 						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
 						Architectures:            []string{"arm64"},
-						KubeletVersionConstraint: ptr.To("==1.30.0"),
+						KubeletVersionConstraint: new("==1.30.0"),
 					}},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -413,7 +413,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
 						"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
 						"Architectures":            ConsistOf("amd64"),
-						"KubeletVersionConstraint": Equal(ptr.To("==1.30.0")),
+						"KubeletVersionConstraint": Equal(new("==1.30.0")),
 					})),
 				}),
 				MatchFields(IgnoreExtras, Fields{
@@ -422,7 +422,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.1.2", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
 						"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
 						"Architectures":            ConsistOf("arm64"),
-						"KubeletVersionConstraint": Equal(ptr.To("==1.30.0")),
+						"KubeletVersionConstraint": Equal(new("==1.30.0")),
 					})),
 				}),
 			))
@@ -484,7 +484,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
 				"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
 				"Architectures":            ConsistOf("amd64"),
-				"KubeletVersionConstraint": Equal(ptr.To("==1.30.0")),
+				"KubeletVersionConstraint": Equal(new("==1.30.0")),
 			})))
 		})
 	})
@@ -529,7 +529,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				"CPU":          Equal(resource.MustParse("1")),
 				"GPU":          Equal(resource.MustParse("5")),
 				"Memory":       Equal(resource.MustParse("3Gi")),
-				"Architecture": Equal(ptr.To("amd64")),
+				"Architecture": Equal(new("amd64")),
 			})))
 
 		})
@@ -559,14 +559,14 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					"CPU":          Equal(resource.MustParse("2")),
 					"GPU":          Equal(resource.MustParse("7")),
 					"Memory":       Equal(resource.MustParse("10Gi")),
-					"Architecture": Equal(ptr.To("amd64")),
+					"Architecture": Equal(new("amd64")),
 				}),
 				MatchFields(IgnoreExtras, Fields{
 					"Name":         Equal("test-type-namespaced"),
 					"CPU":          Equal(resource.MustParse("1")),
 					"GPU":          Equal(resource.MustParse("5")),
 					"Memory":       Equal(resource.MustParse("3Gi")),
-					"Architecture": Equal(ptr.To("amd64")),
+					"Architecture": Equal(new("amd64")),
 				}),
 			))
 		})
@@ -799,9 +799,9 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 								{Name: "image-c"},
 							},
 							MachineTypes: []gardencorev1beta1.MachineType{
-								{Name: "type-a", Architecture: ptr.To("amd64")},
-								{Name: "type-b", Architecture: ptr.To("amd64")},
-								{Name: "type-c", Architecture: ptr.To("amd64")},
+								{Name: "type-a", Architecture: new("amd64")},
+								{Name: "type-b", Architecture: new("amd64")},
+								{Name: "type-c", Architecture: new("amd64")},
 							},
 							VolumeTypes: []gardencorev1beta1.VolumeType{
 								{Name: "volume-a"},
@@ -839,12 +839,12 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}
 					namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
-						{Name: "type-d", Architecture: ptr.To("amd64")},
+						{Name: "type-d", Architecture: new("amd64")},
 					}
 					namespacedCloudProfile.Spec.VolumeTypes = []gardencorev1beta1.VolumeType{
 						{Name: "volume-d"},
 					}
-					namespacedCloudProfile.Spec.Kubernetes = ptr.To(gardencorev1beta1.KubernetesSettings{
+					namespacedCloudProfile.Spec.Kubernetes = new(gardencorev1beta1.KubernetesSettings{
 						Versions: []gardencorev1beta1.ExpirableVersion{
 							{Version: "1.34.1", ExpirationDate: &expirationDate},
 						},
@@ -862,7 +862,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 							"architecture": {"amd64"},
 						}}},
 					})
-					expectedSpec.MachineTypes = append(expectedSpec.MachineTypes, gardencorev1beta1.MachineType{Name: "type-d", Architecture: ptr.To("amd64"), Capabilities: map[string]gardencorev1beta1.CapabilityValues{
+					expectedSpec.MachineTypes = append(expectedSpec.MachineTypes, gardencorev1beta1.MachineType{Name: "type-d", Architecture: new("amd64"), Capabilities: map[string]gardencorev1beta1.CapabilityValues{
 						"architecture": {"amd64"},
 					}})
 					expectedSpec.VolumeTypes = append(expectedSpec.VolumeTypes, gardencorev1beta1.VolumeType{Name: "volume-d"})
@@ -890,37 +890,37 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 
 				It("should apply only the value from the CloudProfile", func() {
-					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: new(int32(10))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
 
-					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(new(int32(10))))
 				})
 
 				It("should apply only the value from the NamespacedCloudProfile", func() {
-					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: new(int32(10))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
 
-					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(new(int32(10))))
 				})
 
 				It("should apply the higher overridden value from the NamespacedCloudProfile", func() {
-					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
-					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(99))}
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: new(int32(10))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: new(int32(99))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
 
-					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(99))))
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(new(int32(99))))
 				})
 
 				It("should apply a lower value from the NamespacedCloudProfile", func() {
-					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(124))}
-					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(20))}
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: new(int32(124))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: new(int32(20))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
 
-					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(20))))
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(new(int32(20))))
 				})
 			})
 
@@ -1027,7 +1027,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 								Name:         "m5.arm.large",
 								CPU:          resource.MustParse("2"),
 								Memory:       resource.MustParse("8Gi"),
-								Architecture: ptr.To("arm64"),
+								Architecture: new("arm64"),
 							},
 						}
 
@@ -1038,11 +1038,11 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 						Expect(machineTypes).To(ConsistOf(
 							MatchFields(IgnoreExtras, Fields{
-								"Architecture": Equal(ptr.To("amd64")),
+								"Architecture": Equal(new("amd64")),
 								"Capabilities": HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"amd64"}),
 							}),
 							MatchFields(IgnoreExtras, Fields{
-								"Architecture": Equal(ptr.To("arm64")),
+								"Architecture": Equal(new("arm64")),
 								"Capabilities": HaveKeyWithValue("architecture", gardencorev1beta1.CapabilityValues{"arm64"}),
 							}),
 						))
@@ -1090,7 +1090,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
 
 						machineType := namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes[0]
-						Expect(machineType.Architecture).To(Equal(ptr.To("amd64")))
+						Expect(machineType.Architecture).To(Equal(new("amd64")))
 						Expect(machineType.Capabilities).To(BeNil())
 					})
 

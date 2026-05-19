@@ -42,8 +42,8 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:   "gardener-user.service",
-					Enable: ptr.To(true),
-					Content: ptr.To(`[Unit]
+					Enable: new(true),
+					Content: new(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]
@@ -54,8 +54,8 @@ ExecStart=/var/lib/gardener-user/run.sh
 				},
 				extensionsv1alpha1.Unit{
 					Name:   "gardener-user.path",
-					Enable: ptr.To(true),
-					Content: ptr.To(`[Path]
+					Enable: new(true),
+					Content: new(`[Path]
 PathChanged=/var/lib/gardener-user-authorized-keys
 [Install]
 WantedBy=multi-user.target

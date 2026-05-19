@@ -145,7 +145,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 
 func (v *vpa) reconcileRecommenderServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 }
 
 func (v *vpa) reconcileRecommenderClusterRoleMetricsReader(clusterRole *rbacv1.ClusterRole) {
@@ -250,7 +250,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(ptr.Deref(v.values.Recommender.Replicas, 1)),
+		Replicas:             new(ptr.Deref(v.values.Recommender.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
 		Template: corev1.PodTemplateSpec{
@@ -284,7 +284,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 				}},
 			},
@@ -376,7 +376,7 @@ func (v *vpa) computeRecommenderArgs() []string {
 
 func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(recommenderPortMetrics)),
+		Port:     new(intstr.FromInt32(recommenderPortMetrics)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
@@ -410,7 +410,7 @@ func (v *vpa) reconcileRecommenderServiceMonitor(serviceMonitor *monitoringv1.Se
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(recommender),
+					Replacement: new(recommender),
 					TargetLabel: "job",
 				},
 				{

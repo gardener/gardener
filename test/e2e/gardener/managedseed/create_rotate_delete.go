@@ -113,7 +113,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 
 				if ptr.Deref(deployment.Spec.Replicas, 0) != 0 {
 					g.Expect(s.ShootContext.ShootKomega.Update(deployment, func() {
-						deployment.Spec.Replicas = ptr.To(int32(0))
+						deployment.Spec.Replicas = new(int32(0))
 					})()).To(Succeed())
 				}
 
@@ -178,7 +178,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) *seedmanagementv1alpha1.Ma
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
 						ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
-							Enabled: ptr.To(false),
+							Enabled: new(false),
 						},
 						Scheduling: &gardencorev1beta1.SeedSettingScheduling{
 							Visible: false,

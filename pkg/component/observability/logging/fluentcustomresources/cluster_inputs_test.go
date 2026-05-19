@@ -38,7 +38,7 @@ var _ = Describe("Logging", func() {
 								ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_vali-*.log",
 								RefreshIntervalSeconds: ptr.To[int64](10),
 								MemBufLimit:            "60MB",
-								SkipLongLines:          ptr.To(true),
+								SkipLongLines:          new(true),
 								DB:                     "/var/fluentbit/flb_kube.db",
 								DBSync:                 "Normal",
 								IgnoreOlder:            "30m",

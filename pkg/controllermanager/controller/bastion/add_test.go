@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -114,14 +113,14 @@ var _ = Describe("Add", func() {
 
 			It("should return false when shoot is scheduled for the first time", func() {
 				obj.Spec.SeedName = nil
-				objNew.Spec.SeedName = ptr.To("some-seed-name")
+				objNew.Spec.SeedName = new("some-seed-name")
 
 				Expect(p.Update(e)).To(BeFalse())
 			})
 
 			It("should return true when seed name changed", func() {
-				obj.Spec.SeedName = ptr.To("old-seed")
-				objNew.Spec.SeedName = ptr.To("new-seed")
+				obj.Spec.SeedName = new("old-seed")
+				objNew.Spec.SeedName = new("new-seed")
 
 				Expect(p.Update(e)).To(BeTrue())
 			})

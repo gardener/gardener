@@ -88,7 +88,7 @@ func getValitailUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
+		Enable:  new(true),
 		Content: ptr.To(`[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono

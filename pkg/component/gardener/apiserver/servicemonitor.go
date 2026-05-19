@@ -22,11 +22,11 @@ func (g *gardenerAPIServer) serviceMonitor() *monitoringv1.ServiceMonitor {
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: GetLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
-				TargetPort: ptr.To(intstr.FromInt32(port)),
+				TargetPort: new(intstr.FromInt32(port)),
 				Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},

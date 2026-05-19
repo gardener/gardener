@@ -37,7 +37,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	var (
 		provider = local.Type
-		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: ptr.To("*")}}
+		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: new("*")}}
 	)
 
 	logger = logger.WithValues("provider", provider)
@@ -54,7 +54,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Types:          types,
 		Target:         extensionswebhook.TargetShoot,
 		Path:           WebhookName,
-		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
+		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: new(true)},
 		FailurePolicy:  ptr.To(admissionregistrationv1.Ignore),
 		TimeoutSeconds: ptr.To[int32](5),
 	}, nil

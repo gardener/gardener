@@ -129,7 +129,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "controller-manager",
@@ -307,9 +307,9 @@ var _ = Describe("GardenerControllerManager", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -344,7 +344,7 @@ var _ = Describe("GardenerControllerManager", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -355,11 +355,11 @@ var _ = Describe("GardenerControllerManager", func() {
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
@@ -691,20 +691,20 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 		},
 		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			Project: &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 				Quotas:          testValues.Quotas,
 			},
 			SecretBinding: &controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			CredentialsBinding: &controllermanagerconfigv1alpha1.CredentialsBindingControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			Seed: &controllermanagerconfigv1alpha1.SeedControllerConfiguration{
-				ConcurrentSyncs:    ptr.To(20),
+				ConcurrentSyncs:    new(20),
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
@@ -720,18 +720,18 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 				}},
 			},
 			Event: &controllermanagerconfigv1alpha1.EventControllerConfiguration{
-				ConcurrentSyncs:   ptr.To(10),
+				ConcurrentSyncs:   new(10),
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 			ShootReference: &controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration{
-				ConcurrentSyncs: ptr.To(20),
+				ConcurrentSyncs: new(20),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
+			LeaderElect:       new(true),
 			ResourceName:      controllermanagerconfigv1alpha1.ControllerManagerDefaultLockObjectName,
 			ResourceNamespace: metav1.NamespaceSystem,
 		},
@@ -798,9 +798,9 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-200",
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
@@ -842,7 +842,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 								TimeoutSeconds:      5,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -881,7 +881,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 										{
@@ -893,7 +893,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 									},

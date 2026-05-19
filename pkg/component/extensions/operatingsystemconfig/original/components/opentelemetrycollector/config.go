@@ -97,8 +97,8 @@ func getOpenTelemetryCollectorUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=opentelemetry-collector daemon
 Documentation=https://github.com/open-telemetry/opentelemetry-collector
 [Install]

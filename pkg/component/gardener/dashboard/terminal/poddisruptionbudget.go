@@ -19,7 +19,7 @@ func (t *terminal) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},

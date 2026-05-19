@@ -183,7 +183,7 @@ func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
 			Name:      b.name(),
 			Namespace: b.namespace,
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -410,7 +410,7 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      volumeName,
@@ -446,7 +446,7 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 			Labels:    b.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},

@@ -544,7 +544,7 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
 	config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
+			LeaderElect:       new(true),
 			ResourceName:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 			ResourceNamespace: r.namespace,
 		},
@@ -759,7 +759,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
 		portMetrics := networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(r.metricsPort())),
+			Port:     new(intstr.FromInt32(r.metricsPort())),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
@@ -769,7 +769,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		} else {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-				Port:     ptr.To(intstr.FromInt32(r.serverPort())),
+				Port:     new(intstr.FromInt32(r.serverPort())),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			}))
 		}
@@ -956,7 +956,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 							InitialDelaySeconds: 10,
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
@@ -988,7 +988,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-											ExpirationSeconds: ptr.To(int64(60 * 60 * 12)),
+											ExpirationSeconds: new(int64(60 * 60 * 12)),
 											Path:              "token",
 										},
 									},
@@ -1104,7 +1104,7 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := r.emptyServiceAccount()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceAccount, func() error {
 		serviceAccount.Labels = r.getLabels()
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		return nil
 	})
 	return err
@@ -1154,7 +1154,7 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
 		pdb.Labels = r.getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable: new(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: r.getDeploymentTemplateLabels(),
 			},
@@ -2018,7 +2018,7 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.responsibleForHostedShootOrVirtualGarden() {
-		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = new(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      r.values.NamePrefix + resourcemanagerconstants.ServiceName,

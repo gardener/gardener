@@ -18,7 +18,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -117,7 +116,7 @@ var _ = BeforeSuite(func() {
 			Labels:       map[string]string{testID: testRunID},
 		},
 		Spec: gardencorev1beta1.ShootSpec{
-			CredentialsBindingName: ptr.To("my-provider-account"),
+			CredentialsBindingName: new("my-provider-account"),
 			CloudProfile:           &gardencorev1beta1.CloudProfileReference{Name: "test-cloudprofile", Kind: "CloudProfile"},
 			Region:                 "foo-region",
 			Provider: gardencorev1beta1.Provider{
@@ -131,7 +130,7 @@ var _ = BeforeSuite(func() {
 							Type: "large",
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "some-image",
-								Version: ptr.To("1.0.0"),
+								Version: new("1.0.0"),
 							},
 						},
 					},
@@ -141,7 +140,7 @@ var _ = BeforeSuite(func() {
 				Version: "1.31.1",
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Type: ptr.To("foo-networking"),
+				Type: new("foo-networking"),
 			},
 		},
 	}
@@ -161,7 +160,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

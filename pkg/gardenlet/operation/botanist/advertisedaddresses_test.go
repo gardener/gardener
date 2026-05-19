@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -61,7 +60,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("returns external address", func() {
-			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
 
 			addresses, err := botanist.ToAdvertisedAddresses(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -73,7 +72,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("returns internal and service-account-issuer addresses", func() {
-			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 
 			addresses, err := botanist.ToAdvertisedAddresses(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -104,8 +103,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("returns external, internal, service-account-issuer addresses in correct order", func() {
-			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 			botanist.APIServerAddress = "bar.foo"
 
 			addresses, err := botanist.ToAdvertisedAddresses(ctx)
@@ -127,12 +126,12 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("returns external, internal addresses with addition to custom service-account-issuer address", func() {
-			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 			botanist.Shoot.GetInfo().Spec.Kubernetes = gardencorev1beta1.Kubernetes{
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-						Issuer: ptr.To("https://foo.bar.example.issuer"),
+						Issuer: new("https://foo.bar.example.issuer"),
 					},
 				},
 			}
@@ -157,9 +156,9 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("returns external, internal addresses with addition to managed service-account-issuer address", func() {
-			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
-			botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("managed.foo.bar")
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
+			botanist.Shoot.ServiceAccountIssuerHostname = new("managed.foo.bar")
 			botanist.Garden = &garden.Garden{
 				Project: &gardencorev1beta1.Project{
 					ObjectMeta: metav1.ObjectMeta{
@@ -197,8 +196,8 @@ var _ = Describe("AdvertisedAddresses", func() {
 		})
 
 		It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
-			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = ptr.To("baz.foo")
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 
 			botanist.Garden = &garden.Garden{
 				Project: &gardencorev1beta1.Project{
@@ -348,12 +347,12 @@ var _ = Describe("AdvertisedAddresses", func() {
 				{
 					Name:        "ingress/ingress-1/0/0",
 					URL:         "https://foo.example.org",
-					Application: ptr.To("Dashboard"),
+					Application: new("Dashboard"),
 				},
 				{
 					Name:        "ingress/ingress-2/0/0",
 					URL:         "https://bar.example.org",
-					Application: ptr.To("Monitoring"),
+					Application: new("Monitoring"),
 				},
 			}))
 		})

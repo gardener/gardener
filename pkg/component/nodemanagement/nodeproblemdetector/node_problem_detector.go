@@ -116,7 +116,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -191,7 +191,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						DNSPolicy:                     corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName:            serviceAccount.Name,
 						HostNetwork:                   false,
-						TerminationGracePeriodSeconds: ptr.To(daemonSetTerminationGracePeriodSeconds),
+						TerminationGracePeriodSeconds: new(daemonSetTerminationGracePeriodSeconds),
 						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem900,
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
@@ -209,7 +209,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 									"exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json,/config/readonly-monitor.json .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-port=" + strconv.Itoa(daemonSetPrometheusPort),
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: ptr.To(true),
+									Privileged: new(true),
 								},
 								Env: []corev1.EnvVar{
 									{

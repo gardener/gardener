@@ -7,7 +7,6 @@ package garden
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -20,7 +19,7 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 			ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-"+name, namespace, gardenprometheus.Label),
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				Params:      map[string][]string{"module": {module}},
-				MetricsPath: ptr.To("/probe"),
+				MetricsPath: new("/probe"),
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: targets,
 					Labels:  map[string]string{"purpose": "availability"},
@@ -28,30 +27,30 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						SourceLabels: []monitoringv1.LabelName{"__address__"},
-						Separator:    ptr.To(";"),
+						Separator:    new(";"),
 						Regex:        `(.*)`,
 						TargetLabel:  "__param_target",
-						Replacement:  ptr.To(`$1`),
+						Replacement:  new(`$1`),
 						Action:       "replace",
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__param_target"},
-						Separator:    ptr.To(";"),
+						Separator:    new(";"),
 						Regex:        `(.*)`,
 						TargetLabel:  "instance",
-						Replacement:  ptr.To(`$1`),
+						Replacement:  new(`$1`),
 						Action:       "replace",
 					},
 					{
-						Separator:   ptr.To(";"),
+						Separator:   new(";"),
 						Regex:       `(.*)`,
 						TargetLabel: "__address__",
-						Replacement: ptr.To("blackbox-exporter:9115"),
+						Replacement: new("blackbox-exporter:9115"),
 						Action:      "replace",
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("blackbox-" + name),
+						Replacement: new("blackbox-" + name),
 						TargetLabel: "job",
 					},
 				},
@@ -73,10 +72,10 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 
 	kubeAPIServerScrapeConfig.Spec.RelabelConfigs = append([]monitoringv1.RelabelConfig{{
 		SourceLabels: []monitoringv1.LabelName{"__address__"},
-		Separator:    ptr.To(";"),
+		Separator:    new(";"),
 		Regex:        `https://api\..*`,
 		TargetLabel:  "__param_module",
-		Replacement:  ptr.To(httpKubeAPIServerRootCAsModuleName),
+		Replacement:  new(httpKubeAPIServerRootCAsModuleName),
 		Action:       "replace",
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 

@@ -14,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -56,7 +55,7 @@ var _ = Describe("VPNShoot", func() {
 					Services: []net.IPNet{{IP: []byte("10.0.0.0"), Mask: []byte("24")}},
 					Nodes:    []net.IPNet{{IP: []byte("10.181.0.0"), Mask: []byte("16")}},
 				},
-				ExternalClusterDomain: ptr.To("foo.local.gardener.cloud"),
+				ExternalClusterDomain: new("foo.local.gardener.cloud"),
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -65,9 +64,9 @@ var _ = Describe("VPNShoot", func() {
 					},
 					Networking: &gardencorev1beta1.Networking{
 						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
-						Pods:       ptr.To("192.168.0.0/16"),
-						Services:   ptr.To("10.0.0.0/24"),
-						Nodes:      ptr.To("10.181.0.0/16"),
+						Pods:       new("192.168.0.0/16"),
+						Services:   new("10.0.0.0/24"),
+						Nodes:      new("10.181.0.0/16"),
 					},
 				},
 			})

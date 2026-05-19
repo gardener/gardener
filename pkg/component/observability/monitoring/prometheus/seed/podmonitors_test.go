@@ -45,14 +45,14 @@ var _ = Describe("PodMonitors", func() {
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 									Regex:        `([^:]+)`,
 									Action:       "replace",
-									Replacement:  ptr.To(`$1`),
+									Replacement:  new(`$1`),
 									TargetLabel:  "__tmp_kubernetes_pod_ip_ipv4",
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 									Regex:        `(.+:.+)`,
 									Action:       "replace",
-									Replacement:  ptr.To(`[$1]`),
+									Replacement:  new(`[$1]`),
 									TargetLabel:  "__tmp_kubernetes_pod_ip_ipv6_with_brackets",
 								},
 								{
@@ -63,7 +63,7 @@ var _ = Describe("PodMonitors", func() {
 									},
 									Regex:       `(.*);(.*);(.+)`,
 									Action:      "replace",
-									Replacement: ptr.To(`$1$2:$3`),
+									Replacement: new(`$1$2:$3`),
 									TargetLabel: "__address__",
 								},
 								{
@@ -82,7 +82,7 @@ var _ = Describe("PodMonitors", func() {
 						PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
 							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 							HTTPConfigWithProxy: monitoringv1.HTTPConfigWithProxy{
-								HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+								HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 							},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
@@ -109,21 +109,21 @@ var _ = Describe("PodMonitors", func() {
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 									Regex:        `(.+:.+:.+)`,
 									Action:       "replace",
-									Replacement:  ptr.To(`[$1]`),
+									Replacement:  new(`[$1]`),
 									TargetLabel:  "__tmp_kubernetes_pod_ip",
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 									Regex:        `([^:]+)`,
 									Action:       "replace",
-									Replacement:  ptr.To(`$1`),
+									Replacement:  new(`$1`),
 									TargetLabel:  "__tmp_kubernetes_pod_ip",
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"__tmp_kubernetes_pod_ip", "__meta_kubernetes_pod_annotation_prometheus_io_port"},
 									Regex:        `(.+);(.+)`,
 									Action:       "replace",
-									Replacement:  ptr.To(`$1:$2`),
+									Replacement:  new(`$1:$2`),
 									TargetLabel:  "__address__",
 								},
 								{

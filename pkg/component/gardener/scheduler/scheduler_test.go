@@ -129,7 +129,7 @@ var _ = Describe("GardenerScheduler", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "scheduler",
@@ -349,9 +349,9 @@ var _ = Describe("GardenerScheduler", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -376,7 +376,7 @@ var _ = Describe("GardenerScheduler", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -394,12 +394,12 @@ var _ = Describe("GardenerScheduler", func() {
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceVirtual).To(consistOf(clusterRole, clusterRoleBinding))
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
 			})
@@ -728,7 +728,7 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 			Kubeconfig: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
+			LeaderElect:       new(true),
 			ResourceName:      "gardener-scheduler-leader-election",
 			ResourceNamespace: "kube-system",
 		},
@@ -804,9 +804,9 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-200",
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
@@ -848,7 +848,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 								TimeoutSeconds:      5,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -887,7 +887,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 										{
@@ -899,7 +899,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 									},

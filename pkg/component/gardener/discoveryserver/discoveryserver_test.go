@@ -214,9 +214,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName:            "gardener-garden-system-200",
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
+							RunAsNonRoot: new(true),
 							RunAsUser:    ptr.To[int64](65532),
 							RunAsGroup:   ptr.To[int64](65532),
 							FSGroup:      ptr.To[int64](65532),
@@ -285,7 +285,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 									PeriodSeconds:       10,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -381,7 +381,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "discovery-server",
@@ -692,9 +692,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -719,7 +719,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -747,11 +747,11 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
@@ -784,7 +784,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 			})
 
 			JustBeforeEach(func() {
-				values.TLSSecretName = ptr.To("my-tls-secret")
+				values.TLSSecretName = new("my-tls-secret")
 				deployer = discoveryserver.New(fakeClient, namespace, fakeSecretManager, values)
 				// Update the deployment fixture to match what the code produces with an explicit TLS secret.
 				deployment.Spec.Template.Spec.Volumes[0].Secret.SecretName = "my-tls-secret"

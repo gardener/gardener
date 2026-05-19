@@ -12,7 +12,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,7 +29,7 @@ var _ = Describe("Miscellaneous", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To("seed1"),
+				SeedName: new("seed1"),
 			},
 		}
 
@@ -40,10 +39,10 @@ var _ = Describe("Miscellaneous", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To("seed1"),
+				SeedName: new("seed1"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName: ptr.To("seed2"),
+				SeedName: new("seed2"),
 			},
 		}
 
@@ -322,7 +321,7 @@ var _ = Describe("Miscellaneous", func() {
 			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
 				{Domain: "example.com"},
 			}
-			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.other-domain.com")}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.other-domain.com")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
@@ -331,7 +330,7 @@ var _ = Describe("Miscellaneous", func() {
 			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{
 				{Domain: "test.org"},
 			}
-			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.example.com")}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.example.com")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)
 			Expect(err).To(HaveOccurred())
@@ -340,7 +339,7 @@ var _ = Describe("Miscellaneous", func() {
 
 		It("should return error if multiple default domains removed and shoots are using them", func() {
 			newSeedSpec.DNS.Defaults = []core.SeedDNSProviderConfig{}
-			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.test.org")}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.test.org")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 			err := ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)
 			Expect(err).To(HaveOccurred())
@@ -353,7 +352,7 @@ var _ = Describe("Miscellaneous", func() {
 			otherSeed := "other-seed"
 			shoot.Spec.SeedName = &otherSeed
 			shoot.Status.SeedName = &otherSeed
-			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.example.com")}
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.example.com")}
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 			Expect(ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, secretLister, kind)).To(Succeed())
 		})
@@ -385,7 +384,7 @@ var _ = Describe("Miscellaneous", func() {
 					{Domain: "additional.com"},
 				}
 
-				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.global-default.com")}
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.global-default.com")}
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(globalDefaultSecret)).To(Succeed())
 
@@ -397,7 +396,7 @@ var _ = Describe("Miscellaneous", func() {
 					{Domain: "different.com"},
 				}
 
-				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.global-default.com")}
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.global-default.com")}
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(globalDefaultSecret)).To(Succeed())
 
@@ -412,7 +411,7 @@ var _ = Describe("Miscellaneous", func() {
 					{Domain: "different.com"},
 				}
 
-				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("my-shoot.my-project.other-domain.com")}
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("my-shoot.my-project.other-domain.com")}
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(globalDefaultSecret)).To(Succeed())
 

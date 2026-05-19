@@ -642,7 +642,7 @@ func (r *Reconciler) newPlutono(
 ) {
 	var wildcardCertName *string
 	if wildcardCertSecret != nil {
-		wildcardCertName = ptr.To(wildcardCertSecret.GetName())
+		wildcardCertName = new(wildcardCertSecret.GetName())
 	}
 
 	var authSecretName string
@@ -774,7 +774,7 @@ func (r *Reconciler) newAggregatePrometheus(
 	}
 
 	if wildcardCertSecret != nil {
-		values.Ingress.WildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
+		values.Ingress.WildcardCertSecretName = new(wildcardCertSecret.GetName())
 	}
 
 	if alertingSMTPSecret != nil {

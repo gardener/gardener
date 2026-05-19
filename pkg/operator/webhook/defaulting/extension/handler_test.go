@@ -39,11 +39,11 @@ var _ = Describe("Handler", func() {
 		extension = &operatorv1alpha1.Extension{
 			Spec: operatorv1alpha1.ExtensionSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
-					{Kind: "Worker", Type: "test", Primary: ptr.To(true)},
+					{Kind: "Worker", Type: "test", Primary: new(true)},
 				},
 				Deployment: &operatorv1alpha1.Deployment{
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
-						InjectGardenKubeconfig: ptr.To(true),
+						InjectGardenKubeconfig: new(true),
 					},
 				},
 			},
@@ -87,7 +87,7 @@ var _ = Describe("Handler", func() {
 			})
 
 			It("should not default if injectGardenKubeconfig is already set", func() {
-				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = ptr.To(false)
+				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = new(false)
 
 				Expect(handler.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: mustEncodeObject(encoder, extension)}}})).To(Equal(admission.Response{
 					Patches: []jsonpatch.JsonPatchOperation{},
@@ -136,7 +136,7 @@ var _ = Describe("Handler", func() {
 			})
 
 			It("should not overwrite the primary field", func() {
-				extension.Spec.Resources[0].Primary = ptr.To(false)
+				extension.Spec.Resources[0].Primary = new(false)
 
 				Expect(handler.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: mustEncodeObject(encoder, extension)}}})).To(Equal(admission.Response{
 					Patches: []jsonpatch.JsonPatchOperation{},

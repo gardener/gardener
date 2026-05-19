@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/config/controllermanager/v1alpha1/validation"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
@@ -74,7 +73,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 		})
 
 		It("should allow disabling leader election", func() {
-			conf.LeaderElection.LeaderElect = ptr.To(false)
+			conf.LeaderElection.LeaderElect = new(false)
 
 			Expect(ValidateControllerManagerConfiguration(conf)).To(BeEmpty())
 		})

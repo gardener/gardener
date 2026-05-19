@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -127,9 +126,9 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 	shoot := &gardencorev1beta1.Shoot{
 		Spec: gardencorev1beta1.ShootSpec{
 			Hibernation: &gardencorev1beta1.Hibernation{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 			},
-			Purpose: (*gardencorev1beta1.ShootPurpose)(ptr.To("evaluation")),
+			Purpose: (*gardencorev1beta1.ShootPurpose)(new("evaluation")),
 		},
 		Status: gardencorev1beta1.ShootStatus{
 			LastOperation: &gardencorev1beta1.LastOperation{
@@ -214,7 +213,7 @@ func newEmptyDirVolume(name, size string) corev1.Volume {
 		Name: name,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
-				SizeLimit: ptr.To(resource.MustParse(size)),
+				SizeLimit: new(resource.MustParse(size)),
 			},
 		},
 	}

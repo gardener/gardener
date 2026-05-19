@@ -155,8 +155,8 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, scrapeConfig, func() error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
 		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
-			HonorLabels: ptr.To(false),
-			MetricsPath: ptr.To("/probe"),
+			HonorLabels: new(false),
+			MetricsPath: new("/probe"),
 			Params:      map[string][]string{"module": {"http_apiserver"}},
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 				Role:       monitoringv1alpha1.KubernetesRolePod,
@@ -167,12 +167,12 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					Key:                  resourcesv1alpha1.DataKeyToken,
 				}},
 				// This is needed because we do not fetch the correct cluster CA bundle right now
-				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 			}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					TargetLabel: "type",
-					Replacement: ptr.To("seed"),
+					Replacement: new("seed"),
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
@@ -183,7 +183,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
 					TargetLabel:  "__param_target",
 					Regex:        `(.+);(.+)`,
-					Replacement:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port) + `/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1`),
+					Replacement:  new("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port) + `/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1`),
 					Action:       "replace",
 				},
 				{
@@ -193,12 +193,12 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 				},
 				{
 					TargetLabel: "__address__",
-					Replacement: ptr.To("blackbox-exporter:9115"),
+					Replacement: new("blackbox-exporter:9115"),
 					Action:      "replace",
 				},
 				{
 					Action:      "replace",
-					Replacement: ptr.To("tunnel-probe-apiserver-proxy"),
+					Replacement: new("tunnel-probe-apiserver-proxy"),
 					TargetLabel: "job",
 				},
 			},
@@ -433,7 +433,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		networkPolicy = &networkingv1.NetworkPolicy{
@@ -578,7 +578,7 @@ func (v *vpnShoot) podDisruptionBudget() client.Object {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},
@@ -598,7 +598,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 			},
 		},
 		Spec: corev1.PodSpec{
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 			ServiceAccountName:           serviceAccount.Name,
 			PriorityClassName:            "system-cluster-critical",
 			DNSPolicy:                    corev1.DNSDefault,
@@ -641,8 +641,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               ptr.To(false),
-			AllowPrivilegeEscalation: ptr.To(false),
+			Privileged:               new(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -664,8 +664,8 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               ptr.To(false),
-			AllowPrivilegeEscalation: ptr.To(false),
+			Privileged:               new(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -701,7 +701,7 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 		},
 		Spec: appsv1.DeploymentSpec{
 			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To(int32(replicas)),
+			Replicas:             new(int32(replicas)),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -728,7 +728,7 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 		Spec: appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
 			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To(int32(replicas)), // #nosec: G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
+			Replicas:             new(int32(replicas)), // #nosec: G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
@@ -949,7 +949,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: ptr.To(true),
+			Privileged: new(true),
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{

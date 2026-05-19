@@ -213,7 +213,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken:  ptr.To(false),
+					AutomountServiceAccountToken:  new(false),
 					PriorityClassName:             k.values.PriorityClassName,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -222,7 +222,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
 						RunAsGroup:   ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
 						FSGroup:      ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
@@ -242,7 +242,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
@@ -687,7 +687,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 					Sources: []corev1.VolumeProjection{
 						{
 							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-								ExpirationSeconds: ptr.To(int64(60 * 60 * 12)),
+								ExpirationSeconds: new(int64(60 * 60 * 12)),
 								Path:              "token",
 							},
 						},
@@ -892,7 +892,7 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 		})
 	}
 	// may need to enable IPv6 in pod network (e.g. for GKE clusters)
-	container.SecurityContext.Privileged = ptr.To(true)
+	container.SecurityContext.Privileged = new(true)
 
 	container.LivenessProbe = nil
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -957,7 +957,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: ptr.To(false),
+			RunAsNonRoot: new(false),
 			RunAsUser:    ptr.To[int64](0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
@@ -1046,7 +1046,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: ptr.To(false),
+			RunAsNonRoot: new(false),
 			RunAsUser:    ptr.To[int64](0),
 			// group needs to be set to a concrete value to allow unprivileged ping socket when configuring sysctl net.ipv4.ping_group_range
 			RunAsGroup: ptr.To[int64](0),

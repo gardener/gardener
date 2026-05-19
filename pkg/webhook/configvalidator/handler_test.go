@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -153,7 +152,7 @@ var _ = Describe("Handler", func() {
 		})
 
 		It("should allow since the shoot has a deletion timestamp", func() {
-			shoot.DeletionTimestamp = ptr.To(metav1.Now())
+			shoot.DeletionTimestamp = new(metav1.Now())
 
 			rawShoot, err := runtime.Encode(encoder, shoot)
 			Expect(err).NotTo(HaveOccurred())
@@ -418,7 +417,7 @@ var _ = Describe("Handler", func() {
 		})
 
 		It("should allow since the garden has a deletion timestamp", func() {
-			garden.DeletionTimestamp = ptr.To(metav1.Now())
+			garden.DeletionTimestamp = new(metav1.Now())
 
 			rawGarden, err := runtime.Encode(encoder, garden)
 			Expect(err).NotTo(HaveOccurred())

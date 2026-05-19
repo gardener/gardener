@@ -435,7 +435,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should reconcile the service account settings", func() {
-			serviceAccount.AutomountServiceAccountToken = ptr.To(true)
+			serviceAccount.AutomountServiceAccountToken = new(true)
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())

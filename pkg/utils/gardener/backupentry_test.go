@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -72,14 +71,14 @@ var _ = Describe("BackupEntry", func() {
 		It("returns the correct seed names of a BackupEntry", func() {
 			specSeedName, statusSeedName := GetBackupEntrySeedNames(&gardencorev1beta1.BackupEntry{
 				Spec: gardencorev1beta1.BackupEntrySpec{
-					SeedName: ptr.To("spec"),
+					SeedName: new("spec"),
 				},
 				Status: gardencorev1beta1.BackupEntryStatus{
-					SeedName: ptr.To("status"),
+					SeedName: new("status"),
 				},
 			})
-			Expect(specSeedName).To(Equal(ptr.To("spec")))
-			Expect(statusSeedName).To(Equal(ptr.To("status")))
+			Expect(specSeedName).To(Equal(new("spec")))
+			Expect(statusSeedName).To(Equal(new("status")))
 		})
 	})
 })

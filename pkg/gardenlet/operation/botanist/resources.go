@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -125,7 +124,7 @@ func (b *Botanist) PopulateStaticManifestsFromSeedToShoot(ctx context.Context) e
 
 		tasks = append(tasks, func(ctx context.Context) error {
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secretInShootNamespace, func() error {
-				secretInShootNamespace.Immutable = ptr.To(false)
+				secretInShootNamespace.Immutable = new(false)
 				secretInShootNamespace.Type = secret.Type
 				secretInShootNamespace.Data = secret.Data
 				return nil

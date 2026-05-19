@@ -50,7 +50,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	values.DefragmentationSchedule = &defragmentationSchedule
 
 	if !b.Shoot.HibernationEnabled {
-		values.Replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
+		values.Replicas = new(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
 	switch role {

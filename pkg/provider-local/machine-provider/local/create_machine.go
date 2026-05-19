@@ -106,7 +106,7 @@ func (d *localDriver) applyService(ctx context.Context, providerClient client.Cl
 				Name:        "ssh",
 				Port:        22,
 				Protocol:    corev1.ProtocolTCP,
-				AppProtocol: ptr.To("ssh"),
+				AppProtocol: new("ssh"),
 			},
 		},
 	}
@@ -168,7 +168,7 @@ func (d *localDriver) applyPod(
 				Image:           providerSpec.Image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				SecurityContext: &corev1.SecurityContext{
-					Privileged: ptr.To(true),
+					Privileged: new(true),
 				},
 				Env: []corev1.EnvVar{{
 					Name: "NODE_NAME",

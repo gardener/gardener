@@ -491,7 +491,7 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 					ImagePullPolicy:          corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 					Stdin: true,
 					VolumeMounts: []corev1.VolumeMount{

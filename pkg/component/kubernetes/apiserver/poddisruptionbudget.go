@@ -24,7 +24,7 @@ func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *p
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
 		pdb.Labels = getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}

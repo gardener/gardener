@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -44,7 +43,7 @@ var _ = Describe("Project controller tests", func() {
 				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: ptr.To("garden-" + projectName),
+				Namespace: new("garden-" + projectName),
 			},
 		}
 
@@ -58,8 +57,8 @@ var _ = Describe("Project controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("mysecretbinding"),
-				CloudProfileName:  ptr.To("cloudprofile1"),
+				SecretBindingName: new("mysecretbinding"),
+				CloudProfileName:  new("cloudprofile1"),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -72,20 +71,20 @@ var _ = Describe("Project controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("some-domain.example.com"),
+					Domain: new("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}
@@ -123,7 +122,7 @@ var _ = Describe("Project controller tests", func() {
 	triggerAndWaitForReconciliation := func(project *gardencorev1beta1.Project) {
 		By("Trigger Project Reconciliation")
 		patch := client.MergeFrom(project.DeepCopy())
-		project.Spec.Description = ptr.To(time.Now().UTC().Format(time.RFC3339Nano))
+		project.Spec.Description = new(time.Now().UTC().Format(time.RFC3339Nano))
 		Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
 		By("Wait for Project to be reconciled")
@@ -210,8 +209,8 @@ var _ = Describe("Project controller tests", func() {
 						Kind:               "Project",
 						Name:               project.Name,
 						UID:                project.UID,
-						Controller:         ptr.To(true),
-						BlockOwnerDeletion: ptr.To(true),
+						Controller:         new(true),
+						BlockOwnerDeletion: new(true),
 					}))
 				}).Should(Succeed())
 
@@ -580,7 +579,7 @@ var _ = Describe("Project controller tests", func() {
 						Regions:      []gardencorev1beta1.Region{{Name: "some-region"}},
 						Type:         "provider-type",
 						Limits: &gardencorev1beta1.Limits{
-							MaxNodesTotal: ptr.To(int32(100)),
+							MaxNodesTotal: new(int32(100)),
 						},
 					},
 				}
@@ -797,7 +796,7 @@ var _ = Describe("Project controller tests", func() {
 				}
 				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo": "bar"}`)}
 				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-					MaxNodesTotal: ptr.To(int32(200)),
+					MaxNodesTotal: new(int32(200)),
 				}
 				Eventually(func() error {
 					return testUserClient.Update(ctx, namespacedCloudProfile)

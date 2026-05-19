@@ -218,7 +218,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Namespace: v1beta1constants.KubernetesDashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		secretCerts = &corev1.Secret{
@@ -284,7 +284,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 					Spec: corev1.PodSpec{
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
+							RunAsNonRoot:       new(true),
 							RunAsUser:          ptr.To[int64](1001),
 							RunAsGroup:         ptr.To[int64](2001),
 							FSGroup:            ptr.To[int64](1),
@@ -330,8 +330,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									ReadOnlyRootFilesystem:   ptr.To(true),
+									AllowPrivilegeEscalation: new(false),
+									ReadOnlyRootFilesystem:   new(true),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -411,9 +411,9 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									TimeoutSeconds:      int32(30),
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									ReadOnlyRootFilesystem:   ptr.To(true),
-									RunAsNonRoot:             ptr.To(true),
+									AllowPrivilegeEscalation: new(false),
+									ReadOnlyRootFilesystem:   new(true),
+									RunAsNonRoot:             new(true),
 									RunAsUser:                ptr.To[int64](1001),
 									RunAsGroup:               ptr.To[int64](2001),
 									SeccompProfile: &corev1.SeccompProfile{

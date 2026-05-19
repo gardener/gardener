@@ -134,8 +134,8 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *victoriametricsv1.V
 				},
 			},
 			CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
-				DisableSelfServiceScrape: ptr.To(true),
-				UseStrictSecurity:        ptr.To(true),
+				DisableSelfServiceScrape: new(true),
+				UseStrictSecurity:        new(true),
 				Image: victoriametricsv1beta1.Image{
 					Repository: imageRepo,
 					Tag:        imageTag,
@@ -147,10 +147,10 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *victoriametricsv1.V
 						corev1.ResourceMemory: resource.MustParse("100M"),
 					},
 				},
-				UseDefaultResources: ptr.To(false),
+				UseDefaultResources: new(false),
 			},
 			CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
-				ReplicaCount:      ptr.To(v.values.Replicas),
+				ReplicaCount:      new(v.values.Replicas),
 				PriorityClassName: v.values.PriorityClassName,
 			},
 			RetentionPeriod: "15d",
@@ -258,7 +258,7 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("victoria-logs"),
+						Replacement: new("victoria-logs"),
 						TargetLabel: "job",
 					},
 					{

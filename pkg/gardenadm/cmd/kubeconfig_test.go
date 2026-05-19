@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
@@ -26,7 +25,7 @@ var _ = Describe("Kubeconfig", func() {
 			var kubeconfig *string
 
 			BeforeEach(func() {
-				kubeconfig = ptr.To("")
+				kubeconfig = new("")
 			})
 
 			It("should do nothing when the value is already set", func() {

@@ -14,7 +14,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -78,8 +77,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs:  []corev1.LocalObjectReference{},
-					Class:       ptr.To("seed"),
-					KeepObjects: ptr.To(false),
+					Class:       new("seed"),
+					KeepObjects: new(false),
 				},
 			}
 		)

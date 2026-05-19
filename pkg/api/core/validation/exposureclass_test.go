@@ -11,7 +11,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -21,7 +20,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	var (
 		exposureClass          *core.ExposureClass
 		defaultTestTolerations = []core.Toleration{
-			{Key: "test", Value: ptr.To("foo")},
+			{Key: "test", Value: new("foo")},
 		}
 	)
 
@@ -129,8 +128,8 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
+				{Key: "bar", Value: new("baz")},
 			}
 			errorList := ValidateExposureClass(exposureClass)
 

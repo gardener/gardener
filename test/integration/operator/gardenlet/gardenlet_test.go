@@ -73,7 +73,7 @@ var _ = Describe("Gardenlet controller test", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 				},
 			},
 		}

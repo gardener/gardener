@@ -72,7 +72,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				Namespace: f.namespace,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -209,7 +209,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  f.values.PriorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
+							RunAsNonRoot: new(true),
 							RunAsUser:    ptr.To[int64](65532),
 							RunAsGroup:   ptr.To[int64](65532),
 							FSGroup:      ptr.To[int64](65532),
@@ -241,7 +241,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{

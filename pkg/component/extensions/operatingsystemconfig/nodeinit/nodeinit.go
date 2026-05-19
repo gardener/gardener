@@ -56,7 +56,7 @@ func Config(
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: machinecontroller.BootstrapTokenPlaceholder,
 					},
-					TransmitUnencoded: ptr.To(true),
+					TransmitUnencoded: new(true),
 				},
 			},
 			{
@@ -76,7 +76,7 @@ func Config(
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: machinecontroller.MachineNamePlaceholder,
 					},
-					TransmitUnencoded: ptr.To(true),
+					TransmitUnencoded: new(true),
 				},
 			},
 		}
@@ -129,8 +129,8 @@ func generateInitScriptUnit(unitName, binaryName, filePath string) extensionsv1a
 	return extensionsv1alpha1.Unit{
 		Name:    unitName,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=Downloads the ` + binaryName + ` binary from the container registry and bootstraps it.
 Requires=containerd.service
 After=containerd.service

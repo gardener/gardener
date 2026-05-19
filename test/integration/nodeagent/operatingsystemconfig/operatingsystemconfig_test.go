@@ -103,7 +103,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 			},
 			Controller: controllerconfig.Controller{
-				SkipNameValidation: ptr.To(true),
+				SkipNameValidation: new(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -266,15 +266,15 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
-			Enable:  ptr.To(false),
-			Content: ptr.To("#gna"),
+			Enable:  new(false),
+			Content: new("#gna"),
 		}
 
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
-			Enable:  ptr.To(true),
+			Enable:  new(true),
 			Command: ptr.To(extensionsv1alpha1.CommandStart),
-			Content: ptr.To("#unit1"),
+			Content: new("#unit1"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
 				Content: "#unit1drop",
@@ -282,9 +282,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit2 = extensionsv1alpha1.Unit{
 			Name:    "unit2",
-			Enable:  ptr.To(false),
+			Enable:  new(false),
 			Command: ptr.To(extensionsv1alpha1.CommandStop),
-			Content: ptr.To("#unit2"),
+			Content: new("#unit2"),
 		}
 		unit3 = extensionsv1alpha1.Unit{
 			Name: "unit3",
@@ -296,9 +296,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit4 = extensionsv1alpha1.Unit{
 			Name:    "unit4",
-			Enable:  ptr.To(true),
+			Enable:  new(true),
 			Command: ptr.To(extensionsv1alpha1.CommandStart),
-			Content: ptr.To("#unit4"),
+			Content: new("#unit4"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
 				Content: "#unit4drop",
@@ -306,9 +306,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit5 = extensionsv1alpha1.Unit{
 			Name:    "unit5",
-			Enable:  ptr.To(true),
+			Enable:  new(true),
 			Command: ptr.To(extensionsv1alpha1.CommandStart),
-			Content: ptr.To("#unit5"),
+			Content: new("#unit5"),
 			DropIns: []extensionsv1alpha1.DropIn{
 				{
 					Name:    "drop1",
@@ -329,21 +329,21 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		unit6 = extensionsv1alpha1.Unit{
 			Name:      "unit6",
-			Enable:    ptr.To(true),
-			Content:   ptr.To("#unit6"),
+			Enable:    new(true),
+			Content:   new("#unit6"),
 			FilePaths: []string{file3.Path},
 		}
 		unit7 = extensionsv1alpha1.Unit{
 			Name:      "unit7",
-			Enable:    ptr.To(true),
-			Content:   ptr.To("#unit7"),
+			Enable:    new(true),
+			Content:   new("#unit7"),
 			FilePaths: []string{file5.Path},
 		}
 		unit8 = extensionsv1alpha1.Unit{
 			Name:      "unit8",
-			Enable:    ptr.To(true),
+			Enable:    new(true),
 			Command:   ptr.To(extensionsv1alpha1.CommandStart),
-			Content:   ptr.To("#unit8"),
+			Content:   new("#unit8"),
 			FilePaths: []string{file6.Path},
 		}
 		unit9 = extensionsv1alpha1.Unit{
@@ -373,7 +373,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		registryConfig1 = extensionsv1alpha1.RegistryConfig{
 			Upstream: "_default",
-			Server:   ptr.To("https://registry.hub.docker.com"),
+			Server:   new("https://registry.hub.docker.com"),
 			Hosts: []extensionsv1alpha1.RegistryHost{
 				{URL: "https://10.10.10.100:8080"},
 				{URL: "https://10.10.10.200:8080"},
@@ -381,13 +381,13 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		registryConfig2 = extensionsv1alpha1.RegistryConfig{
 			Upstream: "registry.k8s.io",
-			Server:   ptr.To("https://registry.k8s.io"),
+			Server:   new("https://registry.k8s.io"),
 			Hosts: []extensionsv1alpha1.RegistryHost{
 				{
 					URL:          "https://10.10.10.101:8080",
 					Capabilities: []extensionsv1alpha1.RegistryCapability{"pull"},
 					CACerts:      []string{"/var/certs/ca.crt"},
-					OverridePath: ptr.To(true),
+					OverridePath: new(true),
 				},
 			},
 		}
@@ -568,7 +568,7 @@ units: {}
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
 		operatingSystemConfig.Spec.Units[0].Command = ptr.To(extensionsv1alpha1.CommandStop)
-		operatingSystemConfig.Spec.Units[1].Enable = ptr.To(true)
+		operatingSystemConfig.Spec.Units[1].Enable = new(true)
 		operatingSystemConfig.Spec.Units[1].Command = ptr.To(extensionsv1alpha1.CommandStart)
 		fakeDBus.InjectRestartFailure(fmt.Errorf("injected failure for unit2"), unit2.Name)
 
@@ -624,10 +624,10 @@ units: {}
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
 		// remove existingUnitDropIn, so the drop-in file should be removed, but the existing unit should not be affected
 		// remove containerd drop-in extension unit, the other containerd drop-in should not be affected
-		unit2.Enable = ptr.To(true)
+		unit2.Enable = new(true)
 		unit2.Command = ptr.To(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
-		unit4.Enable = ptr.To(false)
+		unit4.Enable = new(false)
 		unit4.DropIns = nil
 		unit5.DropIns = unit5.DropIns[1:]
 		unit6.FilePaths = nil
@@ -1091,7 +1091,7 @@ metadata:
   annotations:
     gardener.cloud/config.mirror: abc
 `}},
-						HostName: ptr.To("some-other-hostname"),
+						HostName: new("some-other-hostname"),
 					})
 				})
 
@@ -1129,8 +1129,8 @@ metadata:
 
 			kubeletUnit = extensionsv1alpha1.Unit{
 				Name:      "kubelet.service",
-				Enable:    ptr.To(true),
-				Content:   ptr.To("#kubelet"),
+				Enable:    new(true),
+				Content:   new("#kubelet"),
 				FilePaths: []string{kubeletFilePath, kubeletConfigFilePath},
 			}
 
@@ -1210,7 +1210,7 @@ kind: NodeAgentConfiguration
 			})
 
 			DeferCleanup(test.WithVars(
-				&operatingsystemconfig.GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) { return ptr.To("1.2.3"), nil },
+				&operatingsystemconfig.GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) { return new("1.2.3"), nil },
 				&operatingsystemconfig.KubeletHealthCheckRetryTimeout, 2*time.Second,
 				&operatingsystemconfig.KubeletHealthCheckRetryInterval, 200*time.Millisecond,
 				&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL,
@@ -1271,7 +1271,7 @@ kind: NodeAgentConfiguration
 			DeferCleanup(test.WithVar(&operatingsystemconfig.ExecCommandCombinedOutput, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 				// Simulate a successful OS update by returning the new OS version in GetOSVersion.
 				DeferCleanup(test.WithVars(
-					&operatingsystemconfig.GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) { return ptr.To("1.2.4"), nil },
+					&operatingsystemconfig.GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) { return new("1.2.4"), nil },
 				))
 				return []byte("OS update successful"), nil
 			}))

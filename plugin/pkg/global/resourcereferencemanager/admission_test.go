@@ -305,8 +305,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:       &cloudProfileName,
 					SeedName:               &seedName,
-					SecretBindingName:      ptr.To(bindingName),
-					CredentialsBindingName: ptr.To(credentialsBindingName),
+					SecretBindingName:      new(bindingName),
+					CredentialsBindingName: new(credentialsBindingName),
 					Kubernetes: core.Kubernetes{
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							AuditConfig: &core.AuditConfig{
@@ -1499,7 +1499,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				It("should reject because the referenced cloud profile does not exist (update)", func() {
 					oldShoot := coreShoot.DeepCopy()
-					oldShoot.Spec.CloudProfileName = ptr.To("")
+					oldShoot.Spec.CloudProfileName = new("")
 
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
@@ -1583,7 +1583,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				oldShoot := coreShoot.DeepCopy()
-				oldShoot.Spec.SecretBindingName = ptr.To("")
+				oldShoot.Spec.SecretBindingName = new("")
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
@@ -1849,7 +1849,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 						AdmissionPlugins: []core.AdmissionPlugin{{
 							Name:                 "ValidatingAdmissionWebhook",
-							KubeconfigSecretName: ptr.To("foo"),
+							KubeconfigSecretName: new("foo"),
 						}},
 					}
 				}, "failed to resolve admission plugin kubeconfig secret reference")
@@ -2212,13 +2212,13 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for Project objects", func() {
 			It("should allow specifying a namespace which is not in use (create)", func() {
-				project.Spec.Namespace = ptr.To("garden-foo")
+				project.Spec.Namespace = new("garden-foo")
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
-				projectCopy.Spec.Namespace = ptr.To("garden-bar")
+				projectCopy.Spec.Namespace = new("garden-bar")
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				coreProject.Spec.Namespace = new("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -2229,14 +2229,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should allow specifying a namespace which is not in use (update)", func() {
 				projectOld := project.DeepCopy()
 				projectCopy := project.DeepCopy()
-				project.Spec.Namespace = ptr.To("garden-foo")
+				project.Spec.Namespace = new("garden-foo")
 				projectCopy.Name = "project-2"
-				projectCopy.Spec.Namespace = ptr.To("garden-bar")
+				projectCopy.Spec.Namespace = new("garden-bar")
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
 				coreProjectOld := coreProject.DeepCopy()
-				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				coreProject.Spec.Namespace = new("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, coreProjectOld, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -2258,11 +2258,11 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should forbid specifying a namespace which is already used by another project (create)", func() {
 				projectCopy := project.DeepCopy()
-				projectCopy.Spec.Namespace = ptr.To("garden-foo")
+				projectCopy.Spec.Namespace = new("garden-foo")
 				projectCopy.Name = "project-2"
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
-				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				coreProject.Spec.Namespace = new("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -2277,14 +2277,14 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should forbid specifying a namespace which is already used by another project (update)", func() {
 				projectOld := project.DeepCopy()
-				project.Spec.Namespace = ptr.To("garden-foo")
+				project.Spec.Namespace = new("garden-foo")
 				projectCopy := project.DeepCopy()
 				projectCopy.Name = "project-2"
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectOld)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
 
 				coreProjectOld := coreProject
-				coreProject.Spec.Namespace = ptr.To("garden-foo")
+				coreProject.Spec.Namespace = new("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, &coreProjectOld, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -2307,7 +2307,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			shootOne := shoot.DeepCopy()
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
-			shootOne.Spec.CloudProfileName = ptr.To("aws-profile")
+			shootOne.Spec.CloudProfileName = new("aws-profile")
 			shootOne.Spec.Kubernetes.Version = "1.24.2"
 
 			shootTwo := shootOne.DeepCopy()
@@ -2540,14 +2540,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			shootOne := shoot.DeepCopy()
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
-			shootOne.Spec.CloudProfileName = ptr.To("aws-profile")
+			shootOne.Spec.CloudProfileName = new("aws-profile")
 			shootOne.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 				{
 					Name: "coreos-worker",
 					Machine: gardencorev1beta1.Machine{
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "coreos",
-							Version: ptr.To("1.17.3"),
+							Version: new("1.17.3"),
 						},
 					},
 				},
@@ -2561,7 +2561,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Machine: gardencorev1beta1.Machine{
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "ubuntu",
-							Version: ptr.To("1.17.2"),
+							Version: new("1.17.2"),
 						},
 					},
 				},
@@ -2570,7 +2570,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Machine: gardencorev1beta1.Machine{
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "ubuntu",
-							Version: ptr.To("1.17.1"),
+							Version: new("1.17.1"),
 						},
 					},
 				},
@@ -2754,7 +2754,7 @@ var _ = Describe("resourcereferencemanager", func() {
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name: "dummy",
 								// version does not matter for this test, as image does not exist
-								Version: ptr.To("1.1.1"),
+								Version: new("1.1.1"),
 							},
 						},
 					},
@@ -2763,7 +2763,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "ubuntu",
-								Version: ptr.To("1.17.2"),
+								Version: new("1.17.2"),
 							},
 						},
 					},
@@ -2877,7 +2877,7 @@ var _ = Describe("resourcereferencemanager", func() {
 									{
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version:        "1.16.0",
-											ExpirationDate: ptr.To(metav1.Now()),
+											ExpirationDate: new(metav1.Now()),
 										},
 									},
 								},
@@ -2936,7 +2936,7 @@ var _ = Describe("resourcereferencemanager", func() {
 									{
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version:        "1.16.0",
-											ExpirationDate: ptr.To(metav1.Now()),
+											ExpirationDate: new(metav1.Now()),
 										},
 									},
 								},
@@ -2999,7 +2999,7 @@ var _ = Describe("resourcereferencemanager", func() {
 									{
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version:        "1.16.0",
-											ExpirationDate: ptr.To(metav1.Now()),
+											ExpirationDate: new(metav1.Now()),
 										},
 									},
 								},
@@ -3046,7 +3046,7 @@ var _ = Describe("resourcereferencemanager", func() {
 									{
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version:        "1.15.0",
-											ExpirationDate: ptr.To(metav1.Now()),
+											ExpirationDate: new(metav1.Now()),
 										},
 									},
 								},
@@ -3167,7 +3167,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "coreos",
-								Version: ptr.To("1.17.3"),
+								Version: new("1.17.3"),
 							},
 						},
 					},
@@ -3183,7 +3183,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "ubuntu",
-								Version: ptr.To("1.17.2"),
+								Version: new("1.17.2"),
 							},
 						},
 					},
@@ -3194,7 +3194,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "ubuntu",
-								Version: ptr.To("1.17.1"),
+								Version: new("1.17.1"),
 							},
 						},
 					},
@@ -3203,7 +3203,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept if referencing shoots limits are within the accepted range", func() {
 				cloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(12)),
+					MaxNodesTotal: new(int32(12)),
 				}
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
@@ -3218,10 +3218,10 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should fail if referencing shoots limits are not within the accepted range", func() {
 				shootOne.Spec.Provider.Workers[0].Minimum = 7
 				oldCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(12)),
+					MaxNodesTotal: new(int32(12)),
 				}
 				cloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(5)),
+					MaxNodesTotal: new(int32(5)),
 				}
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
@@ -3241,7 +3241,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should fail if shoots referencing a descendant NamespacedCloudProfile have limits that are not within the accepted range", func() {
 				shootOne.Spec.Provider.Workers[0].Minimum = 7
 				cloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(5)),
+					MaxNodesTotal: new(int32(5)),
 				}
 				shootOne.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
@@ -3699,7 +3699,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject for the complete Kubernetes section being removed with Shoots using overridden versions rendering expired afterwards", func() {
-				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(-48 * time.Hour)})}}
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(-48 * time.Hour)})}}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3709,7 +3709,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 					Spec: core.NamespacedCloudProfileSpec{
 						Parent:     core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
-						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(96 * time.Hour)})}}},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(96 * time.Hour)})}}},
 					},
 				}
 
@@ -3793,7 +3793,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "coreos",
-								Version: ptr.To("1.17.3"),
+								Version: new("1.17.3"),
 							},
 						},
 					},
@@ -3940,7 +3940,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "coreos",
-								Version: ptr.To("1.1.2"),
+								Version: new("1.1.2"),
 							},
 						},
 					},
@@ -3984,7 +3984,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "custom-namespaced-image",
-								Version: ptr.To("1.1.2"),
+								Version: new("1.1.2"),
 							},
 						},
 					},
@@ -4108,7 +4108,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				projectNamespace = "test-project"
 
 				cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-					MaxNodesTotal: ptr.To(int32(12)),
+					MaxNodesTotal: new(int32(12)),
 				}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
@@ -4139,7 +4139,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "coreos",
-								Version: ptr.To("1.17.3"),
+								Version: new("1.17.3"),
 							},
 						},
 					},
@@ -4156,7 +4156,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "ubuntu",
-								Version: ptr.To("1.17.2"),
+								Version: new("1.17.2"),
 							},
 						},
 					},
@@ -4167,7 +4167,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						Machine: gardencorev1beta1.Machine{
 							Image: &gardencorev1beta1.ShootMachineImage{
 								Name:    "ubuntu",
-								Version: ptr.To("1.17.1"),
+								Version: new("1.17.1"),
 							},
 						},
 					},
@@ -4176,7 +4176,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept if referencing shoots limits are within the accepted range", func() {
 				namespacedCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(12)),
+					MaxNodesTotal: new(int32(12)),
 				}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
@@ -4190,10 +4190,10 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should fail if referencing shoots limits are not within the accepted range", func() {
 				shootTwo.Spec.Provider.Workers[0].Minimum = 7
 				oldNamespacedCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(12)),
+					MaxNodesTotal: new(int32(12)),
 				}
 				namespacedCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To(int32(5)),
+					MaxNodesTotal: new(int32(5)),
 				}
 
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())

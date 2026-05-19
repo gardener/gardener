@@ -20,7 +20,6 @@ import (
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	apiservervalidation "k8s.io/apiserver/pkg/apis/apiserver/validation"
 	authorizationcel "k8s.io/apiserver/pkg/authorization/cel"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -45,7 +44,7 @@ func AddToManager(mgr manager.Manager) error {
 			mgr.GetClient(),
 			admission.NewDecoder(mgr.GetScheme()),
 		),
-		RecoverPanic: ptr.To(true),
+		RecoverPanic: new(true),
 	}
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)

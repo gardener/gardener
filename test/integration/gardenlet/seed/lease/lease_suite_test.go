@@ -136,7 +136,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
+				Nodes:    new("10.2.0.0/16"),
 			},
 		},
 	}
@@ -171,7 +171,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

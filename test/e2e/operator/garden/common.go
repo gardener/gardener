@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,7 +33,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 
 	var bucketName *string
 	if specifyBackupBucket {
-		bucketName = ptr.To("gardener-operator/" + name)
+		bucketName = new("gardener-operator/" + name)
 	}
 
 	return &operatorv1alpha1.Garden{
@@ -63,19 +62,19 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 				Ingress: operatorv1alpha1.Ingress{
 					Domains: []operatorv1alpha1.DNSDomain{{
 						Name:     "ingress.runtime-garden.local.gardener.cloud",
-						Provider: ptr.To("primary"),
+						Provider: new("primary"),
 					}},
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},
 				},
 				Provider: operatorv1alpha1.Provider{
-					Region: ptr.To("local"),
+					Region: new("local"),
 					Zones:  []string{"0", "1", "2"},
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 					TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
 						Enabled: true,
@@ -89,14 +88,14 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 				DNS: operatorv1alpha1.DNS{
 					Domains: []operatorv1alpha1.DNSDomain{{
 						Name:     "virtual-garden.local.gardener.cloud",
-						Provider: ptr.To("primary"),
+						Provider: new("primary"),
 					}},
 				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							Region:     ptr.To("local"),
+							Region:     new("local"),
 							BucketName: bucketName,
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,
@@ -114,7 +113,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 					DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
 						Domain: &operatorv1alpha1.DNSDomain{
 							Name:     "discovery.local.gardener.cloud",
-							Provider: ptr.To("primary"),
+							Provider: new("primary"),
 						},
 					},
 				},

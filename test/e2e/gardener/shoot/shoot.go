@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -115,7 +114,7 @@ func ItShouldHibernateShoot(s *ShootContext) {
 	It("Hibernate Shoot", func(ctx SpecContext) {
 		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 			}
 		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))
@@ -128,7 +127,7 @@ func ItShouldWakeUpShoot(s *ShootContext) {
 	It("Wake Up Shoot", func(ctx SpecContext) {
 		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 			}
 		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))

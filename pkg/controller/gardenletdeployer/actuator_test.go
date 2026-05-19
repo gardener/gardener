@@ -183,7 +183,7 @@ var _ = Describe("Interface", func() {
 				},
 			},
 			Bootstrap:       ptr.To(seedmanagementv1alpha1.BootstrapToken),
-			MergeWithParent: ptr.To(true),
+			MergeWithParent: new(true),
 		}
 
 		gardenNamespace = &corev1.Namespace{
@@ -251,8 +251,8 @@ var _ = Describe("Interface", func() {
 		expectMergeWithParent = func() {
 			mergedDeployment = managedSeed.Spec.Gardenlet.Deployment.DeepCopy()
 			mergedDeployment.Image = &seedmanagementv1alpha1.Image{
-				Repository: ptr.To("repository"),
-				Tag:        ptr.To("tag"),
+				Repository: new("repository"),
+				Tag:        new("tag"),
 				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}
 

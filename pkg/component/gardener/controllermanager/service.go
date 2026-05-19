@@ -40,7 +40,7 @@ func (g *gardenerControllerManager) service() *corev1.Service {
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(metricsPort)),
+		Port:     new(intstr.FromInt32(metricsPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -299,9 +298,9 @@ var _ = Describe("ExtensionValidator", func() {
 			Spec: core.ShootSpec{
 				DNS: &core.DNS{
 					Providers: []core.DNSProvider{
-						{Type: ptr.To("foo-1")},
-						{Type: ptr.To("foo0")},
-						{Type: ptr.To("unmanaged")},
+						{Type: new("foo-1")},
+						{Type: new("foo0")},
+						{Type: new("unmanaged")},
 					},
 				},
 				Extensions: []core.Extension{
@@ -309,7 +308,7 @@ var _ = Describe("ExtensionValidator", func() {
 					{Type: "foo2"},
 				},
 				Networking: &core.Networking{
-					Type: ptr.To("foo3"),
+					Type: new("foo3"),
 				},
 				Provider: core.Provider{
 					Type: "foo4",
@@ -323,7 +322,7 @@ var _ = Describe("ExtensionValidator", func() {
 							ControlPlane: &core.WorkerControlPlane{
 								Exposure: &core.Exposure{
 									Extension: &core.ExtensionExposure{
-										Type: ptr.To("foo-exposure"),
+										Type: new("foo-exposure"),
 									},
 								},
 							},
@@ -426,7 +425,7 @@ var _ = Describe("ExtensionValidator", func() {
 			It("should prevent the object from being created because the extension type doesn't support workerless Shoots", func() {
 				var (
 					nonSupportedType      = "non-supported"
-					nonSupportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, ptr.To(false))
+					nonSupportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, new(false))
 
 					shoot = &core.Shoot{
 						Spec: core.ShootSpec{
@@ -477,7 +476,7 @@ var _ = Describe("ExtensionValidator", func() {
 			It("should allow object creation because the extension type supports workerless Shoots", func() {
 				var (
 					supportedType      = "supported"
-					supportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, ptr.To(true))
+					supportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, new(true))
 					shoot              = &core.Shoot{
 						Spec: core.ShootSpec{
 							Extensions: []core.Extension{

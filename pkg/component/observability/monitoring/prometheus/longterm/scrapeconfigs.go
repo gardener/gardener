@@ -26,7 +26,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("prometheus-" + Label),
+					Replacement: new("prometheus-" + Label),
 					TargetLabel: "job",
 				}},
 			},
@@ -39,7 +39,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("cortex-frontend"),
+					Replacement: new("cortex-frontend"),
 					TargetLabel: "job",
 				}},
 			},
@@ -47,9 +47,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + garden.Label},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels:     ptr.To(false),
-				HonorTimestamps: ptr.To(true),
-				MetricsPath:     ptr.To("/federate"),
+				HonorLabels:     new(false),
+				HonorTimestamps: new(true),
+				MetricsPath:     new("/federate"),
 				Params: map[string][]string{
 					"match[]": {
 						`{__name__="garden_shoot_info"}`,

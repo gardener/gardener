@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -52,7 +51,7 @@ var _ = Describe("Seed Care controller tests", func() {
 				},
 			},
 			Controller: controllerconfig.Controller{
-				SkipNameValidation: ptr.To(true),
+				SkipNameValidation: new(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -120,7 +119,7 @@ var _ = Describe("Seed Care controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 				},
 			},
 		}
@@ -151,7 +150,7 @@ var _ = Describe("Seed Care controller tests", func() {
 					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:      ptr.To("seed"),
+					Class:      new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
 				},
 			}

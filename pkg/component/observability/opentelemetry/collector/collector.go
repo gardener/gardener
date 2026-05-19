@@ -267,7 +267,7 @@ func (o *otelCollector) serviceAccount() *corev1.ServiceAccount {
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -323,7 +323,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 					// job label, prometheus-operator would choose job=logging (service name).
 					{
 						Action:      "replace",
-						Replacement: ptr.To("opentelemetry-collector"),
+						Replacement: new("opentelemetry-collector"),
 						TargetLabel: "job",
 					},
 					{
@@ -354,7 +354,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			},
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:             o.values.Image,
-				Replicas:          ptr.To(o.values.Replicas),
+				Replicas:          new(o.values.Replicas),
 				PriorityClassName: o.values.PriorityClassName,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
@@ -363,7 +363,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 				},
 				ServiceAccount: collectorconstants.ServiceAccountName,
 			},
@@ -583,11 +583,11 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 					RunAsUser:                ptr.To[int64](65532),
 					RunAsGroup:               ptr.To[int64](65534),
-					RunAsNonRoot:             ptr.To(true),
-					ReadOnlyRootFilesystem:   ptr.To(true),
+					RunAsNonRoot:             new(true),
+					ReadOnlyRootFilesystem:   new(true),
 				},
 			},
 			{
@@ -612,11 +612,11 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 					RunAsUser:                ptr.To[int64](65532),
 					RunAsGroup:               ptr.To[int64](65534),
-					RunAsNonRoot:             ptr.To(true),
-					ReadOnlyRootFilesystem:   ptr.To(true),
+					RunAsNonRoot:             new(true),
+					ReadOnlyRootFilesystem:   new(true),
 				},
 			},
 		}

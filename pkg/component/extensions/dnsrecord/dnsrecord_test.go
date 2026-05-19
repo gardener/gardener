@@ -80,11 +80,11 @@ var _ = Describe("DNSRecord", func() {
 			Namespace:         namespace,
 			SecretName:        secretName,
 			Type:              extensionType,
-			Zone:              ptr.To(zone),
+			Zone:              new(zone),
 			DNSName:           dnsName,
 			RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 			Values:            []string{address},
-			TTL:               ptr.To(ttl),
+			TTL:               new(ttl),
 			AnnotateOperation: true,
 		}
 
@@ -108,11 +108,11 @@ var _ = Describe("DNSRecord", func() {
 					Name:      secretName,
 					Namespace: namespace,
 				},
-				Zone:       ptr.To(zone),
+				Zone:       new(zone),
 				Name:       dnsName,
 				RecordType: extensionsv1alpha1.DNSRecordTypeA,
 				Values:     []string{address},
-				TTL:        ptr.To(ttl),
+				TTL:        new(ttl),
 			},
 		}
 		secret = &corev1.Secret{
@@ -672,7 +672,7 @@ var _ = Describe("DNSRecord", func() {
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			},
 				Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
-				Entry("zone changes", func() { values.Zone = ptr.To("new-zone") }, func() { expectedDNSRecord.Spec.Zone = ptr.To("new-zone") }),
+				Entry("zone changes", func() { values.Zone = new("new-zone") }, func() { expectedDNSRecord.Spec.Zone = new("new-zone") }),
 				Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
 				Entry("TTL changes", func() { values.TTL = ptr.To[int64](1337) }, func() { expectedDNSRecord.Spec.TTL = ptr.To[int64](1337) }),
 				Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
@@ -823,7 +823,7 @@ var _ = Describe("DNSRecord", func() {
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Kind:  extensionsv1alpha1.DNSRecordResource,
-							Name:  ptr.To(name),
+							Name:  new(name),
 							State: state,
 						},
 					},

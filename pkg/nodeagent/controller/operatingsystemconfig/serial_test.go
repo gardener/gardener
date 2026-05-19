@@ -91,8 +91,8 @@ var _ = Describe("#newLeaderElectorForSecret", func() {
 			Kind:               "Secret",
 			Name:               "test-secret",
 			UID:                "test-uid",
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(true),
+			Controller:         new(true),
+			BlockOwnerDeletion: new(true),
 		}))
 	})
 })
@@ -119,7 +119,7 @@ var _ = Describe("leaderElector", func() {
 
 	Describe("#acquiredByMe", func() {
 		It("should return true when HolderIdentity matches identity", func() {
-			le.lease.Spec.HolderIdentity = ptr.To(identity)
+			le.lease.Spec.HolderIdentity = new(identity)
 			Expect(le.acquiredByMe()).To(BeTrue())
 		})
 
@@ -128,12 +128,12 @@ var _ = Describe("leaderElector", func() {
 		})
 
 		It("should return false when HolderIdentity is another identity", func() {
-			le.lease.Spec.HolderIdentity = ptr.To("other")
+			le.lease.Spec.HolderIdentity = new("other")
 			Expect(le.acquiredByMe()).To(BeFalse())
 		})
 
 		It("should return false when HolderIdentity is empty string", func() {
-			le.lease.Spec.HolderIdentity = ptr.To("")
+			le.lease.Spec.HolderIdentity = new("")
 			Expect(le.acquiredByMe()).To(BeFalse())
 		})
 	})
@@ -144,17 +144,17 @@ var _ = Describe("leaderElector", func() {
 		})
 
 		It("should return false when HolderIdentity is empty", func() {
-			le.lease.Spec.HolderIdentity = ptr.To("")
+			le.lease.Spec.HolderIdentity = new("")
 			Expect(le.acquiredByAnotherInstance()).To(BeFalse())
 		})
 
 		It("should return false when HolderIdentity is own identity", func() {
-			le.lease.Spec.HolderIdentity = ptr.To(identity)
+			le.lease.Spec.HolderIdentity = new(identity)
 			Expect(le.acquiredByAnotherInstance()).To(BeFalse())
 		})
 
 		It("should return true when HolderIdentity is a different non-empty identity", func() {
-			le.lease.Spec.HolderIdentity = ptr.To("other")
+			le.lease.Spec.HolderIdentity = new("other")
 			Expect(le.acquiredByAnotherInstance()).To(BeTrue())
 		})
 	})
@@ -245,11 +245,11 @@ var _ = Describe("leaderElector", func() {
 		It("should reload an existing lease", func() {
 			existing := &coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{Name: lease.Name, Namespace: lease.Namespace},
-				Spec:       coordinationv1.LeaseSpec{HolderIdentity: ptr.To("some-holder")},
+				Spec:       coordinationv1.LeaseSpec{HolderIdentity: new("some-holder")},
 			}
 			Expect(fakeClient.Create(ctx, existing)).To(Succeed())
 			Expect(le.reload(ctx)).To(Succeed())
-			Expect(le.lease.Spec.HolderIdentity).To(Equal(ptr.To("some-holder")))
+			Expect(le.lease.Spec.HolderIdentity).To(Equal(new("some-holder")))
 		})
 
 		It("should not error when lease does not exist (IgnoreNotFound)", func() {
@@ -264,7 +264,7 @@ var _ = Describe("leaderElector", func() {
 				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-				Expect(lease.Spec.HolderIdentity).To(Equal(ptr.To(identity)))
+				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
 				Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(600))))
 				Expect(lease.Spec.AcquireTime).NotTo(BeNil())
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
@@ -274,7 +274,7 @@ var _ = Describe("leaderElector", func() {
 
 			It("should not overwrite AcquireTime when already the holder", func() {
 				acquireTime := now.Add(-5 * time.Minute)
-				le.lease.Spec.HolderIdentity = ptr.To(identity)
+				le.lease.Spec.HolderIdentity = new(identity)
 				le.lease.Spec.LeaseDurationSeconds = ptr.To[int32](600)
 				le.lease.Spec.AcquireTime = &metav1.MicroTime{Time: acquireTime}
 
@@ -286,13 +286,13 @@ var _ = Describe("leaderElector", func() {
 			})
 
 			It("should reset AcquireTime when taking over from another holder", func() {
-				le.lease.Spec.HolderIdentity = ptr.To("other")
+				le.lease.Spec.HolderIdentity = new("other")
 				le.lease.Spec.AcquireTime = &metav1.MicroTime{Time: now.Add(-10 * time.Minute)}
 
 				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-				Expect(lease.Spec.HolderIdentity).To(Equal(ptr.To(identity)))
+				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
 				Expect(lease.Spec.RenewTime.UTC()).To(Equal(now.UTC()))
 			})
@@ -307,7 +307,7 @@ var _ = Describe("leaderElector", func() {
 				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-				Expect(lease.Spec.HolderIdentity).To(Equal(ptr.To(identity)))
+				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
 				Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(600))))
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
 				Expect(lease.Spec.RenewTime.UTC()).To(Equal(now.UTC()))
@@ -315,7 +315,7 @@ var _ = Describe("leaderElector", func() {
 
 			It("should only update RenewTime when already the holder", func() {
 				acquireTime := now.Add(-5 * time.Minute)
-				le.lease.Spec.HolderIdentity = ptr.To(identity)
+				le.lease.Spec.HolderIdentity = new(identity)
 				le.lease.Spec.LeaseDurationSeconds = ptr.To[int32](600)
 				le.lease.Spec.AcquireTime = &metav1.MicroTime{Time: acquireTime}
 				Expect(fakeClient.Update(ctx, le.lease)).To(Succeed())
@@ -336,18 +336,18 @@ var _ = Describe("leaderElector", func() {
 		})
 
 		It("should do nothing when not the holder", func() {
-			le.lease.Spec.HolderIdentity = ptr.To("other")
+			le.lease.Spec.HolderIdentity = new("other")
 			Expect(fakeClient.Create(ctx, le.lease)).To(Succeed())
 
 			Expect(le.release(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
-			Expect(lease.Spec.HolderIdentity).To(Equal(ptr.To("other")))
+			Expect(lease.Spec.HolderIdentity).To(Equal(new("other")))
 		})
 
 		It("should clear all lease spec fields when the current holder releases", func() {
 			t := metav1.NewMicroTime(now)
-			le.lease.Spec.HolderIdentity = ptr.To(identity)
+			le.lease.Spec.HolderIdentity = new(identity)
 			le.lease.Spec.LeaseDurationSeconds = ptr.To[int32](600)
 			le.lease.Spec.AcquireTime = &t
 			le.lease.Spec.RenewTime = &t

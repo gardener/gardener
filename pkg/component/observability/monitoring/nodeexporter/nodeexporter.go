@@ -294,7 +294,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		service = &corev1.Service{
@@ -358,9 +358,9 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						HostPID:                      true,
 						PriorityClassName:            "system-cluster-critical",
 						ServiceAccountName:           serviceAccount.Name,
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
+							RunAsNonRoot: new(true),
 							RunAsUser:    ptr.To[int64](65534),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -429,7 +429,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{

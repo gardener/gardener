@@ -85,7 +85,7 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{
@@ -160,7 +160,7 @@ var _ = Describe("VpnSeedServer", func() {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Add: []corev1.Capability{
 										"NET_ADMIN",
@@ -194,7 +194,7 @@ var _ = Describe("VpnSeedServer", func() {
 								"setup",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged: ptr.To(true),
+								Privileged: new(true),
 							},
 						},
 					},
@@ -318,7 +318,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{
 								"all",
@@ -379,7 +379,7 @@ var _ = Describe("VpnSeedServer", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To(values.Replicas),
+					Replicas:             new(values.Replicas),
 					RevisionHistoryLimit: ptr.To[int32](2),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: "vpn-seed-server",
@@ -615,7 +615,7 @@ var _ = Describe("VpnSeedServer", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To(jobName),
+							Replacement: new(jobName),
 							TargetLabel: "job",
 						},
 						{
@@ -708,7 +708,7 @@ var _ = Describe("VpnSeedServer", func() {
 		values = Values{
 			ImageAPIServerProxy: apiServerProxyImage,
 			ImageVPNSeedServer:  vpnSeedServerImage,
-			KubeAPIServerHost:   ptr.To("foo.bar"),
+			KubeAPIServerHost:   new("foo.bar"),
 			Network: NetworkValues{
 				PodCIDRs:     []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}},
 				ServiceCIDRs: []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}},

@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -24,7 +23,7 @@ import (
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
 	test := func(s *ShootContext) {
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
-		s.Shoot.Spec.SeedName = ptr.To(getSeedName(false))
+		s.Shoot.Spec.SeedName = new(getSeedName(false))
 
 		ItShouldCreateShoot(s)
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
@@ -64,7 +63,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 
 		It("Migrate Shoot", func(ctx SpecContext) {
 			patch := client.MergeFrom(s.Shoot.DeepCopy())
-			s.Shoot.Spec.SeedName = ptr.To(getSeedName(true))
+			s.Shoot.Spec.SeedName = new(getSeedName(true))
 			Eventually(ctx, func() error {
 				return s.GardenClient.SubResource("binding").Patch(ctx, s.Shoot, patch)
 			}).Should(Succeed())
@@ -108,7 +107,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	Context("Hibernated Shoot", Label("hibernated"), Ordered, func() {
 		shoot := DefaultShoot("e2e-mgr-hib")
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-			Enabled: ptr.To(true),
+			Enabled: new(true),
 		}
 		test(NewTestContext().ForShoot(shoot))
 	})

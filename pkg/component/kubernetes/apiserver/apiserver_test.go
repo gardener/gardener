@@ -262,7 +262,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Name: "cpu",
 							Target: autoscalingv2.MetricTarget{
 								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("6")),
+								AverageValue: new(resource.MustParse("6")),
 							},
 						},
 					},
@@ -272,7 +272,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Name: "memory",
 							Target: autoscalingv2.MetricTarget{
 								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("24G")),
+								AverageValue: new(resource.MustParse("24G")),
 							},
 						},
 					},
@@ -476,7 +476,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+						MaxUnavailable: new(intstr.FromInt32(1)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app":  "kubernetes",
@@ -519,11 +519,11 @@ var _ = Describe("KubeAPIServer", func() {
 							"metrics-scrape-target": "true",
 						}},
 						Endpoints: []monitoringv1.Endpoint{{
-							TargetPort: ptr.To(intstr.FromInt32(443)),
+							TargetPort: new(intstr.FromInt32(443)),
 							Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 									HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 										Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 											LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
@@ -875,7 +875,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
 					},
 				}
@@ -904,7 +904,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      secretAdmissionKubeconfigs.Data,
 					}))
 				})
@@ -941,7 +941,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      secretAdmissionKubeconfigs.Data,
 					}))
 				})
@@ -984,7 +984,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
@@ -1077,7 +1077,7 @@ resources:
 							},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      expectedSecretETCDEncryptionConfiguration.Data,
 					}))
 
@@ -1102,9 +1102,9 @@ resources:
 						},
 						Version: version,
 						SNI: SNIConfig{TLS: []TLSSNIConfig{
-							{SecretName: ptr.To("foo")},
+							{SecretName: new("foo")},
 							{Certificate: []byte("foo"), PrivateKey: []byte("bar")},
-							{SecretName: ptr.To("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+							{SecretName: new("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
 						}},
 					})
 
@@ -1127,7 +1127,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      expectedSecret.Data,
 					}))
 				})
@@ -1178,7 +1178,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1216,7 +1216,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1262,7 +1262,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      secretAuthorizationKubeconfigs.Data,
 					}))
 				})
@@ -1291,7 +1291,7 @@ plugins: null
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1386,7 +1386,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1472,7 +1472,7 @@ kubeConfigFile: ""
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1548,7 +1548,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1577,7 +1577,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
@@ -1612,7 +1612,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
@@ -1635,7 +1635,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1654,11 +1654,11 @@ rules:
 								"AnonymousAuthConfigurableEndpoints": true,
 							},
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: false,
 					}
@@ -1681,7 +1681,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1702,7 +1702,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1718,11 +1718,11 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: false,
 					}
@@ -1745,7 +1745,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1766,7 +1766,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1782,12 +1782,12 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(true),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: true,
 					}
@@ -1810,7 +1810,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1831,7 +1831,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1850,12 +1850,12 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AnonymousAuthenticationEnabled: ptr.To(false),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(false),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -1875,7 +1875,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1896,7 +1896,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1915,12 +1915,12 @@ rules:
 								"AnonymousAuthConfigurableEndpoints": false,
 							},
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(true),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -1940,7 +1940,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1961,7 +1961,7 @@ rules:
 									ClaimMappings: apiserverv1alpha1.ClaimMappings{
 										Username: apiserverv1alpha1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1977,12 +1977,12 @@ rules:
 									Issuer: apiserverv1beta1.Issuer{
 										URL:          "https://foo.com",
 										Audiences:    []string{"example-client-id"},
-										DiscoveryURL: ptr.To(""),
+										DiscoveryURL: new(""),
 									},
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -2001,8 +2001,8 @@ rules:
 								"AnonymousAuthConfigurableEndpoints": false,
 							},
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(true),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
@@ -2025,7 +2025,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -2043,7 +2043,7 @@ rules:
 								"StructuredAuthenticationConfiguration": false,
 							},
 						},
-						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						AuthenticationConfiguration: new(authenticationConfig),
 						Version:                     version,
 					})
 
@@ -2114,7 +2114,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2182,7 +2182,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2219,7 +2219,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2286,7 +2286,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2318,7 +2318,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapEgressSelector.Data,
 					}))
 				})
@@ -2776,7 +2776,7 @@ kind: AuthorizationConfiguration
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
-				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(ptr.To(true)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(new(true)))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsUser).To(PointTo(Equal(int64(65532))))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsGroup).To(PointTo(Equal(int64(65532))))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.FSGroup).To(PointTo(Equal(int64(65532))))
@@ -2854,7 +2854,7 @@ kind: AuthorizationConfiguration
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsNonRoot: ptr.To(false),
+						RunAsNonRoot: new(false),
 						RunAsUser:    ptr.To[int64](0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
@@ -2915,7 +2915,7 @@ kind: AuthorizationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
-				initContainer.SecurityContext.Privileged = ptr.To(true)
+				initContainer.SecurityContext.Privileged = new(true)
 				return initContainer
 			}
 
@@ -3000,7 +3000,7 @@ kind: AuthorizationConfiguration
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsNonRoot: ptr.To(false),
+						RunAsNonRoot: new(false),
 						RunAsGroup:   ptr.To[int64](0),
 						RunAsUser:    ptr.To[int64](0),
 						Capabilities: &corev1.Capabilities{
@@ -3153,7 +3153,7 @@ kind: AuthorizationConfiguration
 							AcceptedIssuers:       acceptedIssuers,
 							MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
 							ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
-							JWKSURI:               ptr.To("https://foo.bar/jwks"),
+							JWKSURI:               new("https://foo.bar/jwks"),
 						},
 						ServiceNetworkCIDRs: serviceNetworkCIDRs,
 						Version:             version,
@@ -3233,7 +3233,7 @@ kind: AuthorizationConfiguration
 						Protocol:      corev1.ProtocolTCP,
 					}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
-					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext).To(Equal(&corev1.SecurityContext{AllowPrivilegeEscalation: ptr.To(false)}))
+					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext).To(Equal(&corev1.SecurityContext{AllowPrivilegeEscalation: new(false)}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ConsistOf(
 						corev1.VolumeMount{
 							Name:      "audit-policy-config",
@@ -3604,7 +3604,7 @@ kind: AuthorizationConfiguration
 								"StructuredAuthenticationConfiguration": false,
 							},
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
+						AnonymousAuthenticationEnabled: new(true),
 						Images:                         images,
 						Version:                        version,
 					})
@@ -3629,7 +3629,7 @@ anonymous:
 						},
 						Images:                      images,
 						Version:                     semver.MustParse("1.32.0"),
-						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						AuthenticationConfiguration: new(authenticationConfig),
 					})
 					deployAndRead()
 
@@ -3816,7 +3816,7 @@ anonymous:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -3833,11 +3833,11 @@ anonymous:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{Enabled: false}
 					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
 					Expect(err).ToNot(HaveOccurred())
@@ -3852,7 +3852,7 @@ anonymous:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
@@ -3947,7 +3947,7 @@ anonymous:
 						Default: ptr.To[int32](123),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
 							{Resource: "foo", CacheSize: 456},
-							{Resource: "bar", CacheSize: 789, APIGroup: ptr.To("baz")},
+							{Resource: "bar", CacheSize: 789, APIGroup: new("baz")},
 						},
 					}
 
@@ -4141,7 +4141,7 @@ anonymous:
 
 				It("should properly set the TLS SNI flag if necessary", func() {
 					values.SNI.TLS = []TLSSNIConfig{
-						{SecretName: ptr.To("existing-secret")},
+						{SecretName: new("existing-secret")},
 						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatterns: []string{"foo1.com", "*.foo2.com"}},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -4190,7 +4190,7 @@ anonymous:
 						Webhook: &apiserver.AuditWebhook{
 							Kubeconfig:   []byte("foo"),
 							BatchMaxSize: ptr.To[int32](30),
-							Version:      ptr.To("audit.k8s.io/v1beta1"),
+							Version:      new("audit.k8s.io/v1beta1"),
 						},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -4224,7 +4224,7 @@ anonymous:
 					values.AuthenticationWebhook = &AuthenticationWebhook{
 						Kubeconfig: []byte("foo"),
 						CacheTTL:   ptr.To(30 * time.Second),
-						Version:    ptr.To("v1beta1"),
+						Version:    new("v1beta1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
@@ -4623,19 +4623,19 @@ anonymous:
 			),
 			Entry("ExtendTokenExpiration and MaxTokenExpiration are set",
 				&gardencorev1beta1.ServiceAccountConfig{
-					ExtendTokenExpiration: ptr.To(true),
+					ExtendTokenExpiration: new(true),
 					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				ServiceAccountConfig{
 					Issuer:                "https://" + externalHostname,
-					ExtendTokenExpiration: ptr.To(true),
+					ExtendTokenExpiration: new(true),
 					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 				},
 			),
 			Entry("Issuer is set",
 				&gardencorev1beta1.ServiceAccountConfig{
-					Issuer: ptr.To("issuer"),
+					Issuer: new("issuer"),
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				ServiceAccountConfig{
@@ -4655,7 +4655,7 @@ anonymous:
 			),
 			Entry("AcceptedIssuers and Issuer are both set",
 				&gardencorev1beta1.ServiceAccountConfig{
-					Issuer:          ptr.To("issuer"),
+					Issuer:          new("issuer"),
 					AcceptedIssuers: []string{"issuer1", "issuer2"},
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),
@@ -4666,7 +4666,7 @@ anonymous:
 			),
 			Entry("Default Issuer is already part of AcceptedIssuers",
 				&gardencorev1beta1.ServiceAccountConfig{
-					Issuer:          ptr.To("issuer"),
+					Issuer:          new("issuer"),
 					AcceptedIssuers: []string{"https://" + externalHostname},
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),

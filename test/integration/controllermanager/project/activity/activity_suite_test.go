@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -90,7 +89,7 @@ var _ = BeforeSuite(func() {
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -104,7 +103,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&activity.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())

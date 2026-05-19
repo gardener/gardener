@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -62,7 +61,7 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 	if conditions.controllerInstallationsHealthy != nil {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			newControllerInstallationsCondition, err := h.checkControllerInstallations(ctx, *conditions.controllerInstallationsHealthy)
-			conditions.controllerInstallationsHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.controllerInstallationsHealthy, newControllerInstallationsCondition, err))
+			conditions.controllerInstallationsHealthy = new(v1beta1helper.NewConditionOrError(h.clock, *conditions.controllerInstallationsHealthy, newControllerInstallationsCondition, err))
 			return nil
 		})
 	}
@@ -70,7 +69,7 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 	if conditions.extensionHealthy != nil {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			newExtensionComponentsCondition, err := h.checkRuntimeExtension(ctx, *conditions.extensionHealthy)
-			conditions.extensionHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionHealthy, newExtensionComponentsCondition, err))
+			conditions.extensionHealthy = new(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionHealthy, newExtensionComponentsCondition, err))
 			return nil
 		})
 	}
@@ -78,7 +77,7 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 	if conditions.extensionAdmissionHealthy != nil {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			newExtensionAdmissionComponentsCondition, err := h.checkExtensionAdmission(ctx, *conditions.extensionAdmissionHealthy)
-			conditions.extensionAdmissionHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionAdmissionHealthy, newExtensionAdmissionComponentsCondition, err))
+			conditions.extensionAdmissionHealthy = new(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionAdmissionHealthy, newExtensionAdmissionComponentsCondition, err))
 			return nil
 		})
 	}
@@ -102,7 +101,7 @@ func (h *health) checkControllerInstallations(ctx context.Context, condition gar
 		return exitCondition, nil
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControllerInstallationsRunning", "All controller installations are healthy.")), nil
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControllerInstallationsRunning", "All controller installations are healthy.")), nil
 }
 
 func (h *health) checkRuntimeExtension(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
@@ -117,7 +116,7 @@ func (h *health) checkRuntimeExtension(ctx context.Context, condition gardencore
 		return exitCondition, nil
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ExtensionComponentsRunning", "All extension components are healthy.")), nil
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ExtensionComponentsRunning", "All extension components are healthy.")), nil
 }
 
 func (h *health) checkExtensionAdmission(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
@@ -137,7 +136,7 @@ func (h *health) checkExtensionAdmission(ctx context.Context, condition gardenco
 		}
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ExtensionAdmissionComponentsRunning", "All extension admission components are healthy.")), nil
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ExtensionAdmissionComponentsRunning", "All extension admission components are healthy.")), nil
 }
 
 // ExtensionConditions contains all conditions of the extension status subresource.
@@ -181,15 +180,15 @@ func NewExtensionConditions(clock clock.Clock, extension *operatorv1alpha1.Exten
 	var extensionConditions ExtensionConditions
 
 	if operator.IsControllerInstallationInVirtualRequired(extension) {
-		extensionConditions.controllerInstallationsHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ControllerInstallationsHealthy))
+		extensionConditions.controllerInstallationsHealthy = new(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ControllerInstallationsHealthy))
 	}
 
 	if operator.IsExtensionInRuntimeRequired(extension) {
-		extensionConditions.extensionHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionHealthy))
+		extensionConditions.extensionHealthy = new(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionHealthy))
 	}
 
 	if extension.Spec.Deployment != nil && extension.Spec.Deployment.AdmissionDeployment != nil {
-		extensionConditions.extensionAdmissionHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionAdmissionHealthy))
+		extensionConditions.extensionAdmissionHealthy = new(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionAdmissionHealthy))
 	}
 
 	return extensionConditions

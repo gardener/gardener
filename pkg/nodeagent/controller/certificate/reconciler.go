@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -47,7 +46,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 		totalDuration := float64(clientCertificate.Leaf.NotAfter.Sub(clientCertificate.Leaf.NotBefore))
 		jitteredDuration := wait.Jitter(time.Duration(totalDuration*0.8), 0.1)
-		r.renewalDeadline = ptr.To(clientCertificate.Leaf.NotBefore.Add(jitteredDuration))
+		r.renewalDeadline = new(clientCertificate.Leaf.NotBefore.Add(jitteredDuration))
 		log.Info("Scheduling certificate renewal", "time", *r.renewalDeadline)
 	}
 

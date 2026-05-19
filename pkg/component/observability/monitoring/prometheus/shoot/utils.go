@@ -61,10 +61,10 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 	}
 
 	return monitoringv1alpha1.ScrapeConfigSpec{
-		HonorLabels: ptr.To(false),
+		HonorLabels: new(false),
 		Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
 		// This is needed because we do not fetch the correct cluster CA bundle right now
-		TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+		TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 		Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 			Key:                  resourcesv1alpha1.DataKeyToken,
@@ -78,18 +78,18 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 				Key:                  resourcesv1alpha1.DataKeyToken,
 			}},
 			// This is needed because we do not fetch the correct cluster CA bundle right now
-			TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+			TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 		}},
 		RelabelConfigs: append(
 			append([]monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(jobName),
+					Replacement: new(jobName),
 					TargetLabel: "job",
 				},
 				{
 					TargetLabel: "type",
-					Replacement: ptr.To("shoot"),
+					Replacement: new("shoot"),
 				},
 			}, relabelConfigs...),
 			monitoringv1.RelabelConfig{
@@ -106,7 +106,7 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 			},
 			monitoringv1.RelabelConfig{
 				TargetLabel: "__address__",
-				Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+				Replacement: new(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 			},
 			monitoringv1.RelabelConfig{
 				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},

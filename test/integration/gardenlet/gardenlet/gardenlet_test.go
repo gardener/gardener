@@ -51,7 +51,7 @@ var _ = Describe("Gardenlet controller test", func() {
 					Spec: gardencorev1beta1.SeedSpec{
 						Backup: &gardencorev1beta1.Backup{
 							Provider: "test",
-							Region:   ptr.To("bar"),
+							Region:   new("bar"),
 							CredentialsRef: &corev1.ObjectReference{
 								Kind:       "Secret",
 								APIVersion: "v1",
@@ -168,8 +168,8 @@ var _ = Describe("Gardenlet controller test", func() {
 
 	When("image vector overwrite configurations are provided", func() {
 		BeforeEach(func() {
-			gardenlet.Spec.Deployment.ImageVectorOverwrite = ptr.To("images: []")
-			gardenlet.Spec.Deployment.ComponentImageVectorOverwrite = ptr.To("components: []")
+			gardenlet.Spec.Deployment.ImageVectorOverwrite = new("images: []")
+			gardenlet.Spec.Deployment.ComponentImageVectorOverwrite = new("components: []")
 		})
 
 		It("should remove image vector overwrite configurations when removed from `Gardenlet` resource", func() {

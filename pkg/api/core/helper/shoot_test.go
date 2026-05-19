@@ -258,8 +258,8 @@ var _ = Describe("Helper", func() {
 		Entry("rotation nil", &core.ShootCredentials{}, false),
 		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, false),
 		Entry("AutoCompleteAfterPrepared empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, false),
-		Entry("AutoCompleteAfterPrepared true", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
-		Entry("AutoCompleteAfterPrepared false", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: new(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: new(false)}}}, false),
 	)
 
 	Describe("#GetAllZonesFromShoot", func() {
@@ -394,9 +394,9 @@ var _ = Describe("Helper", func() {
 		}, nil),
 		Entry("Issuer set", &core.KubeAPIServerConfig{
 			ServiceAccountConfig: &core.ServiceAccountConfig{
-				Issuer: ptr.To("foo"),
+				Issuer: new("foo"),
 			},
-		}, ptr.To("foo")),
+		}, new("foo")),
 	)
 
 	DescribeTable("#GetShootServiceAccountConfigAcceptedIssuers",
@@ -460,34 +460,34 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("no providers", nil, BeNil()),
-		Entry("one non primary provider", []core.DNSProvider{{Type: ptr.To("provider")}}, BeNil()),
-		Entry("one primary provider", []core.DNSProvider{{Type: ptr.To("provider"),
-			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
+		Entry("one non primary provider", []core.DNSProvider{{Type: new("provider")}}, BeNil()),
+		Entry("one primary provider", []core.DNSProvider{{Type: new("provider"),
+			Primary: new(true)}}, Equal(&core.DNSProvider{Type: new("provider"), Primary: new(true)})),
 		Entry("multiple w/ one primary provider", []core.DNSProvider{
 			{
-				Type: ptr.To("provider2"),
+				Type: new("provider2"),
 			},
 			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
+				Type:    new("provider1"),
+				Primary: new(true),
 			},
 			{
-				Type: ptr.To("provider3"),
+				Type: new("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		}, Equal(&core.DNSProvider{Type: new("provider1"), Primary: new(true)})),
 		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
 			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
+				Type:    new("provider1"),
+				Primary: new(true),
 			},
 			{
-				Type:    ptr.To("provider2"),
-				Primary: ptr.To(true),
+				Type:    new("provider2"),
+				Primary: new(true),
 			},
 			{
-				Type: ptr.To("provider3"),
+				Type: new("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		}, Equal(&core.DNSProvider{Type: new("provider1"), Primary: new(true)})),
 	)
 
 	DescribeTable("#CalculateEffectiveKubernetesVersion",
@@ -499,15 +499,15 @@ var _ = Describe("Helper", func() {
 
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: new("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	var (
 		sampleShootKubelet = &core.KubeletConfig{
-			MaxPods: ptr.To(int32(50)),
+			MaxPods: new(int32(50)),
 		}
 		sampleWorkerKubelet = &core.KubeletConfig{
-			MaxPods: ptr.To(int32(100)),
+			MaxPods: new(int32(100)),
 		}
 	)
 
@@ -663,8 +663,8 @@ var _ = Describe("Helper", func() {
 		Entry("kubeAPIServerConfig is nil", nil, false),
 		Entry("kubeAPIServerConfig is empty", &core.KubeAPIServerConfig{}, false),
 		Entry("EnableAnonymousAuthentication is nil", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: nil}, false),
-		Entry("EnableAnonymousAuthentication is false", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(false)}, true),
-		Entry("EnableAnonymousAuthentication is true", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}, true),
+		Entry("EnableAnonymousAuthentication is false", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(false)}, true),
+		Entry("EnableAnonymousAuthentication is true", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)}, true),
 	)
 
 	DescribeTable("#IsKubeProxyIPVSMode",
@@ -673,9 +673,9 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with KubeProxy in IPVS mode", nil, false),
 		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{}, false),
-		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: ptr.To(false), Mode: ptr.To(core.ProxyModeIPVS)}, false),
-		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPVS)}, true),
-		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(core.ProxyModeIPTables)}, false),
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: new(false), Mode: ptr.To(core.ProxyModeIPVS)}, false),
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: new(true), Mode: ptr.To(core.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: new(true), Mode: ptr.To(core.ProxyModeIPTables)}, false),
 	)
 
 	Describe("#IsShootSelfHosted", func() {

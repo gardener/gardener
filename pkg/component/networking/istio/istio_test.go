@@ -385,11 +385,11 @@ var _ = Describe("istiod", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResourceIstioSecret.Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -397,7 +397,7 @@ var _ = Describe("istiod", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceIstioSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		}
 
@@ -487,7 +487,7 @@ var _ = Describe("istiod", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
 				Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				istioSystemManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSystemSecret.Data)
@@ -582,7 +582,7 @@ var _ = Describe("istiod", func() {
 
 		Context("LoadBalancer class", func() {
 			BeforeEach(func() {
-				igw[0].LoadBalancerClass = ptr.To("non-default-loadbalancer-class")
+				igw[0].LoadBalancerClass = new("non-default-loadbalancer-class")
 				istiod = NewIstio(
 					c,
 					renderer,

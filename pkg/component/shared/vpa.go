@@ -10,7 +10,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -68,11 +67,11 @@ func NewVerticalPodAutoscaler(
 			Recommender: vpa.ValuesRecommender{
 				Image:                        imageRecommender.String(),
 				PriorityClassName:            priorityClassNameRecommender,
-				RecommendationMarginFraction: ptr.To(float64(0.05)),
+				RecommendationMarginFraction: new(float64(0.05)),
 				MaxAllowed:                   maxAllowed,
 			},
 			Updater: vpa.ValuesUpdater{
-				EvictionTolerance:      ptr.To(float64(1.0)),
+				EvictionTolerance:      new(float64(1.0)),
 				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
 				Image:                  imageUpdater.String(),
 				PriorityClassName:      priorityClassNameUpdater,

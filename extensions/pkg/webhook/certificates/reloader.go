@@ -14,7 +14,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -82,7 +81,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 
 	opts := controller.Options{
 		Reconciler:   r,
-		RecoverPanic: ptr.To(true),
+		RecoverPanic: new(true),
 		// if going into exponential backoff, wait at most the configured sync period
 		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.SyncPeriod),
 	}

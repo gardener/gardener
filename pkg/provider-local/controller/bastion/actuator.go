@@ -172,7 +172,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 					Image:           image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -226,7 +226,7 @@ func serviceForBastion(bastion *extensionsv1alpha1.Bastion) *corev1.Service {
 				Name:        "ssh",
 				Port:        SSHPort,
 				Protocol:    corev1.ProtocolTCP,
-				AppProtocol: ptr.To("ssh"),
+				AppProtocol: new("ssh"),
 			}},
 		},
 	}

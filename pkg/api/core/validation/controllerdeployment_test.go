@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	. "github.com/gardener/gardener/pkg/apis/core"
@@ -93,7 +92,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			controllerDeployment.Helm = &HelmControllerDeployment{
 				RawChart: []byte("foo"),
 				OCIRepository: &OCIRepository{
-					Ref: ptr.To("foo"),
+					Ref: new("foo"),
 				},
 			}
 			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -145,9 +144,9 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 		Context("with ociRepository", func() {
 			BeforeEach(func() {
 				controllerDeployment.Helm.OCIRepository = &OCIRepository{
-					Repository: ptr.To("foo"),
-					Tag:        ptr.To("1.0.0"),
-					Digest:     ptr.To("sha256:foo"),
+					Repository: new("foo"),
+					Tag:        new("1.0.0"),
+					Digest:     new("sha256:foo"),
 				}
 			})
 
@@ -176,7 +175,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			})
 
 			It("should validate required oci URL", func() {
-				controllerDeployment.Helm.OCIRepository.Digest = ptr.To("invalid")
+				controllerDeployment.Helm.OCIRepository.Digest = new("invalid")
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -197,7 +196,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 		Context("with ociRepository.ref", func() {
 			BeforeEach(func() {
 				controllerDeployment.Helm.OCIRepository = &OCIRepository{
-					Ref: ptr.To("foo:v1.0.0"),
+					Ref: new("foo:v1.0.0"),
 				}
 			})
 
@@ -206,9 +205,9 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			})
 
 			It("should not allow fields other than ref", func() {
-				controllerDeployment.Helm.OCIRepository.Repository = ptr.To("foo")
-				controllerDeployment.Helm.OCIRepository.Digest = ptr.To("foo")
-				controllerDeployment.Helm.OCIRepository.Tag = ptr.To("foo")
+				controllerDeployment.Helm.OCIRepository.Repository = new("foo")
+				controllerDeployment.Helm.OCIRepository.Digest = new("foo")
+				controllerDeployment.Helm.OCIRepository.Tag = new("foo")
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

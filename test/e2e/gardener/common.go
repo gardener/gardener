@@ -60,16 +60,16 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds, "0")
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationAuthenticationIssuer, v1beta1constants.AnnotationAuthenticationIssuerManaged)
 
-	shoot.Spec.CredentialsBindingName = ptr.To("local")
+	shoot.Spec.CredentialsBindingName = new("local")
 	shoot.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
-		SerializeImagePulls: ptr.To(false),
+		SerializeImagePulls: new(false),
 		RegistryPullQPS:     ptr.To[int32](10),
 		RegistryBurst:       ptr.To[int32](20),
 	}
 	shoot.Spec.Networking = &gardencorev1beta1.Networking{
-		Type: ptr.To("calico"),
+		Type: new("calico"),
 		// Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
-		Nodes: ptr.To("10.0.0.0/16"),
+		Nodes: new("10.0.0.0/16"),
 	}
 	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker("local", nil))
 	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{Type: "local-ext-shoot-after-worker"})
@@ -77,7 +77,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 		// Must be within fd00:10:1:100::/56 (subnet of kind pod CIDR fd00:10:1::/48, but disjoint with seed pod CIDR fd00:10:1::/56).
-		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1:100::/56")
+		shoot.Spec.Networking.Nodes = new("fd00:10:1:100::/56")
 		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
 	}
 
@@ -101,8 +101,8 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 // seed pod and service ranges of the default garden for the e2e tests.
 func DefaultOverlappingShoot(name string) *gardencorev1beta1.Shoot {
 	shoot := DefaultShoot(name + "-ovr")
-	shoot.Spec.Networking.Pods = ptr.To("10.1.0.0/16")
-	shoot.Spec.Networking.Services = ptr.To("10.2.0.0/16")
+	shoot.Spec.Networking.Pods = new("10.1.0.0/16")
+	shoot.Spec.Networking.Services = new("10.2.0.0/16")
 
 	return shoot
 }
@@ -120,7 +120,7 @@ func DefaultWorker(name string, updateStrategy *gardencorev1beta1.MachineUpdateS
 		Labels: map[string]string{
 			"foo": "bar",
 		},
-		UpdateStrategy: ptr.To(ptr.Deref(updateStrategy, gardencorev1beta1.AutoRollingUpdate)),
+		UpdateStrategy: new(ptr.Deref(updateStrategy, gardencorev1beta1.AutoRollingUpdate)),
 		Minimum:        1,
 		Maximum:        1,
 	}

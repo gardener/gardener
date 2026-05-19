@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -710,7 +709,7 @@ func managedResource(namespace, name string, classSeed bool, conditions []garden
 	)
 
 	if classSeed {
-		class = ptr.To("seed")
+		class = new("seed")
 	}
 
 	return &resourcesv1alpha1.ManagedResource{

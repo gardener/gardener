@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -31,7 +30,7 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 
 	var bundleFor *string
 	if options.isBundleSecret {
-		bundleFor = ptr.To(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
+		bundleFor = new(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
 	namespace := m.opts.Namespaces[0]
@@ -341,7 +340,7 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 	var mustPatch bool
 
 	if secret.Immutable == nil || !*secret.Immutable {
-		secret.Immutable = ptr.To(true)
+		secret.Immutable = new(true)
 		mustPatch = true
 	}
 
@@ -525,7 +524,7 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 		}
 
 		certificateConfig.SigningCA = ca
-		options.signingCAChecksum = ptr.To(kubernetesutils.TruncateLabelValue(secret.dataChecksum))
+		options.signingCAChecksum = new(kubernetesutils.TruncateLabelValue(secret.dataChecksum))
 		return nil
 	}
 }

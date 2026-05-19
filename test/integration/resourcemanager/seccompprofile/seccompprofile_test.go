@@ -59,7 +59,7 @@ var _ = Describe("SeccompProfile tests", func() {
 
 	It("should not overwrite any values in security context during pod mutation", func() {
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{
-			RunAsNonRoot:       ptr.To(false),
+			RunAsNonRoot:       new(false),
 			RunAsUser:          ptr.To[int64](3),
 			SupplementalGroups: []int64{4, 5, 6},
 		}
@@ -67,7 +67,7 @@ var _ = Describe("SeccompProfile tests", func() {
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 		Expect(pod.Spec.SecurityContext).To(Equal(&corev1.PodSecurityContext{
-			RunAsNonRoot:       ptr.To(false),
+			RunAsNonRoot:       new(false),
 			RunAsUser:          ptr.To[int64](3),
 			SupplementalGroups: []int64{4, 5, 6},
 			SeccompProfile: &corev1.SeccompProfile{

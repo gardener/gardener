@@ -229,10 +229,10 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		if workerPool.ClusterAutoscaler != nil {
 			autoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
 			if workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
-				autoscalerOptions.ScaleDownUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold))
+				autoscalerOptions.ScaleDownUtilizationThreshold = new(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold))
 			}
 			if workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold != nil {
-				autoscalerOptions.ScaleDownGpuUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold))
+				autoscalerOptions.ScaleDownGpuUtilizationThreshold = new(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold))
 			}
 			if workerPool.ClusterAutoscaler.ScaleDownUnneededTime != nil {
 				autoscalerOptions.ScaleDownUnneededTime = workerPool.ClusterAutoscaler.ScaleDownUnneededTime

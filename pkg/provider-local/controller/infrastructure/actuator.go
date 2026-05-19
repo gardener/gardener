@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -97,7 +96,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 					Name:        "ssh",
 					Port:        22,
 					Protocol:    corev1.ProtocolTCP,
-					AppProtocol: ptr.To("ssh"),
+					AppProtocol: new("ssh"),
 				},
 			},
 		}

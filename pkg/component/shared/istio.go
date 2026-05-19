@@ -77,8 +77,8 @@ func NewIstio(
 		return nil, err
 	}
 
-	minReplicas := ptr.To(max(1, len(zones)) * minReplicasPerZone)
-	maxReplicas := ptr.To(max(1, len(zones)) * maxReplicasPerZone)
+	minReplicas := new(max(1, len(zones)) * minReplicasPerZone)
+	maxReplicas := new(max(1, len(zones)) * maxReplicasPerZone)
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(withShoots)
 	for _, label := range networkPolicyLabels {
@@ -169,8 +169,8 @@ func AddIstioIngressGateway(
 	if zone != nil {
 		zones = []string{*zone}
 
-		minReplicas = ptr.To(minReplicasPerZone)
-		maxReplicas = ptr.To(maxReplicasPerZone)
+		minReplicas = new(minReplicasPerZone)
+		maxReplicas = new(maxReplicasPerZone)
 
 		var err error
 		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(ctx, cl, zones)

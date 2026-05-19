@@ -449,7 +449,7 @@ var _ = Describe("KubeStateMetrics", func() {
 						"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
 					"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 				}
-				automountServiceAccountToken = ptr.To(false)
+				automountServiceAccountToken = new(false)
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      "kubeconfig",
 					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
@@ -470,7 +470,7 @@ var _ = Describe("KubeStateMetrics", func() {
 											Key:  "kubeconfig",
 											Path: "kubeconfig",
 										}},
-										Optional: ptr.To(false),
+										Optional: new(false),
 									},
 								},
 								{
@@ -482,7 +482,7 @@ var _ = Describe("KubeStateMetrics", func() {
 											Key:  "token",
 											Path: "token",
 										}},
-										Optional: ptr.To(false),
+										Optional: new(false),
 									},
 								},
 							},
@@ -552,7 +552,7 @@ var _ = Describe("KubeStateMetrics", func() {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								VolumeMounts: volumeMounts,
 							}},
@@ -593,17 +593,17 @@ var _ = Describe("KubeStateMetrics", func() {
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_type"},
 							Regex:        `(.+)`,
-							Replacement:  ptr.To(`${1}`),
+							Replacement:  new(`${1}`),
 							TargetLabel:  "type",
 						},
 						{
 							Action:      "replace",
-							Replacement: ptr.To("kube-state-metrics"),
+							Replacement: new("kube-state-metrics"),
 							TargetLabel: "job",
 						},
 						{
 							TargetLabel: "instance",
-							Replacement: ptr.To("kube-state-metrics"),
+							Replacement: new("kube-state-metrics"),
 						},
 					},
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -638,12 +638,12 @@ var _ = Describe("KubeStateMetrics", func() {
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("kube-state-metrics"),
+						Replacement: new("kube-state-metrics"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "instance",
-						Replacement: ptr.To("kube-state-metrics"),
+						Replacement: new("kube-state-metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -675,12 +675,12 @@ var _ = Describe("KubeStateMetrics", func() {
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("kube-state-metrics"),
+						Replacement: new("kube-state-metrics"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "instance",
-						Replacement: ptr.To("kube-state-metrics"),
+						Replacement: new("kube-state-metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -720,17 +720,17 @@ var _ = Describe("KubeStateMetrics", func() {
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_type"},
 						Regex:        `(.+)`,
-						Replacement:  ptr.To(`${1}`),
+						Replacement:  new(`${1}`),
 						TargetLabel:  "type",
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("kube-state-metrics"),
+						Replacement: new("kube-state-metrics"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "instance",
-						Replacement: ptr.To("kube-state-metrics"),
+						Replacement: new("kube-state-metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -848,7 +848,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					Namespace: namespace,
 					Labels:    selectorLabelsForClusterType(nameSuffix),
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 			}
 		}
 		secretShootAccess = &corev1.Secret{
@@ -982,11 +982,11 @@ var _ = Describe("KubeStateMetrics", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: ptr.To("seed"),
+						Class: new("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -1006,7 +1006,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
@@ -1056,11 +1056,11 @@ var _ = Describe("KubeStateMetrics", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: ptr.To("seed"),
+						Class: new("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -1081,7 +1081,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
@@ -1137,7 +1137,7 @@ var _ = Describe("KubeStateMetrics", func() {
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMrTarget))
@@ -1158,11 +1158,11 @@ var _ = Describe("KubeStateMetrics", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: ptr.To("seed"),
+						Class: new("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 
@@ -1181,7 +1181,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				actualSecretShootAccess := &corev1.Secret{}

@@ -53,9 +53,9 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem200,
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
@@ -97,7 +97,7 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 								TimeoutSeconds:      5,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{

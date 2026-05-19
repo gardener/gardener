@@ -41,7 +41,7 @@ func (n *nodeLocalDNS) computeResourcesData() (*corev1.ServiceAccount, *corev1.C
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		configMap = &corev1.ConfigMap{
@@ -232,7 +232,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"NET_ADMIN"},
 									},
@@ -319,7 +319,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: "kube-dns",
 										},
-										Optional: ptr.To(true),
+										Optional: new(true),
 									},
 								},
 							},
@@ -347,7 +347,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 											Name: coredns.CustomConfigMapName,
 										},
 										DefaultMode: ptr.To[int32](420),
-										Optional:    ptr.To(true),
+										Optional:    new(true),
 									},
 								},
 							},
@@ -368,8 +368,8 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
-					RunAsNonRoot:             ptr.To(true),
+					AllowPrivilegeEscalation: new(false),
+					RunAsNonRoot:             new(true),
 					RunAsUser:                ptr.To[int64](65532),
 					RunAsGroup:               ptr.To[int64](65532),
 				},

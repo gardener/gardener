@@ -16,7 +16,6 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -74,7 +73,7 @@ var _ = Describe("KubeProxy", func() {
 				ShootClientSet:   fakeShootKubernetesInterface,
 				SecretsManager:   sm,
 				Shoot: &shootpkg.Shoot{
-					InternalClusterDomain: ptr.To(internalClusterDomain),
+					InternalClusterDomain: new(internalClusterDomain),
 					KubernetesVersion:     kubernetesVersionControlPlane,
 					ControlPlaneNamespace: namespace,
 				},
@@ -93,13 +92,13 @@ var _ = Describe("KubeProxy", func() {
 						{
 							Name: poolName2,
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To(kubernetesVersionPool2.String()),
+								Version: new(kubernetesVersionPool2.String()),
 							},
 						},
 						{
 							Name: poolName3,
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: ptr.To(kubernetesVersionPool3.String()),
+								Version: new(kubernetesVersionPool3.String()),
 							},
 						},
 					},
@@ -208,7 +207,7 @@ users:
 								{
 									Name: poolName2,
 									Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-										Version: ptr.To(kubernetesVersionPool2.String()),
+										Version: new(kubernetesVersionPool2.String()),
 									},
 								},
 							},

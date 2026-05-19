@@ -58,9 +58,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
 				// TODO(hown3d): Drop 8132 with RemoveHTTPProxyLegacyPort feature gate
-				{Port: ptr.To(intstr.FromInt32(8132)), Protocol: ptr.To(corev1.ProtocolTCP)},
-				{Port: ptr.To(intstr.FromInt32(8443)), Protocol: ptr.To(corev1.ProtocolTCP)},
-				{Port: ptr.To(intstr.FromInt32(9443)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				{Port: new(intstr.FromInt32(8132)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				{Port: new(intstr.FromInt32(8443)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				{Port: new(intstr.FromInt32(9443)), Protocol: ptr.To(corev1.ProtocolTCP)},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{

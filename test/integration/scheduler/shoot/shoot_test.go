@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -48,7 +47,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("other-region")
 			createSeed("some-region", nil, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "other-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "other-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 			Consistently(func(g Gomega) *string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -68,7 +67,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			_ = createSeed("some-region", nil, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", ptr.To("foo-scheduler"), ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", new("foo-scheduler"), new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -81,7 +80,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", nil, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -94,7 +93,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			_ = createSeed("some-region", nil, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.invalid.example.com", shootName)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.invalid.example.com", shootName)), nil, nil)
 
 			Consistently(func(g Gomega) *string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -114,7 +113,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", []string{"1"}, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -127,7 +126,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", []string{"1", "2", "3"}, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -140,7 +139,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", []string{"1", "2"}, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("node"), nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("node"), nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -153,7 +152,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", []string{"1", "2", "3"}, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("node"), nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("node"), nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -166,7 +165,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			_ = createSeed("some-region", []string{"1", "2"}, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("zone"), nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("zone"), nil)
 
 			Consistently(func(g Gomega) *string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -186,7 +185,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", []string{"1", "2", "3"}, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("zone"), nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("zone"), nil)
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -199,7 +198,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			_ = createSeed("some-region", nil, nil)
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, []gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}})
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, []gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}})
 
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -214,7 +213,7 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile := createCloudProfile("some-region")
 			seed := createSeed("some-region", nil, []gardencorev1beta1.AccessRestriction{{Name: "foo"}})
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, []gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}})
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, []gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}})
 
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -231,7 +230,7 @@ var _ = Describe("Scheduler tests", func() {
 			}
 			Expect(testClient.Update(ctx, seed)).To(Succeed())
 			shootName := generateShootName()
-			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+			shoot := createShoot(shootName, cloudProfile.Name, "some-region", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -269,7 +268,7 @@ var _ = Describe("Scheduler tests", func() {
 
 			createShootWithWorkerZones := func(shootName, cloudProfileName string, workerZones []string) *gardencorev1beta1.Shoot {
 				return createShoot(shootName, cloudProfileName, "some-region", nil,
-					ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)),
+					new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)),
 					nil, nil,
 					workerZones,
 				)
@@ -411,7 +410,7 @@ us-central-2: 220`,
 				}).Should(Succeed())
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -454,7 +453,7 @@ us-central-2: 220`,
 				}).Should(Succeed())
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -522,7 +521,7 @@ us-central-2: 220`,
 				}).Should(HaveLen(2))
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -562,7 +561,7 @@ us-central-2: 220`,
 				}).Should(Succeed())
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -605,7 +604,7 @@ us-central-3: 220`,
 				}).Should(Succeed())
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -642,7 +641,7 @@ us-central-3: 220`,
 				}).Should(Succeed())
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Consistently(func() *string {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -664,7 +663,7 @@ us-central-3: 220`,
 				cloudProfile := createCloudProfile("eu-west-1")
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -677,7 +676,7 @@ us-central-3: 220`,
 				cloudProfile := createCloudProfile("eu-west-1")
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -690,7 +689,7 @@ us-central-3: 220`,
 				cloudProfile := createCloudProfile("eu-central-1")
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-central-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-central-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -703,7 +702,7 @@ us-central-3: 220`,
 				cloudProfile := createCloudProfile("jp-west-1")
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "jp-west-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "jp-west-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), nil, nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -724,7 +723,7 @@ us-central-3: 220`,
 				cloudProfile := createCloudProfile("eu-east-1")
 
 				shootName := generateShootName()
-				shoot := createShoot(shootName, cloudProfile.Name, "eu-east-1", nil, ptr.To(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("zone"), nil)
+				shoot := createShoot(shootName, cloudProfile.Name, "eu-east-1", nil, new(fmt.Sprintf("%s.%s.example.com", shootName, testProject.Name)), getControlPlaneWithType("zone"), nil)
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -745,7 +744,7 @@ func createAndStartManager(config *schedulerconfigv1alpha1.ShootSchedulerConfigu
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(indexer.AddProjectNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
@@ -835,7 +834,7 @@ func createSeedWithSettings(region string, zones []string, accessRestrictions []
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
+				Nodes:    new("10.2.0.0/16"),
 			},
 			AccessRestrictions: accessRestrictions,
 		},
@@ -950,13 +949,13 @@ func createShoot(shootName, cloudProfile, region string, schedulerName, dnsDomai
 				}(),
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Pods:     ptr.To("10.3.0.0/16"),
-				Services: ptr.To("10.4.0.0/16"),
-				Nodes:    ptr.To("10.5.0.0/16"),
-				Type:     ptr.To("some-type"),
+				Pods:     new("10.3.0.0/16"),
+				Services: new("10.4.0.0/16"),
+				Nodes:    new("10.5.0.0/16"),
+				Type:     new("some-type"),
 			},
 			Kubernetes:         gardencorev1beta1.Kubernetes{Version: "1.31.1"},
-			SecretBindingName:  ptr.To(testSecretBinding.Name),
+			SecretBindingName:  new(testSecretBinding.Name),
 			SchedulerName:      schedulerName,
 			DNS:                &gardencorev1beta1.DNS{Domain: dnsDomain},
 			AccessRestrictions: accessRestrictions,

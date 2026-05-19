@@ -138,11 +138,11 @@ func (a *alertManager) emailConfigs() []monitoringv1alpha1.EmailConfig {
 	var configs []monitoringv1alpha1.EmailConfig
 	for _, email := range emailReceivers {
 		configs = append(configs, monitoringv1alpha1.EmailConfig{
-			To:           ptr.To(email),
-			From:         ptr.To(string(a.values.AlertingSMTPSecret.Data["from"])),
-			Smarthost:    ptr.To(string(a.values.AlertingSMTPSecret.Data["smarthost"])),
-			AuthUsername: ptr.To(string(a.values.AlertingSMTPSecret.Data["auth_username"])),
-			AuthIdentity: ptr.To(string(a.values.AlertingSMTPSecret.Data["auth_identity"])),
+			To:           new(email),
+			From:         new(string(a.values.AlertingSMTPSecret.Data["from"])),
+			Smarthost:    new(string(a.values.AlertingSMTPSecret.Data["smarthost"])),
+			AuthUsername: new(string(a.values.AlertingSMTPSecret.Data["auth_username"])),
+			AuthIdentity: new(string(a.values.AlertingSMTPSecret.Data["auth_identity"])),
 			AuthPassword: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{Name: a.smtpSecret().Name},
 				Key:                  dataKeyAuthPassword,

@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -56,7 +55,7 @@ var _ = Describe("Extension Care controller tests", func() {
 					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:      ptr.To("seed"),
+					Class:      new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
 				},
 			}
@@ -130,7 +129,7 @@ var _ = Describe("Extension Care controller tests", func() {
 					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:      ptr.To("seed"),
+					Class:      new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{Name: "bar-runtime-secret"}},
 				},
 			}

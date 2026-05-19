@@ -38,7 +38,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when enableAnonymousAuthentication is set",
-				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)},
+				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)},
 				ContainElement(Equal("you are setting the spec.shootTemplate.spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")),
 			),
 		)
@@ -85,7 +85,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when secretName is set",
-				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				ContainElement(Equal("you are setting the spec.shootTemplate.spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.shootTemplate.spec.dns.providers[0].credentialsRef instead.")),
 			),
 		)

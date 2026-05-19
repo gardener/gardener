@@ -128,7 +128,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		return nil
 	}); err != nil {
 		return err
@@ -140,8 +140,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Kind:               "Namespace",
 			Name:               c.namespace,
 			UID:                c.namespaceUID,
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(true),
+			Controller:         new(true),
+			BlockOwnerDeletion: new(true),
 		}}
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -162,7 +162,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(portMetrics)),
+			Port:     new(intstr.FromInt32(portMetrics)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
@@ -236,7 +236,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					},
 				},
@@ -255,7 +255,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
 			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}

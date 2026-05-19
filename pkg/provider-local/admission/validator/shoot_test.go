@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -43,32 +42,32 @@ var _ = Describe("Shoot Validator", func() {
 
 	Describe("#Validate", func() {
 		It("should succeed for valid IPv4 nodes CIDR", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
+			shoot.Spec.Networking.Nodes = new("10.0.0.0/24")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
 		})
 
 		It("should fail for invalid IPv4 nodes CIDR", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
+			shoot.Spec.Networking.Nodes = new("192.168.0.0/24")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 10.0.0.0/16")))
 		})
 
 		It("should fail for invalid IPv4 nodes CIDR with shorter prefix", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/15")
+			shoot.Spec.Networking.Nodes = new("10.0.0.0/15")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 10.0.0.0/16")))
 		})
 
 		It("should succeed for valid IPv6 nodes CIDR", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1:100::/64")
+			shoot.Spec.Networking.Nodes = new("fd00:10:1:100::/64")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
 		})
 
 		It("should fail for invalid IPv6 nodes CIDR", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("fd00:20:1:100::/64")
+			shoot.Spec.Networking.Nodes = new("fd00:20:1:100::/64")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of fd00:10:1:100::/56")))
 		})
 
 		It("should fail for invalid IPv6 nodes CIDR with shorter prefix", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("fd00:10:1::/48")
+			shoot.Spec.Networking.Nodes = new("fd00:10:1::/48")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of fd00:10:1:100::/56")))
 		})
 
@@ -78,45 +77,45 @@ var _ = Describe("Shoot Validator", func() {
 		})
 
 		It("should fail for invalid CIDR format", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("not-a-cidr")
+			shoot.Spec.Networking.Nodes = new("not-a-cidr")
 			Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a valid CIDR")))
 		})
 
 		It("should succeed if nodes CIDR is added on update", func() {
 			oldShoot := shoot.DeepCopy()
-			shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
+			shoot.Spec.Networking.Nodes = new("10.0.0.0/24")
 			Expect(shootValidator.Validate(ctx, shoot, oldShoot)).To(Succeed())
 		})
 
 		It("should fail if invalid nodes CIDR is added on update", func() {
 			oldShoot := shoot.DeepCopy()
-			shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
+			shoot.Spec.Networking.Nodes = new("192.168.0.0/24")
 			Expect(shootValidator.Validate(ctx, shoot, oldShoot)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 10.0.0.0/16")))
 		})
 
 		It("should succeed if nodes CIDR is unchanged on update", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
+			shoot.Spec.Networking.Nodes = new("192.168.0.0/24")
 			oldShoot := shoot.DeepCopy()
 			Expect(shootValidator.Validate(ctx, shoot, oldShoot)).To(Succeed())
 		})
 
 		It("should succeed if nodes CIDR is changed to valid value on update", func() {
 			oldShoot := shoot.DeepCopy()
-			oldShoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
-			shoot.Spec.Networking.Nodes = ptr.To("10.0.1.0/24")
+			oldShoot.Spec.Networking.Nodes = new("10.0.0.0/24")
+			shoot.Spec.Networking.Nodes = new("10.0.1.0/24")
 			Expect(shootValidator.Validate(ctx, shoot, oldShoot)).To(Succeed())
 		})
 
 		It("should fail if nodes CIDR is changed to invalid value on update", func() {
 			oldShoot := shoot.DeepCopy()
-			oldShoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
-			shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
+			oldShoot.Spec.Networking.Nodes = new("10.0.0.0/24")
+			shoot.Spec.Networking.Nodes = new("192.168.0.0/24")
 			Expect(shootValidator.Validate(ctx, shoot, oldShoot)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 10.0.0.0/16")))
 		})
 
 		It("should succeed if Shoot is in deletion phase", func() {
-			shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
-			shoot.DeletionTimestamp = ptr.To(metav1.Now())
+			shoot.Spec.Networking.Nodes = new("192.168.0.0/24")
+			shoot.DeletionTimestamp = new(metav1.Now())
 			Expect(shootValidator.Validate(ctx, shoot, shoot.DeepCopy())).To(Succeed())
 		})
 
@@ -135,33 +134,33 @@ var _ = Describe("Shoot Validator", func() {
 			})
 
 			It("should succeed for valid GinD IPv4 nodes CIDR", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("172.18.0.0/24")
+				shoot.Spec.Networking.Nodes = new("172.18.0.0/24")
 				Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
 			})
 
 			It("should fail for invalid GinD IPv4 nodes CIDR", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("192.168.0.0/24")
+				shoot.Spec.Networking.Nodes = new("192.168.0.0/24")
 				Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 172.18.0.0/24")))
 			})
 
 			It("should succeed for valid GinD IPv6 nodes CIDR", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("fd00:10::/64")
+				shoot.Spec.Networking.Nodes = new("fd00:10::/64")
 				Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
 			})
 
 			It("should fail for invalid GinD IPv6 nodes CIDR", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("fd00:20::/64")
+				shoot.Spec.Networking.Nodes = new("fd00:20::/64")
 				Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of fd00:10::/64")))
 			})
 
 			It("should fail for KinD CIDR when shoot is self-hosted without managed infrastructure", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
+				shoot.Spec.Networking.Nodes = new("10.0.0.0/24")
 				Expect(shootValidator.Validate(ctx, shoot, nil)).To(MatchError(ContainSubstring("nodes CIDR must be a subnet of 172.18.0.0/24")))
 			})
 
 			It("should use KinD CIDRs when shoot is self-hosted with managed infrastructure", func() {
-				shoot.Spec.CredentialsBindingName = ptr.To("my-binding")
-				shoot.Spec.Networking.Nodes = ptr.To("10.0.0.0/24")
+				shoot.Spec.CredentialsBindingName = new("my-binding")
+				shoot.Spec.Networking.Nodes = new("10.0.0.0/24")
 				Expect(shootValidator.Validate(ctx, shoot, nil)).To(Succeed())
 			})
 		})

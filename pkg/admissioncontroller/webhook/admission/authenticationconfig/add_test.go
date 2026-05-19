@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -171,7 +170,7 @@ anonymous:
 							ConfigMapName: cmName,
 						},
 						ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-							Issuer: ptr.To("https://xyz.com"),
+							Issuer: new("https://xyz.com"),
 							AcceptedIssuers: []string{
 								"https://abc.com",
 							},
@@ -301,7 +300,7 @@ anonymous:
 					Data:       map[string]string{"config.yaml": validAuthenticationConfiguration}, // does not set `anonymous.enabled: true`
 				})).To(Succeed())
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(true)
+				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = new(true)
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
 			})
 		})
@@ -363,7 +362,7 @@ anonymous:
 					Data:       map[string]string{"config.yaml": anonymousAuthenticationConfiguration},
 				})).To(Succeed())
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(false)
+				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = new(false)
 				test(admissionv1.Create, shootv1beta1, newShoot, false, statusCodeInvalid, "cannot use anonymous authentication configuration when the following shoots have the legacy configuration enabled: fake-shoot-name", "")
 			})
 		})
@@ -460,7 +459,7 @@ anonymous:
 				})
 
 				It("uses anonymous authentication and has the legacy kube-apiserver setting already enabled", func() {
-					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(true)
+					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = new(true)
 					Expect(fakeClient.Update(ctx, shootv1beta1)).To(Succeed())
 
 					newCm := cm.DeepCopy()
@@ -470,7 +469,7 @@ anonymous:
 				})
 
 				It("uses anonymous authentication and has the legacy kube-apiserver setting already enabled", func() {
-					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = ptr.To(false)
+					shootv1beta1.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = new(false)
 					Expect(fakeClient.Update(ctx, shootv1beta1)).To(Succeed())
 
 					newCm := cm.DeepCopy()

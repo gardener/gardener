@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -188,7 +187,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To(type3),
+					Type: new(type3),
 				},
 				Extensions: []gardencorev1beta1.Extension{
 					{Type: type4},
@@ -214,7 +213,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To(type3),
+					Type: new(type3),
 				},
 			},
 		}
@@ -251,7 +250,7 @@ var _ = Describe("Reconciler", func() {
 					{
 						Kind:    extensionsv1alpha1.NetworkResource,
 						Type:    type2,
-						Primary: ptr.To(false),
+						Primary: new(false),
 					},
 				},
 			},
@@ -562,7 +561,7 @@ var _ = Describe("Reconciler", func() {
 						Name: "s4",
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						SeedName: ptr.To("anotherSeed"),
+						SeedName: new("anotherSeed"),
 						Provider: gardencorev1beta1.Provider{
 							Type: type2,
 							Workers: []gardencorev1beta1.Worker{
@@ -576,7 +575,7 @@ var _ = Describe("Reconciler", func() {
 							},
 						},
 						Networking: &gardencorev1beta1.Networking{
-							Type: ptr.To(type3),
+							Type: new(type3),
 						},
 						Extensions: []gardencorev1beta1.Extension{
 							{Type: type4},

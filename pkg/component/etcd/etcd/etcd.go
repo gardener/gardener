@@ -218,7 +218,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidcorev1alpha1.GzipCompression
 		compressionSpec         = druidcorev1alpha1.CompressionSpec{
-			Enabled: ptr.To(true),
+			Enabled: new(true),
 			Policy:  &compressionPolicy,
 		}
 		snapshotCompactionSpec = druidcorev1alpha1.SnapshotCompactionSpec{
@@ -296,8 +296,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	gardenerutils.ReconcileTopologyAwareRoutingSettings(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	ports := []networkingv1.NetworkPolicyPort{
-		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
-		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortBackupRestore)), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: new(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: new(intstr.FromInt32(etcdconstants.PortBackupRestore)), Protocol: ptr.To(corev1.ProtocolTCP)},
 	}
 	if e.values.NamePrefix != "" {
 		// etcd deployed for garden cluster
@@ -365,12 +365,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 			},
 			PeerUrlTLS:              peerUrlTLS,
-			ClientPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
-			ServerPort:              ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
-			WrapperPort:             ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
+			ClientPort:              new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
+			ServerPort:              new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
+			WrapperPort:             new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
-			Quota:                   ptr.To(resource.MustParse("8Gi")),
+			Quota:                   new(resource.MustParse("8Gi")),
 			ClientService: &druidcorev1alpha1.ClientService{
 				Annotations:         clientService.Annotations,
 				Labels:              clientService.Labels,
@@ -396,7 +396,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			Port:                    ptr.To(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortBackupRestore, etcdconstants.StaticPodPortEtcdEventsBackupRestore)),
+			Port:                    new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortBackupRestore, etcdconstants.StaticPodPortEtcdEventsBackupRestore)),
 			Resources:               resourcesBackupRestore,
 			SnapshotCompaction:      &snapshotCompactionSpec,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
@@ -418,7 +418,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
-			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = ptr.To(resource.MustParse("100Mi"))
+			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = new(resource.MustParse("100Mi"))
 			e.etcd.Spec.Backup.DeltaSnapshotRetentionPeriod = e.values.BackupConfig.DeltaSnapshotRetentionPeriod
 
 			if e.values.BackupConfig.LeaderElection != nil {
@@ -430,12 +430,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		if e.values.StaticPodConfig != nil {
-			e.etcd.Spec.RunAsRoot = ptr.To(true)
+			e.etcd.Spec.RunAsRoot = new(true)
 			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
 		}
 
 		if existingEtcd == nil || existingEtcd.Spec.StorageCapacity == nil {
-			e.etcd.Spec.StorageCapacity = ptr.To(resource.MustParse(e.values.StorageCapacity))
+			e.etcd.Spec.StorageCapacity = new(resource.MustParse(e.values.StorageCapacity))
 		}
 		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
@@ -470,7 +470,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
 								// This is needed because the etcd's certificates are not are generated for a specific pod IP.
-								InsecureSkipVerify: ptr.To(true),
+								InsecureSkipVerify: new(true),
 								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
 									Key:                  secretsutils.DataKeyCertificate,
@@ -489,7 +489,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						},
 						{
 							Action:      "replace",
-							Replacement: ptr.To(serviceMonitorJobNameEtcd),
+							Replacement: new(serviceMonitorJobNameEtcd),
 							TargetLabel: "job",
 						},
 					},
@@ -505,7 +505,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
 								// This is needed because the etcd's certificates are not are generated for a specific pod IP.
-								InsecureSkipVerify: ptr.To(true),
+								InsecureSkipVerify: new(true),
 								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
 									Key:                  secretsutils.DataKeyCertificate,
@@ -525,7 +525,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 						{
 							Action:      "replace",
-							Replacement: ptr.To(serviceMonitorJobNameBackupRestore),
+							Replacement: new(serviceMonitorJobNameBackupRestore),
 							TargetLabel: "job",
 						},
 					},

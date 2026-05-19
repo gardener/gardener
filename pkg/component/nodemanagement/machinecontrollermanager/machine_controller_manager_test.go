@@ -94,7 +94,7 @@ var _ = Describe("MachineControllerManager", func() {
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		roleBinding = &rbacv1.RoleBinding{
@@ -286,7 +286,7 @@ var _ = Describe("MachineControllerManager", func() {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						}},
 						PriorityClassName:             "gardener-system-300",
@@ -308,7 +308,7 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":  "kubernetes",
@@ -556,7 +556,7 @@ subjects:
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(false),
+				KeepObjects:  new(false),
 			},
 		}
 	})
@@ -624,7 +624,7 @@ subjects:
 				managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
 				Expect(actualManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(actualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(actualManagedResourceSecret.Immutable).To(Equal(new(true)))
 
 				manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
 				Expect(err).NotTo(HaveOccurred())

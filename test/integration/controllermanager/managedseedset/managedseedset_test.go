@@ -139,10 +139,10 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     ptr.To("100.128.0.0/11"),
-						Services: ptr.To("100.72.0.0/13"),
+						Pods:     new("100.128.0.0/11"),
+						Services: new("100.72.0.0/13"),
 					},
 				},
 			},
@@ -187,15 +187,15 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: ptr.To("foo"),
+				CloudProfileName: new("foo"),
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo"),
+					Type: new("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("replica-name.example.com"),
+					Domain: new("replica-name.example.com"),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo",
@@ -206,18 +206,18 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 								Type: "some-machine-type",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 							Maximum:        2,
 							Minimum:        1,
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+							MaxUnavailable: new(intstr.FromInt32(1)),
 						},
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: ptr.To("shoot-operator-foo"),
+				SecretBindingName: new("shoot-operator-foo"),
 			},
 		}
 

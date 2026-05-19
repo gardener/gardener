@@ -111,8 +111,8 @@ var _ = Describe("helper", func() {
 		Entry("rotation nil", &operatorv1alpha1.Credentials{}, false),
 		Entry("etcdEncryptionKey nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, false),
 		Entry("AutoCompleteAfterPrepared empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}, false),
-		Entry("AutoCompleteAfterPrepared true", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
-		Entry("AutoCompleteAfterPrepared false", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: new(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: new(false)}}}, false),
 	)
 
 	Describe("#MutateETCDEncryptionKeyRotation", func() {
@@ -445,11 +445,11 @@ var _ = Describe("helper", func() {
 							Domains: []operatorv1alpha1.DNSDomain{
 								{
 									Name:     "ingress.local.gardener.cloud",
-									Provider: ptr.To("primary"),
+									Provider: new("primary"),
 								},
 								{
 									Name:     "secondary.local.gardener.cloud",
-									Provider: ptr.To("secondary"),
+									Provider: new("secondary"),
 								},
 							},
 						},
@@ -459,7 +459,7 @@ var _ = Describe("helper", func() {
 							DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
 								Domain: &operatorv1alpha1.DNSDomain{
 									Name:     "discovery.local.gardener.cloud",
-									Provider: ptr.To("primary"),
+									Provider: new("primary"),
 								},
 							},
 						},
@@ -472,11 +472,11 @@ var _ = Describe("helper", func() {
 			Expect(GetIngressWildcardDomains(garden)).To(ConsistOf(
 				operatorv1alpha1.DNSDomain{
 					Name:     "*.ingress.local.gardener.cloud",
-					Provider: ptr.To("primary"),
+					Provider: new("primary"),
 				},
 				operatorv1alpha1.DNSDomain{
 					Name:     "*.secondary.local.gardener.cloud",
-					Provider: ptr.To("secondary"),
+					Provider: new("secondary"),
 				},
 			))
 		})
@@ -493,11 +493,11 @@ var _ = Describe("helper", func() {
 							Domains: []operatorv1alpha1.DNSDomain{
 								{
 									Name:     "ingress.local.gardener.cloud",
-									Provider: ptr.To("primary"),
+									Provider: new("primary"),
 								},
 								{
 									Name:     "secondary.local.gardener.cloud",
-									Provider: ptr.To("secondary"),
+									Provider: new("secondary"),
 								},
 							},
 						},
@@ -507,7 +507,7 @@ var _ = Describe("helper", func() {
 							DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
 								Domain: &operatorv1alpha1.DNSDomain{
 									Name:     "discovery.local.gardener.cloud",
-									Provider: ptr.To("primary"),
+									Provider: new("primary"),
 								},
 							},
 						},
@@ -520,15 +520,15 @@ var _ = Describe("helper", func() {
 			Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 				operatorv1alpha1.DNSDomain{
 					Name:     "*.ingress.local.gardener.cloud",
-					Provider: ptr.To("primary"),
+					Provider: new("primary"),
 				},
 				operatorv1alpha1.DNSDomain{
 					Name:     "*.secondary.local.gardener.cloud",
-					Provider: ptr.To("secondary"),
+					Provider: new("secondary"),
 				},
 				operatorv1alpha1.DNSDomain{
 					Name:     "discovery.local.gardener.cloud",
-					Provider: ptr.To("primary"),
+					Provider: new("primary"),
 				},
 			))
 		})
@@ -542,11 +542,11 @@ var _ = Describe("helper", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
-						Provider: ptr.To("primary"),
+						Provider: new("primary"),
 					},
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
-						Provider: ptr.To("secondary"),
+						Provider: new("secondary"),
 					},
 				))
 			})
@@ -561,11 +561,11 @@ var _ = Describe("helper", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
-						Provider: ptr.To("primary"),
+						Provider: new("primary"),
 					},
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
-						Provider: ptr.To("secondary"),
+						Provider: new("secondary"),
 					},
 				))
 			})

@@ -169,7 +169,7 @@ func (r *Reconciler) instantiateComponents(
 ) {
 	var wildcardCertSecretName *string
 	if wildcardCertSecret != nil {
-		wildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
+		wildcardCertSecretName = new(wildcardCertSecret.GetName())
 	}
 
 	// crds
@@ -775,7 +775,7 @@ func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardene
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
-		Replicas: ptr.To(replicas),
+		Replicas: new(replicas),
 	}
 }
 
@@ -864,7 +864,7 @@ func (r *Reconciler) newKubeControllerManager(
 
 	if controllerManager := garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager; controllerManager != nil {
 		config = controllerManager.KubeControllerManagerConfig
-		certificateSigningDuration = ptr.To(controllerManager.CertificateSigningDuration.Duration)
+		certificateSigningDuration = new(controllerManager.CertificateSigningDuration.Duration)
 	}
 
 	return sharedcomponent.NewKubeControllerManager(
@@ -881,10 +881,10 @@ func (r *Reconciler) newKubeControllerManager(
 		false,
 		certificateSigningDuration,
 		kubecontrollermanager.ControllerWorkers{
-			GarbageCollector:    ptr.To(250),
-			Namespace:           ptr.To(100),
-			ResourceQuota:       ptr.To(100),
-			ServiceAccountToken: ptr.To(0),
+			GarbageCollector:    new(250),
+			Namespace:           new(100),
+			ResourceQuota:       new(100),
+			ServiceAccountToken: new(0),
 		},
 		kubecontrollermanager.ControllerSyncPeriods{
 			ResourceQuota: ptr.To(time.Minute),
@@ -1752,7 +1752,7 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 	values := &extension.Values{
 		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 		Namespace:  r.GardenNamespace,
-		NamePrefix: ptr.To("garden-"),
+		NamePrefix: new("garden-"),
 		Extensions: make(map[string]extension.Extension),
 	}
 

@@ -38,7 +38,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when enableAnonymousAuthentication is set",
-				&operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}},
+				&operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)}},
 				ContainElement(Equal("you are setting the spec.virtualCluster.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")),
 			),
 		)

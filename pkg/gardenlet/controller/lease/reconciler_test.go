@@ -76,7 +76,7 @@ var _ = Describe("LeaseReconciler", func() {
 				}},
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       ptr.To(seed.Name),
+				HolderIdentity:       new(seed.Name),
 				LeaseDurationSeconds: ptr.To[int32](2),
 				RenewTime:            &renewTime,
 			},

@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -118,7 +117,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -138,7 +137,7 @@ var _ = BeforeSuite(func() {
 	Expect(controllerregistration.AddToManager(mgr, controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: ptr.To(5),
+				ConcurrentSyncs: new(5),
 			},
 		},
 	})).To(Succeed())
@@ -205,7 +204,7 @@ var _ = BeforeSuite(func() {
 			Labels:       map[string]string{testID: testRunID},
 		},
 		Spec: gardencorev1beta1.ShootSpec{
-			CredentialsBindingName: ptr.To("my-provider-account"),
+			CredentialsBindingName: new("my-provider-account"),
 			CloudProfile:           &gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "test-cloudprofile"},
 			Region:                 "foo-region",
 			Provider: gardencorev1beta1.Provider{
@@ -217,7 +216,7 @@ var _ = BeforeSuite(func() {
 					Maximum:      1,
 					Machine: gardencorev1beta1.Machine{
 						Type:  "large",
-						Image: &gardencorev1beta1.ShootMachineImage{Name: providerType, Version: ptr.To("0.0.0")},
+						Image: &gardencorev1beta1.ShootMachineImage{Name: providerType, Version: new("0.0.0")},
 					},
 					CRI: &gardencorev1beta1.CRI{
 						Name:              gardencorev1beta1.CRINameContainerD,

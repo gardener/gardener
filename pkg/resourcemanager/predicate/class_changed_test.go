@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -27,7 +26,7 @@ var _ = Describe("Predicate", func() {
 	BeforeEach(func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: ptr.To("shoot"),
+				Class: new("shoot"),
 			},
 		}
 		createEvent = event.CreateEvent{
@@ -101,7 +100,7 @@ var _ = Describe("Predicate", func() {
 
 		It("should match on update (class changed)", func() {
 			managedResourceNew := managedResource.DeepCopy()
-			managedResourceNew.Spec.Class = ptr.To("other")
+			managedResourceNew.Spec.Class = new("other")
 			updateEvent.ObjectNew = managedResourceNew
 
 			predicate := resourcemanagerpredicate.ClassChangedPredicate()

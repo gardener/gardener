@@ -266,13 +266,13 @@ func getPods(kubernetesVersion string) []*corev1.Pod {
 				}},
 				// allow running this pod on the "unprivileged" shoot
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 					Capabilities: &corev1.Capabilities{
 						Drop: []corev1.Capability{"ALL"},
 					},
 					RunAsUser:    ptr.To[int64](65532),
 					RunAsGroup:   ptr.To[int64](65532),
-					RunAsNonRoot: ptr.To(true),
+					RunAsNonRoot: new(true),
 					SeccompProfile: &corev1.SeccompProfile{
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
 					},

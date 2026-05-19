@@ -139,7 +139,7 @@ var _ = Describe("Builder", func() {
 				}))
 			},
 				Entry("reason is not set", nil, initializedReason),
-				Entry("empty reason is set", ptr.To(""), unspecifiedReason),
+				Entry("empty reason is set", new(""), unspecifiedReason),
 				Entry("reason is set", ptr.To(bazReason), bazReason),
 			)
 
@@ -181,9 +181,9 @@ var _ = Describe("Builder", func() {
 			},
 				Entry("reason is not set", nil, bazReason, bazReason),
 				Entry("reason was previously empty", nil, "", initializedReason),
-				Entry("empty reason is set", ptr.To(""), bazReason, unspecifiedReason),
-				Entry("message is the same", ptr.To("ReasonA"), "ReasonA", "ReasonA"),
-				Entry("message changed", ptr.To("ReasonA"), bazReason, "ReasonA"),
+				Entry("empty reason is set", new(""), bazReason, unspecifiedReason),
+				Entry("message is the same", new("ReasonA"), "ReasonA", "ReasonA"),
+				Entry("message changed", new("ReasonA"), bazReason, "ReasonA"),
 			)
 		})
 
@@ -209,7 +209,7 @@ var _ = Describe("Builder", func() {
 				}))
 			},
 				Entry("message is not set", nil, uninitializedMessage),
-				Entry("empty message is set", ptr.To(""), unspecifiedMessage),
+				Entry("empty message is set", new(""), unspecifiedMessage),
 				Entry("message is set", ptr.To(fubarMessage), fubarMessage),
 			)
 
@@ -251,9 +251,9 @@ var _ = Describe("Builder", func() {
 			},
 				Entry("message is not set", nil, fubarMessage, fubarMessage),
 				Entry("message was previously empty", nil, "", uninitializedMessage),
-				Entry("empty message is set", ptr.To(""), fubarMessage, unspecifiedMessage),
-				Entry("message is the same", ptr.To("another message"), "another message", "another message"),
-				Entry("message changed", ptr.To("another message"), fubarMessage, "another message"),
+				Entry("empty message is set", new(""), fubarMessage, unspecifiedMessage),
+				Entry("message is the same", new("another message"), "another message", "another message"),
+				Entry("message changed", new("another message"), fubarMessage, "another message"),
 			)
 		})
 

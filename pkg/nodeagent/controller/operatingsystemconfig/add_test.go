@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -154,7 +153,7 @@ var _ = Describe("Add", func() {
 
 			It("should return false because lease is still held", func() {
 				oldLease := lease.DeepCopy()
-				oldLease.Spec.HolderIdentity = ptr.To("other-host")
+				oldLease.Spec.HolderIdentity = new("other-host")
 				lease = oldLease.DeepCopy()
 
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldLease, ObjectNew: lease})).To(BeFalse())
@@ -165,7 +164,7 @@ var _ = Describe("Add", func() {
 
 				BeforeEach(func() {
 					oldLease = lease.DeepCopy()
-					oldLease.Spec.HolderIdentity = ptr.To("other-host")
+					oldLease.Spec.HolderIdentity = new("other-host")
 					lease.Spec.HolderIdentity = nil
 				})
 

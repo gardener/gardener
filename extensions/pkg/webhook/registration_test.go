@@ -112,7 +112,7 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "mutating",
 					Name:              "webhook3",
-					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
+					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: new("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
@@ -148,7 +148,7 @@ var _ = Describe("Registration", func() {
 				{
 					Action:            "validating",
 					Name:              "webhook3",
-					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: ptr.To("token")}},
+					Types:             []Type{{Obj: &corev1.ServiceAccount{}, Subresource: new("token")}},
 					Target:            TargetShoot,
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
@@ -192,17 +192,17 @@ var _ = Describe("Registration", func() {
 							out.Service = &admissionregistrationv1.ServiceReference{
 								Name:      "gardener-extension-" + providerName,
 								Namespace: namespace,
-								Path:      ptr.To("/" + path),
-								Port:      ptr.To(int32(servicePort)),
+								Path:      new("/" + path),
+								Port:      new(int32(servicePort)),
 							}
 						}
 
 						if mode == ModeURL {
-							out.URL = ptr.To("https://" + url + "/" + path)
+							out.URL = new("https://" + url + "/" + path)
 						}
 
 						if mode == ModeURLWithServiceName {
-							out.URL = ptr.To(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path))
+							out.URL = new(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path))
 						}
 
 						return out
@@ -210,11 +210,11 @@ var _ = Describe("Registration", func() {
 
 					buildShootClientConfig = func(path string) admissionregistrationv1.WebhookClientConfig {
 						out := admissionregistrationv1.WebhookClientConfig{
-							URL: ptr.To(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path)),
+							URL: new(fmt.Sprintf("https://gardener-extension-%s.%s:%d/%s", providerName, namespace, servicePort, path)),
 						}
 
 						if url != "" {
-							out.URL = ptr.To("https://" + url + "/" + path)
+							out.URL = new("https://" + url + "/" + path)
 						}
 
 						return out
@@ -559,8 +559,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(false),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})
@@ -592,8 +592,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(false),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})
@@ -614,8 +614,8 @@ var _ = Describe("Registration", func() {
 				APIVersion:         "v1",
 				Kind:               "Namespace",
 				Name:               ownerNamespaceName,
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(false),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(false),
 			}))
 			Expect(webhookConfig.Webhooks[0].ClientConfig.CABundle).To(Equal(caBundle))
 		})

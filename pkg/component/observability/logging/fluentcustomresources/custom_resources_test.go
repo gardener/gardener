@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -69,7 +68,7 @@ var _ = Describe("Custom Resources", func() {
 								Parser: &fluentbitv1alpha2filter.Parser{
 									KeyName:     "log",
 									Parser:      "extensions-parser",
-									ReserveData: ptr.To(true),
+									ReserveData: new(true),
 								},
 							},
 							{
@@ -169,11 +168,11 @@ var _ = Describe("Custom Resources", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -182,7 +181,7 @@ var _ = Describe("Custom Resources", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
 			Expect(err).NotTo(HaveOccurred())

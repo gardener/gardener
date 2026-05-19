@@ -174,7 +174,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, seed *garde
 	seed.Status.Gardener = r.Identity
 	seed.Status.ObservedGeneration = seed.Generation
 	seed.Status.ClientCertificateExpirationTimestamp = r.ClientCertificateExpirationTimestamp
-	seed.Status.KubernetesVersion = ptr.To(r.SeedClientSet.Version())
+	seed.Status.KubernetesVersion = new(r.SeedClientSet.Version())
 
 	// Initialize capacity and allocatable
 	var capacity, allocatable corev1.ResourceList

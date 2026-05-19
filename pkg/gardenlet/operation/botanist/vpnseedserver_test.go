@@ -15,7 +15,6 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -54,7 +53,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						Nodes: ptr.To("10.0.0.0/24"),
+						Nodes: new("10.0.0.0/24"),
 					},
 				},
 			})
@@ -65,7 +64,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 				SNI: &gardenletconfigv1alpha1.SNI{
 					Ingress: &gardenletconfigv1alpha1.SNIIngress{
-						Namespace: ptr.To("test-ns"),
+						Namespace: new("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
 						},
@@ -127,7 +126,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 				SNI: &gardenletconfigv1alpha1.SNI{
 					Ingress: &gardenletconfigv1alpha1.SNIIngress{
-						Namespace: ptr.To("test-ns"),
+						Namespace: new("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
 						},

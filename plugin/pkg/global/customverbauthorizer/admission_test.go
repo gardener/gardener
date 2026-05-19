@@ -18,7 +18,6 @@ import (
 	servieaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -507,7 +506,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 					It("should allow creating a NamespacedCloudProfile with kubernetes section", func() {
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
 						}}
 
 						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
@@ -516,11 +515,11 @@ var _ = Describe("customverbauthorizer", func() {
 
 					It("should allow updating a NamespacedCloudProfile's kubernetes section", func() {
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
 						}}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(48 * time.Hour)})},
 						}}
 
 						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
@@ -529,7 +528,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 					It("should allow removing a NamespacedCloudProfile's kubernetes section", func() {
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
 						}}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.Kubernetes = nil
@@ -546,7 +545,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 					It("should forbid creating a NamespacedCloudProfile with kubernetes section", func() {
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
 						}}
 
 						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
@@ -555,11 +554,11 @@ var _ = Describe("customverbauthorizer", func() {
 
 					It("should forbid updating a NamespacedCloudProfile's kubernetes section", func() {
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
 						}}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(48 * time.Hour)})},
 						}}
 
 						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
@@ -568,7 +567,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 					It("should forbid removing a NamespacedCloudProfile's kubernetes section", func() {
 						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
-							{Version: "1.30.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+							{Version: "1.30.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
 						}}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.Kubernetes = nil
@@ -597,7 +596,7 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should allow creating a NamespacedCloudProfile with machineImages section", func() {
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
 							}},
 						}
 
@@ -608,13 +607,13 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should allow updating a NamespacedCloudProfile's machineImages section", func() {
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
 							}},
 						}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(48 * time.Hour)})}},
 							}},
 						}
 
@@ -625,7 +624,7 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should allow removing a NamespacedCloudProfile's machineImages section", func() {
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
 							}},
 						}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
@@ -644,7 +643,7 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should forbid creating a NamespacedCloudProfile with machineImages section", func() {
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
 							}},
 						}
 
@@ -655,13 +654,13 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should forbid updating a NamespacedCloudProfile's machineImages section", func() {
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
 							}},
 						}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(48 * time.Hour)})}},
 							}},
 						}
 
@@ -672,7 +671,7 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should forbid removing a NamespacedCloudProfile's machineImages section", func() {
 						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 							{Name: "dummy-image", Versions: []core.MachineImageVersion{
-								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
 							}},
 						}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
@@ -739,7 +738,7 @@ var _ = Describe("customverbauthorizer", func() {
 				})
 			})
 			It("should allow creating a NamespacedCloudProfile with limits above parent CloudProfile limits", func() {
-				namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+				namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: new(int32(15))}
 
 				attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())

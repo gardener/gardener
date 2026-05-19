@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -67,10 +66,10 @@ var _ = Describe("Seed Secrets controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     ptr.To("100.128.0.0/11"),
-						Services: ptr.To("100.72.0.0/13"),
+						Pods:     new("100.128.0.0/11"),
+						Services: new("100.72.0.0/13"),
 					},
 				},
 			},

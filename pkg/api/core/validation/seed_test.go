@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -58,7 +57,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					Internal: &core.SeedDNSProviderConfig{
 						Type:   "foo",
 						Domain: "internal.example.com",
-						Zone:   ptr.To("zone-1"),
+						Zone:   new("zone-1"),
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -414,7 +413,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
 					Type:   "foo",
 					Domain: "foo.example.com",
-					Zone:   ptr.To("zone-1"),
+					Zone:   new("zone-1"),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -430,7 +429,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				seed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
 					Type:   "foo",
 					Domain: "foo.example.com",
-					Zone:   ptr.To("zone-1"),
+					Zone:   new("zone-1"),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "security.gardener.cloud/v1alpha1",
 						Kind:       "WorkloadIdentity",
@@ -506,7 +505,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
 					Type:   "foo",
 					Domain: "foo.example.com",
-					Zone:   ptr.To("zone-1"),
+					Zone:   new("zone-1"),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -523,7 +522,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					{
 						Type:   "foo",
 						Domain: "foo.example.com",
-						Zone:   ptr.To("zone-1"),
+						Zone:   new("zone-1"),
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -534,7 +533,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					{
 						Type:   "bar",
 						Domain: "bar.example.com",
-						Zone:   ptr.To("zone-2"),
+						Zone:   new("zone-2"),
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "security.gardener.cloud/v1alpha1",
 							Kind:       "WorkloadIdentity",
@@ -552,7 +551,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					{
 						Type:   "foo",
 						Domain: "example.com",
-						Zone:   ptr.To("zone-1"),
+						Zone:   new("zone-1"),
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -563,7 +562,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					{
 						Type:   "bar",
 						Domain: "example.com",
-						Zone:   ptr.To("zone-2"),
+						Zone:   new("zone-2"),
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -584,7 +583,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					{
 						Type:   "foo",
 						Domain: "foo.example.com",
-						Zone:   ptr.To("zone-1"),
+						Zone:   new("zone-1"),
 						CredentialsRef: corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -720,11 +719,11 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			Context("IPv4", func() {
 				It("should allow valid networking configuration", func() {
-					seed.Spec.Networks.Nodes = ptr.To("10.1.0.0/16")
+					seed.Spec.Networks.Nodes = new("10.1.0.0/16")
 					seed.Spec.Networks.Pods = "10.2.0.0/16"
 					seed.Spec.Networks.Services = "10.3.0.0/16"
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = new("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = new("10.5.0.0/16")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(BeEmpty())
@@ -764,11 +763,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid IPv6 CIDRs with IPv4 IP family", func() {
-					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = new("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "2001:db8:13::/48"
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = new("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = new("2001:db8:3::/48")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -859,9 +858,9 @@ var _ = Describe("Seed Validation Tests", func() {
 					// Service CIDR overlaps with reserved range
 					seed.Spec.Networks.Pods = "240.0.0.0/16" // 240.0.0.0 -> 240.0.255.255
 					seed.Spec.Networks.Services = "243.1.0.0/16"
-					seed.Spec.Networks.Nodes = ptr.To("242.2.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("244.3.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("244.4.0.0/16")
+					seed.Spec.Networks.Nodes = new("242.2.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = new("244.3.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = new("244.4.0.0/16")
 
 					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -904,11 +903,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should allow valid networking configuration", func() {
-					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = new("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "2001:db8:13::/48"
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = new("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = new("2001:db8:3::/48")
 
 					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
@@ -946,11 +945,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid Seed with overlapping networks", func() {
-					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = new("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:11:1::/49"
 					seed.Spec.Networks.Services = "2001:db8:11:2::/49"
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:11:a::/64")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:11:b::/64")
+					seed.Spec.Networks.ShootDefaults.Pods = new("2001:db8:11:a::/64")
+					seed.Spec.Networks.ShootDefaults.Services = new("2001:db8:11:b::/64")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -996,11 +995,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
-					seed.Spec.Networks.Nodes = ptr.To("10.1.0.0/16")
+					seed.Spec.Networks.Nodes = new("10.1.0.0/16")
 					seed.Spec.Networks.Pods = "10.2.0.0/16"
 					seed.Spec.Networks.Services = "10.3.0.0/16"
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = new("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = new("10.5.0.0/16")
 
 					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -1026,11 +1025,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should allow Seed with very large service range because the range limit only applies to ipv4", func() {
-					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = new("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "3001::/7" // larger than /8 ipv4 limit
-					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = new("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = new("2001:db8:3::/48")
 
 					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
@@ -1389,19 +1388,19 @@ var _ = Describe("Seed Validation Tests", func() {
 					})
 
 					It("should allow specifying a non-empty class", func() {
-						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("non-default")
+						seed.Spec.Settings.LoadBalancerServices.Class = new("non-default")
 
 						Expect(ValidateSeed(seed)).To(BeEmpty())
 					})
 
 					It("should allow specifying a qualified class", func() {
-						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("stackit.cloud/yawol")
+						seed.Spec.Settings.LoadBalancerServices.Class = new("stackit.cloud/yawol")
 
 						Expect(ValidateSeed(seed)).To(BeEmpty())
 					})
 
 					It("should deny specifying an empty class", func() {
-						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To("")
+						seed.Spec.Settings.LoadBalancerServices.Class = new("")
 
 						Expect(ValidateSeed(seed)).To(ContainElement(
 							PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1413,7 +1412,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					})
 
 					It("should deny specifying a class that Kubernetes does not accept", func() {
-						seed.Spec.Settings.LoadBalancerServices.Class = ptr.To(".invalid-")
+						seed.Spec.Settings.LoadBalancerServices.Class = new(".invalid-")
 
 						Expect(ValidateSeed(seed)).To(ContainElement(
 							PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2016,13 +2015,13 @@ var _ = Describe("Seed Validation Tests", func() {
 		Context("validate .status.clusterIdentity updates", func() {
 			newSeed := &core.Seed{
 				Status: core.SeedStatus{
-					ClusterIdentity: ptr.To("newClusterIdentity"),
+					ClusterIdentity: new("newClusterIdentity"),
 				},
 			}
 
 			It("should fail to update seed status cluster identity if it already exists", func() {
 				oldSeed := &core.Seed{Status: core.SeedStatus{
-					ClusterIdentity: ptr.To("clusterIdentityExists"),
+					ClusterIdentity: new("clusterIdentityExists"),
 				}}
 
 				Expect(ValidateSeedStatusUpdate(newSeed, oldSeed)).To(ConsistOfFields(Fields{
@@ -2050,7 +2049,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid invalid metadata or spec fields", func() {
 			seedTemplate.Labels = map[string]string{"foo!": "bar"}
 			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
-			seedTemplate.Spec.Networks.Nodes = ptr.To("")
+			seedTemplate.Spec.Networks.Nodes = new("")
 
 			Expect(ValidateSeedTemplate(seedTemplate, nil)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{

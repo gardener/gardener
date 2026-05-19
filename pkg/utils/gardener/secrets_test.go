@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -93,7 +92,7 @@ var _ = Describe("Secrets", func() {
 					Annotations: map[string]string{"baz": "foo"},
 				},
 				Type:      corev1.SecretTypeOpaque,
-				Immutable: ptr.To(false),
+				Immutable: new(false),
 				Data:      map[string][]byte{"username": []byte("bar"), "password": []byte("baz")},
 			}
 		)

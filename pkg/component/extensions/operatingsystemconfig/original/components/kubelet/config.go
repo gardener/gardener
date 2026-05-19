@@ -33,13 +33,13 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 			Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 			},
 			X509: kubeletconfigv1beta1.KubeletX509Authentication{
 				ClientCAFile: PathKubeletCACert,
 			},
 			Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-				Enabled:  ptr.To(true),
+				Enabled:  new(true),
 				CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 			},
 		},
@@ -58,7 +58,7 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		// containerd implementation of the new CRI API: https://github.com/containerd/containerd/pull/8722
 		CgroupDriver:                     "systemd",
 		CgroupRoot:                       "/",
-		CgroupsPerQOS:                    ptr.To(true),
+		CgroupsPerQOS:                    new(true),
 		ClusterDNS:                       clusterDNSAddresses,
 		ClusterDomain:                    clusterDomain,
 		ContainerLogMaxSize:              *params.ContainerLogMaxSize,
@@ -66,9 +66,9 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		CPUCFSQuota:                      params.CpuCFSQuota,
 		CPUManagerPolicy:                 *params.CpuManagerPolicy,
 		CPUManagerReconcilePeriod:        metav1.Duration{Duration: 10 * time.Second},
-		EnableControllerAttachDetach:     ptr.To(true),
-		EnableDebuggingHandlers:          ptr.To(true),
-		EnableServer:                     ptr.To(true),
+		EnableControllerAttachDetach:     new(true),
+		EnableDebuggingHandlers:          new(true),
+		EnableServer:                     new(true),
 		EnforceNodeAllocatable:           []string{"pods"},
 		EventBurst:                       50,
 		EventRecordQPS:                   ptr.To[int32](50),
@@ -96,7 +96,7 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		PodPidsLimit:                     params.PodPidsLimit,
 		ProtectKernelDefaults:            *params.ProtectKernelDefaults,
 		ReadOnlyPort:                     0,
-		ResolverConfig:                   ptr.To("/etc/resolv.conf"),
+		ResolverConfig:                   new("/etc/resolv.conf"),
 		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SeccompDefault:                   params.SeccompDefault,
@@ -163,12 +163,12 @@ var (
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	if c.CpuCFSQuota == nil {
-		c.CpuCFSQuota = ptr.To(true)
+		c.CpuCFSQuota = new(true)
 	}
 
 	if c.CpuManagerPolicy == nil {
 		// Ref: https://github.com/kubernetes/kubernetes/blob/cede96336a809a67546ca08df0748e4253ec270d/pkg/kubelet/cm/cpumanager/policy_none.go#L34
-		c.CpuManagerPolicy = ptr.To("none")
+		c.CpuManagerPolicy = new("none")
 	}
 
 	if c.EvictionHard == nil {
@@ -216,7 +216,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.FailSwapOn == nil {
-		c.FailSwapOn = ptr.To(true)
+		c.FailSwapOn = new(true)
 	}
 
 	if c.ImageGCHighThresholdPercent == nil {
@@ -228,7 +228,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.SerializeImagePulls == nil {
-		c.SerializeImagePulls = ptr.To(true)
+		c.SerializeImagePulls = new(true)
 	}
 
 	if c.KubeReserved == nil {
@@ -245,10 +245,10 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.ContainerLogMaxSize == nil {
-		c.ContainerLogMaxSize = ptr.To("100Mi")
+		c.ContainerLogMaxSize = new("100Mi")
 	}
 
-	c.ProtectKernelDefaults = ptr.To(ptr.Deref(c.ProtectKernelDefaults, true))
+	c.ProtectKernelDefaults = new(ptr.Deref(c.ProtectKernelDefaults, true))
 
 	if c.StreamingConnectionIdleTimeout == nil {
 		c.StreamingConnectionIdleTimeout = &metav1.Duration{Duration: time.Minute * 5}

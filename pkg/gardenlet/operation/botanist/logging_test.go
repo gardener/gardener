@@ -15,7 +15,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -87,12 +86,12 @@ var _ = Describe("Logging", func() {
 				SeedClientSet:  k8sSeedClient,
 				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 					Logging: &gardenletconfigv1alpha1.Logging{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 						Vali: &gardenletconfigv1alpha1.Vali{
-							Enabled: ptr.To(true),
+							Enabled: new(true),
 						},
 						VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
-							Enabled: ptr.To(true),
+							Enabled: new(true),
 						},
 						ShootNodeLogging: &gardenletconfigv1alpha1.ShootNodeLogging{
 							ShootPurposes: []gardencorev1beta1.ShootPurpose{
@@ -100,7 +99,7 @@ var _ = Describe("Logging", func() {
 							},
 						},
 						ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
-							Enabled: ptr.To(true),
+							Enabled: new(true),
 						},
 					},
 				},
@@ -123,7 +122,7 @@ var _ = Describe("Logging", func() {
 
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Status: gardencorev1beta1.SeedStatus{
-				KubernetesVersion: ptr.To("1.2.3"),
+				KubernetesVersion: new("1.2.3"),
 			},
 		})
 

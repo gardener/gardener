@@ -35,16 +35,16 @@ var _ = Describe("Validation", func() {
 					},
 				},
 				Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
-					ClusterID:     ptr.To(""),
-					ResourceClass: ptr.To("foo"),
+					ClusterID:     new(""),
+					ResourceClass: new("foo"),
 					Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
-						ConcurrentSyncs: ptr.To(5),
+						ConcurrentSyncs: new(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 					},
 					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
-						ConcurrentSyncs:     ptr.To(5),
+						ConcurrentSyncs:     new(5),
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-						ManagedByLabelValue: ptr.To("foo"),
+						ManagedByLabelValue: new("foo"),
 					},
 				},
 			}
@@ -126,7 +126,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("should allow disabling leader election", func() {
-				conf.LeaderElection.LeaderElect = ptr.To(false)
+				conf.LeaderElection.LeaderElect = new(false)
 
 				Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 			})
@@ -231,7 +231,7 @@ var _ = Describe("Validation", func() {
 			Context("csr approver", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
 					conf.Controllers.CSRApprover.Enabled = true
-					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(0)
+					conf.Controllers.CSRApprover.ConcurrentSyncs = new(0)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -243,8 +243,8 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when machine namespace is empty", func() {
 					conf.Controllers.CSRApprover.Enabled = true
-					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(1)
-					conf.Controllers.CSRApprover.MachineNamespace = ptr.To("")
+					conf.Controllers.CSRApprover.ConcurrentSyncs = new(1)
+					conf.Controllers.CSRApprover.MachineNamespace = new("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -256,7 +256,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return succeed when machine namespace is nil", func() {
 					conf.Controllers.CSRApprover.Enabled = true
-					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(1)
+					conf.Controllers.CSRApprover.ConcurrentSyncs = new(1)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})
@@ -289,7 +289,7 @@ var _ = Describe("Validation", func() {
 
 			Context("health", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.Health.ConcurrentSyncs = ptr.To(0)
+					conf.Controllers.Health.ConcurrentSyncs = new(0)
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -301,7 +301,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.Health.ConcurrentSyncs = ptr.To(5)
+					conf.Controllers.Health.ConcurrentSyncs = new(5)
 					conf.Controllers.Health.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -313,7 +313,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.Health.ConcurrentSyncs = ptr.To(5)
+					conf.Controllers.Health.ConcurrentSyncs = new(5)
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -327,7 +327,7 @@ var _ = Describe("Validation", func() {
 
 			Context("managed resources", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(0)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = new(0)
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -339,7 +339,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = new(5)
 					conf.Controllers.ManagedResource.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -351,7 +351,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = ptr.To(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = new(5)
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -374,7 +374,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because managed by label value is empty", func() {
-					conf.Controllers.ManagedResource.ManagedByLabelValue = ptr.To("")
+					conf.Controllers.ManagedResource.ManagedByLabelValue = new("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -438,7 +438,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when scheduler name is empty", func() {
 					conf.Webhooks.PodSchedulerName.Enabled = true
-					conf.Webhooks.PodSchedulerName.SchedulerName = ptr.To("")
+					conf.Webhooks.PodSchedulerName.SchedulerName = new("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -483,8 +483,8 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should fail with invalid toleration options", func() {
-					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = ptr.To(int64(-1))
-					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = ptr.To(int64(-2))
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = new(int64(-1))
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = new(int64(-2))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -502,7 +502,7 @@ var _ = Describe("Validation", func() {
 			Context("node agent authorizer", func() {
 				It("should succeed with a valid machine namespace", func() {
 					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
-					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = ptr.To("foo-namespace")
+					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = new("foo-namespace")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})
@@ -515,7 +515,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when machine namespace is empty", func() {
 					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
-					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = ptr.To("")
+					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = new("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{

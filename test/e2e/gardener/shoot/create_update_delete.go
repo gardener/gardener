@@ -57,7 +57,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					pool2.Name += "2"
 					pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
 					pool3.Name += "3"
-					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(kubernetesSourceVersion)}
+					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(kubernetesSourceVersion)}
 					s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 				}
 			})

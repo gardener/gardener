@@ -248,7 +248,7 @@ func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName str
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

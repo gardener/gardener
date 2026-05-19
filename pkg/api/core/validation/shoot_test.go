@@ -60,7 +60,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				Minimum:          1,
 				Maximum:          1,
@@ -73,7 +73,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "",
 				Machine: core.Machine{
 					Type:         "",
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				Minimum:          -1,
 				Maximum:          -2,
@@ -89,7 +89,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				Minimum:          1,
 				Maximum:          1,
@@ -105,7 +105,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				Minimum:          1,
 				Maximum:          1,
@@ -121,7 +121,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				Minimum:          0,
 				Maximum:          2,
@@ -137,7 +137,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				Minimum:          0,
 				Maximum:          0,
@@ -159,15 +159,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Addon: addon,
 						},
 					},
-					CloudProfileName:  ptr.To("test-profile"),
+					CloudProfileName:  new("test-profile"),
 					Region:            region,
-					SecretBindingName: ptr.To("my-secret"),
+					SecretBindingName: new("my-secret"),
 					Purpose:           &purpose,
 					DNS: &core.DNS{
 						Providers: []core.DNSProvider{
 							{
 								Type:    &dnsProviderType,
-								Primary: ptr.To(true),
+								Primary: new(true),
 							},
 						},
 						Domain: &domain,
@@ -220,12 +220,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 							NodeCIDRMaskSize: ptr.To[int32](22),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
 								SyncPeriod: &metav1.Duration{Duration: 30 * time.Second},
-								Tolerance:  ptr.To(0.1),
+								Tolerance:  new(0.1),
 							},
 						},
 					},
 					Networking: &core.Networking{
-						Type: ptr.To("some-network-plugin"),
+						Type: new("some-network-plugin"),
 					},
 					Provider: core.Provider{
 						Type:    providerType,
@@ -367,7 +367,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Context("shoot is scheduled", func() {
 				BeforeEach(func() {
-					shoot.Spec.SeedName = ptr.To("someSeed")
+					shoot.Spec.SeedName = new("someSeed")
 				})
 
 				It("should forbid to change the Shoot ControlPlane spec", func() {
@@ -424,7 +424,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -454,7 +454,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 					newShoot.Status.IsHibernated = true
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(ConsistOf(
@@ -470,7 +470,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 					newShoot.Status.IsHibernated = false
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(BeEmpty())
@@ -590,7 +590,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("exposure class", func() {
 			It("should forbid invalid exposure class names", func() {
-				shoot.Spec.ExposureClassName = ptr.To("$invalid.class.[]name{}/")
+				shoot.Spec.ExposureClassName = new("$invalid.class.[]name{}/")
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -601,13 +601,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow valid exposure class name", func() {
-				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
+				shoot.Spec.ExposureClassName = new("exposure-class-1")
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should pass as exposure class is not changed", func() {
-				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
+				shoot.Spec.ExposureClassName = new("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -616,9 +616,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow to change the exposure class", func() {
-				shoot.Spec.ExposureClassName = ptr.To("exposure-class-1")
+				shoot.Spec.ExposureClassName = new("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.ExposureClassName = ptr.To("exposure-class-2")
+				newShoot.Spec.ExposureClassName = new("exposure-class-2")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -695,7 +695,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
 				shoot.Spec.Addons.KubernetesDashboard = &core.KubernetesDashboard{
 					Addon:              addon,
-					AuthenticationMode: ptr.To("does-not-exist"),
+					AuthenticationMode: new("does-not-exist"),
 				}
 
 				errorList := ValidateShoot(shoot)
@@ -839,8 +839,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should forbid unsupported specification (provider independent)", func() {
 			shoot.Spec.CloudProfileName = nil
 			shoot.Spec.Region = ""
-			shoot.Spec.SecretBindingName = ptr.To("")
-			shoot.Spec.SeedName = ptr.To("")
+			shoot.Spec.SecretBindingName = new("")
+			shoot.Spec.SeedName = new("")
 			shoot.Spec.SeedSelector = &core.SeedSelector{
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
 			}
@@ -879,7 +879,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("SecretBindingName/CredentialsBinding validation", func() {
 			It("should forbid adding secretBindingName in case of workerless shoot", func() {
 				shoot.Spec.Provider.Workers = nil
-				shoot.Spec.SecretBindingName = ptr.To("foo")
+				shoot.Spec.SecretBindingName = new("foo")
 
 				errorList := ValidateShoot(shoot)
 
@@ -892,7 +892,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid adding credentialsBindingName in case of workerless shoot", func() {
 				shoot.Spec.Provider.Workers = nil
-				shoot.Spec.CredentialsBindingName = ptr.To("foo")
+				shoot.Spec.CredentialsBindingName = new("foo")
 
 				errorList := ValidateShoot(shoot)
 
@@ -931,8 +931,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid setting both secretBindingName and credentialsBindingName", func() {
-				shoot.Spec.SecretBindingName = ptr.To("foo")
-				shoot.Spec.CredentialsBindingName = ptr.To("foo")
+				shoot.Spec.SecretBindingName = new("foo")
+				shoot.Spec.CredentialsBindingName = new("foo")
 
 				errorList := ValidateShoot(shoot)
 
@@ -958,7 +958,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating secretBindingName when not migrating to credentialsBindingName", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.SecretBindingName = ptr.To("another-reference")
+				shoot.Spec.SecretBindingName = new("another-reference")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -972,9 +972,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow updating credentialsBindingName", func() {
 				shoot.Spec.SecretBindingName = nil
-				shoot.Spec.CredentialsBindingName = ptr.To("foo")
+				shoot.Spec.CredentialsBindingName = new("foo")
 				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+				shoot.Spec.CredentialsBindingName = new("another-reference")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -984,7 +984,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should allow switching from secretBindingName to credentialsBindingName", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.SecretBindingName = nil
-				newShoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+				newShoot.Spec.CredentialsBindingName = new("another-reference")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -993,9 +993,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not allow switching from credentialsBindingName to secretBindingName", func() {
 				shoot.Spec.SecretBindingName = nil
-				shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+				shoot.Spec.CredentialsBindingName = new("another-reference")
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.SecretBindingName = ptr.To("foo")
+				newShoot.Spec.SecretBindingName = new("foo")
 				newShoot.Spec.CredentialsBindingName = nil
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1016,7 +1016,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("secretBindingName validation for Kubernetes >= 1.34",
 				func(kubernetesVersion string) {
-					shoot.Spec.SecretBindingName = ptr.To("my-secret")
+					shoot.Spec.SecretBindingName = new("my-secret")
 					shoot.Spec.Kubernetes.Version = kubernetesVersion
 
 					errorList := ValidateShoot(shoot)
@@ -1059,9 +1059,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
-				{Key: "bar", Value: ptr.To("baz")},
-				{Key: "!nvalid", Value: ptr.To("va!ue")},
+				{Key: "bar", Value: new("baz")},
+				{Key: "bar", Value: new("baz")},
+				{Key: "!nvalid", Value: new("va!ue")},
 				{Key: strings.Repeat("n", 64)},
 			}
 
@@ -1115,7 +1115,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should forbid updating some cloud keys", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			shoot.Spec.CloudProfileName = ptr.To("another-profile")
+			shoot.Spec.CloudProfileName = new("another-profile")
 			shoot.Spec.Region = "another-region"
 			// shoot.Spec.SecretBindingName = ptr.To("another-reference")
 			// shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
@@ -1316,7 +1316,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should allow updating the seed if it has not been set previously", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SeedName = ptr.To("another-seed")
+			newShoot.Spec.SeedName = new("another-seed")
 			shoot.Spec.SeedName = nil
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1604,7 +1604,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should prevent setting a seed name", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
-					shoot.Spec.SeedName = ptr.To("foo")
+					shoot.Spec.SeedName = new("foo")
 
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -1785,7 +1785,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					It("should forbid invalid updates", func() {
 						newShoot := prepareShootForUpdate(shoot)
-						newShoot.Spec.Provider.Workers[0].ControlPlane.Backup.Region = ptr.To("other-backup-region")
+						newShoot.Spec.Provider.Workers[0].ControlPlane.Backup.Region = new("other-backup-region")
 						newShoot.Spec.Provider.Workers[0].ControlPlane.Backup.Provider = "other-provider"
 
 						Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElements(
@@ -1846,7 +1846,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
 						Exposure: &core.Exposure{
 							Extension: &core.ExtensionExposure{
-								Type: ptr.To("stackit"),
+								Type: new("stackit"),
 							},
 							DNS: &core.DNSExposure{},
 						},
@@ -1879,7 +1879,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
 						Exposure: &core.Exposure{
 							Extension: &core.ExtensionExposure{
-								Type: ptr.To(""),
+								Type: new(""),
 							},
 						},
 					}
@@ -1895,7 +1895,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
 						Exposure: &core.Exposure{
 							Extension: &core.ExtensionExposure{
-								Type: ptr.To("My_Service"),
+								Type: new("My_Service"),
 							},
 						},
 					}
@@ -1928,7 +1928,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
 						Exposure: &core.Exposure{
 							Extension: &core.ExtensionExposure{
-								Type: ptr.To("stackit"),
+								Type: new("stackit"),
 							},
 						},
 					}
@@ -1940,7 +1940,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
 						Exposure: &core.Exposure{
 							Extension: &core.ExtensionExposure{
-								Type:           ptr.To("local"),
+								Type:           new("local"),
 								ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"apiVersion": "v1", "kind": "Configuration"}`)},
 							},
 						},
@@ -1963,47 +1963,47 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("valid with empty options", core.ClusterAutoscalerOptions{}, BeEmpty()),
 					Entry("valid with nil options", nil, BeEmpty()),
 					Entry("valid with all options", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold:    ptr.To(0.5),
-						ScaleDownGpuUtilizationThreshold: ptr.To(0.5),
-						ScaleDownUnneededTime:            ptr.To(positiveDuration),
-						ScaleDownUnreadyTime:             ptr.To(positiveDuration),
-						MaxNodeProvisionTime:             ptr.To(positiveDuration),
+						ScaleDownUtilizationThreshold:    new(0.5),
+						ScaleDownGpuUtilizationThreshold: new(0.5),
+						ScaleDownUnneededTime:            new(positiveDuration),
+						ScaleDownUnreadyTime:             new(positiveDuration),
+						MaxNodeProvisionTime:             new(positiveDuration),
 					}, BeEmpty()),
 					Entry("valid with ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold: ptr.To(0.5),
+						ScaleDownUtilizationThreshold: new(0.5),
 					}, BeEmpty()),
 					Entry("invalid negative ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold: ptr.To(-0.5),
+						ScaleDownUtilizationThreshold: new(-0.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 					Entry("invalid > 1 ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold: ptr.To(1.5),
+						ScaleDownUtilizationThreshold: new(1.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 					Entry("valid with ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownGpuUtilizationThreshold: ptr.To(0.5),
+						ScaleDownGpuUtilizationThreshold: new(0.5),
 					}, BeEmpty()),
 					Entry("invalid negative ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownGpuUtilizationThreshold: ptr.To(-0.5),
+						ScaleDownGpuUtilizationThreshold: new(-0.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), -0.5, "can not be negative"))),
 					Entry("invalid > 1 ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownGpuUtilizationThreshold: ptr.To(1.5),
+						ScaleDownGpuUtilizationThreshold: new(1.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 					Entry("valid with ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
-						ScaleDownUnneededTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+						ScaleDownUnneededTime: new(metav1.Duration{Duration: time.Minute}),
 					}, BeEmpty()),
 					Entry("invalid negative ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
-						ScaleDownUnneededTime: ptr.To(negativeDuration),
+						ScaleDownUnneededTime: new(negativeDuration),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUnneededTime"), negativeDuration, "can not be negative"))),
 					Entry("valid with ScaleDownUnreadyTime", core.ClusterAutoscalerOptions{
-						ScaleDownUnreadyTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+						ScaleDownUnreadyTime: new(metav1.Duration{Duration: time.Minute}),
 					}, BeEmpty()),
 					Entry("invalid negative ScaleDownUnreadyTime", core.ClusterAutoscalerOptions{
-						ScaleDownUnreadyTime: ptr.To(negativeDuration),
+						ScaleDownUnreadyTime: new(negativeDuration),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUnreadyTime"), negativeDuration, "can not be negative"))),
 					Entry("valid with MaxNodeProvisionTime", core.ClusterAutoscalerOptions{
-						MaxNodeProvisionTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+						MaxNodeProvisionTime: new(metav1.Duration{Duration: time.Minute}),
 					}, BeEmpty()),
 					Entry("invalid negative MaxNodeProvisionTime", core.ClusterAutoscalerOptions{
-						MaxNodeProvisionTime: ptr.To(negativeDuration),
+						MaxNodeProvisionTime: new(negativeDuration),
 					}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
 				)
 			})
@@ -2041,7 +2041,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
 						Type:    ptr.To(core.DNSUnmanaged),
-						Primary: ptr.To(true),
+						Primary: new(true),
 					},
 				}
 
@@ -2052,7 +2052,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid specifying invalid domain", func() {
 				shoot.Spec.DNS.Providers = nil
-				shoot.Spec.DNS.Domain = ptr.To("foo/bar.baz")
+				shoot.Spec.DNS.Domain = new("foo/bar.baz")
 
 				errorList := ValidateShoot(shoot)
 
@@ -2103,7 +2103,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot.Spec.DNS = nil
 				newShoot := prepareShootForUpdate(oldShoot)
 				newShoot.Spec.DNS = &core.DNS{
-					Domain: ptr.To("some-domain.com"),
+					Domain: new("some-domain.com"),
 				}
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
@@ -2115,7 +2115,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot := prepareShootForUpdate(shoot)
 				oldShoot.Spec.DNS = &core.DNS{}
 				newShoot := prepareShootForUpdate(oldShoot)
-				newShoot.Spec.DNS.Domain = ptr.To("some-domain.com")
+				newShoot.Spec.DNS.Domain = new("some-domain.com")
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
 
@@ -2137,7 +2137,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Domain = ptr.To("another-domain.com")
+				newShoot.Spec.DNS.Domain = new("another-domain.com")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -2150,10 +2150,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating the dns providers", func() {
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.DNS.Providers[0].Type = ptr.To("some-dns-provider")
+				oldShoot.Spec.DNS.Providers[0].Type = new("some-dns-provider")
 
 				newShoot := prepareShootForUpdate(oldShoot)
-				newShoot.Spec.SeedName = ptr.To("seed")
+				newShoot.Spec.SeedName = new("seed")
 				newShoot.Spec.DNS.Providers = nil
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
@@ -2167,7 +2167,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid to unset the primary DNS provider type", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.SeedName = ptr.To("seed")
+				newShoot.Spec.SeedName = new("seed")
 				newShoot.Spec.DNS.Providers[0].Type = nil
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -2181,8 +2181,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid to remove the primary DNS provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.SeedName = ptr.To("seed")
-				newShoot.Spec.DNS.Providers[0].Primary = ptr.To(false)
+				newShoot.Spec.SeedName = new("seed")
+				newShoot.Spec.DNS.Providers[0].Primary = new(false)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -2195,9 +2195,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid adding another primary provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.SeedName = ptr.To("seed")
+				newShoot.Spec.SeedName = new("seed")
 				newShoot.Spec.DNS.Providers = append(newShoot.Spec.DNS.Providers, core.DNSProvider{
-					Primary: ptr.To(true),
+					Primary: new(true),
 				})
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -2272,7 +2272,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid having more than one primary provider", func() {
 				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, core.DNSProvider{
-					Primary: ptr.To(true),
+					Primary: new(true),
 				})
 
 				errorList := ValidateShoot(shoot)
@@ -2392,7 +2392,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should forbid credentialsRef and secretName to refer different secret", func() {
 					shoot.Spec.DNS.Providers[0].CredentialsRef = &dnsSecretRef
-					shoot.Spec.DNS.Providers[0].SecretName = ptr.To("other")
+					shoot.Spec.DNS.Providers[0].SecretName = new("other")
 
 					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
@@ -2519,7 +2519,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name: "test-profile",
 					}
 					shoot.Spec.SecretBindingName = nil
-					shoot.Spec.CredentialsBindingName = ptr.To("my-secret")
+					shoot.Spec.CredentialsBindingName = new("my-secret")
 
 					errorList := ValidateShoot(shoot)
 
@@ -2534,9 +2534,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal("for Kubernetes versions >= 1.35, enableAnonymousAuthentication field is no longer supported"),
 					}))))
 				},
-				Entry("should allow setting enableAnonymousAuthentication for Kubernetes version < 1.35", "1.34.0", ptr.To(true), false),
-				Entry("should forbid setting enableAnonymousAuthentication to true for Kubernetes version >= 1.35", "1.35.0", ptr.To(true), true),
-				Entry("should forbid setting enableAnonymousAuthentication to false for Kubernetes version >= 1.35", "1.35.0", ptr.To(false), true),
+				Entry("should allow setting enableAnonymousAuthentication for Kubernetes version < 1.35", "1.34.0", new(true), false),
+				Entry("should forbid setting enableAnonymousAuthentication to true for Kubernetes version >= 1.35", "1.35.0", new(true), true),
+				Entry("should forbid setting enableAnonymousAuthentication to false for Kubernetes version >= 1.35", "1.35.0", new(false), true),
 				Entry("should allow not setting enableAnonymousAuthentication for Kubernetes version >= 1.35", "1.35.0", nil, false),
 			)
 
@@ -2569,15 +2569,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
 							Name:     "MutatingAdmissionWebhook",
-							Disabled: ptr.To(true),
+							Disabled: new(true),
 						},
 						{
 							Name:     "NamespaceLifecycle",
-							Disabled: ptr.To(false),
+							Disabled: new(false),
 						},
 						{
 							Name:     "NodeRestriction",
-							Disabled: ptr.To(true),
+							Disabled: new(true),
 						},
 					}
 					errorList := ValidateShoot(shoot)
@@ -2756,7 +2756,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 						shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 							Provider: core.EncryptionProvider{
-								Type: ptr.To(providerType),
+								Type: new(providerType),
 							},
 						}
 
@@ -2893,7 +2893,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Resources: resources,
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = resources
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
@@ -2916,7 +2916,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Status.IsHibernated = true
 
 					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
@@ -3031,7 +3031,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Default: ptr.To[int32](42),
 					}, BeEmpty()),
 					Entry("invalid (default<0)", "1.34.0", &core.WatchCacheSizes{
-						Default: ptr.To(negativeSize),
+						Default: new(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
@@ -3050,7 +3050,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}, BeEmpty()),
 					Entry("valid (API group empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To(""),
+							APIGroup:  new(""),
 							Resource:  "secrets",
 							CacheSize: 0,
 						}},
@@ -3097,28 +3097,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 					// APIGroup set
 					Entry("valid (apps/deployments=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("apps"),
+							APIGroup:  new("apps"),
 							Resource:  "deployments",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
 					Entry("valid (apps/deployments=>0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("apps"),
+							APIGroup:  new("apps"),
 							Resource:  "deployments",
 							CacheSize: 42,
 						}},
 					}, BeEmpty()),
 					Entry("valid (coordination.k8s.io/leases=0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("coordination.k8s.io"),
+							APIGroup:  new("coordination.k8s.io"),
 							Resource:  "leases",
 							CacheSize: 0,
 						}},
 					}, BeEmpty()),
 					Entry("invalid (apps/deployments=<0)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("apps"),
+							APIGroup:  new("apps"),
 							Resource:  "deployments",
 							CacheSize: negativeSize,
 						}},
@@ -3127,7 +3127,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					)),
 					Entry("invalid (apps resource empty)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("apps"),
+							APIGroup:  new("apps"),
 							Resource:  "",
 							CacheSize: 42,
 						}},
@@ -3136,7 +3136,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					)),
 					Entry("invalid (apps API group with casing)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("Apps"),
+							APIGroup:  new("Apps"),
 							Resource:  "deployments",
 							CacheSize: 42,
 						}},
@@ -3145,7 +3145,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					)),
 					Entry("invalid (apps API group with illegal character)", "1.34.0", &core.WatchCacheSizes{
 						Resources: []core.ResourceWatchCacheSize{{
-							APIGroup:  ptr.To("apps#"),
+							APIGroup:  new("apps#"),
 							Resource:  "deployments",
 							CacheSize: 42,
 						}},
@@ -3178,12 +3178,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						HTTPAccessVerbosity: ptr.To[int32](3),
 					}, BeEmpty()),
 					Entry("invalid (verbosity<0)", &core.APIServerLogging{
-						Verbosity: ptr.To(negativeSize),
+						Verbosity: new(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
 					Entry("invalid (httpAccessVerbosity<0)", &core.APIServerLogging{
-						HTTPAccessVerbosity: ptr.To(negativeSize),
+						HTTPAccessVerbosity: new(negativeSize),
 					}, ConsistOf(
 						field.Invalid(field.NewPath("httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 					)),
@@ -3210,8 +3210,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should not allow negative values for max inflight requests fields", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
-						MaxNonMutatingInflight: ptr.To(int32(-1)),
-						MaxMutatingInflight:    ptr.To(int32(-1)),
+						MaxNonMutatingInflight: new(int32(-1)),
+						MaxMutatingInflight:    new(int32(-1)),
 					}
 
 					errorList := ValidateShoot(shoot)
@@ -3284,7 +3284,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should not allow to duplicate the issuer in accepted issuers", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						Issuer:          ptr.To("https://issuer.example/auth"),
+						Issuer:          new("https://issuer.example/auth"),
 						AcceptedIssuers: []string{"https://issuer.example/auth"},
 					}
 
@@ -3299,7 +3299,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should reject invalid issuer URL", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-						Issuer: ptr.To("http://issuer.invalid"),
+						Issuer: new("http://issuer.invalid"),
 					}
 
 					errorList := ValidateShoot(shoot)
@@ -3458,7 +3458,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To(int64(-1))
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = new(int64(-1))
 
 				errorList := ValidateShoot(shoot)
 
@@ -3477,7 +3477,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow to specify a negative defaultUnreachableTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To(int64(-1))
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = new(int64(-1))
 
 				errorList := ValidateShoot(shoot)
 
@@ -3689,7 +3689,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							defaultNodeCIDRMaskSize = 24
 							// /25 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
 							tooLargeNodeCIDRMaskSize = 25
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(defaultNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(defaultNodeCIDRMaskSize)
 						})
 
 						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
@@ -3697,7 +3697,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should deny too large nodeCIDRMaskSize", func() {
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(tooLargeNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(tooLargeNodeCIDRMaskSize)
 
 							Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
 								"Type":   Equal(field.ErrorTypeInvalid),
@@ -3715,7 +3715,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							defaultNodeCIDRMaskSize = 64
 							// /121 CIDR can host 126 pod IPs (prefix is too large for the largest maxPods setting)
 							tooLargeNodeCIDRMaskSize = 121
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(defaultNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(defaultNodeCIDRMaskSize)
 						})
 
 						It("should allow the default maxPods and nodeCIDRMaskSize", func() {
@@ -3723,7 +3723,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})
 
 						It("should deny too large nodeCIDRMaskSize", func() {
-							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To(tooLargeNodeCIDRMaskSize)
+							shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(tooLargeNodeCIDRMaskSize)
 
 							Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
 								"Type":   Equal(field.ErrorTypeInvalid),
@@ -3933,14 +3933,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed when setting valid kubeMaxPDVols", func() {
-				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("127")
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = new("127")
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should fail when setting invalid kubeMaxPDVols", func() {
-				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("foo")
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = new("foo")
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -3953,7 +3953,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should fail when setting kubeMaxPDVols for kubernetes >= 1.35", func() {
 				shoot.Spec.Kubernetes.Version = "1.35.0"
-				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("foo")
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = new("foo")
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -3963,7 +3963,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail when setting invalid non positive kubeMaxPDVols", func() {
-				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = ptr.To("0")
+				shoot.Spec.Kubernetes.KubeScheduler.KubeMaxPDVols = new("0")
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -4105,13 +4105,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("valid", core.ClusterAutoscaler{}, version_1_32, BeEmpty()),
 				Entry("valid", core.ClusterAutoscaler{}, version_1_33, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: ptr.To(0.5),
+					ScaleDownUtilizationThreshold: new(0.5),
 				}, version_1_31, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: ptr.To(-0.5),
+					ScaleDownUtilizationThreshold: new(-0.5),
 				}, version_1_31, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: ptr.To(1.5),
+					ScaleDownUtilizationThreshold: new(1.5),
 				}, version_1_31, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
@@ -4253,7 +4253,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxDrainParallelism: &negativeInteger,
 				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxDrainParallelism"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
 				Entry("invalid with both maxEmptyBulkDelete and maxScaleDownParallelism set to different values", core.ClusterAutoscaler{
-					MaxEmptyBulkDelete:      ptr.To(positiveInteger + 10),
+					MaxEmptyBulkDelete:      new(positiveInteger + 10),
 					MaxScaleDownParallelism: &positiveInteger,
 				}, version_1_32, ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -4410,11 +4410,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ConsistOf(field.Invalid(field.NewPath("evictionRateBurst"), int32(-1), "must be non-negative")),
 				),
 				Entry("with invalid evictionTolerance field",
-					core.VerticalPodAutoscaler{EvictionTolerance: ptr.To(-0.1)},
+					core.VerticalPodAutoscaler{EvictionTolerance: new(-0.1)},
 					ConsistOf(field.Invalid(field.NewPath("evictionTolerance"), -0.1, "fraction value must be in the range [0, 1)")),
 				),
 				Entry("with invalid recommendationMarginFraction field",
-					core.VerticalPodAutoscaler{RecommendationMarginFraction: ptr.To(1.0)},
+					core.VerticalPodAutoscaler{RecommendationMarginFraction: new(1.0)},
 					ConsistOf(field.Invalid(field.NewPath("recommendationMarginFraction"), 1.0, "fraction value must be in the range [0, 1)")),
 				),
 				Entry("with invalid updaterInterval field",
@@ -4488,16 +4488,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 					core.VerticalPodAutoscaler{
 						EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
 						EvictionRateBurst:                        ptr.To[int32](1),
-						EvictionTolerance:                        ptr.To(0.4),
-						RecommendationMarginFraction:             ptr.To(0.1),
+						EvictionTolerance:                        new(0.4),
+						RecommendationMarginFraction:             new(0.1),
 						UpdaterInterval:                          &metav1.Duration{Duration: 2 * time.Minute},
 						RecommenderInterval:                      &metav1.Duration{Duration: 2 * time.Minute},
-						TargetCPUPercentile:                      ptr.To(0.333),
-						RecommendationLowerBoundCPUPercentile:    ptr.To(0.303),
-						RecommendationUpperBoundCPUPercentile:    ptr.To(0.393),
-						TargetMemoryPercentile:                   ptr.To(0.444),
-						RecommendationLowerBoundMemoryPercentile: ptr.To(0.404),
-						RecommendationUpperBoundMemoryPercentile: ptr.To(0.494),
+						TargetCPUPercentile:                      new(0.333),
+						RecommendationLowerBoundCPUPercentile:    new(0.303),
+						RecommendationUpperBoundCPUPercentile:    new(0.393),
+						TargetMemoryPercentile:                   new(0.444),
+						RecommendationLowerBoundMemoryPercentile: new(0.404),
+						RecommendationUpperBoundMemoryPercentile: new(0.494),
 						CPUHistogramDecayHalfLife:                &metav1.Duration{Duration: 2 * time.Minute},
 						MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
 						MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
@@ -4760,7 +4760,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("worker pool kubernetes version", func() {
 			It("should forbid worker pool kubernetes version higher than control plane", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.31.1")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.31.1")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -4778,7 +4778,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow to set worker pool kubernetes version lower one minor than control plane version", func() {
 				shoot.Spec.Kubernetes.Version = "1.26.2"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.26.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.26.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Kubernetes.Version = "1.27.2"
@@ -4788,7 +4788,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow to set worker pool kubernetes version lower two minor than control plane version", func() {
 				shoot.Spec.Kubernetes.Version = "1.25.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.24.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.24.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Kubernetes.Version = "1.26.0"
@@ -4798,7 +4798,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("allow to set worker pool kubernetes version lower three minor than control plane version", func() {
 				shoot.Spec.Kubernetes.Version = "1.27.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.25.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.25.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Kubernetes.Version = "1.28.0"
@@ -4808,7 +4808,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("forbid to set worker pool kubernetes version lower four minor than control plane version", func() {
 				shoot.Spec.Kubernetes.Version = "1.27.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.24.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.24.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Kubernetes.Version = "1.28.0"
@@ -4822,10 +4822,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow to skip minor versions during worker pool kubernetes version upgrade", func() {
 				shoot.Spec.Kubernetes.Version = "1.28.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.25.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.25.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.27.0")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.27.0")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -4834,11 +4834,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 
 				shoot.Spec.Kubernetes.Version = "1.28.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.25.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.25.2")}
 				shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.27.0")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.27.0")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -4849,7 +4849,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow to set worker pool kubernetes version to nil with one minor difference", func() {
 				shoot.Spec.Kubernetes.Version = "1.25.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.24.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.24.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
@@ -4859,7 +4859,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow to set worker pool kubernetes version to nil with more than one minor difference", func() {
 				shoot.Spec.Kubernetes.Version = "1.28.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.25.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.25.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
@@ -4876,13 +4876,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Addons = nil
 					shoot.Spec.Kubernetes.KubeControllerManager = nil
 					shoot.Spec.Networking = &core.Networking{
-						Type: ptr.To("some-type"),
+						Type: new("some-type"),
 						ProviderConfig: &runtime.RawExtension{
 							Raw: []byte("foo"),
 						},
-						Pods:       ptr.To("0.0.0.0/0"),
-						Nodes:      ptr.To("0.0.0.0/0"),
-						Services:   ptr.To("0.0.0.0/0"),
+						Pods:       new("0.0.0.0/0"),
+						Nodes:      new("0.0.0.0/0"),
+						Services:   new("0.0.0.0/0"),
 						IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
 					}
 
@@ -4921,7 +4921,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid not specifying a networking type", func() {
-				shoot.Spec.Networking.Type = ptr.To("")
+				shoot.Spec.Networking.Type = new("")
 
 				errorList := ValidateShoot(shoot)
 
@@ -4932,7 +4932,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid specifying a networking type with invalid characters", func() {
-				shoot.Spec.Networking.Type = ptr.To("$/()[]{}")
+				shoot.Spec.Networking.Type = new("$/()[]{}")
 
 				errorList := ValidateShoot(shoot)
 
@@ -4943,7 +4943,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid specifying a very long networking type", func() {
-				shoot.Spec.Networking.Type = ptr.To("my-extremely-long-networking-type-that-exceeds-the-maximum-length")
+				shoot.Spec.Networking.Type = new("my-extremely-long-networking-type-that-exceeds-the-maximum-length")
 
 				errorList := ValidateShoot(shoot)
 
@@ -4955,7 +4955,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid changing the networking type", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Networking.Type = ptr.To("some-other-type")
+				newShoot.Spec.Networking.Type = new("some-other-type")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -4966,9 +4966,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow increasing the networking nodes range", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("10.181.0.0/18")
+				shoot.Spec.Networking.Nodes = new("10.181.0.0/18")
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Networking.Nodes = ptr.To("10.181.0.0/16")
+				newShoot.Spec.Networking.Nodes = new("10.181.0.0/16")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -4987,9 +4987,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Context("IPv4", func() {
 				It("should allow valid networking configuration", func() {
-					shoot.Spec.Networking.Nodes = ptr.To("10.250.0.0/16")
-					shoot.Spec.Networking.Services = ptr.To("100.64.0.0/13")
-					shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/11")
+					shoot.Spec.Networking.Nodes = new("10.250.0.0/16")
+					shoot.Spec.Networking.Services = new("100.64.0.0/13")
+					shoot.Spec.Networking.Pods = new("100.96.0.0/11")
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(BeEmpty())
@@ -5019,9 +5019,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should forbid IPv6 CIDRs with IPv4 IP family", func() {
-					shoot.Spec.Networking.Pods = ptr.To("2001:db8:1::/48")
-					shoot.Spec.Networking.Nodes = ptr.To("2001:db8:2::/48")
-					shoot.Spec.Networking.Services = ptr.To("2001:db8:3::/48")
+					shoot.Spec.Networking.Pods = new("2001:db8:1::/48")
+					shoot.Spec.Networking.Nodes = new("2001:db8:2::/48")
+					shoot.Spec.Networking.Services = new("2001:db8:3::/48")
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -5040,9 +5040,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should forbid non canonical CIDRs", func() {
-					shoot.Spec.Networking.Nodes = ptr.To("10.250.0.3/16")
-					shoot.Spec.Networking.Services = ptr.To("100.64.0.5/13")
-					shoot.Spec.Networking.Pods = ptr.To("100.96.0.4/11")
+					shoot.Spec.Networking.Nodes = new("10.250.0.3/16")
+					shoot.Spec.Networking.Services = new("100.64.0.5/13")
+					shoot.Spec.Networking.Pods = new("100.96.0.4/11")
 
 					errorList := ValidateShoot(shoot)
 
@@ -5069,9 +5069,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should allow valid networking configuration", func() {
-					shoot.Spec.Networking.Pods = ptr.To("2001:db8:1::/48")
-					shoot.Spec.Networking.Nodes = ptr.To("2001:db8:2::/48")
-					shoot.Spec.Networking.Services = ptr.To("2001:db8:3::/48")
+					shoot.Spec.Networking.Pods = new("2001:db8:1::/48")
+					shoot.Spec.Networking.Nodes = new("2001:db8:2::/48")
+					shoot.Spec.Networking.Services = new("2001:db8:3::/48")
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(BeEmpty())
@@ -5101,9 +5101,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
-					shoot.Spec.Networking.Nodes = ptr.To("10.250.0.0/16")
-					shoot.Spec.Networking.Services = ptr.To("100.64.0.0/13")
-					shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/11")
+					shoot.Spec.Networking.Nodes = new("10.250.0.0/16")
+					shoot.Spec.Networking.Services = new("100.64.0.0/13")
+					shoot.Spec.Networking.Pods = new("100.96.0.0/11")
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -5122,9 +5122,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should forbid non canonical CIDRs", func() {
-					shoot.Spec.Networking.Pods = ptr.To("2001:db8:1::1/48")
-					shoot.Spec.Networking.Nodes = ptr.To("2001:db8:2::2/48")
-					shoot.Spec.Networking.Services = ptr.To("2001:db8:3::3/48")
+					shoot.Spec.Networking.Pods = new("2001:db8:1::1/48")
+					shoot.Spec.Networking.Nodes = new("2001:db8:2::2/48")
+					shoot.Spec.Networking.Services = new("2001:db8:3::3/48")
 
 					errorList := ValidateShoot(shoot)
 
@@ -5208,9 +5208,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow IPv4 networking configuration", func() {
-				shoot.Spec.Networking.Nodes = ptr.To("10.250.0.0/16")
-				shoot.Spec.Networking.Services = ptr.To("100.64.0.0/13")
-				shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/11")
+				shoot.Spec.Networking.Nodes = new("10.250.0.0/16")
+				shoot.Spec.Networking.Services = new("100.64.0.0/13")
+				shoot.Spec.Networking.Pods = new("100.96.0.0/11")
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
 			})
@@ -5264,7 +5264,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not allow setting machineImageVersion for autoUpdate if it's a workerless Shoot", func() {
 				shoot.Spec.Provider.Workers = nil
-				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
 
 				errorList := ValidateShoot(shoot)
 
@@ -6464,7 +6464,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 				shoot.Spec.SecretBindingName = nil
-				shoot.Spec.CredentialsBindingName = ptr.To("creds")
+				shoot.Spec.CredentialsBindingName = new("creds")
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 				shoot.Status = core.ShootStatus{
 					LastOperation: &core.LastOperation{
@@ -7036,7 +7036,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",
 				func(operation, forbiddenOp string) {
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -7098,7 +7098,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 						},
 					}
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
@@ -7116,7 +7116,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 						},
 					}
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 					shoot.Status = core.ShootStatus{IsHibernated: true}
 
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -7163,7 +7163,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("forbid certain rotation operations when shoot is waking up",
 				func(operation, forbiddenOp string) {
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 					shoot.Status = core.ShootStatus{
 						IsHibernated: true,
 					}
@@ -7220,7 +7220,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("forbid hibernating the shoot when certain rotation maintenance operations are set",
 				func(operation string) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
@@ -7242,11 +7242,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("forbid hibernating the shoot when certain rotation operations are in progress",
 				func(status core.ShootStatus) {
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 					shoot.Status = status
 
 					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 
 					Expect(ValidateShootUpdate(shoot, oldShoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
@@ -7299,7 +7299,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 
 			It("should forbid hibernating the shoot when ServiceAccount key rotation is in PreparingWithoutWorkersRollout phase", func() {
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 				shoot.Status = core.ShootStatus{
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
@@ -7311,7 +7311,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 
 				Expect(ValidateShootUpdate(shoot, oldShoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
@@ -7324,7 +7324,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid hibernation when the spec encryption config and status encryption config are different", func() {
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					EncryptionConfig: &core.EncryptionConfig{
 						Resources: []string{"events", "configmaps"},
@@ -7333,7 +7333,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"events"}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -7343,7 +7343,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow hibernation when the spec encryption config and status encryption config are the same", func() {
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					EncryptionConfig: &core.EncryptionConfig{
 						Resources: []string{"events", "configmaps"},
@@ -7352,7 +7352,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"configmaps.", "events"}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -7457,7 +7457,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("scheduler name", func() {
 			It("forbid setting an invalid scheduler name", func() {
-				shoot.Spec.SchedulerName = ptr.To("!nvalid")
+				shoot.Spec.SchedulerName = new("!nvalid")
 
 				errorList := ValidateShoot(shoot)
 
@@ -7471,7 +7471,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("allow setting the default scheduler name when name was 'nil'", func() {
 				shoot.Spec.SchedulerName = nil
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SchedulerName = ptr.To("default-scheduler")
+				shoot.Spec.SchedulerName = new("default-scheduler")
 
 				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 
@@ -7481,7 +7481,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("forbid changing the scheduler name when name was 'nil'", func() {
 				shoot.Spec.SchedulerName = nil
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SchedulerName = ptr.To("foo-scheduler")
+				oldShoot.Spec.SchedulerName = new("foo-scheduler")
 
 				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 
@@ -7492,9 +7492,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("forbid changing the scheduler name when configured before", func() {
-				shoot.Spec.SchedulerName = ptr.To("foo-scheduler")
+				shoot.Spec.SchedulerName = new("foo-scheduler")
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SchedulerName = ptr.To("bar-scheduler")
+				oldShoot.Spec.SchedulerName = new("bar-scheduler")
 
 				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 
@@ -7570,7 +7570,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = nil
 				shoot.Spec.Kubernetes.Version = "1.34.0"
 				shoot.Spec.SecretBindingName = nil
-				shoot.Spec.CredentialsBindingName = ptr.To("creds")
+				shoot.Spec.CredentialsBindingName = new("creds")
 				shoot.Spec.CloudProfileName = nil
 				cloudProfileRef := &core.CloudProfileReference{
 					Kind: "CloudProfile",
@@ -7729,10 +7729,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should forbid changing the volume details", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
-					shoot.Spec.Provider.Workers[0].Volume = &core.Volume{Name: ptr.To("foo")}
+					shoot.Spec.Provider.Workers[0].Volume = &core.Volume{Name: new("foo")}
 					newShoot := prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].Volume.Name = ptr.To("bar")
+					newShoot.Spec.Provider.Workers[0].Volume.Name = new("bar")
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -7845,7 +7845,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should fail to set the cluster identity if it is already set", func() {
 				newShoot.Status.ClusterIdentity = &clusterIdentity
-				shoot.Status.ClusterIdentity = ptr.To("oldClusterIdentity")
+				shoot.Status.ClusterIdentity = new("oldClusterIdentity")
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 				Expect(errorList).To(HaveLen(1))
 				Expect(errorList).To(ConsistOfFields(Fields{
@@ -7990,8 +7990,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not fail for duplicate application (grouping)", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", Application: ptr.To("app")},
-					{Name: "b", URL: "https://bar.foo", Application: ptr.To("app")},
+					{Name: "a", URL: "https://foo.bar", Application: new("app")},
+					{Name: "b", URL: "https://bar.foo", Application: new("app")},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -8000,8 +8000,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should succeed with unique applications", func() {
 				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
-					{Name: "a", URL: "https://foo.bar", Application: ptr.To("app-a")},
-					{Name: "b", URL: "https://bar.foo", Application: ptr.To("app-b")},
+					{Name: "a", URL: "https://foo.bar", Application: new("app-a")},
+					{Name: "b", URL: "https://bar.foo", Application: new("app-b")},
 				}
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -8116,7 +8116,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
@@ -8128,7 +8128,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				core.Machine{
 					Type:         "large",
 					Image:        nil,
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
@@ -8143,7 +8143,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
@@ -8158,7 +8158,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
@@ -8190,7 +8190,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					MaxSurge:       maxSurge,
 					MaxUnavailable: maxUnavailable,
@@ -8204,21 +8204,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			// double zero values (percent or int)
-			Entry("two zero integers", core.AutoRollingUpdate, ptr.To(intstr.FromInt32(0)), ptr.To(intstr.FromInt32(0)), field.ErrorTypeInvalid),
-			Entry("zero int and zero percent", core.AutoRollingUpdate, ptr.To(intstr.FromInt32(0)), ptr.To(intstr.FromString("0%")), field.ErrorTypeInvalid),
-			Entry("zero percent and zero int", core.AutoRollingUpdate, ptr.To(intstr.FromString("0%")), ptr.To(intstr.FromInt32(0)), field.ErrorTypeInvalid),
-			Entry("two zero percents", core.AutoRollingUpdate, ptr.To(intstr.FromString("0%")), ptr.To(intstr.FromString("0%")), field.ErrorTypeInvalid),
+			Entry("two zero integers", core.AutoRollingUpdate, new(intstr.FromInt32(0)), new(intstr.FromInt32(0)), field.ErrorTypeInvalid),
+			Entry("zero int and zero percent", core.AutoRollingUpdate, new(intstr.FromInt32(0)), new(intstr.FromString("0%")), field.ErrorTypeInvalid),
+			Entry("zero percent and zero int", core.AutoRollingUpdate, new(intstr.FromString("0%")), new(intstr.FromInt32(0)), field.ErrorTypeInvalid),
+			Entry("two zero percents", core.AutoRollingUpdate, new(intstr.FromString("0%")), new(intstr.FromString("0%")), field.ErrorTypeInvalid),
 
 			// greater than 100
-			Entry("maxUnavailable greater than 100 percent", core.AutoRollingUpdate, ptr.To(intstr.FromString("101%")), ptr.To(intstr.FromString("100%")), field.ErrorTypeInvalid),
+			Entry("maxUnavailable greater than 100 percent", core.AutoRollingUpdate, new(intstr.FromString("101%")), new(intstr.FromString("100%")), field.ErrorTypeInvalid),
 
 			// below zero tests
-			Entry("values are not below zero", core.AutoRollingUpdate, ptr.To(intstr.FromInt32(-1)), ptr.To(intstr.FromInt32(0)), field.ErrorTypeInvalid),
-			Entry("percentage is not less than zero", core.AutoRollingUpdate, ptr.To(intstr.FromString("-90%")), ptr.To(intstr.FromString("90%")), field.ErrorTypeInvalid),
+			Entry("values are not below zero", core.AutoRollingUpdate, new(intstr.FromInt32(-1)), new(intstr.FromInt32(0)), field.ErrorTypeInvalid),
+			Entry("percentage is not less than zero", core.AutoRollingUpdate, new(intstr.FromString("-90%")), new(intstr.FromString("90%")), field.ErrorTypeInvalid),
 
 			// manual in-place update tests
-			Entry("maxSurge is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, nil, ptr.To(intstr.FromInt32(1)), field.ErrorTypeInvalid),
-			Entry("maxUnavailable is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, ptr.To(intstr.FromInt32(0)), nil, field.ErrorTypeInvalid),
+			Entry("maxSurge is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, nil, new(intstr.FromInt32(1)), field.ErrorTypeInvalid),
+			Entry("maxUnavailable is not nil in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, new(intstr.FromInt32(0)), nil, field.ErrorTypeInvalid),
 		)
 
 		DescribeTable("reject when labels are invalid",
@@ -8233,7 +8233,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -8269,7 +8269,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -8304,7 +8304,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Name:    "image-name",
 							Version: "1.0.0",
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -8348,7 +8348,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8374,7 +8374,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8400,7 +8400,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8431,7 +8431,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8461,7 +8461,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8499,7 +8499,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:              &maxSurge,
 				MaxUnavailable:        &maxUnavailable,
@@ -8527,7 +8527,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:              &maxSurge,
 				MaxUnavailable:        &maxUnavailable,
@@ -8559,7 +8559,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8590,7 +8590,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Name:    "image-name",
 						Version: "1.0.0",
 					},
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -8645,7 +8645,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry("amd64 is a valid architecture name", ptr.To(v1beta1constants.ArchitectureAMD64), BeEmpty()),
 			Entry("arm64 is a valid architecture name", ptr.To(v1beta1constants.ArchitectureARM64), BeEmpty()),
-			Entry("foo is an invalid architecture name", ptr.To("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("foo is an invalid architecture name", new("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("architecture"),
 			})))),
@@ -8697,7 +8697,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			BeforeEach(func() {
 				worker = core.Worker{
 					Name:           "worker1",
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					MaxUnavailable: new(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
 						Image: &core.ShootMachineImage{
@@ -8836,7 +8836,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), "v1.33.0", fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, new(cloudProfileReference.Name), "v1.33.0", fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -8847,7 +8847,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), "v1.34.0", fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, new(cloudProfileReference.Name), "v1.34.0", fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8868,7 +8868,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			BeforeEach(func() {
 				worker = core.Worker{
 					Name:           "worker-1",
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					MaxUnavailable: new(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
 						Image: &core.ShootMachineImage{
@@ -8882,7 +8882,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail if the update strategy is not supported", func() {
-				worker.UpdateStrategy = ptr.To(testUpdateStrategy)
+				worker.UpdateStrategy = new(testUpdateStrategy)
 
 				Expect(ValidateWorker(worker, core.Kubernetes{}, shootNamespace, providerType, fldPath, false)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -8959,7 +8959,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			BeforeEach(func() {
 				worker = core.Worker{
 					Name:           "worker-1",
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					MaxUnavailable: new(intstr.FromInt32(1)),
 					Machine: core.Machine{
 						Type: "xlarge",
 						Image: &core.ShootMachineImage{
@@ -8979,7 +8979,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow setting DisableHealthTimeout to false for update strategy AutoRollingUpdate", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
-					DisableHealthTimeout: ptr.To(false),
+					DisableHealthTimeout: new(false),
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
@@ -8988,7 +8988,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid setting DisableHealthTimeout to true for update strategy AutoRollingUpdate", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
-					DisableHealthTimeout: ptr.To(true),
+					DisableHealthTimeout: new(true),
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
@@ -9003,7 +9003,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
-					DisableHealthTimeout: ptr.To(false),
+					DisableHealthTimeout: new(false),
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
@@ -9014,7 +9014,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
-					DisableHealthTimeout: ptr.To(true),
+					DisableHealthTimeout: new(true),
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
@@ -9101,7 +9101,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid setting MaxEvictRetries to a negative value", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
-					MaxEvictRetries: ptr.To(int32(-2)),
+					MaxEvictRetries: new(int32(-2)),
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
@@ -9118,8 +9118,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.0.0",
 					},
 				},
-				MaxUnavailable: ptr.To(intstr.FromInt(1)),
-				Priority:       ptr.To(int32(-2)),
+				MaxUnavailable: new(intstr.FromInt(1)),
+				Priority:       new(int32(-2)),
 			}
 
 			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
@@ -9429,9 +9429,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 			Entry("should allow empty cpuManagerPolicy", nil, BeEmpty()),
-			Entry("should allow cpuManagerPolicy to be 'none'", ptr.To("none"), BeEmpty()),
-			Entry("should allow cpuManagerPolicy to be 'static'", ptr.To("static"), BeEmpty()),
-			Entry("should not allow cpuManagerPolicy to be 'foo'", ptr.To("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("should allow cpuManagerPolicy to be 'none'", new("none"), BeEmpty()),
+			Entry("should allow cpuManagerPolicy to be 'static'", new("static"), BeEmpty()),
+			Entry("should not allow cpuManagerPolicy to be 'foo'", new("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeNotSupported),
 				"Field":  Equal("kubelet.cpuManagerPolicy"),
 				"Detail": Equal("supported values: \"none\", \"static\""),
@@ -9473,11 +9473,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					kubeletConfig.MemorySwap = &core.MemorySwapConfiguration{SwapBehavior: (*core.SwapBehavior)(swapBehavior)}
 				}
 
-				kubeletConfig.FailSwapOn = ptr.To(true)
+				kubeletConfig.FailSwapOn = new(true)
 
 				if allowSwap {
 					kubeletConfig.FeatureGates = map[string]bool{"NodeSwap": true}
-					kubeletConfig.FailSwapOn = ptr.To(false)
+					kubeletConfig.FailSwapOn = new(false)
 				}
 
 				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
@@ -9486,16 +9486,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry("should allow empty memory swap", false, nil, "1.35", BeEmpty()),
 			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.35", BeEmpty()),
-			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.35", BeEmpty()),
-			Entry("should forbid random behavior", true, ptr.To("MagicSwap"), "1.35", ConsistOf(
+			Entry("should allow LimitedSwap behavior", true, new("LimitedSwap"), "1.35", BeEmpty()),
+			Entry("should forbid random behavior", true, new("MagicSwap"), "1.35", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("memorySwap.swapBehavior"),
 					"Detail": Equal("supported values: \"NoSwap\", \"LimitedSwap\""),
 				})),
 			)),
-			Entry("should allow NoSwap behavior", true, ptr.To("NoSwap"), "1.35", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.35", ConsistOf(
+			Entry("should allow NoSwap behavior", true, new("NoSwap"), "1.35", BeEmpty()),
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, new("LimitedSwap"), "1.35", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("memorySwap"),
@@ -9716,7 +9716,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		DescribeTable("ImageGCHighThresholdPercent",
 			func(imageGCHighThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
-					ImageGCHighThresholdPercent: ptr.To(int32(imageGCHighThresholdPercent)),
+					ImageGCHighThresholdPercent: new(int32(imageGCHighThresholdPercent)),
 				}
 
 				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
@@ -9742,7 +9742,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		DescribeTable("ImageGCLowThresholdPercent",
 			func(imageGCLowThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
-					ImageGCLowThresholdPercent: ptr.To(int32(imageGCLowThresholdPercent)),
+					ImageGCLowThresholdPercent: new(int32(imageGCLowThresholdPercent)),
 				}
 
 				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
@@ -9873,8 +9873,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should not allow negative values", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
-					RegistryPullQPS: ptr.To(int32(-10)),
-					RegistryBurst:   ptr.To(int32(-20)),
+					RegistryPullQPS: new(int32(-10)),
+					RegistryBurst:   new(int32(-20)),
 				}, "", nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -9974,7 +9974,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should not allow maxParallelImagePulls > 1 when serializeImagePulls is set to true", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					MaxParallelImagePulls: ptr.To[int32](10),
-					SerializeImagePulls:   ptr.To(true),
+					SerializeImagePulls:   new(true),
 				}, "", nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
@@ -9991,20 +9991,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 			func(schedules []core.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
 				Expect(ValidateHibernationSchedules(schedules, nil)).To(matcher)
 			},
-			Entry("valid schedules", []core.HibernationSchedule{{Start: ptr.To("1 * * * *"), End: ptr.To("2 * * * *")}}, BeEmpty()),
+			Entry("valid schedules", []core.HibernationSchedule{{Start: new("1 * * * *"), End: new("2 * * * *")}}, BeEmpty()),
 			Entry("nil schedules", nil, BeEmpty()),
 			Entry("duplicate start and end value in same schedule",
-				[]core.HibernationSchedule{{Start: ptr.To("* * * * *"), End: ptr.To("* * * * *")}},
+				[]core.HibernationSchedule{{Start: new("* * * * *"), End: new("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("duplicate start and end value in different schedules",
-				[]core.HibernationSchedule{{Start: ptr.To("1 * * * *"), End: ptr.To("2 * * * *")}, {Start: ptr.To("1 * * * *"), End: ptr.To("3 * * * *")}},
+				[]core.HibernationSchedule{{Start: new("1 * * * *"), End: new("2 * * * *")}, {Start: new("1 * * * *"), End: new("3 * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("invalid schedule",
-				[]core.HibernationSchedule{{Start: ptr.To("foo"), End: ptr.To("* * * * *")}},
+				[]core.HibernationSchedule{{Start: new("foo"), End: new("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeInvalid),
 				})))),
@@ -10063,30 +10063,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid schedule", sets.New[string](), &core.HibernationSchedule{Start: ptr.To("1 * * * *"), End: ptr.To("2 * * * *")}, BeEmpty()),
-			Entry("invalid start value", sets.New[string](), &core.HibernationSchedule{Start: ptr.To(""), End: ptr.To("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("valid schedule", sets.New[string](), &core.HibernationSchedule{Start: new("1 * * * *"), End: new("2 * * * *")}, BeEmpty()),
+			Entry("invalid start value", sets.New[string](), &core.HibernationSchedule{Start: new(""), End: new("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("start").String()),
 			})))),
-			Entry("invalid end value", sets.New[string](), &core.HibernationSchedule{Start: ptr.To("* * * * *"), End: ptr.To("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid end value", sets.New[string](), &core.HibernationSchedule{Start: new("* * * * *"), End: new("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("invalid location", sets.New[string](), &core.HibernationSchedule{Start: ptr.To("1 * * * *"), End: ptr.To("2 * * * *"), Location: ptr.To("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid location", sets.New[string](), &core.HibernationSchedule{Start: new("1 * * * *"), End: new("2 * * * *"), Location: new("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("location").String()),
 			})))),
-			Entry("equal start and end value", sets.New[string](), &core.HibernationSchedule{Start: ptr.To("* * * * *"), End: ptr.To("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("equal start and end value", sets.New[string](), &core.HibernationSchedule{Start: new("* * * * *"), End: new("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("nil start", sets.New[string](), &core.HibernationSchedule{End: ptr.To("* * * * *")}, BeEmpty()),
-			Entry("nil end", sets.New[string](), &core.HibernationSchedule{Start: ptr.To("* * * * *")}, BeEmpty()),
+			Entry("nil start", sets.New[string](), &core.HibernationSchedule{End: new("* * * * *")}, BeEmpty()),
+			Entry("nil end", sets.New[string](), &core.HibernationSchedule{Start: new("* * * * *")}, BeEmpty()),
 			Entry("start and end nil", sets.New[string](), &core.HibernationSchedule{},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeRequired),
 				})))),
-			Entry("invalid start and end value", sets.New[string](), &core.HibernationSchedule{Start: ptr.To(""), End: ptr.To("")},
+			Entry("invalid start and end value", sets.New[string](), &core.HibernationSchedule{Start: new(""), End: new("")},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -10254,8 +10254,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.31.0",
 						Kubelet: &core.KubeletConfig{
 							EvictionHard: &core.KubeletConfigEviction{
-								MemoryAvailable:  ptr.To("100Mi"),
-								ImageFSAvailable: ptr.To("100Mi"),
+								MemoryAvailable:  new("100Mi"),
+								ImageFSAvailable: new("100Mi"),
 							},
 						},
 					},
@@ -10265,11 +10265,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 								Name:           "worker-1",
 								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
 								Kubernetes: &core.WorkerKubernetes{
-									Version: ptr.To("1.35.0"),
+									Version: new("1.35.0"),
 									Kubelet: &core.KubeletConfig{
 										EvictionHard: &core.KubeletConfigEviction{
-											MemoryAvailable:  ptr.To("200Mi"),
-											ImageFSAvailable: ptr.To("200Mi"),
+											MemoryAvailable:  new("200Mi"),
+											ImageFSAvailable: new("200Mi"),
 										},
 									},
 								},
@@ -10346,7 +10346,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should return an error if the old worker Kubernetes version is invalid", func() {
-			oldShoot.Spec.Provider.Workers[0].Kubernetes.Version = ptr.To("invalid-version")
+			oldShoot.Spec.Provider.Workers[0].Kubernetes.Version = new("invalid-version")
 			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = oldShoot.Spec.Provider.Workers[1].Machine.Image.Version
 
 			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
@@ -10359,7 +10359,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should return an error if the new worker Kubernetes version is invalid", func() {
-			newShoot.Spec.Provider.Workers[0].Kubernetes.Version = ptr.To("invalid-version")
+			newShoot.Spec.Provider.Workers[0].Kubernetes.Version = new("invalid-version")
 			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = oldShoot.Spec.Provider.Workers[1].Machine.Image.Version
 
 			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
@@ -10387,7 +10387,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should return an error if the worker pool is undergoing an in-place update and changes are made to the Shoot kubelet config", func() {
-			newShoot.Spec.Kubernetes.Kubelet.EvictionHard.MemoryAvailable = ptr.To("150Mi")
+			newShoot.Spec.Kubernetes.Kubelet.EvictionHard.MemoryAvailable = new("150Mi")
 			newShoot.Spec.Provider.Workers[0].Machine.Image.Version = oldShoot.Spec.Provider.Workers[0].Machine.Image.Version
 
 			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(

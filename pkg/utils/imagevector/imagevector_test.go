@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -80,10 +79,10 @@ var _ = Describe("imagevector", func() {
 			tag6 = "tag6"
 			tag7 = "tag7"
 
-			repo1 = ptr.To("repo1")
-			repo2 = ptr.To("repo2")
-			repo3 = ptr.To("repo3")
-			repo3 = ptr.To("repo4")
+			repo1 = new("repo1")
+			repo2 = new("repo2")
+			repo3 = new("repo3")
+			repo3 = new("repo4")
 
 			greaterEquals16Smaller18 = ">= 1.6, < 1.8"
 			greaterEquals18 = ">= 1.8"
@@ -153,13 +152,13 @@ var _ = Describe("imagevector", func() {
 			}
 			image1Src7 = &ImageSource{
 				Name:           image1Name,
-				Ref:            ptr.To(*repo1 + ":" + tag2),
+				Ref:            new(*repo1 + ":" + tag2),
 				Version:        &tag2,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
 			image1Src8 = &ImageSource{
 				Name:           image1Name,
-				Ref:            ptr.To(*repo1 + ":" + tag3),
+				Ref:            new(*repo1 + ":" + tag3),
 				Version:        &tag3,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
@@ -617,7 +616,7 @@ images:
 	Describe("> Image", func() {
 		Describe("#WithOptionalTag", func() {
 			It("should do nothing because ref is set", func() {
-				image := Image{Ref: ptr.To("ref")}
+				image := Image{Ref: new("ref")}
 				image.WithOptionalTag("foo")
 
 				Expect(image.Repository).To(BeNil())
@@ -625,7 +624,7 @@ images:
 			})
 
 			It("should do nothing because tag is already set", func() {
-				image := Image{Repository: ptr.To("some-repo"), Tag: ptr.To("some-tag")}
+				image := Image{Repository: new("some-repo"), Tag: new("some-tag")}
 				image.WithOptionalTag("foo")
 
 				Expect(image.Repository).To(PointTo(Equal("some-repo")))
@@ -633,7 +632,7 @@ images:
 			})
 
 			It("should use the optional tag", func() {
-				image := Image{Repository: ptr.To("some-repo")}
+				image := Image{Repository: new("some-repo")}
 				image.WithOptionalTag("foo")
 
 				Expect(image.Repository).To(PointTo(Equal("some-repo")))
@@ -642,10 +641,10 @@ images:
 		})
 
 		Describe("#String", func() {
-			var repo = ptr.To("my-repo")
+			var repo = new("my-repo")
 
 			It("should return the string representation of the image (w/ ref)", func() {
-				ref := ptr.To("some-ref")
+				ref := new("some-ref")
 
 				image := Image{
 					Name: "my-image",
@@ -695,20 +694,20 @@ images:
 		Describe("#ToImage", func() {
 			var (
 				name       = "foo"
-				repository = ptr.To("repo")
+				repository = new("repo")
 				tag        = "v1"
 			)
 
 			It("should return an image with the ref without doing anything", func() {
 				var (
-					ref    = ptr.To("ref")
+					ref    = new("ref")
 					source = ImageSource{
 						Name: name,
 						Ref:  ref,
 					}
 				)
 
-				image := source.ToImage(ptr.To("1.8.0"))
+				image := source.ToImage(new("1.8.0"))
 
 				Expect(image).To(Equal(&Image{
 					Name: name,
@@ -723,7 +722,7 @@ images:
 					Tag:        &tag,
 				}
 
-				image := source.ToImage(ptr.To("1.8.0"))
+				image := source.ToImage(new("1.8.0"))
 
 				Expect(image).To(Equal(&Image{
 					Name:       name,
@@ -748,8 +747,8 @@ images:
 				Expect(image).To(Equal(&Image{
 					Name:       name,
 					Repository: repository,
-					Tag:        ptr.To("v" + version),
-					Version:    ptr.To("v" + version),
+					Tag:        new("v" + version),
+					Version:    new("v" + version),
 				}))
 			})
 		})
@@ -760,12 +759,12 @@ images:
 			var (
 				image1Key        = "foo"
 				image1Name       = "baz"
-				image1Repository = ptr.To("baz")
+				image1Repository = new("baz")
 				image1Tag        = "barbaz"
 
 				image2Key        = "bar"
 				image2Name       = "baz"
-				image2Repository = ptr.To("foo")
+				image2Repository = new("foo")
 
 				imageMap = map[string]*Image{
 					image1Key: {

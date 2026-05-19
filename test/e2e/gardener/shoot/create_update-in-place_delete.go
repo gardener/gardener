@@ -37,25 +37,25 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			pool1.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
 			pool1.Minimum = 2
 			pool1.Maximum = 2
-			pool1.MaxUnavailable = ptr.To(intstr.FromInt(1))
-			pool1.MaxSurge = ptr.To(intstr.FromInt(0))
+			pool1.MaxUnavailable = new(intstr.FromInt(1))
+			pool1.MaxSurge = new(intstr.FromInt(0))
 
 			pool2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
 			pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-				Version: ptr.To(kubernetesSourceVersion),
+				Version: new(kubernetesSourceVersion),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
-					CPUManagerPolicy: ptr.To("none"),
+					CPUManagerPolicy: new("none"),
 					EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-						MemoryAvailable: ptr.To("100Mi"),
-						NodeFSAvailable: ptr.To("100Mi"),
+						MemoryAvailable: new("100Mi"),
+						NodeFSAvailable: new("100Mi"),
 					},
 				},
 			}
 
 			pool3 := pool1.DeepCopy()
 			pool3.Name = "auto-surge"
-			pool3.MaxSurge = ptr.To(intstr.FromInt(1))
-			pool3.MaxUnavailable = ptr.To(intstr.FromInt(0))
+			pool3.MaxSurge = new(intstr.FromInt(1))
+			pool3.MaxUnavailable = new(intstr.FromInt(0))
 
 			s.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{pool1, pool2, *pool3}
 
@@ -110,15 +110,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 				// Update machine image version for pool1
 				s.Log.Info("Updating worker pool machine image version", "pool", s.Shoot.Spec.Provider.Workers[0].Name, "version", "2.0.0")
-				s.Shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("2.0.0")
+				s.Shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("2.0.0")
 
 				// Update Kubelet config for pool2
 				s.Log.Info("Updating worker pool Kubelet config", "pool", s.Shoot.Spec.Provider.Workers[1].Name)
 				s.Shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
-					CPUManagerPolicy: ptr.To("static"),
+					CPUManagerPolicy: new("static"),
 					EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-						MemoryAvailable: ptr.To("200Mi"),
-						NodeFSAvailable: ptr.To("200Mi"),
+						MemoryAvailable: new("200Mi"),
+						NodeFSAvailable: new("200Mi"),
 					},
 				}
 

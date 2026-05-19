@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 )
@@ -36,7 +35,7 @@ var _ = Describe("Logging", func() {
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
 										Parser:      "vpn-seed-server-parser",
-										ReserveData: ptr.To(true),
+										ReserveData: new(true),
 									},
 								},
 							},
@@ -54,7 +53,7 @@ var _ = Describe("Logging", func() {
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
 										Parser:      "envoy-proxy-parser",
-										ReserveData: ptr.To(true),
+										ReserveData: new(true),
 									},
 								},
 							},

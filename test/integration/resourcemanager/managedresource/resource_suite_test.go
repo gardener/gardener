@@ -107,7 +107,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -118,11 +118,11 @@ var _ = BeforeSuite(func() {
 
 	Expect((&managedresource.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
 			// resource, which won't be possible if the controller reconciles it back too quickly.
 			SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-			ManagedByLabelValue: ptr.To("gardener"),
+			ManagedByLabelValue: new("gardener"),
 		},
 		Clock:                         fakeClock,
 		ClassFilter:                   filter,

@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/utils/ptr"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -267,7 +266,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.Metrics = metricsserver.Options{BindAddress: c.MetricsBindAddress}
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
-	opts.Controller = controllerconfig.Controller{RecoverPanic: ptr.To(true)}
+	opts.Controller = controllerconfig.Controller{RecoverPanic: new(true)}
 	opts.WebhookServer = webhook.NewServer(webhook.Options{
 		Host:    c.WebhookServerHost,
 		Port:    c.WebhookServerPort,

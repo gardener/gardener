@@ -14,7 +14,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -155,7 +154,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set unsupported seed selectors", func() {
-			controllerRegistration.Spec.Resources[0].Primary = ptr.To(false)
+			controllerRegistration.Spec.Resources[0].Primary = new(false)
 			controllerRegistration.Spec.Deployment.SeedSelector = &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"foo": "no/slash/allowed",
@@ -216,7 +215,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid changing the primary field of a resource", func() {
 			newControllerRegistration := prepareControllerRegistrationForUpdate(controllerRegistration)
-			newControllerRegistration.Spec.Resources[0].Primary = ptr.To(false)
+			newControllerRegistration.Spec.Resources[0].Primary = new(false)
 
 			errorList := ValidateControllerRegistrationUpdate(newControllerRegistration, controllerRegistration)
 
@@ -536,7 +535,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid changing the primary field of a resource", func() {
 			newResources := slices.Clone(resources)
-			newResources[0].Primary = ptr.To(false)
+			newResources[0].Primary = new(false)
 
 			errorList := ValidateControllerResourcesUpdate(newResources, resources, field.NewPath("spec.resources"))
 
@@ -548,7 +547,7 @@ var _ = Describe("validation", func() {
 			newResources = append(newResources, core.ControllerResource{
 				Kind:    extensionsv1alpha1.ExtensionResource,
 				Type:    "baz",
-				Primary: ptr.To(true),
+				Primary: new(true),
 			})
 
 			errorList := ValidateControllerResourcesUpdate(newResources, resources, field.NewPath("spec.resources"))

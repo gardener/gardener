@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -84,7 +83,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 				Name:      "other-mr",
 				Namespace: secret.Namespace,
 			},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("other")},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: new("other")},
 		}
 		Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 
@@ -99,7 +98,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 				Namespace: secret.Namespace,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:      ptr.To(filter.ResourceClass()),
+				Class:      new(filter.ResourceClass()),
 				SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 			},
 		}

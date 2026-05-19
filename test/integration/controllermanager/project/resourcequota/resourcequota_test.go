@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -178,8 +177,8 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 
 				It("should only add the gardener created resource annotations to the resource quota", func() {
-					originalConfigMapQuota := ptr.To(resourceQuota.Spec.Hard["count/configmaps"]).Value()
-					originalSecretQuota := ptr.To(resourceQuota.Spec.Hard["count/secrets"]).Value()
+					originalConfigMapQuota := new(resourceQuota.Spec.Hard["count/configmaps"]).Value()
+					originalSecretQuota := new(resourceQuota.Spec.Hard["count/secrets"]).Value()
 
 					eventuallyExpectActualUsageAnnotations(ctx, resourceQuota)
 					consistentlyExpectQuotaSpec(ctx, resourceQuota, originalConfigMapQuota, originalSecretQuota)
@@ -298,8 +297,8 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 
 				It("should do nothing", func() {
-					originalConfigMapQuota := ptr.To(resourceQuota.Spec.Hard["count/configmaps"]).Value()
-					originalSecretQuota := ptr.To(resourceQuota.Spec.Hard["count/secrets"]).Value()
+					originalConfigMapQuota := new(resourceQuota.Spec.Hard["count/configmaps"]).Value()
+					originalSecretQuota := new(resourceQuota.Spec.Hard["count/secrets"]).Value()
 
 					consistentlyExpectUsageAnnotations(ctx, resourceQuota, "2", "4")
 					consistentlyExpectQuotaSpec(ctx, resourceQuota, originalConfigMapQuota, originalSecretQuota)
@@ -341,8 +340,8 @@ var _ = Describe("ResourceQuota Controller tests", func() {
 				})
 
 				It("should just update the annotations", func() {
-					originalConfigMapQuota := ptr.To(resourceQuota.Spec.Hard["count/configmaps"]).Value()
-					originalSecretQuota := ptr.To(resourceQuota.Spec.Hard["count/secrets"]).Value()
+					originalConfigMapQuota := new(resourceQuota.Spec.Hard["count/configmaps"]).Value()
+					originalSecretQuota := new(resourceQuota.Spec.Hard["count/secrets"]).Value()
 
 					consistentlyExpectQuotaSpec(ctx, resourceQuota, originalConfigMapQuota, originalSecretQuota)
 					eventuallyExpectActualUsageAnnotations(ctx, resourceQuota)

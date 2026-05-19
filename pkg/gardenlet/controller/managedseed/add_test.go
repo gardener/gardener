@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -132,7 +131,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object without delay for Create events when generation changed and jitterudpates is set to false", func() {
-			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = new(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
@@ -142,7 +141,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
-			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(true)
+			cfg.Controllers.ManagedSeed.JitterUpdates = new(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
@@ -152,7 +151,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
-			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = new(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 2
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
@@ -189,7 +188,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object for Update events when jitterUpdates is set to false", func() {
-			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = new(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
@@ -199,7 +198,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
-			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(true)
+			cfg.Controllers.ManagedSeed.JitterUpdates = new(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()

@@ -63,24 +63,24 @@ var _ = Describe("helmregistry", func() {
 
 	It("should return error if the repository does not exist", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/examplexxx"),
-			Tag:        ptr.To("0.1.0"),
+			Repository: new(registryAddress + "/charts/examplexxx"),
+			Tag:        new("0.1.0"),
 		})
 		Expect(err).To(MatchError(ContainSubstring("failed get manifest from remote")))
 	})
 
 	It("should return error if the digest does not exist", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/examplexxx"),
-			Digest:     ptr.To("sha256:7a855a6d69033dd3240d9648e8bd46a67a528059158e098c7794ac9227735b4a"),
+			Repository: new(registryAddress + "/charts/examplexxx"),
+			Digest:     new("sha256:7a855a6d69033dd3240d9648e8bd46a67a528059158e098c7794ac9227735b4a"),
 		})
 		Expect(err).To(MatchError(ContainSubstring("failed to pull artifact")))
 	})
 
 	It("should pull the chart by tag", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Tag:               ptr.To("0.1.0"),
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -89,8 +89,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart by digest", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Digest:            ptr.To(exampleChartDigest),
+			Repository:        new(registryAddress + "/charts/example"),
+			Digest:            new(exampleChartDigest),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -99,7 +99,7 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart with ref", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Ref:               ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
+			Ref:               new(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -108,7 +108,7 @@ var _ = Describe("helmregistry", func() {
 
 	It("should use the cache", func() {
 		oci := &gardencorev1.OCIRepository{
-			Ref:               ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
+			Ref:               new(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		}
 		_, err := hr.Pull(ctx, oci)
@@ -122,16 +122,16 @@ var _ = Describe("helmregistry", func() {
 
 	It("should use the cache no matter if tag or digest is used", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Digest:            ptr.To(exampleChartDigest),
+			Repository:        new(registryAddress + "/charts/example"),
+			Digest:            new(exampleChartDigest),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(0))
 
 		_, err = hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Tag:               ptr.To("0.1.0"),
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -141,8 +141,8 @@ var _ = Describe("helmregistry", func() {
 	It("should pull the chart with pull secret", func() {
 		out, err := hr.Pull(ctx,
 			&gardencorev1.OCIRepository{
-				Repository:        ptr.To(registryAddress + "/charts/example"),
-				Tag:               ptr.To("0.1.0"),
+				Repository:        new(registryAddress + "/charts/example"),
+				Tag:               new("0.1.0"),
 				CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 				PullSecretRef:     &corev1.LocalObjectReference{Name: "pull-secret"},
 			})
@@ -166,8 +166,8 @@ var _ = Describe("helmregistry", func() {
 
 		out, err := hr.Pull(ctx,
 			&gardencorev1.OCIRepository{
-				Repository:        ptr.To(registryAddress + "/charts/example"),
-				Tag:               ptr.To("0.1.0"),
+				Repository:        new(registryAddress + "/charts/example"),
+				Tag:               new("0.1.0"),
 				PullSecretRef:     &corev1.LocalObjectReference{Name: "pull-secret"},
 				CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 			})
@@ -178,8 +178,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should return error when CA bundle secret does not exist", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Tag:               ptr.To("0.1.0"),
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: "non-existing-ca-bundle"},
 		})
 		Expect(err).To(MatchError(ContainSubstring("failed to get CA bundle secret")))
@@ -199,8 +199,8 @@ var _ = Describe("helmregistry", func() {
 		invalidHr := &HelmRegistry{cache: rc, client: fakeClient}
 
 		_, err := invalidHr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Tag:               ptr.To("0.1.0"),
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: "invalid-ca-bundle"},
 		})
 		Expect(err).To(MatchError("failed to append CA certificates from bundle"))
@@ -208,8 +208,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should fail without CA bundle for TLS registry", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: ptr.To(registryAddress + "/charts/example"),
-			Tag:        ptr.To("0.1.0"),
+			Repository: new(registryAddress + "/charts/example"),
+			Tag:        new("0.1.0"),
 		})
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("tls: failed to verify certificate: x509"))
@@ -217,8 +217,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should work with CA bundle and pull secret together", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository:        ptr.To(registryAddress + "/charts/example"),
-			Tag:               ptr.To("0.1.0"),
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
 			PullSecretRef:     &corev1.LocalObjectReference{Name: "pull-secret"},
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
 		})
@@ -253,7 +253,7 @@ var _ = Describe("buildRef", func() {
 			Expect(buildRef(oci)).To(Equal(want))
 		},
 		Entry("ref without digest",
-			&gardencorev1.OCIRepository{Ref: ptr.To("example.com/foo:1.0.0")},
+			&gardencorev1.OCIRepository{Ref: new("example.com/foo:1.0.0")},
 			mustNewTag("example.com/foo:1.0.0"),
 		),
 		Entry("ref with tag and digest",
@@ -261,15 +261,15 @@ var _ = Describe("buildRef", func() {
 			mustNewDigest("example.com/foo:1.0.0@"+digest),
 		),
 		Entry("repository with tag",
-			&gardencorev1.OCIRepository{Repository: ptr.To("example.com/foo"), Tag: ptr.To("1.0.0")},
+			&gardencorev1.OCIRepository{Repository: new("example.com/foo"), Tag: new("1.0.0")},
 			mustNewTag("example.com/foo:1.0.0"),
 		),
 		Entry("repository with tag and digest",
-			&gardencorev1.OCIRepository{Repository: ptr.To("oci://example.com/foo"), Tag: ptr.To("1.0.0"), Digest: ptr.To(digest)},
+			&gardencorev1.OCIRepository{Repository: new("oci://example.com/foo"), Tag: new("1.0.0"), Digest: ptr.To(digest)},
 			mustNewDigest("example.com/foo@"+digest),
 		),
 		Entry("configure insecure in local setup when using registry.local.gardener.cloud",
-			&gardencorev1.OCIRepository{Ref: ptr.To("registry.local.gardener.cloud:5001/foo:1.0.0")},
+			&gardencorev1.OCIRepository{Ref: new("registry.local.gardener.cloud:5001/foo:1.0.0")},
 			name.MustParseReference("registry.local.gardener.cloud:5001/foo:1.0.0", name.Insecure),
 		),
 	)

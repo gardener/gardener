@@ -92,7 +92,7 @@ var _ = Describe("ValuesHelper", func() {
 				string("BarFeature"): true,
 			},
 			Logging: &gardenletconfigv1alpha1.Logging{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 			},
 			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -129,8 +129,8 @@ var _ = Describe("ValuesHelper", func() {
 			ReplicaCount:         ptr.To[int32](1),
 			RevisionHistoryLimit: ptr.To[int32](1),
 			Image: &seedmanagementv1alpha1.Image{
-				Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
-				Tag:        ptr.To("v0.0.0-master+$Format:%H$"),
+				Repository: new("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
+				Tag:        new("v0.0.0-master+$Format:%H$"),
 				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
@@ -191,7 +191,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("BarFeature"): true,
 				},
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				},
 			}
 		}

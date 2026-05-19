@@ -72,8 +72,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:   "gardener-user.service",
-				Enable: ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Enable: new(true),
+				Content: new(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]
@@ -84,8 +84,8 @@ ExecStart=` + pathScript + `
 			},
 			{
 				Name:   "gardener-user.path",
-				Enable: ptr.To(true),
-				Content: ptr.To(`[Path]
+				Enable: new(true),
+				Content: new(`[Path]
 PathChanged=` + pathAuthorizedSSHKeys + `
 [Install]
 WantedBy=multi-user.target

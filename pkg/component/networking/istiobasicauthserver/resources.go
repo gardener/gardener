@@ -86,7 +86,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 					Labels: i.getLabels(),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					Containers: []corev1.Container{
 						{
 							Name:            name,
@@ -130,7 +130,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",
@@ -142,7 +142,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 					},
 					PriorityClassName: i.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),

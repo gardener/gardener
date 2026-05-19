@@ -194,7 +194,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: b.runtimeNamespace(),
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		configMap = &corev1.ConfigMap{
@@ -232,7 +232,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  b.values.PriorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
+							RunAsNonRoot:       new(true),
 							RunAsUser:          ptr.To[int64](65534),
 							FSGroup:            ptr.To[int64](65534),
 							SupplementalGroups: []int64{1},
@@ -253,7 +253,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								Ports: []corev1.ContainerPort{
 									{
@@ -274,7 +274,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 							Options: []corev1.PodDNSConfigOption{
 								{
 									Name:  "ndots",
-									Value: ptr.To("3"),
+									Value: new("3"),
 								},
 							},
 						},
@@ -328,7 +328,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   deployment.Spec.Selector,
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
@@ -341,7 +341,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 	if b.values.ClusterType == component.ClusterTypeSeed {
 		networkPolicyPort := networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
+			Port:     new(intstr.FromInt32(port)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
@@ -413,7 +413,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			Name: volumeNameClusterAccess,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To(int32(420)),
+					DefaultMode: new(int32(420)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -422,7 +422,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 									Key:  secrets.DataKeyCertificateBundle,
 									Path: secrets.DataKeyCertificateBundle,
 								}},
-								Optional: ptr.To(false),
+								Optional: new(false),
 							},
 						},
 						{
@@ -432,7 +432,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 									Key:  resourcesv1alpha1.DataKeyToken,
 									Path: resourcesv1alpha1.DataKeyToken,
 								}},
-								Optional: ptr.To(false),
+								Optional: new(false),
 							},
 						},
 					},

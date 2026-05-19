@@ -84,7 +84,7 @@ var _ = Describe("Provider", func() {
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 			},
 		}
 	})

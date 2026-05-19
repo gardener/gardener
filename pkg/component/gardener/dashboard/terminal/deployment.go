@@ -58,12 +58,12 @@ func (t *terminal) deployment(
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem200,
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
+						RunAsNonRoot: new(true),
 						RunAsUser:    ptr.To[int64](65532),
 					},
-					TerminationGracePeriodSeconds: ptr.To(int64(10)),
+					TerminationGracePeriodSeconds: new(int64(10)),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           t.values.Image,
@@ -83,7 +83,7 @@ func (t *terminal) deployment(
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						Ports: []corev1.ContainerPort{
 							{

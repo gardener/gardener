@@ -34,8 +34,8 @@ var _ = Describe("Component", func() {
 
 			logrotateUnit := extensionsv1alpha1.Unit{
 				Name:   "containerd-logrotate.service",
-				Enable: ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Enable: new(true),
+				Content: new(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
@@ -47,8 +47,8 @@ WantedBy=multi-user.target`),
 			logrotateTimerUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-logrotate.timer",
 				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Enable:  new(true),
+				Content: new(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10

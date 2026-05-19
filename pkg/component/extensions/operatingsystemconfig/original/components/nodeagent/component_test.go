@@ -53,15 +53,15 @@ var _ = Describe("Component", func() {
 				KubernetesVersion: kubernetesVersion,
 				APIServerURL:      apiServerURL,
 				CABundle:          string(caBundle),
-				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: ptr.To("gardener-node-agent"), Tag: ptr.To("v1")}},
+				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: new("gardener-node-agent"), Tag: new("v1")}},
 			})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:   "gardener-node-agent.service",
-					Enable: ptr.To(true),
-					Content: ptr.To(`[Unit]
+					Enable: new(true),
+					Content: new(`[Unit]
 Description=Gardener Node Agent
 After=network-online.target
 

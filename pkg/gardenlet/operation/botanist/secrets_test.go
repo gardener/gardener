@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -493,7 +492,7 @@ var _ = Describe("Secrets", func() {
 										Immutable *bool
 										Type      corev1.SecretType
 									}{
-										Immutable: ptr.To(true),
+										Immutable: new(true),
 										Type:      corev1.SecretTypeOpaque,
 									})},
 							},
@@ -505,7 +504,7 @@ var _ = Describe("Secrets", func() {
 										Immutable *bool
 										Type      corev1.SecretType
 									}{
-										Immutable: ptr.To(false),
+										Immutable: new(false),
 										Type:      corev1.SecretTypeOpaque,
 									})},
 							},
@@ -517,7 +516,7 @@ var _ = Describe("Secrets", func() {
 										Immutable *bool
 										Type      corev1.SecretType
 									}{
-										Immutable: ptr.To(true),
+										Immutable: new(true),
 										Type:      corev1.SecretTypeTLS,
 									})},
 							},

@@ -11,7 +11,6 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/istio"
 )
@@ -43,7 +42,7 @@ var _ = Describe("Protocol", func() {
 		})
 
 		It("should return ProtocolModeExplicitHTTP2 when appProtocol indicates HTTP/2", func() {
-			port.AppProtocol = ptr.To("kubernetes.io/h2c")
+			port.AppProtocol = new("kubernetes.io/h2c")
 			Expect(DetermineProtocolMode(destinationRule, port)).To(Equal(HTTPProtocolPolicyExplicitHTTP2))
 		})
 
@@ -182,11 +181,11 @@ var _ = Describe("Protocol", func() {
 		Entry("port name tcp-metrics", corev1.ServicePort{Name: "tcp-metrics", Port: 9090}, false),
 		Entry("port name http-server", corev1.ServicePort{Name: "http-server", Port: 80}, false),
 		Entry("empty port name", corev1.ServicePort{Name: "", Port: 80}, false),
-		Entry("appProtocol kubernetes.io/h2c", corev1.ServicePort{Name: "https-main", Port: 443, AppProtocol: ptr.To("kubernetes.io/h2c")}, true),
-		Entry("appProtocol grpc", corev1.ServicePort{Name: "tcp-main", Port: 443, AppProtocol: ptr.To("grpc")}, true),
-		Entry("appProtocol http2", corev1.ServicePort{Name: "tcp-main", Port: 443, AppProtocol: ptr.To("http2")}, true),
-		Entry("appProtocol grpc-web", corev1.ServicePort{Name: "tcp-main", Port: 443, AppProtocol: ptr.To("grpc-web")}, true),
-		Entry("appProtocol http overrides grpc port name", corev1.ServicePort{Name: "grpc-main", Port: 443, AppProtocol: ptr.To("http")}, false),
-		Entry("appProtocol tcp overrides grpc port name", corev1.ServicePort{Name: "grpc-main", Port: 443, AppProtocol: ptr.To("tcp")}, false),
+		Entry("appProtocol kubernetes.io/h2c", corev1.ServicePort{Name: "https-main", Port: 443, AppProtocol: new("kubernetes.io/h2c")}, true),
+		Entry("appProtocol grpc", corev1.ServicePort{Name: "tcp-main", Port: 443, AppProtocol: new("grpc")}, true),
+		Entry("appProtocol http2", corev1.ServicePort{Name: "tcp-main", Port: 443, AppProtocol: new("http2")}, true),
+		Entry("appProtocol grpc-web", corev1.ServicePort{Name: "tcp-main", Port: 443, AppProtocol: new("grpc-web")}, true),
+		Entry("appProtocol http overrides grpc port name", corev1.ServicePort{Name: "grpc-main", Port: 443, AppProtocol: new("http")}, false),
+		Entry("appProtocol tcp overrides grpc port name", corev1.ServicePort{Name: "grpc-main", Port: 443, AppProtocol: new("tcp")}, false),
 	)
 })

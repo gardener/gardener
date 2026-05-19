@@ -81,32 +81,32 @@ var _ = Describe("NodeLocalDNS", func() {
 				ResourceVersion: "1",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
+				HonorLabels: new(false),
 				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 					Key:                  "token",
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					APIServer:  ptr.To("https://kube-apiserver"),
+					APIServer:  new("https://kube-apiserver"),
 					Role:       "Pod",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
-					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("node-local-dns"),
+						Replacement: new("node-local-dns"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "type",
-						Replacement: ptr.To("shoot"),
+						Replacement: new("shoot"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
@@ -132,13 +132,13 @@ var _ = Describe("NodeLocalDNS", func() {
 					},
 					{
 						TargetLabel: "__address__",
-						Replacement: ptr.To("kube-apiserver:443"),
+						Replacement: new("kube-apiserver:443"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 						Regex:        `(.+);(.+)`,
 						TargetLabel:  "__metrics_path__",
-						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+						Replacement:  new("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -156,32 +156,32 @@ var _ = Describe("NodeLocalDNS", func() {
 				ResourceVersion: "1",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
+				HonorLabels: new(false),
 				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 					Key:                  "token",
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					APIServer:  ptr.To("https://kube-apiserver"),
+					APIServer:  new("https://kube-apiserver"),
 					Role:       "Pod",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
-					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("node-local-dns-errors"),
+						Replacement: new("node-local-dns-errors"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "type",
-						Replacement: ptr.To("shoot"),
+						Replacement: new("shoot"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
@@ -207,13 +207,13 @@ var _ = Describe("NodeLocalDNS", func() {
 					},
 					{
 						TargetLabel: "__address__",
-						Replacement: ptr.To("kube-apiserver:443"),
+						Replacement: new("kube-apiserver:443"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 						Regex:        `(.+);(.+)`,
 						TargetLabel:  "__metrics_path__",
-						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+						Replacement:  new("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -473,7 +473,7 @@ status:
 											},
 										},
 										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
+											AllowPrivilegeEscalation: new(false),
 											Capabilities: &corev1.Capabilities{
 												Add: []corev1.Capability{"NET_ADMIN"},
 											},
@@ -560,7 +560,7 @@ status:
 												LocalObjectReference: corev1.LocalObjectReference{
 													Name: "kube-dns",
 												},
-												Optional: ptr.To(true),
+												Optional: new(true),
 											},
 										},
 									},
@@ -588,7 +588,7 @@ status:
 													Name: coredns.CustomConfigMapName,
 												},
 												DefaultMode: ptr.To[int32](420),
-												Optional:    ptr.To(true),
+												Optional:    new(true),
 											},
 										},
 									},
@@ -609,8 +609,8 @@ status:
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
-							RunAsNonRoot:             ptr.To(true),
+							AllowPrivilegeEscalation: new(false),
+							RunAsNonRoot:             new(true),
 							RunAsUser:                ptr.To[int64](65532),
 							RunAsGroup:               ptr.To[int64](65532),
 						},
@@ -688,7 +688,7 @@ status: {}
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -697,7 +697,7 @@ status: {}
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
@@ -751,9 +751,9 @@ status: {}
 					func(forceTcpCluster, forceTcpUpstream bool, vpaEnabled bool, expectedForceTcpCluster, expectedForceTcpUpstream string) {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{
 							Enabled:                     true,
-							ForceTCPToClusterDNS:        ptr.To(forceTcpCluster),
-							ForceTCPToUpstreamDNS:       ptr.To(forceTcpUpstream),
-							DisableForwardToUpstreamDNS: ptr.To(false),
+							ForceTCPToClusterDNS:        new(forceTcpCluster),
+							ForceTCPToUpstreamDNS:       new(forceTcpUpstream),
+							DisableForwardToUpstreamDNS: new(false),
 						}
 						values.VPAEnabled = vpaEnabled
 						forceTcpToClusterDNS = expectedForceTcpCluster
@@ -851,9 +851,9 @@ import generated-config/custom-server-block.server
 				It("should successfully deploy all resources when DisableForwardToUpstreamDNS is true", func() {
 					values.Config = &gardencorev1beta1.NodeLocalDNS{
 						Enabled:                     true,
-						ForceTCPToClusterDNS:        ptr.To(true),
-						ForceTCPToUpstreamDNS:       ptr.To(true),
-						DisableForwardToUpstreamDNS: ptr.To(true),
+						ForceTCPToClusterDNS:        new(true),
+						ForceTCPToUpstreamDNS:       new(true),
+						DisableForwardToUpstreamDNS: new(true),
 					}
 					values.VPAEnabled = true
 					upstreamDNSAddress = values.ClusterDNS
@@ -971,9 +971,9 @@ status: {}
 						func(forceTcpCluster, forceTcpUpstream bool, vpaEnabled bool, expectedForceTcpCluster, expectedForceTcpUpstream string) {
 							values.Config = &gardencorev1beta1.NodeLocalDNS{
 								Enabled:                     true,
-								ForceTCPToClusterDNS:        ptr.To(forceTcpCluster),
-								ForceTCPToUpstreamDNS:       ptr.To(forceTcpUpstream),
-								DisableForwardToUpstreamDNS: ptr.To(false),
+								ForceTCPToClusterDNS:        new(forceTcpCluster),
+								ForceTCPToUpstreamDNS:       new(forceTcpUpstream),
+								DisableForwardToUpstreamDNS: new(false),
 							}
 							values.VPAEnabled = vpaEnabled
 							forceTcpToClusterDNS = expectedForceTcpCluster
@@ -1070,9 +1070,9 @@ ip6.arpa:53 {
 					It("should successfully deploy all resources when DisableForwardToUpstreamDNS is true", func() {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{
 							Enabled:                     true,
-							ForceTCPToClusterDNS:        ptr.To(true),
-							ForceTCPToUpstreamDNS:       ptr.To(true),
-							DisableForwardToUpstreamDNS: ptr.To(true),
+							ForceTCPToClusterDNS:        new(true),
+							ForceTCPToUpstreamDNS:       new(true),
+							DisableForwardToUpstreamDNS: new(true),
 						}
 						values.VPAEnabled = true
 						upstreamDNSAddress = values.ClusterDNS
@@ -1191,9 +1191,9 @@ status: {}
 					func(forceTcpCluster, forceTcpUpstream bool, vpaEnabled bool, expectedForceTcpCluster, expectedForceTcpUpstream string) {
 						values.Config = &gardencorev1beta1.NodeLocalDNS{
 							Enabled:                     true,
-							ForceTCPToClusterDNS:        ptr.To(forceTcpCluster),
-							ForceTCPToUpstreamDNS:       ptr.To(forceTcpUpstream),
-							DisableForwardToUpstreamDNS: ptr.To(false),
+							ForceTCPToClusterDNS:        new(forceTcpCluster),
+							ForceTCPToUpstreamDNS:       new(forceTcpUpstream),
+							DisableForwardToUpstreamDNS: new(false),
 						}
 						values.VPAEnabled = vpaEnabled
 						forceTcpToClusterDNS = expectedForceTcpCluster
@@ -1298,9 +1298,9 @@ import generated-config/custom-server-block.server
 						func(vpaEnabled bool) {
 							values.Config = &gardencorev1beta1.NodeLocalDNS{
 								Enabled:                     true,
-								ForceTCPToClusterDNS:        ptr.To(false),
-								ForceTCPToUpstreamDNS:       ptr.To(false),
-								DisableForwardToUpstreamDNS: ptr.To(false),
+								ForceTCPToClusterDNS:        new(false),
+								ForceTCPToUpstreamDNS:       new(false),
+								DisableForwardToUpstreamDNS: new(false),
 							}
 							values.VPAEnabled = vpaEnabled
 							forceTcpToClusterDNS = "prefer_udp"

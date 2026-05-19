@@ -45,7 +45,7 @@ func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target
 			}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{{
 				Action:      "replace",
-				Replacement: ptr.To("prometheus-" + Label),
+				Replacement: new("prometheus-" + Label),
 				TargetLabel: "job",
 			}},
 			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig("prometheus_(.+)"),
@@ -69,9 +69,9 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 	config := &monitoringv1alpha1.ScrapeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: federation.name},
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
-			HonorLabels:     ptr.To(true),
-			HonorTimestamps: ptr.To(false),
-			MetricsPath:     ptr.To("/federate"),
+			HonorLabels:     new(true),
+			HonorTimestamps: new(false),
+			MetricsPath:     new("/federate"),
 			Params: map[string][]string{
 				"match[]": {
 					`{__name__=~"seed:(.+):count"}`,
@@ -105,7 +105,7 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 
 	if federation.isIngress {
 		config.Spec.Scheme = ptr.To(monitoringv1.SchemeHTTPS)
-		config.Spec.TLSConfig = &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}
+		config.Spec.TLSConfig = &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}
 		config.Spec.BasicAuth = &monitoringv1.BasicAuth{
 			Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyUserName},
 			Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyPassword},

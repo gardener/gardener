@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -65,7 +64,7 @@ var _ = Describe("Extension controller tests", func() {
 					},
 					Settings: &operatorv1alpha1.Settings{
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: ptr.To(true),
+							Enabled: new(true),
 						},
 					},
 				},

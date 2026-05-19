@@ -39,7 +39,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 						Registries: []extensionsv1alpha1.RegistryConfig{
 							{
 								Upstream: "docker.io",
-								Server:   ptr.To("https://docker.io"),
+								Server:   new("https://docker.io"),
 								Hosts: []extensionsv1alpha1.RegistryHost{
 									{
 										URL:          "https://registry-1.docker.io",
@@ -225,17 +225,17 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path7",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("-&#39;invalid&#39;"),
+					HostName: new("-&#39;invalid&#39;"),
 				},
 				{
 					Path:     "path8",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 				{
 					Path:     "path8",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 				{
 					Path:    "path9",
@@ -244,7 +244,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path9",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 			}
 
@@ -318,12 +318,12 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path1",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 				{
 					Path:     "path1",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node-2"),
+					HostName: new("my-node-2"),
 				},
 			}
 
@@ -363,7 +363,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 		It("should allow setting a known cgroup driver", func() {
 			for _, driver := range []extensionsv1alpha1.CgroupDriverName{"cgroupfs", "systemd"} {
 				oscCopy := osc.DeepCopy()
-				oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(driver)
+				oscCopy.Spec.CRIConfig.CgroupDriver = new(driver)
 
 				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty(), driver+" should be configurable")
 			}
@@ -471,7 +471,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
 				{
 					Upstream: "foo.bar",
-					Server:   ptr.To("ftp://foo.bar"),
+					Server:   new("ftp://foo.bar"),
 				},
 			}
 
@@ -552,7 +552,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				oscCopy := osc.DeepCopy()
 				oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 					{
-						Op:   ptr.To(op),
+						Op:   new(op),
 						Path: []string{"foo"},
 					},
 				}

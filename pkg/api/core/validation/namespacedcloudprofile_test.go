@@ -209,7 +209,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
-				namespacedCloudProfile.Spec.CABundle = ptr.To("unsupported")
+				namespacedCloudProfile.Spec.CABundle = new("unsupported")
 
 				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 
@@ -249,7 +249,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						{
 							Version:        "1.1.0",
 							Classification: &classification,
-							ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)}),
+							ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)}),
 						},
 					}
 
@@ -319,7 +319,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 									},
 									CRI:                      []core.CRI{{Name: "containerd"}},
 									Architectures:            []string{"amd64"},
-									KubeletVersionConstraint: ptr.To(">= 1.32.0"),
+									KubeletVersionConstraint: new(">= 1.32.0"),
 								},
 							},
 						},

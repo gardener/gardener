@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -121,7 +120,7 @@ var _ = BeforeSuite(func() {
 		Scheme:  testScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
@@ -137,7 +136,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&status.Reconciler{
 		Config: gardenletconfigv1alpha1.ShootStatusControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 		SeedName: seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

@@ -53,7 +53,7 @@ var _ = Describe("cleaner", func() {
 							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 								VolumeName:       "foo-pvc",
-								StorageClassName: ptr.To("ultra-fast"),
+								StorageClassName: new("ultra-fast"),
 							},
 						},
 					},
@@ -114,7 +114,7 @@ var _ = Describe("cleaner", func() {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					VolumeName:       "foo-pvc-foo-0",
-					StorageClassName: ptr.To("ultra-fast"),
+					StorageClassName: new("ultra-fast"),
 				},
 			}
 			Expect(c.Create(ctx, pvc)).To(Succeed())
@@ -133,7 +133,7 @@ var _ = Describe("cleaner", func() {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					VolumeName:       "foo-pvc-foo-0",
-					StorageClassName: ptr.To("ultra-fast"),
+					StorageClassName: new("ultra-fast"),
 				},
 			}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())

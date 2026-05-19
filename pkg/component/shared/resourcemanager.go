@@ -39,9 +39,9 @@ import (
 
 func runtimeGardenerResourceManagerDefaultValues() resourcemanager.Values {
 	return resourcemanager.Values{
-		ConcurrentSyncs:                   ptr.To(20),
+		ConcurrentSyncs:                   new(20),
 		HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
-		MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
+		MaxConcurrentNetworkPolicyWorkers: new(20),
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -83,12 +83,12 @@ func NewRuntimeGardenerResourceManager(
 
 func targetGardenerResourceManagerDefaultValues(namespaceName string) resourcemanager.Values {
 	return resourcemanager.Values{
-		AlwaysUpdate:                       ptr.To(true),
-		ConcurrentSyncs:                    ptr.To(20),
+		AlwaysUpdate:                       new(true),
+		ConcurrentSyncs:                    new(20),
 		HealthSyncPeriod:                   &metav1.Duration{Duration: time.Minute},
-		MaxConcurrentCSRApproverWorkers:    ptr.To(5),
-		MaxConcurrentHealthWorkers:         ptr.To(10),
-		MaxConcurrentTokenRequestorWorkers: ptr.To(5),
+		MaxConcurrentCSRApproverWorkers:    new(5),
+		MaxConcurrentHealthWorkers:         new(10),
+		MaxConcurrentTokenRequestorWorkers: new(5),
 		ResponsibilityMode:                 resourcemanager.ForShootOrVirtualGarden,
 		WatchedNamespace:                   &namespaceName,
 		// The webhook should be enabled only if the target is a shoot — not if it is the virtual garden.

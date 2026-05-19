@@ -14,7 +14,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -47,8 +46,8 @@ var _ = Describe("Bastion controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Namespace: objectKey.Namespace, Name: objectKey.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  ptr.To("test-cloudprofile"),
+				SecretBindingName: new("my-provider-account"),
+				CloudProfileName:  new("test-cloudprofile"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: providerType,
@@ -61,7 +60,7 @@ var _ = Describe("Bastion controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
@@ -71,7 +70,7 @@ var _ = Describe("Bastion controller tests", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 				SeedName: &seedName,
 			},
@@ -171,7 +170,7 @@ var _ = Describe("Bastion controller tests", func() {
 			var err error
 
 			By("Change Shoot's .spec.seedName")
-			shoot.Spec.SeedName = ptr.To("another-seed")
+			shoot.Spec.SeedName = new("another-seed")
 			err = testClient.SubResource("binding").Update(ctx, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})

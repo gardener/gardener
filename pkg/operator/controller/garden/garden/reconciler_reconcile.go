@@ -1168,21 +1168,21 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        "(.+);(.+)",
 			Action:       "replace",
-			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden-$1/shoots/$2"),
+			Replacement:  new("https://dashboard." + primaryIngressDomain + "/namespace/garden-$1/shoots/$2"),
 			TargetLabel:  "dashboard_url",
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        "garden;(.+)",
 			Action:       "replace",
-			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			Replacement:  new("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
 			TargetLabel:  "dashboard_url",
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        ";(" + strings.Join(managedSeedNames, "|") + ")",
 			Action:       "replace",
-			Replacement:  ptr.To("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			Replacement:  new("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
 			TargetLabel:  "dashboard_url",
 		},
 	}
@@ -1258,7 +1258,7 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 		}
-		dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caSecret.Data[secretsutils.DataKeyCertificateBundle])))
+		dashboard.SetAPIServerCABundle(new(utils.EncodeBase64(caSecret.Data[secretsutils.DataKeyCertificateBundle])))
 	} else if ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.PropagateCAFromSNI, false) {
 		tlsSecretName := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName
 		if tlsSecretName == nil {
@@ -1275,7 +1275,7 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 		}
 
 		if caData, ok := tlsSecret.Data[secretsutils.DataKeyCertificateCA]; ok {
-			dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caData)))
+			dashboard.SetAPIServerCABundle(new(utils.EncodeBase64(caData)))
 		}
 	}
 
@@ -1312,7 +1312,7 @@ func (r *Reconciler) updateHelmChartRefForGardenlets(ctx context.Context, log lo
 		log.Info("Updating Helm chart reference of Gardenlet resource", "gardenlet", client.ObjectKeyFromObject(&gardenlet), "ref", gardenletChartImage.String())
 
 		patch := client.MergeFrom(gardenlet.DeepCopy())
-		gardenlet.Spec.Deployment.Helm.OCIRepository = gardencorev1.OCIRepository{Ref: ptr.To(gardenletChartImage.String())}
+		gardenlet.Spec.Deployment.Helm.OCIRepository = gardencorev1.OCIRepository{Ref: new(gardenletChartImage.String())}
 		if err := virtualClusterClient.Patch(ctx, &gardenlet, patch); err != nil {
 			return fmt.Errorf("failed updating Helm chart reference of Gardenlet resource: %w", err)
 		}

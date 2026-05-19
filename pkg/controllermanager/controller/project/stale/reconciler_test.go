@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -84,7 +83,7 @@ var _ = Describe("Reconciler", func() {
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: namespaceName},
-			Spec:       gardencorev1beta1.ShootSpec{SecretBindingName: ptr.To(secretBindingName)},
+			Spec:       gardencorev1beta1.ShootSpec{SecretBindingName: new(secretBindingName)},
 		}
 		secretBinding = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: secretBindingName},
@@ -257,7 +256,7 @@ var _ = Describe("Reconciler", func() {
 					})
 					shootWithCB := shoot.DeepCopy()
 					shootWithCB.Spec.SecretBindingName = nil
-					shootWithCB.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootWithCB.Spec.CredentialsBindingName = new(credentialsBindingName)
 					Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 					Expect(fakeClient.Create(ctx, credentialsBinding.DeepCopy())).To(Succeed())
 					Expect(fakeClient.Create(ctx, shootWithCB)).To(Succeed())
@@ -305,7 +304,7 @@ var _ = Describe("Reconciler", func() {
 					shootInOther := shoot.DeepCopy()
 					shootInOther.Namespace = otherNamespace
 					shootInOther.Spec.SecretBindingName = nil
-					shootInOther.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootInOther.Spec.CredentialsBindingName = new(credentialsBindingName)
 
 					Expect(fakeClient.Create(ctx, otherNs)).To(Succeed())
 					Expect(fakeClient.Create(ctx, secret)).To(Succeed())
@@ -336,7 +335,7 @@ var _ = Describe("Reconciler", func() {
 					quota := quotaObj(namespaceName, quotaName)
 					shootWithCB := shoot.DeepCopy()
 					shootWithCB.Spec.SecretBindingName = nil
-					shootWithCB.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootWithCB.Spec.CredentialsBindingName = new(credentialsBindingName)
 					Expect(fakeClient.Create(ctx, quota)).To(Succeed())
 					Expect(fakeClient.Create(ctx, credentialsBinding.DeepCopy())).To(Succeed())
 					Expect(fakeClient.Create(ctx, shootWithCB)).To(Succeed())
@@ -380,7 +379,7 @@ var _ = Describe("Reconciler", func() {
 					shootInOther := shoot.DeepCopy()
 					shootInOther.Namespace = otherNamespace
 					shootInOther.Spec.SecretBindingName = nil
-					shootInOther.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootInOther.Spec.CredentialsBindingName = new(credentialsBindingName)
 
 					Expect(fakeClient.Create(ctx, otherNs)).To(Succeed())
 					Expect(fakeClient.Create(ctx, quota)).To(Succeed())
@@ -402,7 +401,7 @@ var _ = Describe("Reconciler", func() {
 					cbWithInternalSecret.CredentialsRef = corev1.ObjectReference{Kind: "InternalSecret", APIVersion: "core.gardener.cloud/v1beta1", Namespace: namespaceName, Name: internalSecretName}
 					shootWithCB := shoot.DeepCopy()
 					shootWithCB.Spec.SecretBindingName = nil
-					shootWithCB.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootWithCB.Spec.CredentialsBindingName = new(credentialsBindingName)
 
 					Expect(fakeClient.Create(ctx, internalSecret)).To(Succeed())
 					Expect(fakeClient.Create(ctx, cbWithInternalSecret)).To(Succeed())
@@ -428,7 +427,7 @@ var _ = Describe("Reconciler", func() {
 					shootInOther := shoot.DeepCopy()
 					shootInOther.Namespace = otherNamespace
 					shootInOther.Spec.SecretBindingName = nil
-					shootInOther.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootInOther.Spec.CredentialsBindingName = new(credentialsBindingName)
 
 					Expect(fakeClient.Create(ctx, otherNs)).To(Succeed())
 					Expect(fakeClient.Create(ctx, internalSecret)).To(Succeed())
@@ -450,7 +449,7 @@ var _ = Describe("Reconciler", func() {
 					cbWithWI.CredentialsRef = corev1.ObjectReference{Kind: "WorkloadIdentity", APIVersion: "security.gardener.cloud/v1alpha1", Namespace: namespaceName, Name: workloadIdentityName}
 					shootWithCB := shoot.DeepCopy()
 					shootWithCB.Spec.SecretBindingName = nil
-					shootWithCB.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootWithCB.Spec.CredentialsBindingName = new(credentialsBindingName)
 
 					Expect(fakeClient.Create(ctx, wi)).To(Succeed())
 					Expect(fakeClient.Create(ctx, cbWithWI)).To(Succeed())
@@ -476,7 +475,7 @@ var _ = Describe("Reconciler", func() {
 					shootInOther := shoot.DeepCopy()
 					shootInOther.Namespace = otherNamespace
 					shootInOther.Spec.SecretBindingName = nil
-					shootInOther.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+					shootInOther.Spec.CredentialsBindingName = new(credentialsBindingName)
 
 					Expect(fakeClient.Create(ctx, otherNs)).To(Succeed())
 					Expect(fakeClient.Create(ctx, wi)).To(Succeed())

@@ -221,9 +221,9 @@ var _ = Describe("KubeScheduler", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: ptr.To(false),
+							AutomountServiceAccountToken: new(false),
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
+								RunAsNonRoot: new(true),
 								RunAsUser:    ptr.To[int64](65532),
 								RunAsGroup:   ptr.To[int64](65532),
 								FSGroup:      ptr.To[int64](65532),
@@ -262,7 +262,7 @@ var _ = Describe("KubeScheduler", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -425,7 +425,7 @@ var _ = Describe("KubeScheduler", func() {
 					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -509,7 +509,7 @@ var _ = Describe("KubeScheduler", func() {
 						{Name: managedResourceSecretName},
 					},
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 		})
@@ -534,7 +534,7 @@ var _ = Describe("KubeScheduler", func() {
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))

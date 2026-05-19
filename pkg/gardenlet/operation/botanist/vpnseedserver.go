@@ -7,8 +7,6 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/ptr"
-
 	"github.com/gardener/gardener/imagevector"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -44,7 +42,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 	}
 
 	if b.ShootUsesDNS() {
-		values.KubeAPIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
+		values.KubeAPIServerHost = new(b.outOfClusterAPIServerFQDN())
 	}
 
 	if b.Shoot.VPNHighAvailabilityEnabled {

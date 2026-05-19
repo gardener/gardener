@@ -150,7 +150,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 					"resources.gardener.cloud/delete-on-invalid-update": "true",
 				},
 			},
-			AllowVolumeExpansion: ptr.To(true),
+			AllowVolumeExpansion: new(true),
 			Provisioner:          "pd.csi.storage.gke.io",
 			Parameters: map[string]string{
 				"type": "hyperdisk-balanced",

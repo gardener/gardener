@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -1289,7 +1288,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 								Kind:       "Project",
 							},
 							Spec: gardencorev1beta1.ProjectSpec{
-								Namespace: ptr.To("other-namespace"),
+								Namespace: new("other-namespace"),
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())

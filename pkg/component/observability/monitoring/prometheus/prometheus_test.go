@@ -175,7 +175,7 @@ honor_labels: true`
 					"name": name,
 				},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -653,7 +653,7 @@ honor_labels: true`
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "prometheus",
 					"role": "monitoring",
@@ -735,9 +735,9 @@ honor_labels: true`
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -748,7 +748,7 @@ honor_labels: true`
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
@@ -786,8 +786,8 @@ honor_labels: true`
 						Kind:               "Namespace",
 						Name:               namespace,
 						UID:                "foo",
-						Controller:         ptr.To(true),
-						BlockOwnerDeletion: ptr.To(true),
+						Controller:         new(true),
+						BlockOwnerDeletion: new(true),
 					}}
 
 					prometheusRule.Namespace = namespace
@@ -994,7 +994,7 @@ honor_labels: true`
 
 				When("an additional alertmanager is configured via the Alertmananagers slice", func() {
 					BeforeEach(func() {
-						values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &Alertmanager{Name: alertmanagerName2, Namespace: ptr.To(alertmanagerNamespace2)})
+						values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &Alertmanager{Name: alertmanagerName2, Namespace: new(alertmanagerNamespace2)})
 					})
 
 					It("should successfully deploy all resources", func() {
@@ -1132,7 +1132,7 @@ tls_config:
 							SourceLabels: []monitoringv1.LabelName{"project", "name"},
 							Regex:        "(.+);(.+)",
 							Action:       "replace",
-							Replacement:  ptr.To("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
+							Replacement:  new("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
 							TargetLabel:  "shoot_dashboard_url",
 						}}
 					})
@@ -1147,7 +1147,7 @@ tls_config:
 
 				It("should successfully deploy all resources", func() {
 					prometheusObj := prometheusFor(nil, false)
-					prometheusObj.Spec.Replicas = ptr.To(int32(2))
+					prometheusObj.Spec.Replicas = new(int32(2))
 
 					prometheusRule.Namespace = namespace
 					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
@@ -1263,8 +1263,8 @@ query_range:
 							Protocol:      corev1.ProtocolTCP,
 						}},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
-							ReadOnlyRootFilesystem:   ptr.To(true),
+							AllowPrivilegeEscalation: new(false),
+							ReadOnlyRootFilesystem:   new(true),
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -1461,7 +1461,7 @@ query_range:
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceTarget.Spec.SecretRefs[0].Name}},
-							KeepObjects:  ptr.To(false),
+							KeepObjects:  new(false),
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						},
 						Status: healthyManagedResourceStatus,
@@ -1473,7 +1473,7 @@ query_range:
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 
 					Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecretTarget.Immutable).To(Equal(new(true)))
 					Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 

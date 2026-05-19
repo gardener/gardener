@@ -30,7 +30,7 @@ var (
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			// Increase default QPS and Burst by factor 10 as a configuration example of custom REST options for shoot clients
 			ShootRESTOptions: &extensionsconfigv1alpha1.RESTOptions{
-				Burst: ptr.To(100),
+				Burst: new(100),
 				QPS:   ptr.To[float32](50),
 			},
 		},

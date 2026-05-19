@@ -50,7 +50,7 @@ var _ = Describe("Health controller tests", func() {
 
 	Context("different class", func() {
 		BeforeEach(func() {
-			managedResource.Spec.Class = ptr.To("foo")
+			managedResource.Spec.Class = new("foo")
 		})
 
 		JustBeforeEach(func() {
