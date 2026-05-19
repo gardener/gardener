@@ -31,7 +31,7 @@ func (b *GardenadmBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machi
 		return nil, fmt.Errorf("machine index must be non-negative, got %d", index)
 	}
 	if index >= len(b.controlPlaneMachines) {
-		return nil, fmt.Errorf("only %q machines founds, but wanted machine with index %d", len(b.controlPlaneMachines), index)
+		return nil, fmt.Errorf("only %d machines found, but wanted machine with index %d", len(b.controlPlaneMachines), index)
 	}
 	return &b.controlPlaneMachines[index], nil
 }
