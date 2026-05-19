@@ -315,7 +315,7 @@ var _ = Describe("MachineControllerManager", func() {
 						"role": "machine-controller-manager",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -334,17 +334,17 @@ var _ = Describe("MachineControllerManager", func() {
 					Name:       "machine-controller-manager",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "machine-controller-manager",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -362,7 +362,7 @@ var _ = Describe("MachineControllerManager", func() {
 					Rules: []monitoringv1.Rule{{
 						Alert: "MachineControllerManagerDown",
 						Expr:  intstr.FromString(`absent(up{job="machine-controller-manager"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "machine-controller-manager",
 							"severity":   "critical",

@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,14 +32,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			s.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
 
 			// create two worker pools which explicitly specify the kubernetes version
-			pool1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
+			pool1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
 			pool1.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
 			pool1.Minimum = 2
 			pool1.Maximum = 2
 			pool1.MaxUnavailable = new(intstr.FromInt(1))
 			pool1.MaxSurge = new(intstr.FromInt(0))
 
-			pool2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
+			pool2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 			pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
 				Version: new(kubernetesSourceVersion),
 				Kubelet: &gardencorev1beta1.KubeletConfig{

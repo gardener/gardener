@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
@@ -175,7 +174,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for leader election", func() {
 			expectedLeaderElection := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       ptr.To(true),
+				LeaderElect:       new(true),
 				ResourceLock:      "foo",
 				RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},

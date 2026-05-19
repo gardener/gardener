@@ -87,9 +87,9 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 func getValitailUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
-		Content: ptr.To(`[Unit]
+		Content: new(`[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
 [Install]

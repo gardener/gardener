@@ -43,7 +43,7 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{a.values.ExternalExposure.Host},
 			CertType:                    secretsutils.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(a.values.ExternalExposure.SigningCA))
 		if err != nil {

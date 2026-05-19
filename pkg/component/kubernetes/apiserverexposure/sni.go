@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -510,7 +509,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *core
 		CommonName:                  "system:istio-gateway",
 		CertType:                    secretsutils.ClientCert,
 		SkipPublishingCACertificate: true,
-		Validity:                    ptr.To(time.Hour * 24 * 30),
+		Validity:                    new(time.Hour * 24 * 30),
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAFrontProxy), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return fmt.Errorf("failed to generate kube-apiserver client certificate for istio: %w", err)

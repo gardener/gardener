@@ -333,7 +333,7 @@ honor_labels: true`
 					EvaluationInterval: "1m",
 					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 						ScrapeInterval: "1m",
-						ReloadStrategy: ptr.To(monitoringv1.HTTPReloadStrategyType),
+						ReloadStrategy: new(monitoringv1.HTTPReloadStrategyType),
 						ExternalLabels: externalLabels,
 						AdditionalScrapeConfigs: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "prometheus-" + name + "-additional-scrape-configs"},
@@ -436,7 +436,7 @@ honor_labels: true`
 					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -445,11 +445,11 @@ honor_labels: true`
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("100M"),
 							},
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -591,7 +591,7 @@ honor_labels: true`
 				Labels:    map[string]string{"foo": "bar"},
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme: new(monitoringv1.SchemeHTTPS),
 			},
 		}
 		additionalConfigMap = &corev1.ConfigMap{
@@ -659,7 +659,7 @@ honor_labels: true`
 					"role": "monitoring",
 					"name": name,
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -776,7 +776,7 @@ honor_labels: true`
 
 			When("namespace UID is set", func() {
 				BeforeEach(func() {
-					values.NamespaceUID = ptr.To(apitypes.UID("foo"))
+					values.NamespaceUID = new(apitypes.UID("foo"))
 				})
 
 				It("should successfully deploy all resources", func() {

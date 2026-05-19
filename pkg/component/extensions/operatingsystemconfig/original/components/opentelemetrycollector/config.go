@@ -96,7 +96,7 @@ func getOpenTelemetryCollectorCAFile(ctx components.Context) extensionsv1alpha1.
 func getOpenTelemetryCollectorUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=opentelemetry-collector daemon

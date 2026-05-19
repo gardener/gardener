@@ -283,7 +283,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Name:      etcdPeerCASecret.Name,
 					Namespace: e.namespace,
 				},
-				DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+				DataKey: new(secretsutils.DataKeyCertificateBundle),
 			},
 			ServerTLSSecretRef: corev1.SecretReference{
 				Name:      peerServerSecret.Name,
@@ -296,8 +296,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	gardenerutils.ReconcileTopologyAwareRoutingSettings(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	ports := []networkingv1.NetworkPolicyPort{
-		{Port: new(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
-		{Port: new(intstr.FromInt32(etcdconstants.PortBackupRestore)), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: new(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: new(corev1.ProtocolTCP)},
+		{Port: new(intstr.FromInt32(etcdconstants.PortBackupRestore)), Protocol: new(corev1.ProtocolTCP)},
 	}
 	if e.values.NamePrefix != "" {
 		// etcd deployed for garden cluster
@@ -353,7 +353,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+					DataKey: new(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -385,7 +385,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
 					},
-					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+					DataKey: new(secretsutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
@@ -465,7 +465,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Endpoints: []monitoringv1.Endpoint{
 				{
 					Port:   portNameClient,
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
@@ -500,7 +500,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				{
 					Port:   portNameBackupRestore,
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
@@ -635,7 +635,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						{
 							Alert: "KubeEtcd3" + role + "HighMemoryConsumption",
 							Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + e.values.Role + `-0",container="` + containerNameEtcd + `"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="` + containerNameEtcd + `", targetName="etcd-` + e.values.Role + `", resource="memory"}) > .5`),
-							For:   ptr.To(monitoringv1.Duration("15m")),
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "etcd",
 								"severity":   "warning",
@@ -690,7 +690,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					monitoringv1.Rule{
 						Alert: "KubeEtcd" + role + "DeltaBackupFailed",
 						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + serviceMonitorJobNameBackupRestore + `",kind="Incr"} > bool 900) * etcdbr_snapshot_required{job="` + serviceMonitorJobNameBackupRestore + `",kind="Incr"}) * on (pod, role) etcd_server_is_leader{job="` + serviceMonitorJobNameEtcd + `"} > 0`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "etcd",
 							"severity":   "critical",
@@ -705,7 +705,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					monitoringv1.Rule{
 						Alert: "KubeEtcd" + role + "FullBackupFailed",
 						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + serviceMonitorJobNameBackupRestore + `",kind="Full"} > bool 86400) * etcdbr_snapshot_required{job="` + serviceMonitorJobNameBackupRestore + `",kind="Full"}) * on (pod, role) etcd_server_is_leader{job="` + serviceMonitorJobNameEtcd + `"} > 0`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "etcd",
 							"severity":   "critical",
@@ -736,7 +736,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					monitoringv1.Rule{
 						Alert: "KubeEtcd" + role + "BackupRestoreDown",
 						Expr:  intstr.FromString(`(sum(up{job="` + serviceMonitorJobNameEtcd + `"}) - sum(up{job="` + serviceMonitorJobNameBackupRestore + `"}) > 0) or (rate(etcdbr_snapshotter_failure{job="` + serviceMonitorJobNameBackupRestore + `"}[5m]) > 0)`),
-						For:   ptr.To(monitoringv1.Duration("10m")),
+						For:   new(monitoringv1.Duration("10m")),
 						Labels: map[string]string{
 							"service":    "etcd",
 							"severity":   "critical",
@@ -830,19 +830,19 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 				Name:       e.etcd.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    containerNameEtcd,
 						MinAllowed:       minAllowedETCD,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeAuto),
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						Mode:             new(vpaautoscalingv1.ContainerScalingModeAuto),
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

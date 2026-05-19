@@ -37,7 +37,7 @@ var _ = Describe("Component", func() {
 
 			updateCACertsUnit := extensionsv1alpha1.Unit{
 				Name:    "updatecacerts.service",
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Command: new(extensionsv1alpha1.CommandStart),
 				Content: new(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early

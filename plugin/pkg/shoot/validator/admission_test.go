@@ -23,7 +23,6 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -2256,7 +2255,7 @@ var _ = Describe("validator", func() {
 
 			It("update should pass because validation of network disjointedness should not be executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
+				shoot.Spec.Networking.Pods = new(v1beta1constants.DefaultVPNRangeV6)
 				oldShoot.Spec.SeedName = shoot.Spec.SeedName
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2271,7 +2270,7 @@ var _ = Describe("validator", func() {
 
 			It("update should fail because validation of network disjointedness is executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
+				shoot.Spec.Networking.Pods = new(v1beta1constants.DefaultVPNRangeV6)
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2285,7 +2284,7 @@ var _ = Describe("validator", func() {
 
 			It("delete should pass because validation of network disjointedness should not be executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
+				shoot.Spec.Networking.Pods = new(v1beta1constants.DefaultVPNRangeV6)
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2927,7 +2926,7 @@ var _ = Describe("validator", func() {
 					Name: namespacedCloudProfile.Name,
 				}
 
-				expiredVersion = gardencorev1beta1.ExpirableVersion{Version: "1.26.8", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}
+				expiredVersion = gardencorev1beta1.ExpirableVersion{Version: "1.26.8", Classification: new(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}
 
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 					expiredVersion,
@@ -3550,7 +3549,7 @@ var _ = Describe("validator", func() {
 						Name:    validMachineImageName,
 						Version: nonExpiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -3608,7 +3607,7 @@ var _ = Describe("validator", func() {
 						Name:    validMachineImageName,
 						Version: expiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -3664,7 +3663,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to a machine image version with no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 						Name:    validMachineImageName,
 						Version: latestNonExpiredVersion,
@@ -3752,12 +3751,12 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to a machine image version with non-supported architecture, expired version and no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 						Name:    validMachineImageName,
 						Version: expiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -4581,7 +4580,7 @@ var _ = Describe("validator", func() {
 								},
 								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4598,7 +4597,7 @@ var _ = Describe("validator", func() {
 								},
 								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4708,7 +4707,7 @@ var _ = Describe("validator", func() {
 								},
 								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4725,7 +4724,7 @@ var _ = Describe("validator", func() {
 								},
 								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4808,7 +4807,7 @@ var _ = Describe("validator", func() {
 								},
 								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4824,7 +4823,7 @@ var _ = Describe("validator", func() {
 								},
 								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4877,7 +4876,7 @@ var _ = Describe("validator", func() {
 					Name:    validMachineImageName,
 					Version: nonExpiredVersion,
 				}
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{
@@ -4927,7 +4926,7 @@ var _ = Describe("validator", func() {
 					Name:    validMachineImageName,
 					Version: nonExpiredVersion,
 				}
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{
@@ -6294,7 +6293,7 @@ var _ = Describe("validator", func() {
 				const limit int32 = 3
 
 				BeforeEach(func() {
-					cloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(limit)
+					cloudProfile.Spec.Limits.MaxNodesTotal = new(limit)
 				})
 
 				It("should allow shoots within the limit", func() {

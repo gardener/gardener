@@ -346,7 +346,7 @@ func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namesp
 // given download path. The kubeconfig expires in 6 hours.
 func DownloadAdminKubeconfigForShoot(ctx context.Context, client kubernetes.Interface, shoot *gardencorev1beta1.Shoot, downloadPath string) error {
 	const expirationSeconds int64 = 6 * 3600 // 6h
-	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, client, shoot, ptr.To(expirationSeconds))
+	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, client, shoot, new(expirationSeconds))
 	if err != nil {
 		return err
 	}

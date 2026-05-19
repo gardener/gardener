@@ -314,7 +314,7 @@ var _ = Describe("Warnings", func() {
 				shoot.Spec.Kubernetes.Version = "1.35.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
 					Enabled: new(true),
-					Mode:    ptr.To(core.ProxyModeIPVS),
+					Mode:    new(core.ProxyModeIPVS),
 				}
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are using IPVS mode for kube-proxy")))
 			})
@@ -323,7 +323,7 @@ var _ = Describe("Warnings", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
 					Enabled: new(true),
-					Mode:    ptr.To(core.ProxyModeIPVS),
+					Mode:    new(core.ProxyModeIPVS),
 				}
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
 			})
@@ -332,12 +332,12 @@ var _ = Describe("Warnings", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
 					Enabled: new(true),
-					Mode:    ptr.To(core.ProxyModeIPVS),
+					Mode:    new(core.ProxyModeIPVS),
 				}
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
 					Enabled: new(true),
-					Mode:    ptr.To(core.ProxyModeIPTables),
+					Mode:    new(core.ProxyModeIPTables),
 				}
 
 				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))

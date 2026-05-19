@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -44,12 +43,12 @@ func (t *terminal) service() *corev1.Service {
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(portAdmission)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Protocol: new(corev1.ProtocolTCP),
 	}))
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(svc, networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(portMetrics)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Protocol: new(corev1.ProtocolTCP),
 	}))
 
 	gardenerutils.ReconcileTopologyAwareRoutingSettings(svc, t.values.TopologyAwareRoutingEnabled, t.values.RuntimeVersion)

@@ -251,7 +251,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		networkPolicyPort := networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(port)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}
 
 		if k.values.NamePrefix != "" {
@@ -442,7 +442,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -457,17 +457,17 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    containerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff)},
 			},
 		}
 
@@ -504,7 +504,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Rules: []monitoringv1.Rule{{
 					Alert:  "KubeControllerManagerDown",
 					Expr:   intstr.FromString(`absent(up{job="` + service.Name + `"} == 1)`),
-					For:    ptr.To(monitoringv1.Duration("15m")),
+					For:    new(monitoringv1.Duration("15m")),
 					Labels: labels,
 					Annotations: map[string]string{
 						"summary":     "Kube Controller Manager is down.",
@@ -524,7 +524,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port:   portNameMetrics,
-				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme: new(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},

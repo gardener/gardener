@@ -4,13 +4,9 @@
 
 package v1alpha1
 
-import (
-	"k8s.io/utils/ptr"
-)
-
 // SetDefaults_AdminKubeconfigRequestSpec sets default values for AdminKubeconfigRequestSpec objects.
 func SetDefaults_AdminKubeconfigRequestSpec(obj *AdminKubeconfigRequestSpec) {
 	if obj.ExpirationSeconds == nil {
-		obj.ExpirationSeconds = ptr.To(int64(60 * 60))
+		obj.ExpirationSeconds = new(int64(60 * 60))
 	}
 }

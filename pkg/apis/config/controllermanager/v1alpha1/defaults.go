@@ -9,7 +9,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/config"
 )
@@ -59,7 +58,7 @@ func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.Le
 // SetDefaults_ShootRetryControllerConfiguration sets defaults for the ShootRetryControllerConfiguration.
 func SetDefaults_ShootRetryControllerConfiguration(obj *ShootRetryControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.RetryPeriod == nil {
 		obj.RetryPeriod = &metav1.Duration{Duration: 10 * time.Minute}
@@ -75,7 +74,7 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 		obj.SyncPeriod = &metav1.Duration{Duration: 10 * time.Second}
 	}
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.MonitorPeriod == nil {
 		obj.MonitorPeriod = &metav1.Duration{Duration: 40 * time.Second}
@@ -88,16 +87,16 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 // SetDefaults_ProjectControllerConfiguration sets defaults for the ProjectControllerConfiguration.
 func SetDefaults_ProjectControllerConfiguration(obj *ProjectControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.MinimumLifetimeDays == nil {
-		obj.MinimumLifetimeDays = ptr.To(30)
+		obj.MinimumLifetimeDays = new(30)
 	}
 	if obj.StaleGracePeriodDays == nil {
-		obj.StaleGracePeriodDays = ptr.To(14)
+		obj.StaleGracePeriodDays = new(14)
 	}
 	if obj.StaleExpirationTimeDays == nil {
-		obj.StaleExpirationTimeDays = ptr.To(90)
+		obj.StaleExpirationTimeDays = new(90)
 	}
 	if obj.StaleSyncPeriod == nil {
 		obj.StaleSyncPeriod = &metav1.Duration{
@@ -132,7 +131,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 // SetDefaults_BastionControllerConfiguration sets defaults for the BastionControllerConfiguration.
 func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.MaxLifetime == nil {
 		obj.MaxLifetime = &metav1.Duration{Duration: 24 * time.Hour}
@@ -142,70 +141,70 @@ func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfigurat
 // SetDefaults_CertificateSigningRequestControllerConfiguration sets defaults for the CertificateSigningRequestControllerConfiguration.
 func SetDefaults_CertificateSigningRequestControllerConfiguration(obj *CertificateSigningRequestControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_CloudProfileControllerConfiguration sets defaults for the CloudProfileControllerConfiguration.
 func SetDefaults_CloudProfileControllerConfiguration(obj *CloudProfileControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_NamespacedCloudProfileControllerConfiguration sets defaults for the NamespacedCloudProfileControllerConfiguration.
 func SetDefaults_NamespacedCloudProfileControllerConfiguration(obj *NamespacedCloudProfileControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ControllerDeploymentControllerConfiguration sets defaults for the ControllerDeploymentControllerConfiguration.
 func SetDefaults_ControllerDeploymentControllerConfiguration(obj *ControllerDeploymentControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ControllerRegistrationControllerConfiguration sets defaults for the ControllerRegistrationControllerConfiguration.
 func SetDefaults_ControllerRegistrationControllerConfiguration(obj *ControllerRegistrationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ExposureClassControllerConfiguration sets defaults for the ExposureClassControllerConfiguration.
 func SetDefaults_ExposureClassControllerConfiguration(obj *ExposureClassControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_QuotaControllerConfiguration sets defaults for the QuotaControllerConfiguration.
 func SetDefaults_QuotaControllerConfiguration(obj *QuotaControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_SecretBindingControllerConfiguration sets defaults for the SecretBindingControllerConfiguration.
 func SetDefaults_SecretBindingControllerConfiguration(obj *SecretBindingControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_CredentialsBindingControllerConfiguration sets defaults for the CredentialsBindingControllerConfiguration.
 func SetDefaults_CredentialsBindingControllerConfiguration(obj *CredentialsBindingControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_SeedExtensionsCheckControllerConfiguration sets defaults for the SeedExtensionsCheckControllerConfiguration.
 func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsCheckControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 30 * time.Second}
@@ -215,7 +214,7 @@ func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsC
 // SetDefaults_SeedBackupBucketsCheckControllerConfiguration sets defaults for the SeedBackupBucketsCheckControllerConfiguration.
 func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBucketsCheckControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 30 * time.Second}
@@ -225,14 +224,14 @@ func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBu
 // SetDefaults_SeedReferenceControllerConfiguration sets defaults for the SeedReferenceControllerConfiguration.
 func SetDefaults_SeedReferenceControllerConfiguration(obj *SeedReferenceControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ShootHibernationControllerConfiguration sets defaults for the ShootHibernationControllerConfiguration.
 func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.TriggerDeadlineDuration == nil {
 		obj.TriggerDeadlineDuration = &metav1.Duration{Duration: 2 * time.Hour}
@@ -242,17 +241,17 @@ func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationCo
 // SetDefaults_ShootMaintenanceControllerConfiguration sets defaults for the ShootMaintenanceControllerConfiguration.
 func SetDefaults_ShootMaintenanceControllerConfiguration(obj *ShootMaintenanceControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.EnableShootControlPlaneRestarter == nil {
-		obj.EnableShootControlPlaneRestarter = ptr.To(true)
+		obj.EnableShootControlPlaneRestarter = new(true)
 	}
 }
 
 // SetDefaults_ShootQuotaControllerConfiguration sets defaults for the ShootQuotaControllerConfiguration.
 func SetDefaults_ShootQuotaControllerConfiguration(obj *ShootQuotaControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{
@@ -264,21 +263,21 @@ func SetDefaults_ShootQuotaControllerConfiguration(obj *ShootQuotaControllerConf
 // SetDefaults_ShootReferenceControllerConfiguration sets defaults for the ShootReferenceControllerConfiguration.
 func SetDefaults_ShootReferenceControllerConfiguration(obj *ShootReferenceControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ShootConditionsControllerConfiguration sets defaults for the ShootConditionsControllerConfiguration.
 func SetDefaults_ShootConditionsControllerConfiguration(obj *ShootConditionsControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_EventControllerConfiguration sets defaults for the EventControllerConfiguration.
 func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.TTLNonShootEvents == nil {
 		obj.TTLNonShootEvents = &metav1.Duration{Duration: 1 * time.Hour}
@@ -288,31 +287,31 @@ func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration)
 // SetDefaults_ShootStatusLabelControllerConfiguration sets defaults for the ShootStatusLabelControllerConfiguration.
 func SetDefaults_ShootStatusLabelControllerConfiguration(obj *ShootStatusLabelControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ShootMigrationControllerConfiguration sets defaults for the ShootMigrationControllerConfiguration.
 func SetDefaults_ShootMigrationControllerConfiguration(obj *ShootMigrationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 
 // SetDefaults_ManagedSeedSetControllerConfiguration sets defaults for the ManagedSeedSetControllerConfiguration.
 func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.MaxShootRetries == nil {
-		obj.MaxShootRetries = ptr.To(3)
+		obj.MaxShootRetries = new(3)
 	}
 }
 
 // SetDefaults_ShootStateControllerConfiguration sets defaults for the ShootStateControllerConfiguration.
 func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 }
 

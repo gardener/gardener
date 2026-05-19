@@ -273,7 +273,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit1 = extensionsv1alpha1.Unit{
 			Name:    "unit1",
 			Enable:  new(true),
-			Command: ptr.To(extensionsv1alpha1.CommandStart),
+			Command: new(extensionsv1alpha1.CommandStart),
 			Content: new("#unit1"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
@@ -283,7 +283,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit2 = extensionsv1alpha1.Unit{
 			Name:    "unit2",
 			Enable:  new(false),
-			Command: ptr.To(extensionsv1alpha1.CommandStop),
+			Command: new(extensionsv1alpha1.CommandStop),
 			Content: new("#unit2"),
 		}
 		unit3 = extensionsv1alpha1.Unit{
@@ -297,7 +297,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit4 = extensionsv1alpha1.Unit{
 			Name:    "unit4",
 			Enable:  new(true),
-			Command: ptr.To(extensionsv1alpha1.CommandStart),
+			Command: new(extensionsv1alpha1.CommandStart),
 			Content: new("#unit4"),
 			DropIns: []extensionsv1alpha1.DropIn{{
 				Name:    "drop",
@@ -307,7 +307,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit5 = extensionsv1alpha1.Unit{
 			Name:    "unit5",
 			Enable:  new(true),
-			Command: ptr.To(extensionsv1alpha1.CommandStart),
+			Command: new(extensionsv1alpha1.CommandStart),
 			Content: new("#unit5"),
 			DropIns: []extensionsv1alpha1.DropIn{
 				{
@@ -342,7 +342,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit8 = extensionsv1alpha1.Unit{
 			Name:      "unit8",
 			Enable:    new(true),
-			Command:   ptr.To(extensionsv1alpha1.CommandStart),
+			Command:   new(extensionsv1alpha1.CommandStart),
 			Content:   new("#unit8"),
 			FilePaths: []string{file6.Path},
 		}
@@ -567,9 +567,9 @@ units: {}
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
-		operatingSystemConfig.Spec.Units[0].Command = ptr.To(extensionsv1alpha1.CommandStop)
+		operatingSystemConfig.Spec.Units[0].Command = new(extensionsv1alpha1.CommandStop)
 		operatingSystemConfig.Spec.Units[1].Enable = new(true)
-		operatingSystemConfig.Spec.Units[1].Command = ptr.To(extensionsv1alpha1.CommandStart)
+		operatingSystemConfig.Spec.Units[1].Command = new(extensionsv1alpha1.CommandStart)
 		fakeDBus.InjectRestartFailure(fmt.Errorf("injected failure for unit2"), unit2.Name)
 
 		var err error
@@ -625,7 +625,7 @@ units: {}
 		// remove existingUnitDropIn, so the drop-in file should be removed, but the existing unit should not be affected
 		// remove containerd drop-in extension unit, the other containerd drop-in should not be affected
 		unit2.Enable = new(true)
-		unit2.Command = ptr.To(extensionsv1alpha1.CommandStart)
+		unit2.Command = new(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
 		unit4.Enable = new(false)
 		unit4.DropIns = nil
@@ -806,7 +806,7 @@ units: {}
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
 
 		By("Update Operating System Config")
-		operatingSystemConfig.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverName("cgroupfs"))
+		operatingSystemConfig.Spec.CRIConfig.CgroupDriver = new(extensionsv1alpha1.CgroupDriverName("cgroupfs"))
 
 		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)

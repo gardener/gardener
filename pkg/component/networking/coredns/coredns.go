@@ -167,7 +167,7 @@ func (c *coreDNS) Deploy(ctx context.Context) error {
 					{
 						Alert: "CoreDNSDown",
 						Expr:  intstr.FromString(`absent(up{job="coredns"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("20m")),
+						For:   new(monitoringv1.Duration("20m")),
 						Labels: map[string]string{
 							"service":    serviceName,
 							"severity":   "critical",
@@ -698,7 +698,7 @@ import custom/*.server
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -714,7 +714,7 @@ import custom/*.server
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   deployment.Spec.Selector,
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 

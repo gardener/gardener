@@ -151,7 +151,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
 		metricNetworkPolicyPort := networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(admissionControllerMetricsPort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}
 		if v.values.IsGardenCluster {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, metricNetworkPolicyPort))
@@ -161,11 +161,11 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(vpaconstants.AdmissionControllerPort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(admissionControllerMetricsPort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}))
 	}
 
@@ -308,16 +308,16 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate)},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    admissionControllerContainerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},

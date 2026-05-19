@@ -270,16 +270,16 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate)},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    updaterContainerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
@@ -316,7 +316,7 @@ func (v *vpa) computeUpdaterArgs() []string {
 func (v *vpa) reconcileUpdaterService(service *corev1.Service) {
 	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(updaterPortMetrics)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Protocol: new(corev1.ProtocolTCP),
 	}
 
 	switch v.values.ClusterType {

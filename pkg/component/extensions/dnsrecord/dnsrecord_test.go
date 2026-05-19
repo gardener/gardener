@@ -537,11 +537,11 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should deploy the DNSRecord resource with extensionClassName and labels", func() {
-			values.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			values.Class = new(extensionsv1alpha1.ExtensionClassGarden)
 			values.Labels = map[string]string{"foo": "bar"}
 
 			expectedSpec := dns.Spec
-			expectedSpec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			expectedSpec.Class = new(extensionsv1alpha1.ExtensionClassGarden)
 
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 

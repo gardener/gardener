@@ -24,7 +24,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -209,7 +208,7 @@ var _ = Describe("Actuator", func() {
 		createdMRForConfigurationSeedChart = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneSeedConfigurationChartResourceName, Namespace: namespace},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: ptr.To(v1beta1constants.SeedResourceManagerClass),
+				Class: new(v1beta1constants.SeedResourceManagerClass),
 				SecretRefs: []corev1.LocalObjectReference{
 					{Name: ControlPlaneSeedConfigurationChartResourceName},
 				},
@@ -224,7 +223,7 @@ var _ = Describe("Actuator", func() {
 		createdMRForControlPlaneSeedChart = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneSeedChartResourceName, Namespace: namespace},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: ptr.To(v1beta1constants.SeedResourceManagerClass),
+				Class: new(v1beta1constants.SeedResourceManagerClass),
 				SecretRefs: []corev1.LocalObjectReference{
 					{Name: ControlPlaneSeedConfigurationChartResourceName},
 				},

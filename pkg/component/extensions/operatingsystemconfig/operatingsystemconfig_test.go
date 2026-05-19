@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -168,7 +167,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Containerd: &extensionsv1alpha1.ContainerdConfig{
 							SandboxImage: "registry.k8s.io/pause:latest",
 						},
-						CgroupDriver: ptr.To(extensionsv1alpha1.CgroupDriverSystemd),
+						CgroupDriver: new(extensionsv1alpha1.CgroupDriverSystemd),
 					}
 
 					criConfigProvisioning = &extensionsv1alpha1.CRIConfig{
@@ -364,7 +363,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker1Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
 							Version:        new("12.34"),
@@ -377,7 +376,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker2Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "type2",
 							Version: new("12.34"),
@@ -396,7 +395,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: inPlaceWorkerName1,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
 							Version:        new("12.34"),
@@ -413,12 +412,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					},
 
-					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 				{
 					Name: inPlaceWorkerName2,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "type2",
 							Version: new("12.34"),
@@ -432,7 +431,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Version: &workerKubernetesVersion,
 						Kubelet: &gardencorev1beta1.KubeletConfig{},
 					},
-					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 				},
 			}
 
@@ -864,13 +863,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 						gardencorev1beta1.ExtensionResourceState{
 							Name:    new(key + "-init"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
+							Purpose: new(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateInit},
 						},
 						gardencorev1beta1.ExtensionResourceState{
 							Name:    new(key + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
+							Purpose: new(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
 						},
 					)
@@ -1453,7 +1452,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			}
 
 			kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
-				Mode:    ptr.To(gardencorev1beta1.ProxyModeIPTables),
+				Mode:    new(gardencorev1beta1.ProxyModeIPTables),
 				Enabled: new(false),
 			}
 
@@ -1470,7 +1469,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		Context("hash value should not change", func() {
 			AfterEach(func() {
 				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
-					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPTables),
+					Mode:    new(gardencorev1beta1.ProxyModeIPTables),
 					Enabled: new(false),
 				}
 				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
@@ -1685,7 +1684,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				var err error
 				kubernetesVersion = semver.MustParse("1.34")
 				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
-					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPVS),
+					Mode:    new(gardencorev1beta1.ProxyModeIPVS),
 					Enabled: new(true),
 				}
 				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)

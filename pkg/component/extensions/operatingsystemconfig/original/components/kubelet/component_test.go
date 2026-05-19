@@ -211,7 +211,7 @@ func kubeletUnit(cliFlags []string) extensionsv1alpha1.Unit {
 
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet.service",
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=kubelet daemon

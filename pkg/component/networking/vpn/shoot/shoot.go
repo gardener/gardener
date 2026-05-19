@@ -160,7 +160,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 			Params:      map[string][]string{"module": {"http_apiserver"}},
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 				Role:       monitoringv1alpha1.KubernetesRolePod,
-				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+				APIServer:  new("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: shoot.AccessSecretName},
@@ -222,7 +222,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					{
 						Alert: "VPNShootNoPods",
 						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + deploymentName + `"} == 0`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
 							"severity":   "critical",
@@ -237,7 +237,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					{
 						Alert: "VPNHAShootNoPods",
 						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + deploymentName + `"} == 0`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
 							"severity":   "critical",
@@ -252,7 +252,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					{
 						Alert: "VPNProbeAPIServerProxyFailed",
 						Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn-test",
 							"severity":   "critical",
@@ -518,12 +518,12 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			})
 		}
 		containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+			Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 		})
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -580,7 +580,7 @@ func (v *vpnShoot) podDisruptionBudget() client.Object {
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 

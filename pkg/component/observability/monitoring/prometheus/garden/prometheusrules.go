@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -112,7 +111,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "DashboardDown",
 			Expr:   intstr.FromString("probe_success{job = \"blackbox-dashboard\",purpose = \"availability\"} == 0"),
-			For:    ptr.To(monitoringv1.Duration("5m")),
+			For:    new(monitoringv1.Duration("5m")),
 			Labels: utils.MergeStringMaps(getLabels("critical"), map[string]string{"service": "dashboard"}),
 			Annotations: map[string]string{
 				"summary": "Dashboard is Down in landscape {{$externalLabels.landscape}}",
@@ -129,7 +128,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "ApiServerDown",
 			Expr:   intstr.FromString("probe_success{job = \"blackbox-apiserver\", purpose = \"availability\"} == 0"),
-			For:    ptr.To(monitoringv1.Duration("2m")),
+			For:    new(monitoringv1.Duration("2m")),
 			Labels: utils.MergeStringMaps(getLabels("critical"), map[string]string{"service": "apiserver"}),
 			Annotations: map[string]string{
 				"summary": "ApiServer is Down in landscape {{$externalLabels.landscape}}",
@@ -146,7 +145,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenerApiServerDown",
 			Expr:   intstr.FromString("probe_success{job = \"blackbox-gardener-apiserver\",purpose = \"availability\"} == 0"),
-			For:    ptr.To(monitoringv1.Duration("2m")),
+			For:    new(monitoringv1.Duration("2m")),
 			Labels: utils.MergeStringMaps(getLabels("critical"), map[string]string{"service": "gardener-apiserver"}),
 			Annotations: map[string]string{
 				"summary": "Gardener ApiServer is Down in landscape {{$externalLabels.landscape}}",
@@ -166,7 +165,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			Expr: intstr.FromString("avg(garden_projects_status{phase=\"Terminating\"}) without (instance) " +
 				"and " +
 				"avg(garden_projects_status{phase=\"Terminating\"} offset 1w) without (instance)"),
-			For:    ptr.To(monitoringv1.Duration("5m")),
+			For:    new(monitoringv1.Duration("5m")),
 			Labels: getLabels("warning"),
 			Annotations: map[string]string{
 				"summary":     "Project {{$labels.name}} stuck in {{$labels.phase}} phase in landscape {{$externalLabels.landscape}}",
@@ -176,7 +175,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenerControllerManagerDown",
 			Expr:   intstr.FromString("absent( up{job = \"gardener-controller-manager\"} == 1 )"),
-			For:    ptr.To(monitoringv1.Duration("10m")),
+			For:    new(monitoringv1.Duration("10m")),
 			Labels: utils.MergeStringMaps(getLabels("critical"), map[string]string{"service": "gardener-controller-manager"}),
 			Annotations: map[string]string{
 				"summary":     "Gardener Controller Manager is Down in landscape {{$externalLabels.landscape}}",
@@ -186,7 +185,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenerMetricsExporterDown",
 			Expr:   intstr.FromString("absent( up{job=\"gardener-metrics-exporter\"} == 1 )"),
-			For:    ptr.To(monitoringv1.Duration("15m")),
+			For:    new(monitoringv1.Duration("15m")),
 			Labels: getLabels("critical"),
 			Annotations: map[string]string{
 				"summary": "The gardener-metrics-exporter is down in landscape: {{$externalLabels.landscape}}.",
@@ -198,7 +197,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "MissingGardenMetrics",
 			Expr:   intstr.FromString("scrape_samples_scraped{job=\"gardener-metrics-exporter\"} == 0"),
-			For:    ptr.To(monitoringv1.Duration("15m")),
+			For:    new(monitoringv1.Duration("15m")),
 			Labels: getLabels("critical"),
 			Annotations: map[string]string{
 				"summary": "The gardener-metrics-exporter is not exposing metrics in landscape: {{$externalLabels.landscape}}",
@@ -210,7 +209,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "PodFrequentlyRestarting",
 			Expr:   intstr.FromString("increase(kube_pod_container_status_restarts_total[1h]) > 5"),
-			For:    ptr.To(monitoringv1.Duration("10m")),
+			For:    new(monitoringv1.Duration("10m")),
 			Labels: getLabels("warning"),
 			Annotations: map[string]string{
 				"summary": "Pod is restarting frequently",
@@ -222,7 +221,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenConditionStatusNotTrue",
 			Expr:   intstr.FromString(`garden_garden_condition{status!="True"} == 1`),
-			For:    ptr.To(monitoringv1.Duration("10m")),
+			For:    new(monitoringv1.Duration("10m")),
 			Labels: getLabels("critical"),
 			Annotations: map[string]string{
 				"summary": "Garden runtime condition {{$labels.condition}} is in state {{$labels.status}}",
@@ -234,7 +233,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenLastOperationInErrorState",
 			Expr:   intstr.FromString(`garden_garden_last_operation{state=~"Error|Failed"} == 1`),
-			For:    ptr.To(monitoringv1.Duration("10m")),
+			For:    new(monitoringv1.Duration("10m")),
 			Labels: getLabels("critical"),
 			Annotations: map[string]string{
 				"summary": "Garden {{$labels.name}} last operation has failed",
@@ -246,7 +245,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenLastOperationStuckProcessing",
 			Expr:   intstr.FromString(`garden_garden_last_operation{state="Processing"} == 1`),
-			For:    ptr.To(monitoringv1.Duration("30m")),
+			For:    new(monitoringv1.Duration("30m")),
 			Labels: getLabels("warning"),
 			Annotations: map[string]string{
 				"summary": "Garden {{$labels.name}} last operation stuck in Processing",
@@ -258,7 +257,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert:  "GardenKubeStateMetricsDown",
 			Expr:   intstr.FromString(`absent(up{job="kube-state-metrics"} == 1)`),
-			For:    ptr.To(monitoringv1.Duration("10m")),
+			For:    new(monitoringv1.Duration("10m")),
 			Labels: getLabels("critical"),
 			Annotations: map[string]string{
 				"summary": "Garden runtime kube-state-metrics is down",
@@ -297,7 +296,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			monitoringv1.Rule{
 				Alert:  "DiscoveryServerDown",
 				Expr:   intstr.FromString("probe_success{job = \"blackbox-discovery-server\", purpose = \"availability\"} == 0"),
-				For:    ptr.To(monitoringv1.Duration("5m")),
+				For:    new(monitoringv1.Duration("5m")),
 				Labels: utils.MergeStringMaps(getLabels("critical"), map[string]string{"service": "discovery-service"}),
 				Annotations: map[string]string{
 					"summary": "Discovery Server is Down in landscape {{$externalLabels.landscape}}",

@@ -49,7 +49,7 @@ var _ = Describe("Init", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
 					Name:    nodeagentconfigv1alpha1.InitUnitName,
-					Command: ptr.To(extensionsv1alpha1.CommandStart),
+					Command: new(extensionsv1alpha1.CommandStart),
 					Enable:  new(true),
 					Content: new(`[Unit]
 Description=Downloads the gardener-node-agent binary from the container registry and bootstraps it.

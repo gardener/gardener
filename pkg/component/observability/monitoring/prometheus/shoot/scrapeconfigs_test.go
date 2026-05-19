@@ -13,7 +13,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -175,7 +174,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels:     new(false),
 						HonorTimestamps: new(false),
-						Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
+						Scheme:          new(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -281,7 +280,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels: new(false),
-						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+						Scheme:      new(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -378,7 +377,7 @@ var _ = Describe("ScrapeConfigs", func() {
 						},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
 							HonorLabels: new(false),
-							Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+							Scheme:      new(monitoringv1.SchemeHTTPS),
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 								Key:                  "token",

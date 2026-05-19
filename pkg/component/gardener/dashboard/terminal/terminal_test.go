@@ -352,7 +352,7 @@ server:
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   &metav1.LabelSelector{MatchLabels: map[string]string{"app": "terminal-controller-manager"}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -368,13 +368,13 @@ server:
 					Name:       "terminal-controller-manager",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "terminal-controller-manager",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("32Mi"),
@@ -382,7 +382,7 @@ server:
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -398,7 +398,7 @@ server:
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "terminal-controller-manager"}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port:   "metrics",
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
@@ -437,8 +437,8 @@ server:
 				Name:                    "mutating-create-update-terminal.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: new("https://terminal-controller-manager." + namespace + ".svc/mutate-terminal")},
-				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+				FailurePolicy:           new(admissionregistrationv1.Fail),
+				SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{"dashboard.gardener.cloud"},
@@ -463,8 +463,8 @@ server:
 				Name:                    "validating-create-update-terminal.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: new("https://terminal-controller-manager." + namespace + ".svc/validate-terminal")},
-				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+				FailurePolicy:           new(admissionregistrationv1.Fail),
+				SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{"dashboard.gardener.cloud"},
@@ -736,7 +736,7 @@ server:
 					})
 
 					It("should successfully deploy all resources", func() {
-						service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+						service.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferSameZone)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
@@ -749,7 +749,7 @@ server:
 					})
 
 					It("should successfully deploy all resources", func() {
-						service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+						service.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferClose)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))

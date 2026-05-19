@@ -820,7 +820,7 @@ func getPrometheusRule(label string) *monitoringv1.PrometheusRule {
 				Rules: []monitoringv1.Rule{{
 					Alert: "ValiDown",
 					Expr:  intstr.FromString(`absent(up{job="vali"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("30m")),
+					For:   new(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
 						"severity":   "warning",
@@ -975,17 +975,17 @@ func getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    valiName,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
 						ContainerName: "*",
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

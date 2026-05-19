@@ -1195,11 +1195,11 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		},
 		Entry("single provider with secretName without credentialsRef",
 			[]core.DNSProvider{
-				{SecretName: ptr.To(secretName1)},
+				{SecretName: new(secretName1)},
 			},
 			[]core.DNSProvider{
 				{
-					SecretName: ptr.To(secretName1),
+					SecretName: new(secretName1),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1210,12 +1210,12 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		),
 		Entry("multiple providers with secretName and without credentialsRef",
 			[]core.DNSProvider{
-				{SecretName: ptr.To(secretName1)},
-				{SecretName: ptr.To(secretName2)},
+				{SecretName: new(secretName1)},
+				{SecretName: new(secretName2)},
 			},
 			[]core.DNSProvider{
 				{
-					SecretName: ptr.To(secretName1),
+					SecretName: new(secretName1),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1223,7 +1223,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 					},
 				},
 				{
-					SecretName: ptr.To(secretName2),
+					SecretName: new(secretName2),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1234,7 +1234,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		),
 		Entry("multiple providers, some with secretName and all without credentialsRef",
 			[]core.DNSProvider{
-				{SecretName: ptr.To(secretName1)},
+				{SecretName: new(secretName1)},
 				{
 					Domains: &core.DNSIncludeExclude{
 						Include: []string{"example.com"},
@@ -1243,7 +1243,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 			},
 			[]core.DNSProvider{
 				{
-					SecretName: ptr.To(secretName1),
+					SecretName: new(secretName1),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1259,7 +1259,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		),
 		Entry("secretName and credentialsRef are already set",
 			[]core.DNSProvider{{
-				SecretName: ptr.To(secretName1),
+				SecretName: new(secretName1),
 				CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -1267,7 +1267,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 				},
 			}},
 			[]core.DNSProvider{{
-				SecretName: ptr.To(secretName1),
+				SecretName: new(secretName1),
 				CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -1284,7 +1284,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 				},
 			}},
 			[]core.DNSProvider{{
-				SecretName: ptr.To(secretName2),
+				SecretName: new(secretName2),
 				CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",

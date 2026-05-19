@@ -67,7 +67,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxSurge:         &maxSurge,
 				MaxUnavailable:   &maxUnavailable,
 				SystemComponents: systemComponents,
-				UpdateStrategy:   ptr.To(core.AutoRollingUpdate),
+				UpdateStrategy:   new(core.AutoRollingUpdate),
 			}
 			invalidWorker = core.Worker{
 				Name: "",
@@ -1117,8 +1117,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			shoot.Spec.CloudProfileName = new("another-profile")
 			shoot.Spec.Region = "another-region"
-			// shoot.Spec.SecretBindingName = ptr.To("another-reference")
-			// shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+			// shoot.Spec.SecretBindingName = new("another-reference")
+			// shoot.Spec.CredentialsBindingName = new("another-reference")
 			shoot.Spec.Provider.Type = "another-provider"
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
@@ -2040,7 +2040,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Domain = nil
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:    ptr.To(core.DNSUnmanaged),
+						Type:    new(core.DNSUnmanaged),
 						Primary: new(true),
 					},
 				}
@@ -2066,7 +2066,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should forbid specifying a credentialsRef when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:           ptr.To(core.DNSUnmanaged),
+						Type:           new(core.DNSUnmanaged),
 						CredentialsRef: &dnsSecretRef,
 						SecretName:     &dnsSecretName,
 					},
@@ -2771,7 +2771,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should deny specifying unavailable provider type", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Provider: core.EncryptionProvider{
-							Type: ptr.To(core.EncryptionProviderType("fake")),
+							Type: new(core.EncryptionProviderType("fake")),
 						},
 					}
 
@@ -2804,7 +2804,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 
 					Entry("should fail when encryption provider type is aesgcm and auto rotation is not enabled",
-						nil, ptr.To(core.EncryptionProviderTypeAESGCM),
+						nil, new(core.EncryptionProviderTypeAESGCM),
 						ContainElements(
 							PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal(field.ErrorTypeForbidden),
@@ -2814,11 +2814,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("should pass when encryption provider type is aesgcm and auto rotation is enabled",
 						&core.MaintenanceRotationConfig{
 							RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
-						}, ptr.To(core.EncryptionProviderTypeAESGCM), BeEmpty()),
+						}, new(core.EncryptionProviderTypeAESGCM), BeEmpty()),
 					Entry("should fail when encryption provider type is aesgcm and auto rotation is enabled with rotation period beyond 90 days",
 						&core.MaintenanceRotationConfig{
 							RotationPeriod: &metav1.Duration{Duration: 91 * 24 * time.Hour},
-						}, ptr.To(core.EncryptionProviderTypeAESGCM),
+						}, new(core.EncryptionProviderTypeAESGCM),
 						ContainElements(
 							PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal(field.ErrorTypeInvalid),
@@ -2826,11 +2826,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 								"Detail": ContainSubstring("value must be either 0 to disable rotation or between 30m and 90d"),
 							})))),
 					Entry("should pass when encryption provider type is not aesgcm and auto rotation is not enabled",
-						nil, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+						nil, new(core.EncryptionProviderTypeSecretbox), BeEmpty()),
 					Entry("should pass when encryption provider type is not aesgcm and auto rotation is enabled",
 						&core.MaintenanceRotationConfig{
 							RotationPeriod: &metav1.Duration{Duration: 30 * 24 * time.Hour},
-						}, ptr.To(core.EncryptionProviderTypeSecretbox), BeEmpty()),
+						}, new(core.EncryptionProviderTypeSecretbox), BeEmpty()),
 					Entry("should pass when encryption provider type is not set and auto rotation is not enabled",
 						nil, nil, BeEmpty()),
 				)
@@ -2856,7 +2856,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "deployments.apps"},
 						Provider: core.EncryptionProvider{
-							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+							Type: new(core.EncryptionProviderTypeAESCBC),
 						},
 					}
 					shoot.Status.Credentials.EncryptionAtRest.Resources = []string{"deployments.apps", "configmaps"}
@@ -2864,7 +2864,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
-					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeAESCBC)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = new(core.EncryptionProviderTypeAESCBC)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2978,7 +2978,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Provider: core.EncryptionProvider{
-							Type: ptr.To(core.EncryptionProviderTypeAESGCM),
+							Type: new(core.EncryptionProviderTypeAESGCM),
 						},
 					}
 
@@ -2997,12 +2997,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should fail updating immutable provider type field", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Provider: core.EncryptionProvider{
-							Type: ptr.To(core.EncryptionProviderTypeAESCBC),
+							Type: new(core.EncryptionProviderTypeAESCBC),
 						},
 					}
 
 					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = ptr.To(core.EncryptionProviderTypeSecretbox)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = new(core.EncryptionProviderTypeSecretbox)
 
 					errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -4835,7 +4835,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				shoot.Spec.Kubernetes.Version = "1.28.0"
 				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.25.2")}
-				shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.27.0")}
@@ -5618,7 +5618,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 							Maximum:        1,
 							Minimum:        0,
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 						{
 							Name: "worker-2",
@@ -5627,7 +5627,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 							Maximum:        1,
 							Minimum:        0,
-							UpdateStrategy: ptr.To(core.ManualInPlaceUpdate),
+							UpdateStrategy: new(core.ManualInPlaceUpdate),
 						},
 					}
 
@@ -7510,7 +7510,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
 				shoot.Spec.Provider.Workers[1].Name = "worker-2"
-				shoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				shoot.Spec.Provider.Workers[1].UpdateStrategy = new(core.AutoInPlaceUpdate)
 				shoot.Spec.SystemComponents = &core.SystemComponents{
 					NodeLocalDNS: &core.NodeLocalDNS{
 						Enabled: false,
@@ -7561,7 +7561,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
 				shoot.Spec.Provider.Workers[1].Name = "worker-2"
-				shoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				shoot.Spec.Provider.Workers[1].UpdateStrategy = new(core.AutoInPlaceUpdate)
 				shoot.Spec.SystemComponents = &core.SystemComponents{
 					NodeLocalDNS: &core.NodeLocalDNS{
 						Enabled: false,
@@ -7592,7 +7592,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should forbid changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
 					newShoot := prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -7602,7 +7602,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					newShoot = prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -7612,10 +7612,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should forbid changing the update strategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoRollingUpdate)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -7623,10 +7623,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
 					}))))
 
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot = prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoRollingUpdate)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -7637,10 +7637,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should allow changing the update strategy from AutoInPlaceUpdate to ManualInPlaceUpdate", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					newShoot.Spec.Provider.Workers[0].MaxSurge = nil
 					newShoot.Spec.Provider.Workers[0].MaxUnavailable = nil
 
@@ -7649,10 +7649,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should allow changing the update strategy from ManualInPlaceUpdate to AutoInPlaceUpdate", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
-					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
@@ -7662,7 +7662,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers[0])
 					newShoot.Spec.Provider.Workers[1].Name = "worker-2"
-					newShoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[1].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -7675,7 +7675,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
 					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
 					shoot.Spec.Provider.Workers[1].Name = "worker-2"
-					shoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[1].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
@@ -7685,7 +7685,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Context("worker pool update strategy is either AutoInplaceUpdate or ManualInPlaceUpdate", func() {
 				It("should forbid changing the machine type", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
 					newShoot.Spec.Provider.Workers[0].Machine.Type = "foo"
@@ -7699,7 +7699,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should forbid changing the machine image", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
 					newShoot.Spec.Provider.Workers[0].Machine.Image.Name = "foo"
@@ -7713,7 +7713,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should forbid changing the cri", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].CRI = &core.CRI{Name: "foo"}
 					newShoot := prepareShootForUpdate(shoot)
 
@@ -7728,7 +7728,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should forbid changing the volume details", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Volume = &core.Volume{Name: new("foo")}
 					newShoot := prepareShootForUpdate(shoot)
 
@@ -7744,7 +7744,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Context("Machine image version update", func() {
 				It("should allow downgrading the machine image version in case of rolling update strategy", func() {
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoRollingUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
 					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "2.0.0"
 
 					newShoot := prepareShootForUpdate(shoot)
@@ -7754,7 +7754,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should forbid downgrading the machine image version in case of in-place update strategy", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "2.0.0"
 
 					newShoot := prepareShootForUpdate(shoot)
@@ -8643,8 +8643,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("amd64 is a valid architecture name", ptr.To(v1beta1constants.ArchitectureAMD64), BeEmpty()),
-			Entry("arm64 is a valid architecture name", ptr.To(v1beta1constants.ArchitectureARM64), BeEmpty()),
+			Entry("amd64 is a valid architecture name", new(v1beta1constants.ArchitectureAMD64), BeEmpty()),
+			Entry("arm64 is a valid architecture name", new(v1beta1constants.ArchitectureARM64), BeEmpty()),
 			Entry("foo is an invalid architecture name", new("foo"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("architecture"),
@@ -8894,7 +8894,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed if the update strategy is supported", func() {
-				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 				Expect(ValidateWorker(worker, core.Kubernetes{}, shootNamespace, providerType, fldPath, false)).To(BeEmpty())
 			})
@@ -8911,14 +8911,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 									Machine: core.Machine{
 										Type: "xlarge",
 									},
-									UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+									UpdateStrategy: new(core.AutoInPlaceUpdate),
 								},
 								{
 									Name: "worker-2",
 									Machine: core.Machine{
 										Type: "xlarge",
 									},
-									UpdateStrategy: ptr.To(core.ManualInPlaceUpdate),
+									UpdateStrategy: new(core.ManualInPlaceUpdate),
 								},
 							},
 						},
@@ -9001,7 +9001,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow setting DisableHealthTimeout to false for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.UpdateStrategy = new(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					DisableHealthTimeout: new(false),
 				}
@@ -9012,7 +9012,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow setting DisableHealthTimeout to true for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.UpdateStrategy = new(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					DisableHealthTimeout: new(true),
 				}
@@ -9075,7 +9075,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow setting MachineInPlaceUpdateTimeout to positive value for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.UpdateStrategy = new(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * 2},
 				}
@@ -9086,7 +9086,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid setting MachineInPlaceUpdateTimeout to negative value for update strategy AutoInPlaceUpdate", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
-				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.UpdateStrategy = new(core.AutoInPlaceUpdate)
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
@@ -10263,7 +10263,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Workers: []core.Worker{
 							{
 								Name:           "worker-1",
-								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+								UpdateStrategy: new(core.AutoInPlaceUpdate),
 								Kubernetes: &core.WorkerKubernetes{
 									Version: new("1.35.0"),
 									Kubelet: &core.KubeletConfig{
@@ -10281,7 +10281,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 							{
 								Name:           "worker-2",
-								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+								UpdateStrategy: new(core.AutoInPlaceUpdate),
 								Machine: core.Machine{
 									Image: &core.ShootMachineImage{
 										Version: "1.5.0",
@@ -10423,7 +10423,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			oldShoot.Spec.Provider.Workers = []core.Worker{
 				{
 					Name:           "worker-2",
-					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					UpdateStrategy: new(core.AutoInPlaceUpdate),
 					Machine: core.Machine{
 						Image: &core.ShootMachineImage{
 							Version: "1.5.0",
@@ -10432,7 +10432,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				{
 					Name:           "worker-3",
-					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					UpdateStrategy: new(core.AutoInPlaceUpdate),
 					Machine: core.Machine{
 						Image: &core.ShootMachineImage{
 							Version: "1.5.0",
@@ -10444,7 +10444,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			newShoot.Spec.Provider.Workers = []core.Worker{
 				{
 					Name:           "worker-1",
-					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					UpdateStrategy: new(core.AutoInPlaceUpdate),
 					Machine: core.Machine{
 						Image: &core.ShootMachineImage{
 							Version: "1.5.1",
@@ -10453,7 +10453,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				{
 					Name:           "worker-3",
-					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					UpdateStrategy: new(core.AutoInPlaceUpdate),
 					Machine: core.Machine{
 						Image: &core.ShootMachineImage{
 							Version: "1.5.1",

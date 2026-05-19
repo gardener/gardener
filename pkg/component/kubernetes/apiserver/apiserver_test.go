@@ -368,7 +368,7 @@ var _ = Describe("KubeAPIServer", func() {
 								Name:       "kube-apiserver",
 							},
 							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+								UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 							},
 							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 								ContainerPolicies: containerPolicies,
@@ -384,7 +384,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
@@ -392,7 +392,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -404,7 +404,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
@@ -412,7 +412,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -424,7 +424,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
@@ -432,7 +432,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -444,7 +444,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
@@ -452,7 +452,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -483,7 +483,7 @@ var _ = Describe("KubeAPIServer", func() {
 								"role": "apiserver",
 							},
 						},
-						UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+						UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 					},
 				}))
 			})
@@ -520,7 +520,7 @@ var _ = Describe("KubeAPIServer", func() {
 						}},
 						Endpoints: []monitoringv1.Endpoint{{
 							TargetPort: new(intstr.FromInt32(443)),
-							Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
+							Scheme:     new(monitoringv1.SchemeHTTPS),
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
@@ -604,7 +604,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "ApiServerNotReachable",
 									Expr:  intstr.FromString(`probe_success{job="blackbox-apiserver"} == 0`),
-									For:   ptr.To(monitoringv1.Duration("5m")),
+									For:   new(monitoringv1.Duration("5m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "blocker",
@@ -619,7 +619,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiserverDown",
 									Expr:  intstr.FromString(`absent(up{job="kube-apiserver"} == 1)`),
-									For:   ptr.To(monitoringv1.Duration("5m")),
+									For:   new(monitoringv1.Duration("5m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "blocker",
@@ -634,7 +634,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiServerTooManyOpenFileDescriptors",
 									Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50`),
-									For:   ptr.To(monitoringv1.Duration("30m")),
+									For:   new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "warning",
@@ -649,7 +649,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiServerTooManyOpenFileDescriptors",
 									Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80`),
-									For:   ptr.To(monitoringv1.Duration("30m")),
+									For:   new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "critical",
@@ -667,7 +667,7 @@ var _ = Describe("KubeAPIServer", func() {
 									// - WATCHLIST is long-poll
 									// - CONNECT is "kubectl exec"
 									Expr: intstr.FromString(`histogram_quantile(0.99, sum without (instance,resource,subresource) (rate(apiserver_request_duration_seconds_bucket{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3`),
-									For:  ptr.To(monitoringv1.Duration("30m")),
+									For:  new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "warning",
@@ -714,7 +714,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiServerTooManyAuditlogFailures",
 									Expr:  intstr.FromString(`sum(rate (apiserver_audit_error_total{plugin!="log",job="kube-apiserver"}[5m])) / sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m])) > bool 0.02 == 1`),
-									For:   ptr.To(monitoringv1.Duration("15m")),
+									For:   new(monitoringv1.Duration("15m")),
 									Labels: map[string]string{
 										"service":    "auditlog",
 										"severity":   "warning",
@@ -767,7 +767,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "ApiserverRequestsFailureRate",
 									Expr:  intstr.FromString(`max(sum by(instance,resource,verb) (rate(apiserver_request_total{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(apiserver_request_total[10m]))) * 100 > 10`),
-									For:   ptr.To(monitoringv1.Duration("30m")),
+									For:   new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "warning",
@@ -4223,7 +4223,7 @@ anonymous:
 				It("should properly configure the authentication settings with webhook", func() {
 					values.AuthenticationWebhook = &AuthenticationWebhook{
 						Kubeconfig: []byte("foo"),
-						CacheTTL:   ptr.To(30 * time.Second),
+						CacheTTL:   new(30 * time.Second),
 						Version:    new("v1beta1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)

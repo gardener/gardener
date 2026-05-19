@@ -12,7 +12,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -557,7 +556,7 @@ var _ = Describe("Utils tests", func() {
 						CRI:              []core.CRI{{Name: "containerd"}},
 						Architectures:    []string{"amd64"},
 					}},
-					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+					UpdateStrategy: new(core.UpdateStrategyMajor),
 				},
 			},
 			MachineTypes: []core.MachineType{{Name: "valid", Architecture: new("amd64")}},

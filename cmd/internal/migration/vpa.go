@@ -160,7 +160,7 @@ func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log lo
 			return true
 		}
 		mutateFn = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler {
-			vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeRecreate)
+			vpa.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeRecreate)
 			delete(vpa.Labels, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
 			return vpa
 		}

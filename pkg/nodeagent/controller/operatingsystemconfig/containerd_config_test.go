@@ -15,7 +15,6 @@ import (
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	fakecontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
@@ -56,7 +55,7 @@ func init() {
 		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 			CRIConfig: &extensionsv1alpha1.CRIConfig{
 				Name:         extensionsv1alpha1.CRINameContainerD,
-				CgroupDriver: ptr.To(extensionsv1alpha1.CgroupDriverSystemd),
+				CgroupDriver: new(extensionsv1alpha1.CgroupDriverSystemd),
 				Containerd: &extensionsv1alpha1.ContainerdConfig{
 					SandboxImage: sandBoxImageValue,
 				},
@@ -265,7 +264,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			It("should not translate anything", func() {
 				osc.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 					{
-						Op:   ptr.To(extensionsv1alpha1.AddPluginPathOperation),
+						Op:   new(extensionsv1alpha1.AddPluginPathOperation),
 						Path: []string{"io.containerd.grpc.v1.cri", "containerd", "runtimes", "foo"},
 						Values: &apiextensionsv1.JSON{
 							Raw: []byte("{\"runtime_type\": \"bar.123\"}"),
@@ -297,7 +296,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			It("should translate a v2 compliant runtime path to its v3 equivalent", func() {
 				osc.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 					{
-						Op:   ptr.To(extensionsv1alpha1.AddPluginPathOperation),
+						Op:   new(extensionsv1alpha1.AddPluginPathOperation),
 						Path: []string{"io.containerd.grpc.v1.cri", "containerd", "runtimes", "foo"},
 						Values: &apiextensionsv1.JSON{
 							Raw: []byte("{\"runtime_type\": \"bar.123\"}"),
@@ -323,7 +322,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			It("should not translate a path that is not in the translation map", func() {
 				osc.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 					{
-						Op:   ptr.To(extensionsv1alpha1.AddPluginPathOperation),
+						Op:   new(extensionsv1alpha1.AddPluginPathOperation),
 						Path: []string{"io.containerd.grpc.v1.cri", "containerd", "foobar", "foo"},
 						Values: &apiextensionsv1.JSON{
 							Raw: []byte("{\"runtime_type\": \"bar.123\"}"),

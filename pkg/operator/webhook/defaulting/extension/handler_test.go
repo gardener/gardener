@@ -13,7 +13,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -110,7 +109,7 @@ var _ = Describe("Handler", func() {
 					},
 					AdmissionResponse: admissionv1.AdmissionResponse{
 						Allowed:   true,
-						PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
+						PatchType: new(admissionv1.PatchTypeJSONPatch),
 					},
 				}))
 			})
@@ -130,7 +129,7 @@ var _ = Describe("Handler", func() {
 					},
 					AdmissionResponse: admissionv1.AdmissionResponse{
 						Allowed:   true,
-						PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
+						PatchType: new(admissionv1.PatchTypeJSONPatch),
 					},
 				}))
 			})
@@ -215,7 +214,7 @@ var _ = Describe("Handler", func() {
 					},
 					AdmissionResponse: admissionv1.AdmissionResponse{
 						Allowed:   true,
-						PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
+						PatchType: new(admissionv1.PatchTypeJSONPatch),
 					},
 				}))
 			})

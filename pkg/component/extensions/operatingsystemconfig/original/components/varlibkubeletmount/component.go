@@ -5,8 +5,6 @@
 package varlibkubeletmount
 
 import (
-	"k8s.io/utils/ptr"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
@@ -34,7 +32,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 		{
 			Name: UnitName,
-			Content: ptr.To(`[Unit]
+			Content: new(`[Unit]
 Description=mount ` + kubelet.PathKubeletDirectory + ` on kubelet data device
 Before=` + kubelet.UnitName + `
 [Mount]

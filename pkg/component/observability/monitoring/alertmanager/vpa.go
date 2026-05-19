@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
@@ -33,7 +32,7 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 				Name:       a.values.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -45,12 +44,12 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 						MaxAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("200Mi"),
 						},
-						ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ControlledValues:    new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

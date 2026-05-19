@@ -79,7 +79,7 @@ var _ = Describe("Component", func() {
 
 		systemdSysctlUnit := extensionsv1alpha1.Unit{
 			Name:      "systemd-sysctl.service",
-			Command:   ptr.To(extensionsv1alpha1.CommandRestart),
+			Command:   new(extensionsv1alpha1.CommandRestart),
 			Enable:    new(true),
 			FilePaths: []string{"/etc/sysctl.d/99-k8s-general.conf"},
 		}

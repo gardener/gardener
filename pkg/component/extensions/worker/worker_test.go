@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -230,7 +229,7 @@ var _ = Describe("Worker", func() {
 					MachineControllerManagerSettings: worker1MCMSettings,
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					ClusterAutoscaler:                &gardencorev1beta1.ClusterAutoscalerOptions{},
-					UpdateStrategy:                   ptr.To(gardencorev1beta1.AutoRollingUpdate),
+					UpdateStrategy:                   new(gardencorev1beta1.AutoRollingUpdate),
 				},
 				{
 					Name:           worker2Name,
@@ -251,7 +250,7 @@ var _ = Describe("Worker", func() {
 						Version: &workerKubernetesVersion,
 					},
 					ClusterAutoscaler: &gardencorev1beta1.ClusterAutoscalerOptions{},
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 			},
 		}
@@ -328,7 +327,7 @@ var _ = Describe("Worker", func() {
 					NodeTemplate:                     workerPool1NodeTemplate,
 					Architecture:                     worker1Arch,
 					ClusterAutoscaler:                emptyAutoscalerOptions,
-					UpdateStrategy:                   ptr.To(gardencorev1beta1.AutoRollingUpdate),
+					UpdateStrategy:                   new(gardencorev1beta1.AutoRollingUpdate),
 				},
 				{
 					Name:           worker2Name,
@@ -357,7 +356,7 @@ var _ = Describe("Worker", func() {
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
 					ClusterAutoscaler: emptyAutoscalerOptions,
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 			},
 		}

@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -109,7 +108,7 @@ func GetEnvoyProxyContainer(image string) *corev1.Container {
 					"all",
 				},
 			},
-			RunAsGroup:   ptr.To(int64(v1beta1constants.EnvoyVPNGroupId)),
+			RunAsGroup:   new(int64(v1beta1constants.EnvoyVPNGroupId)),
 			RunAsNonRoot: new(true),
 		},
 		VolumeMounts: []corev1.VolumeMount{

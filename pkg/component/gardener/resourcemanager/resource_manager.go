@@ -659,7 +659,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
-		config.Webhooks.PodSchedulerName.SchedulerName = ptr.To(kubescheduler.BinPackingSchedulerName)
+		config.Webhooks.PodSchedulerName.SchedulerName = new(kubescheduler.BinPackingSchedulerName)
 	}
 
 	if r.values.KubernetesServiceHost != nil {
@@ -760,7 +760,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 		portMetrics := networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(r.metricsPort())),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}
 
 		if r.values.ResponsibilityMode != ForShootOrVirtualGarden {
@@ -770,7 +770,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 				Port:     new(intstr.FromInt32(r.serverPort())),
-				Protocol: ptr.To(corev1.ProtocolTCP),
+				Protocol: new(corev1.ProtocolTCP),
 			}))
 		}
 
@@ -1125,17 +1125,17 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 			Name:       r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    containerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		}
@@ -1158,7 +1158,7 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: r.getDeploymentTemplateLabels(),
 			},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -1615,9 +1615,9 @@ func NewExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			NamespaceSelector:       &metav1.LabelSelector{},
 			ClientConfig:            buildClientConfigFn(secretServerCA, webhook.path),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-			FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-			MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-			SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+			FailurePolicy:           new(admissionregistrationv1.Fail),
+			MatchPolicy:             new(admissionregistrationv1.Exact),
+			SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 			TimeoutSeconds:          ptr.To[int32](10),
 		})
 	}
@@ -1652,9 +1652,9 @@ func (r *resourceManager) newProjectedTokenMountMutatingWebhook(namespaceSelecto
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1676,9 +1676,9 @@ func NewPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector, objectSe
 		ObjectSelector:          objectSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, podkubeapiserverloadbalancing.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1700,9 +1700,9 @@ func NewPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		ObjectSelector:          &metav1.LabelSelector{},
 		ClientConfig:            buildClientConfigFn(secretServerCA, podschedulername.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Ignore),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Ignore),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1748,9 +1748,9 @@ func NewPodTopologySpreadConstraintsMutatingWebhook(
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, podtopologyspreadconstraints.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1789,9 +1789,9 @@ func NewSeccompProfileMutatingWebhook(
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, seccompprofile.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1837,10 +1837,10 @@ func NewKubernetesServiceHostMutatingWebhook(
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, kubernetesservicehost.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
-		FailurePolicy:           ptr.To(admissionregistrationv1.Ignore),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		ReinvocationPolicy:      new(admissionregistrationv1.NeverReinvocationPolicy),
+		FailurePolicy:           new(admissionregistrationv1.Ignore),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](2),
 	}
 }
@@ -1875,9 +1875,9 @@ func NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, systemcomponentsconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1933,9 +1933,9 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		ObjectSelector:          oSelector,
 		ClientConfig:            buildClientConfigFn(secretServerCA, highavailabilityconfig.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Equivalent),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
@@ -1971,10 +1971,10 @@ func NewInPlaceUpdatesWebhook(
 		},
 		ClientConfig:            buildClientConfigFn(secretServerCA, vpainplaceupdates.WebhookPath),
 		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		ReinvocationPolicy:      ptr.To(admissionregistrationv1.NeverReinvocationPolicy),
-		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-		MatchPolicy:             ptr.To(admissionregistrationv1.Equivalent),
-		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		ReinvocationPolicy:      new(admissionregistrationv1.NeverReinvocationPolicy),
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		MatchPolicy:             new(admissionregistrationv1.Equivalent),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }

@@ -99,7 +99,7 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 			},
 			Spec: extensionsv1alpha1.ExtensionSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Class: ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+					Class: new(extensionsv1alpha1.ExtensionClassGarden),
 					Type:  extensionProvider,
 				},
 			},

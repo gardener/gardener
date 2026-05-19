@@ -377,7 +377,7 @@ func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
 // SetDefaults_ShootStateControllerConfiguration sets defaults for the shoot state controller.
 func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 6 * time.Hour}
@@ -415,21 +415,21 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 	}
 
 	if obj.JitterUpdates == nil {
-		obj.JitterUpdates = ptr.To(false)
+		obj.JitterUpdates = new(false)
 	}
 }
 
 // SetDefaults_TokenRequestorServiceAccountControllerConfiguration sets defaults for the TokenRequestorServiceAccount controller.
 func SetDefaults_TokenRequestorServiceAccountControllerConfiguration(obj *TokenRequestorServiceAccountControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 }
 
 // SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration sets defaults for the TokenRequestorWorkloadIdentity controller.
 func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *TokenRequestorWorkloadIdentityControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 
 	if obj.TokenExpirationDuration == nil {
@@ -440,7 +440,7 @@ func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *Toke
 // SetDefaults_VPAEvictionRequirementsControllerConfiguration sets defaults for the VPAEvictionRequirements controller.
 func SetDefaults_VPAEvictionRequirementsControllerConfiguration(obj *VPAEvictionRequirementsControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 }
 
@@ -477,7 +477,7 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 // SetDefaults_Logging sets defaults for the Logging stack.
 func SetDefaults_Logging(obj *Logging) {
 	if obj.Enabled == nil {
-		obj.Enabled = ptr.To(false)
+		obj.Enabled = new(false)
 	}
 	if obj.Vali == nil {
 		obj.Vali = &Vali{}
@@ -544,7 +544,7 @@ func SetDefaults_BackupCompactionController(obj *BackupCompactionController) {
 		obj.Workers = ptr.To[int64](3)
 	}
 	if obj.EnableBackupCompaction == nil {
-		obj.EnableBackupCompaction = ptr.To(false)
+		obj.EnableBackupCompaction = new(false)
 	}
 	if obj.EventsThreshold == nil {
 		obj.EventsThreshold = ptr.To[int64](1000000)

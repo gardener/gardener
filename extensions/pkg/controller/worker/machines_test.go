@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -448,7 +447,7 @@ var _ = Describe("Machines", func() {
 				KubernetesVersion:   new("1.2.3"),
 				KubeletConfig:       &gardencorev1beta1.KubeletConfig{},
 				NodeAgentSecretName: &nodeAgentSecretName,
-				UpdateStrategy:      ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+				UpdateStrategy:      new(gardencorev1beta1.AutoInPlaceUpdate),
 			}
 			additionalDataV1 = []string{"sample"}
 			additionalDataV2 = []string{"sample"}
@@ -583,7 +582,7 @@ var _ = Describe("Machines", func() {
 					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
 				}
 				c.Shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
-					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPVS),
+					Mode:    new(gardencorev1beta1.ProxyModeIPVS),
 					Enabled: new(true),
 				}
 				hash1, err := WorkerPoolHashV1(p, c)

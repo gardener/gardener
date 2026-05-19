@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -133,7 +132,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining supported for deprecated classification field", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Classification: ptr.To(core.ClassificationSupported),
+				Classification: new(core.ClassificationSupported),
 				Version:        "1.28.0",
 			})
 			Expect(classification).To(Equal(core.ClassificationSupported))
@@ -149,7 +148,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining preview for deprecated classification and expiration date field", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Classification: ptr.To(core.ClassificationPreview),
+				Classification: new(core.ClassificationPreview),
 				Version:        "1.28.0",
 				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
 			})

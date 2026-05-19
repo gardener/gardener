@@ -128,7 +128,7 @@ var _ = Describe("KubeScheduler", func() {
 						"role": "scheduler",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -141,17 +141,17 @@ var _ = Describe("KubeScheduler", func() {
 					Name:       deploymentName,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    containerName,
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff)},
 					},
 				},
 			},
@@ -347,7 +347,7 @@ var _ = Describe("KubeScheduler", func() {
 						{
 							Alert: "KubeSchedulerDown",
 							Expr:  intstr.FromString(`absent(up{job="kube-scheduler"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("15m")),
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "kube-scheduler",
 								"severity":   "critical",
@@ -422,7 +422,7 @@ var _ = Describe("KubeScheduler", func() {
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port:   "metrics",
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},

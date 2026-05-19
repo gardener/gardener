@@ -199,7 +199,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 					Deployment: seedmanagement.GardenletSelfDeployment{
 						GardenletDeployment: seedmanagement.GardenletDeployment{
 							Image: &seedmanagement.Image{
-								PullPolicy: ptr.To(corev1.PullIfNotPresent),
+								PullPolicy: new(corev1.PullIfNotPresent),
 							},
 						},
 						Helm: seedmanagement.GardenletHelm{

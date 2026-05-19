@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
@@ -84,7 +83,7 @@ var _ = Describe("Encoding", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Controllers).NotTo(BeNil())
 			Expect(result.Controllers.TokenRequestorWorkloadIdentity).NotTo(BeNil())
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(Equal(ptr.To(5)))
+			Expect(result.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(Equal(new(5)))
 			Expect(result.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(Equal(&metav1.Duration{Duration: 6 * time.Hour}))
 		})
 
@@ -106,7 +105,7 @@ var _ = Describe("Encoding", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Controllers).NotTo(BeNil())
 			Expect(result.Controllers.TokenRequestorWorkloadIdentity).NotTo(BeNil())
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(Equal(ptr.To(5)))
+			Expect(result.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(Equal(new(5)))
 			Expect(result.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(Equal(&metav1.Duration{Duration: 6 * time.Hour}))
 		})
 	})

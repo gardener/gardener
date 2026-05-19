@@ -70,7 +70,7 @@ func setDefaultsGardenlet(obj *GardenletConfig) {
 
 	// Set default merge with parent
 	if obj.MergeWithParent == nil {
-		obj.MergeWithParent = ptr.To(true)
+		obj.MergeWithParent = new(true)
 	}
 }
 

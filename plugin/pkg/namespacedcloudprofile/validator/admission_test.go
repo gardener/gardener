@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -52,8 +51,8 @@ var _ = Describe("Admission", func() {
 				},
 				Spec: gardencorev1beta1.CloudProfileSpec{
 					Kubernetes: gardencorev1beta1.KubernetesSettings{Versions: []gardencorev1beta1.ExpirableVersion{
-						{Version: "1.32.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-						{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
+						{Version: "1.32.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+						{Version: "1.31.0", Classification: new(gardencorev1beta1.ClassificationSupported)},
 						{Version: "1.30.0"},
 					}},
 					MachineImages: []gardencorev1beta1.MachineImage{
@@ -478,7 +477,7 @@ var _ = Describe("Admission", func() {
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{
 						Name:           "test-image",
-						UpdateStrategy: ptr.To(gardencore.UpdateStrategyPatch),
+						UpdateStrategy: new(gardencore.UpdateStrategyPatch),
 						Versions:       []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Now())}}},
 					},
 				}
@@ -499,7 +498,7 @@ var _ = Describe("Admission", func() {
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{
 						Name:           "test-image",
-						UpdateStrategy: ptr.To(gardencore.UpdateStrategyPatch),
+						UpdateStrategy: new(gardencore.UpdateStrategyPatch),
 						Versions:       []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: &oldExpirationTime}}},
 					},
 				}
@@ -508,7 +507,7 @@ var _ = Describe("Admission", func() {
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{
 						Name:           "test-image",
-						UpdateStrategy: ptr.To(gardencore.UpdateStrategyPatch),
+						UpdateStrategy: new(gardencore.UpdateStrategyPatch),
 						Versions:       []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: &newExpirationTime}}},
 					},
 				}
@@ -530,7 +529,7 @@ var _ = Describe("Admission", func() {
 						Versions: []gardencore.MachineImageVersion{
 							{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: new(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
 						},
-						UpdateStrategy: ptr.To(gardencore.UpdateStrategyMajor),
+						UpdateStrategy: new(gardencore.UpdateStrategyMajor),
 					},
 				}
 
@@ -550,7 +549,7 @@ var _ = Describe("Admission", func() {
 					{
 						Name:           "another-image",
 						Versions:       []gardencore.MachineImageVersion{},
-						UpdateStrategy: ptr.To(gardencore.UpdateStrategyMajor),
+						UpdateStrategy: new(gardencore.UpdateStrategyMajor),
 					},
 				}
 
@@ -619,7 +618,7 @@ var _ = Describe("Admission", func() {
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{Name: "test-image", Versions: []gardencore.MachineImageVersion{
 						{
-							ExpirableVersion:         gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate, Classification: ptr.To(gardencore.ClassificationSupported)},
+							ExpirableVersion:         gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate, Classification: new(gardencore.ClassificationSupported)},
 							CRI:                      []gardencore.CRI{{Name: "containerd"}},
 							Architectures:            []string{"amd64"},
 							CapabilityFlavors:        []gardencore.MachineImageFlavor{{Capabilities: gardencore.Capabilities{"architecture": []string{"amd64"}}}},
@@ -741,7 +740,7 @@ var _ = Describe("Admission", func() {
 					}},
 				}
 				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
-				namespacedCloudProfile.Spec.MachineImages[0].UpdateStrategy = ptr.To(gardencore.UpdateStrategyMajor)
+				namespacedCloudProfile.Spec.MachineImages[0].UpdateStrategy = new(gardencore.UpdateStrategyMajor)
 				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -1049,7 +1048,7 @@ var _ = Describe("Admission", func() {
 									Architectures: []string{"amd64"},
 								},
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+							UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMajor),
 						},
 					}
 

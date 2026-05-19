@@ -196,7 +196,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{v.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
@@ -318,17 +318,17 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    valiName,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
@@ -429,7 +429,7 @@ func (v *vali) getService() *corev1.Service {
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
 			Port:     new(intstr.FromInt32(valiconstants.ValiPort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}}
 	)
 
@@ -451,7 +451,7 @@ func (v *vali) getService() *corev1.Service {
 
 		networkPolicyPorts = append(networkPolicyPorts, networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(telegrafServicePort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		})
 	}
 
@@ -974,7 +974,7 @@ func (v *vali) getPrometheusRule() *monitoringv1.PrometheusRule {
 				Rules: []monitoringv1.Rule{{
 					Alert: "ValiDown",
 					Expr:  intstr.FromString(`absent(up{job="vali"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("30m")),
+					For:   new(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    valiServiceName,
 						"severity":   "warning",

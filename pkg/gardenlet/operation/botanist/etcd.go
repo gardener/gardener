@@ -75,12 +75,12 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 func getEvictionRequirement(c etcd.Class, s *shoot.Shoot) *string {
 	if c == etcd.ClassImportant && (s.Purpose == gardencorev1beta1.ShootPurposeProduction || s.Purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
-		return ptr.To(v1beta1constants.EvictionRequirementNever)
+		return new(v1beta1constants.EvictionRequirementNever)
 	}
 	if metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		return ptr.To(v1beta1constants.EvictionRequirementNever)
+		return new(v1beta1constants.EvictionRequirementNever)
 	}
-	return ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+	return new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 }
 
 // DeployEtcd deploys the etcd main and events.

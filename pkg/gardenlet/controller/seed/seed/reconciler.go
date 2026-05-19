@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -317,8 +316,8 @@ func selfHostedShootHasManagedInfrastructure(ctx context.Context, reader client.
 
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return []secretsutils.ConfigInterface{
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCASeed, CommonName: "kubernetes", CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAIstioBasicAuthServer, CommonName: "istio-basic-auth-server", CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCASeed, CommonName: "kubernetes", CertType: secretsutils.CACert, Validity: new(30 * 24 * time.Hour)},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAIstioBasicAuthServer, CommonName: "istio-basic-auth-server", CertType: secretsutils.CACert, Validity: new(30 * 24 * time.Hour)},
 	}
 }
 

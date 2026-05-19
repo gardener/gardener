@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	. "github.com/gardener/gardener/pkg/api/seedmanagement/validation"
@@ -222,11 +221,11 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
 					Deployment: &seedmanagement.GardenletDeployment{
 						Image: &seedmanagement.Image{
-							PullPolicy: ptr.To(corev1.PullIfNotPresent),
+							PullPolicy: new(corev1.PullIfNotPresent),
 						},
 					},
 					Config:          gardenletConfiguration(seedx, nil),
-					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
+					Bootstrap:       new(seedmanagement.BootstrapToken),
 					MergeWithParent: new(true),
 				}
 			})
@@ -248,13 +247,13 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					Image: &seedmanagement.Image{
 						Repository: new(""),
 						Tag:        new(""),
-						PullPolicy: ptr.To(corev1.PullPolicy("foo")),
+						PullPolicy: new(corev1.PullPolicy("foo")),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
 					PodAnnotations: map[string]string{"bar@": "baz"},
 				}
 				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedx, nil)
-				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.Bootstrap("foo"))
+				managedSeed.Spec.Gardenlet.Bootstrap = new(seedmanagement.Bootstrap("foo"))
 
 				errorList := ValidateManagedSeed(managedSeed)
 
@@ -372,7 +371,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 							Namespace: namespace,
 						},
 					})
-				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.BootstrapNone)
+				managedSeed.Spec.Gardenlet.Bootstrap = new(seedmanagement.BootstrapNone)
 				managedSeed.Spec.Gardenlet.MergeWithParent = new(false)
 
 				errorList := ValidateManagedSeed(managedSeed)
@@ -483,7 +482,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
 					Config:          gardenletConfiguration(seedx, nil),
-					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
+					Bootstrap:       new(seedmanagement.BootstrapToken),
 					MergeWithParent: new(true),
 				}
 
@@ -502,7 +501,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedxCopy.Spec.Backup.Provider = "bar"
 
 				newManagedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedxCopy, nil)
-				newManagedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.BootstrapServiceAccount)
+				newManagedSeed.Spec.Gardenlet.Bootstrap = new(seedmanagement.BootstrapServiceAccount)
 				newManagedSeed.Spec.Gardenlet.MergeWithParent = new(false)
 
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)

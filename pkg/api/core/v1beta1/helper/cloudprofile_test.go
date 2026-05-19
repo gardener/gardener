@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -135,7 +134,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining supported for deprecated classification field", func() {
 			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
-				Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+				Classification: new(gardencorev1beta1.ClassificationSupported),
 				Version:        "1.28.0",
 			})
 			Expect(classification).To(Equal(gardencorev1beta1.ClassificationSupported))
@@ -151,7 +150,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining preview for deprecated classification and expiration date field", func() {
 			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
-				Classification: ptr.To(gardencorev1beta1.ClassificationPreview),
+				Classification: new(gardencorev1beta1.ClassificationPreview),
 				Version:        "1.28.0",
 				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
 			})

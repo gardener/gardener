@@ -195,7 +195,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					"app":  "gardener",
 					"role": "apiserver",
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -223,7 +223,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt32(8443),
 				}},
-				TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferSameZone),
+				TrafficDistribution: new(corev1.ServiceTrafficDistributionPreferSameZone),
 			},
 		}
 
@@ -243,7 +243,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Name:       "gardener-apiserver",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -256,11 +256,11 @@ var _ = Describe("GardenerAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("12"),
 								corev1.ResourceMemory: resource.MustParse("48G"),
 							},
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -561,7 +561,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			AddressType: "IPv4",
 			Ports: []discoveryv1.EndpointPort{{
 				Port:     new(int32(443)),
-				Protocol: ptr.To(corev1.ProtocolTCP),
+				Protocol: new(corev1.ProtocolTCP),
 			}},
 			Endpoints: []discoveryv1.Endpoint{{
 				Addresses: []string{clusterIP},
@@ -678,7 +678,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					TargetPort: new(intstr.FromInt32(8443)),
-					Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme:     new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},

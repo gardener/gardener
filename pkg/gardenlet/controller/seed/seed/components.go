@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -682,7 +681,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
 		Replicas:          1,
-		Retention:         ptr.To(monitoringv1.Duration("1d")),
+		Retention:         new(monitoringv1.Duration("1d")),
 		RetentionSize:     "5GB",
 		HealthCheckBy:     prometheus.Gardenlet,
 		AdditionalPodLabels: map[string]string{
@@ -744,7 +743,7 @@ func (r *Reconciler) newAggregatePrometheus(
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
 		Replicas:          1,
-		Retention:         ptr.To(monitoringv1.Duration("30d")),
+		Retention:         new(monitoringv1.Duration("30d")),
 		RetentionSize:     "15GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},

@@ -243,6 +243,6 @@ func (v *vpa) reconcilePodDisruptionBudget(pdb *policyv1.PodDisruptionBudget, de
 	pdb.Spec = policyv1.PodDisruptionBudgetSpec{
 		MaxUnavailable:             new(intstr.FromInt32(1)),
 		Selector:                   deployment.Spec.Selector,
-		UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+		UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 	}
 }

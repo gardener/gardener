@@ -92,7 +92,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					Spec:       shoot.Spec,
 				},
 				UpdateStrategy: &seedmanagement.UpdateStrategy{
-					Type: ptr.To(seedmanagement.RollingUpdateStrategyType),
+					Type: new(seedmanagement.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagement.RollingUpdateStrategy{
 						Partition: ptr.To[int32](0),
 					},
@@ -208,7 +208,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid empty updateStrategy.type", func() {
-			managedSeedSet.Spec.UpdateStrategy.Type = ptr.To(seedmanagement.UpdateStrategyType(""))
+			managedSeedSet.Spec.UpdateStrategy.Type = new(seedmanagement.UpdateStrategyType(""))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -221,7 +221,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid unsupported updateStrategy.type", func() {
-			managedSeedSet.Spec.UpdateStrategy.Type = ptr.To(seedmanagement.UpdateStrategyType("OnDelete"))
+			managedSeedSet.Spec.UpdateStrategy.Type = new(seedmanagement.UpdateStrategyType("OnDelete"))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 

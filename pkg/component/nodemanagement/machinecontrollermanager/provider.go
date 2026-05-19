@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -96,7 +95,7 @@ func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamesp
 func ProviderSidecarVPAContainerPolicy(providerName string) vpaautoscalingv1.ContainerResourcePolicy {
 	return vpaautoscalingv1.ContainerResourcePolicy{
 		ContainerName:    providerSidecarContainerName(providerName),
-		ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+		ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 	}
 }
 

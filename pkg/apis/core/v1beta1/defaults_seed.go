@@ -70,7 +70,7 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 // SetDefaults_SeedSettingLoadBalancerServices sets defaults for SeedSettingLoadBalancerServices objects.
 func SetDefaults_SeedSettingLoadBalancerServices(obj *SeedSettingLoadBalancerServices) {
 	if obj.ZonalIngress == nil {
-		obj.ZonalIngress = &SeedSettingLoadBalancerServicesZonalIngress{Enabled: ptr.To(true)}
+		obj.ZonalIngress = &SeedSettingLoadBalancerServicesZonalIngress{Enabled: new(true)}
 	}
 }
 

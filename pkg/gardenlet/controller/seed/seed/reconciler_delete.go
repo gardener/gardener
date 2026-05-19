@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -443,7 +442,7 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 
 func ensureNoManagedResources(c client.Client) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
-		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, c, ptr.To(v1beta1constants.SeedResourceManagerClass), nil, nil)
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, c, new(v1beta1constants.SeedResourceManagerClass), nil, nil)
 		if err != nil {
 			return err
 		}

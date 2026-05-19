@@ -10,7 +10,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -89,8 +88,8 @@ var _ = Describe("Helper", func() {
 			Expect(IsFailureToleranceTypeZone(failureToleranceType)).To(Equal(expectedResult))
 		},
 
-		Entry("failureToleranceType is zone", ptr.To(gardencorev1beta1.FailureToleranceTypeZone), true),
-		Entry("failureToleranceType is node", ptr.To(gardencorev1beta1.FailureToleranceTypeNode), false),
+		Entry("failureToleranceType is zone", new(gardencorev1beta1.FailureToleranceTypeZone), true),
+		Entry("failureToleranceType is node", new(gardencorev1beta1.FailureToleranceTypeNode), false),
 		Entry("failureToleranceType is nil", nil, false),
 	)
 
@@ -99,8 +98,8 @@ var _ = Describe("Helper", func() {
 			Expect(IsFailureToleranceTypeNode(failureToleranceType)).To(Equal(expectedResult))
 		},
 
-		Entry("failureToleranceType is zone", ptr.To(gardencorev1beta1.FailureToleranceTypeZone), false),
-		Entry("failureToleranceType is node", ptr.To(gardencorev1beta1.FailureToleranceTypeNode), true),
+		Entry("failureToleranceType is zone", new(gardencorev1beta1.FailureToleranceTypeZone), false),
+		Entry("failureToleranceType is node", new(gardencorev1beta1.FailureToleranceTypeNode), true),
 		Entry("failureToleranceType is nil", nil, false),
 	)
 

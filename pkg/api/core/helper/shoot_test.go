@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -611,7 +610,7 @@ var _ = Describe("Helper", func() {
 			Entry("Type is set", &core.KubeAPIServerConfig{
 				EncryptionConfig: &core.EncryptionConfig{
 					Provider: core.EncryptionProvider{
-						Type: ptr.To(EncryptionProviderType),
+						Type: new(EncryptionProviderType),
 					},
 				},
 			}, "foo"),
@@ -651,9 +650,9 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("with nil", nil, false),
-		Entry("with AutoRollingUpdate update strategy", ptr.To(core.AutoRollingUpdate), false),
-		Entry("with AutoInPlaceUpdate update strategy", ptr.To(core.AutoInPlaceUpdate), true),
-		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(core.ManualInPlaceUpdate), true),
+		Entry("with AutoRollingUpdate update strategy", new(core.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", new(core.AutoInPlaceUpdate), true),
+		Entry("with ManualInPlaceUpdate  update strategy", new(core.ManualInPlaceUpdate), true),
 	)
 
 	DescribeTable("#IsLegacyAnonymousAuthenticationSet",
@@ -673,9 +672,9 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with KubeProxy in IPVS mode", nil, false),
 		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{}, false),
-		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: new(false), Mode: ptr.To(core.ProxyModeIPVS)}, false),
-		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: new(true), Mode: ptr.To(core.ProxyModeIPVS)}, true),
-		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: new(true), Mode: ptr.To(core.ProxyModeIPTables)}, false),
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: new(false), Mode: new(core.ProxyModeIPVS)}, false),
+		Entry("with KubeProxy in IPVS mode", &core.KubeProxyConfig{Enabled: new(true), Mode: new(core.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &core.KubeProxyConfig{Enabled: new(true), Mode: new(core.ProxyModeIPTables)}, false),
 	)
 
 	Describe("#IsShootSelfHosted", func() {

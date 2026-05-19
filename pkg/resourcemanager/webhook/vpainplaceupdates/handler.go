@@ -45,7 +45,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 	updateMode := ptr.Deref(vpa.Spec.UpdatePolicy.UpdateMode, vpaautoscalingv1.UpdateModeAuto)
 	if updateMode == vpaautoscalingv1.UpdateModeAuto || updateMode == vpaautoscalingv1.UpdateModeRecreate {
 		log.Info("Mutating VerticalPodAutoscaler with InPlaceOrRecreate update mode")
-		vpa.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)
+		vpa.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)
 		metav1.SetMetaDataLabel(&vpa.ObjectMeta, resourcesv1alpha1.VPAInPlaceUpdatesMutated, "true")
 	}
 

@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot/cluster"
 )
@@ -30,7 +29,7 @@ var _ = Describe("ScrapeConfig", func() {
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels: new(false),
-						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+						Scheme:      new(monitoringv1.SchemeHTTPS),
 						Params: map[string][]string{
 							"module": {"http_kubernetes_service"},
 							"target": {"https://kubernetes.default.svc.cluster.local/healthz"},

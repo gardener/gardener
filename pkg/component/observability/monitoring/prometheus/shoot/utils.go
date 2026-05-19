@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -62,7 +61,7 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 
 	return monitoringv1alpha1.ScrapeConfigSpec{
 		HonorLabels: new(false),
-		Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+		Scheme:      new(monitoringv1.SchemeHTTPS),
 		// This is needed because we do not fetch the correct cluster CA bundle right now
 		TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 		Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
@@ -71,7 +70,7 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 		}},
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 			Role:       sdConfig.Role,
-			APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+			APIServer:  new("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 			Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
@@ -112,7 +111,7 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 				Regex:        `(.+);(.+)`,
 				TargetLabel:  "__metrics_path__",
-				Replacement:  ptr.To("/api/v1/namespaces/" + metav1.NamespaceSystem + "/pods/${1}:${2}/proxy/metrics"),
+				Replacement:  new("/api/v1/namespaces/" + metav1.NamespaceSystem + "/pods/${1}:${2}/proxy/metrics"),
 			},
 		),
 		MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),

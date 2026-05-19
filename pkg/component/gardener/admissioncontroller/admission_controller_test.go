@@ -739,10 +739,10 @@ func service(namespace string, testValues Values) *corev1.Service {
 
 	if testValues.TopologyAwareRoutingEnabled {
 		if versionutils.ConstraintK8sGreaterEqual134.Check(testValues.RuntimeVersion) {
-			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+			svc.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferSameZone)
 		} else {
 			// For Kubernetes >= 1.32 (minimum supported version), use PreferClose
-			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+			svc.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferClose)
 		}
 	}
 
@@ -759,7 +759,7 @@ func podDisruptionBudget(namespace string) *policyv1.PodDisruptionBudget {
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: GetLabels()},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 }
@@ -816,7 +816,7 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 					},
 					{
 						ContainerName: "*",
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

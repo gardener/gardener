@@ -92,7 +92,7 @@ func run(ctx context.Context, log logr.Logger, cfg *schedulerconfigv1alpha1.Sche
 	mgr, err := manager.New(restCfg, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.GardenScheme,
-		GracefulShutdownTimeout: ptr.To(5 * time.Second),
+		GracefulShutdownTimeout: new(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		Metrics: metricsserver.Options{

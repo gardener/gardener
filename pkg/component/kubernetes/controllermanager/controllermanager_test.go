@@ -91,7 +91,7 @@ var _ = Describe("KubeControllerManager", func() {
 			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
-		clusterSigningDuration = ptr.To(time.Hour)
+		clusterSigningDuration = new(time.Hour)
 		controllerWorkers      = ControllerWorkers{
 			StatefulSet:         new(1),
 			Deployment:          new(2),
@@ -115,7 +115,7 @@ var _ = Describe("KubeControllerManager", func() {
 			ServiceAccountToken: new(0),
 		}
 		controllerSyncPeriods = ControllerSyncPeriods{
-			ResourceQuota: ptr.To(time.Minute),
+			ResourceQuota: new(time.Minute),
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -161,7 +161,7 @@ var _ = Describe("KubeControllerManager", func() {
 						"role": "controller-manager",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -175,17 +175,17 @@ var _ = Describe("KubeControllerManager", func() {
 						Name:       "kube-controller-manager",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "kube-controller-manager",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -242,7 +242,7 @@ var _ = Describe("KubeControllerManager", func() {
 					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "kubernetes", "role": "controller-manager"}},
 					Endpoints: []monitoringv1.Endpoint{{
 						Port:   "metrics",
-						Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+						Scheme: new(monitoringv1.SchemeHTTPS),
 						HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 							HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
@@ -293,7 +293,7 @@ var _ = Describe("KubeControllerManager", func() {
 						Rules: []monitoringv1.Rule{{
 							Alert:  "KubeControllerManagerDown",
 							Expr:   intstr.FromString(`absent(up{job="` + namePrefix + `kube-controller-manager"} == 1)`),
-							For:    ptr.To(monitoringv1.Duration("15m")),
+							For:    new(monitoringv1.Duration("15m")),
 							Labels: labels,
 							Annotations: map[string]string{
 								"summary":     "Kube Controller Manager is down.",

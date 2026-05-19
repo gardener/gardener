@@ -46,7 +46,7 @@ WantedBy=multi-user.target`),
 
 			logrotateTimerUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-logrotate.timer",
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Command: new(extensionsv1alpha1.CommandStart),
 				Enable:  new(true),
 				Content: new(`[Unit]
 Description=Log Rotation at each 10 minutes

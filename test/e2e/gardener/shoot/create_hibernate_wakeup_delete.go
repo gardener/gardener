@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -151,7 +150,7 @@ func addCustomMachineImage(namespacedCloudProfile *gardencorev1beta1.NamespacedC
 	namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 		{
 			Name:           "nscpfl-machine-image-1",
-			UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMinor),
+			UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMinor),
 			Versions: []gardencorev1beta1.MachineImageVersion{
 				{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1"}, Architectures: []string{"amd64"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
 			},

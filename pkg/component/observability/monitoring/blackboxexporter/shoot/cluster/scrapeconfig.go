@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -26,7 +25,7 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 		ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-exporter-k8s-service-check", namespace, shootprometheus.Label),
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
 			HonorLabels: new(false),
-			Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+			Scheme:      new(monitoringv1.SchemeHTTPS),
 			Params: map[string][]string{
 				"module": {moduleName},
 				"target": {"https://kubernetes.default.svc.cluster.local/healthz"},

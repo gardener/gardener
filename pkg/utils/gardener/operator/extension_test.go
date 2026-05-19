@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -108,7 +107,7 @@ var _ = Describe("Extension", func() {
 							Values: &apiextensionsv1.JSON{
 								Raw: []byte(`{"foo":"bar"}`),
 							},
-							Policy: ptr.To(gardencorev1beta1.ControllerDeploymentPolicyAlways),
+							Policy: new(gardencorev1beta1.ControllerDeploymentPolicyAlways),
 							SeedSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{"deploy-extension": "test"},
 							},

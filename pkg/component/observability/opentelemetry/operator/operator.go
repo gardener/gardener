@@ -404,7 +404,7 @@ func (o *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

@@ -12,7 +12,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -173,7 +172,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels:     new(false),
 					HonorTimestamps: new(false),
-					Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme:          new(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,
@@ -293,7 +292,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					HonorLabels: new(false),
-					Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme:      new(monitoringv1.SchemeHTTPS),
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,
@@ -304,7 +303,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					}}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 						Role:            monitoringv1alpha1.KubernetesRoleNode,
-						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+						APIServer:       new("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 						FollowRedirects: new(true),
 						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
@@ -374,7 +373,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels: new(false),
-						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+						Scheme:      new(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
 							Key:                  resourcesv1alpha1.DataKeyToken,
@@ -385,7 +384,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						}}},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:            monitoringv1alpha1.KubernetesRoleNode,
-							APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+							APIServer:       new("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 							FollowRedirects: new(true),
 							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{

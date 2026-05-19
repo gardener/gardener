@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component"
 )
@@ -45,12 +44,12 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 				// initial notification.
 				// This way ensures that you get multiple alerts for the same group that start firing shortly after
 				// another are batched together on the first notification.
-				GroupWait: ptr.To(monitoringv1.NonEmptyDuration("5m")),
+				GroupWait: new(monitoringv1.NonEmptyDuration("5m")),
 				// When the first notification was sent, wait 'group_interval' to send a batch of new alerts that
 				// started firing for that group.
-				GroupInterval: ptr.To(monitoringv1.NonEmptyDuration("5m")),
+				GroupInterval: new(monitoringv1.NonEmptyDuration("5m")),
 				// If an alert has successfully been sent, wait 'repeat_interval' to resend them.
-				RepeatInterval: ptr.To(monitoringv1.NonEmptyDuration("72h")),
+				RepeatInterval: new(monitoringv1.NonEmptyDuration("72h")),
 				// Send alerts by default to nowhere
 				Receiver: "dev-null",
 				// email only for critical and blocker

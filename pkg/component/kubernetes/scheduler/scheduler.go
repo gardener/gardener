@@ -176,7 +176,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     new(intstr.FromInt32(port)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()
@@ -335,7 +335,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -350,17 +350,17 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Name:       v1beta1constants.DeploymentNameKubeScheduler,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    containerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff)},
 			},
 		}
 		return nil
@@ -377,7 +377,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					{
 						Alert: "KubeSchedulerDown",
 						Expr:  intstr.FromString(`absent(up{job="kube-scheduler"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeScheduler,
 							"severity":   "critical",
@@ -450,7 +450,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port:   portNameMetrics,
-				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme: new(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},

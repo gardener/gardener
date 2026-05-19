@@ -519,7 +519,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
 									Path: volumeMountPathXtablesLock,
-									Type: ptr.To(corev1.HostPathFileOrCreate),
+									Type: new(corev1.HostPathFileOrCreate),
 								},
 							},
 						},

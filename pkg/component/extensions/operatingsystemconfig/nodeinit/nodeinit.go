@@ -128,7 +128,7 @@ func generateInitScript(nodeAgentImage string) ([]byte, error) {
 func generateInitScriptUnit(unitName, binaryName, filePath string) extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    unitName,
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=Downloads the ` + binaryName + ` binary from the container registry and bootstraps it.

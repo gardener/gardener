@@ -217,12 +217,12 @@ func (i *istioBasicAuthServer) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler 
 				Name:       i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 					ContainerName:    name,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				}},
 			},
 		},

@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -593,7 +592,7 @@ status: {}
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: new(false),
-				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
 				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -669,7 +668,7 @@ status: {}
 						{
 							Alert: "CoreDNSDown",
 							Expr:  intstr.FromString(`absent(up{job="coredns"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("20m")),
+							For:   new(monitoringv1.Duration("20m")),
 							Labels: map[string]string{
 								"service":    "kube-dns",
 								"severity":   "critical",

@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -56,7 +55,7 @@ var _ = Describe("NodeExporter", func() {
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: new(false),
-				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
 				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -132,7 +131,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "NodeExporterDown",
 							Expr:  intstr.FromString(`absent(up{job="node-exporter"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "warning",
@@ -147,7 +146,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "K8SNodeOutOfDisk",
 							Expr:  intstr.FromString(`kube_node_status_condition{condition="OutOfDisk", status="true"} == 1`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "critical",
@@ -162,7 +161,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "K8SNodeMemoryPressure",
 							Expr:  intstr.FromString(`kube_node_status_condition{condition="MemoryPressure", status="true"} == 1`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "warning",
@@ -177,7 +176,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "K8SNodeDiskPressure",
 							Expr:  intstr.FromString(`kube_node_status_condition{condition="DiskPressure", status="true"} == 1`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "warning",
@@ -196,7 +195,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "VMRootfsFull",
 							Expr:  intstr.FromString(`node_filesystem_free{mountpoint="/"} < 1024`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "critical",
@@ -211,7 +210,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "VMConntrackTableFull",
 							Expr:  intstr.FromString(`instance:conntrack_entries_usage:percent > 90`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "critical",

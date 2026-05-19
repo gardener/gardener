@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -531,10 +530,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							},
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: ptr.To(corev1.ProtocolUDP), Port: new(intstr.FromInt32(53))},
-							{Protocol: ptr.To(corev1.ProtocolTCP), Port: new(intstr.FromInt32(53))},
-							{Protocol: ptr.To(corev1.ProtocolUDP), Port: new(intstr.FromInt32(8053))},
-							{Protocol: ptr.To(corev1.ProtocolTCP), Port: new(intstr.FromInt32(8053))},
+							{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(53))},
+							{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(53))},
+							{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(8053))},
+							{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(8053))},
 						},
 					}},
 				}

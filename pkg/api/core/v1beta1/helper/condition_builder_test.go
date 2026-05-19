@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -140,7 +139,7 @@ var _ = Describe("Builder", func() {
 			},
 				Entry("reason is not set", nil, initializedReason),
 				Entry("empty reason is set", new(""), unspecifiedReason),
-				Entry("reason is set", ptr.To(bazReason), bazReason),
+				Entry("reason is set", new(bazReason), bazReason),
 			)
 
 			DescribeTable("With old condition", func(reason *string, previousReason, expectedReason string) {
@@ -210,7 +209,7 @@ var _ = Describe("Builder", func() {
 			},
 				Entry("message is not set", nil, uninitializedMessage),
 				Entry("empty message is set", new(""), unspecifiedMessage),
-				Entry("message is set", ptr.To(fubarMessage), fubarMessage),
+				Entry("message is set", new(fubarMessage), fubarMessage),
 			)
 
 			DescribeTable("With old condition", func(message *string, previousMessage, expectedMessage string) {

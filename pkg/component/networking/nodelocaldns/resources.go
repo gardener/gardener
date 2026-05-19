@@ -389,7 +389,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						Name:      volumeMountNameGeneratedConfig,
 					},
 				},
-				RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
+				RestartPolicy: new(corev1.ContainerRestartPolicyAlways),
 			})
 
 			daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -428,11 +428,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    containerName,
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
 							{
 								ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},

@@ -7,7 +7,6 @@ package cluster
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -24,7 +23,7 @@ func PrometheusRule(namespace string) []*monitoringv1.PrometheusRule {
 					{
 						Alert: "ApiServerUnreachableViaKubernetesService",
 						Expr:  intstr.FromString(`probe_success{job="blackbox-exporter-k8s-service-check"} == 0 or absent(probe_success{job="blackbox-exporter-k8s-service-check", instance="https://kubernetes.default.svc.cluster.local/healthz"})`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "apiserver-connectivity-check",
 							"severity":   "critical",

@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -73,7 +72,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		worker = &gardencorev1beta1.Worker{
 			Name: "control-plane",
 			Machine: gardencorev1beta1.Machine{
-				Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+				Architecture: new(v1beta1constants.ArchitectureAMD64),
 				Image: &gardencorev1beta1.ShootMachineImage{
 					Name:    "type1",
 					Version: new("12.34"),

@@ -52,7 +52,7 @@ WantedBy=multi-user.target`),
 
 	timerUnit := extensionsv1alpha1.Unit{
 		Name:    prefix + "-logrotate.timer",
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=Log Rotation at each 10 minutes

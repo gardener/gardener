@@ -7,7 +7,6 @@ package terminal
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -30,8 +29,8 @@ func (t *terminal) mutatingWebhookConfiguration(caBundle []byte) *admissionregis
 				URL:      new("https://" + name + "." + t.namespace + ".svc/mutate-terminal"),
 				CABundle: caBundle,
 			},
-			FailurePolicy: ptr.To(admissionregistrationv1.Fail),
-			SideEffects:   ptr.To(admissionregistrationv1.SideEffectClassNone),
+			FailurePolicy: new(admissionregistrationv1.Fail),
+			SideEffects:   new(admissionregistrationv1.SideEffectClassNone),
 			Rules:         webhookRules,
 		}},
 	}
@@ -50,8 +49,8 @@ func (t *terminal) validatingWebhookConfiguration(caBundle []byte) *admissionreg
 				URL:      new("https://" + name + "." + t.namespace + ".svc/validate-terminal"),
 				CABundle: caBundle,
 			},
-			FailurePolicy: ptr.To(admissionregistrationv1.Fail),
-			SideEffects:   ptr.To(admissionregistrationv1.SideEffectClassNone),
+			FailurePolicy: new(admissionregistrationv1.Fail),
+			SideEffects:   new(admissionregistrationv1.SideEffectClassNone),
 			Rules:         webhookRules,
 		}},
 	}

@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -309,7 +308,7 @@ var _ = Describe("helper", func() {
 			Entry("Type is set", &operatorv1alpha1.GardenerAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(EncryptionProviderType),
+						Type: new(EncryptionProviderType),
 					},
 				},
 			}, "foo"),
@@ -340,7 +339,7 @@ var _ = Describe("helper", func() {
 				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
-							Type: ptr.To(EncryptionProviderType),
+							Type: new(EncryptionProviderType),
 						},
 					},
 				},

@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 )
@@ -141,7 +140,7 @@ metric_relabel_configs:
 							HonorLabels:     new(true),
 							HonorTimestamps: new(false),
 							MetricsPath:     new("/federate"),
-							Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
+							Scheme:          new(monitoringv1.SchemeHTTPS),
 							Params: map[string][]string{
 								"match[]": {
 									`{__name__=~"seed:(.+):count"}`,

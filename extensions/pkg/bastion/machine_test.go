@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/extensions/pkg/bastion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -68,7 +67,7 @@ var _ = Describe("Bastion VM Details", func() {
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version:        desired.ImageVersion,
-								Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+								Classification: new(gardencorev1beta1.ClassificationSupported),
 							},
 							Architectures: []string{desired.Architecture, v1beta1constants.ArchitectureARM64},
 							CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{

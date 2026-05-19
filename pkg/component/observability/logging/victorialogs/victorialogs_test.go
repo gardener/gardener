@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -156,13 +155,13 @@ var _ = Describe("VictoriaLogs", func() {
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "vlsingle",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 					},
 				},
@@ -203,7 +202,7 @@ var _ = Describe("VictoriaLogs", func() {
 					Rules: []monitoringv1.Rule{{
 						Alert: "VictoriaLogsDown",
 						Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "logging",
 							"severity":   "warning",
@@ -526,7 +525,7 @@ func getVictoriaLogsPrometheusRule(label string) *monitoringv1.PrometheusRule {
 				Rules: []monitoringv1.Rule{{
 					Alert: "VictoriaLogsDown",
 					Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("30m")),
+					For:   new(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
 						"severity":   "warning",

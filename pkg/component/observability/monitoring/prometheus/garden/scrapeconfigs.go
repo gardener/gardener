@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -93,7 +92,7 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: federation.targets}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{{
 				Action:      "replace",
-				Replacement: ptr.To("prometheus-" + aggregate.Label),
+				Replacement: new("prometheus-" + aggregate.Label),
 				TargetLabel: "job",
 			}},
 			MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -104,7 +103,7 @@ func newScrapeConfigForFederation(federation federationConfig) *monitoringv1alph
 	}
 
 	if federation.isIngress {
-		config.Spec.Scheme = ptr.To(monitoringv1.SchemeHTTPS)
+		config.Spec.Scheme = new(monitoringv1.SchemeHTTPS)
 		config.Spec.TLSConfig = &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}
 		config.Spec.BasicAuth = &monitoringv1.BasicAuth{
 			Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: federation.secret.Name}, Key: secretsutils.DataKeyUserName},

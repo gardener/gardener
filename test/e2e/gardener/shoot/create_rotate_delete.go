@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -444,13 +443,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				BeforeTestSetup(func() {
 					shoot := DefaultShoot("e2e-rot-ip")
 
-					worker1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
+					worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
 					worker1.Minimum = 2
 					worker1.Maximum = 2
 					worker1.MaxUnavailable = new(intstr.FromInt(1))
 					worker1.MaxSurge = new(intstr.FromInt(0))
 
-					worker2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
+					worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
 					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{worker1, worker2}
 
@@ -488,13 +487,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				BeforeTestSetup(func() {
 					shoot := DefaultShoot("e2e-rot-nr-ip")
 
-					worker1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
+					worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
 					worker1.Minimum = 2
 					worker1.Maximum = 2
 					worker1.MaxUnavailable = new(intstr.FromInt(1))
 					worker1.MaxSurge = new(intstr.FromInt(0))
 
-					worker2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
+					worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
 					// Add a third worker pool when worker rollout should not be performed such that we can make proper
 					// assertions of the shoot status

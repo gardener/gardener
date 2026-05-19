@@ -129,7 +129,7 @@ func (k *kubeStateMetrics) service() *corev1.Service {
 
 	metricsPort := networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(port)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Protocol: new(corev1.ProtocolTCP),
 	}
 
 	switch k.values.ClusterType {
@@ -328,7 +328,7 @@ func (k *kubeStateMetrics) verticalPodAutoscaler(deployment *appsv1.Deployment) 
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
@@ -343,7 +343,7 @@ func (k *kubeStateMetrics) podDisruptionBudget(deployment *appsv1.Deployment) *p
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 		MaxUnavailable:             new(intstr.FromInt32(1)),
 		Selector:                   deployment.Spec.Selector,
-		UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+		UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 	}
 
 	return podDisruptionBudget
@@ -633,7 +633,7 @@ func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 		{
 			Alert: "KubeStateMetricsSeedDown",
 			Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
-			For:   ptr.To(monitoringv1.Duration("15m")),
+			For:   new(monitoringv1.Duration("15m")),
 			Labels: map[string]string{
 				"service":    "kube-state-metrics-seed",
 				"severity":   "critical",
@@ -648,7 +648,7 @@ func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 		{
 			Alert: "KubeStateMetricsShootDown",
 			Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
-			For:   ptr.To(monitoringv1.Duration("15m")),
+			For:   new(monitoringv1.Duration("15m")),
 			Labels: map[string]string{
 				"service":    "kube-state-metrics-shoot",
 				"severity":   "info",
@@ -663,7 +663,7 @@ func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 		{
 			Alert: "NoWorkerNodes",
 			Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
-			For:   ptr.To(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
+			For:   new(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
 			Labels: map[string]string{
 				"service":    "nodes",
 				"severity":   "blocker",

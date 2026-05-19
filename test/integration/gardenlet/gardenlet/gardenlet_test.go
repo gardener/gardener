@@ -90,7 +90,7 @@ var _ = Describe("Gardenlet controller test", func() {
 						ReplicaCount:         ptr.To[int32](1),
 						RevisionHistoryLimit: ptr.To[int32](1),
 						Image: &seedmanagementv1alpha1.Image{
-							PullPolicy: ptr.To(corev1.PullIfNotPresent),
+							PullPolicy: new(corev1.PullIfNotPresent),
 						},
 					},
 				},

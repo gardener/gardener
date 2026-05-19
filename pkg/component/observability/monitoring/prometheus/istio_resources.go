@@ -43,7 +43,7 @@ func (p *prometheus) istioResources(ctx context.Context) ([]client.Object, error
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{p.values.Ingress.Host},
 			CertType:                    secretsutils.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(p.values.Ingress.SigningCA))
 		if err != nil {

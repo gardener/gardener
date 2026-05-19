@@ -148,7 +148,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{o.values.IngressHost, o.values.ValiHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
 		if err != nil {

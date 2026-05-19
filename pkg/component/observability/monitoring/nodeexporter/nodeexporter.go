@@ -129,7 +129,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "NodeExporterDown",
 						Expr:  intstr.FromString(`absent(up{job="` + name + `"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "warning",
@@ -144,7 +144,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "K8SNodeOutOfDisk",
 						Expr:  intstr.FromString(`kube_node_status_condition{condition="OutOfDisk", status="true"} == 1`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "critical",
@@ -159,7 +159,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "K8SNodeMemoryPressure",
 						Expr:  intstr.FromString(`kube_node_status_condition{condition="MemoryPressure", status="true"} == 1`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "warning",
@@ -174,7 +174,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "K8SNodeDiskPressure",
 						Expr:  intstr.FromString(`kube_node_status_condition{condition="DiskPressure", status="true"} == 1`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "warning",
@@ -193,7 +193,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "VMRootfsFull",
 						Expr:  intstr.FromString(`node_filesystem_free{mountpoint="/"} < 1024`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "critical",
@@ -208,7 +208,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "VMConntrackTableFull",
 						Expr:  intstr.FromString(`instance:conntrack_entries_usage:percent > 90`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "critical",
@@ -493,7 +493,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

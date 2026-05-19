@@ -594,7 +594,7 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             &maxUnavailable,
 			Selector:                   &metav1.LabelSelector{},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 
@@ -844,8 +844,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
-			ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
-			Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
+			ServiceName: new(v1beta1constants.DefaultSNIIngressServiceName),
+			Namespace:   new(v1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
 		Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{

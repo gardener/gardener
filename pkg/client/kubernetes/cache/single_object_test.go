@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,7 +34,7 @@ var _ = Describe("SingleObject", func() {
 		obj        *corev1.Secret
 		gvk        = corev1.SchemeGroupVersion.WithKind("Secret")
 		key        client.ObjectKey
-		syncPeriod = ptr.To(time.Second)
+		syncPeriod = new(time.Second)
 
 		mockCache         *mockcache.MockCache
 		singleObjectCache cache.Cache

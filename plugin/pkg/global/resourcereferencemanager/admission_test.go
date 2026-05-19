@@ -25,7 +25,6 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -3590,9 +3589,9 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should succeed if a used and extended kubernetes version already expired is not modified", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.32.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated)},
+					{Version: "1.32.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.31.0", Classification: new(gardencorev1beta1.ClassificationSupported)},
+					{Version: "1.30.0", Classification: new(gardencorev1beta1.ClassificationDeprecated)},
 				}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
@@ -3626,8 +3625,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should succeed if an extended and used Kubernetes version is removed with the base version still being valid", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
+					{Version: "1.31.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.30.0", Classification: new(gardencorev1beta1.ClassificationSupported)},
 				}
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3660,8 +3659,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should fail if an extended and used Kubernetes version is being removed with the base version being already expired", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
+					{Version: "1.31.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.30.0", Classification: new(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
 				}
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -3732,8 +3731,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should succeed if a kubernetes version extended before but not used anymore is removed", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.31.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
-					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
+					{Version: "1.31.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.30.0", Classification: new(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
 				}
 
 				namespacedCloudProfile := &core.NamespacedCloudProfile{

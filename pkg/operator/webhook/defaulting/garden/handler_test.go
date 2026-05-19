@@ -50,7 +50,7 @@ var _ = Describe("Handler", func() {
 					},
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
-							Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+							Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 						},
 					},
 				},
@@ -58,7 +58,7 @@ var _ = Describe("Handler", func() {
 			defaultGardenAPIServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+						Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 					},
 				},
 			}
@@ -99,7 +99,7 @@ var _ = Describe("Handler", func() {
 					Requests: customRequests,
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
-							Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+							Type: new(gardencorev1beta1.EncryptionProviderType("")),
 						},
 					},
 				},
@@ -114,7 +114,7 @@ var _ = Describe("Handler", func() {
 					},
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
-							Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+							Type: new(gardencorev1beta1.EncryptionProviderType("")),
 						},
 					},
 				},
@@ -138,7 +138,7 @@ var _ = Describe("Handler", func() {
 			garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+						Type: new(gardencorev1beta1.EncryptionProviderType("")),
 					},
 				},
 			}
@@ -148,7 +148,7 @@ var _ = Describe("Handler", func() {
 			Expect(garden.Spec.VirtualCluster.Gardener.APIServer).To(Equal(&operatorv1alpha1.GardenerAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(gardencorev1beta1.EncryptionProviderType("")),
+						Type: new(gardencorev1beta1.EncryptionProviderType("")),
 					},
 				},
 			}))

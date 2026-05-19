@@ -234,7 +234,7 @@ var _ = Describe("Alertmanager", func() {
 					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -246,12 +246,12 @@ var _ = Describe("Alertmanager", func() {
 							MaxAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("200Mi"),
 							},
-							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues:    new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -265,9 +265,9 @@ var _ = Describe("Alertmanager", func() {
 			Spec: monitoringv1alpha1.AlertmanagerConfigSpec{
 				Route: &monitoringv1alpha1.Route{
 					GroupBy:        []string{"service"},
-					GroupWait:      ptr.To(monitoringv1.NonEmptyDuration("5m")),
-					GroupInterval:  ptr.To(monitoringv1.NonEmptyDuration("5m")),
-					RepeatInterval: ptr.To(monitoringv1.NonEmptyDuration("72h")),
+					GroupWait:      new(monitoringv1.NonEmptyDuration("5m")),
+					GroupInterval:  new(monitoringv1.NonEmptyDuration("5m")),
+					RepeatInterval: new(monitoringv1.NonEmptyDuration("72h")),
 					Receiver:       "dev-null",
 					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"matchers":[{"matchType":"=~","name":"visibility","value":"all|operator"}],"receiver":"email-kubernetes-ops"}`)}},
 				},
@@ -459,7 +459,7 @@ var _ = Describe("Alertmanager", func() {
 					"role":         "monitoring",
 					"alertmanager": name,
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 	})

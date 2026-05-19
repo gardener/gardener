@@ -82,7 +82,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: new(false),
-				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
 				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -157,7 +157,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: new(false),
-				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
 				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -630,7 +630,7 @@ status:
 								Name:      "generated-config",
 							},
 						},
-						RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways),
+						RestartPolicy: new(corev1.ContainerRestartPolicyAlways),
 					})
 
 					daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{

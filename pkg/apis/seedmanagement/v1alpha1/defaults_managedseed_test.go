@@ -140,8 +140,8 @@ var _ = Describe("Defaults", func() {
 						},
 					}),
 				},
-				Bootstrap:       ptr.To(BootstrapServiceAccount),
-				MergeWithParent: ptr.To(false),
+				Bootstrap:       new(BootstrapServiceAccount),
+				MergeWithParent: new(false),
 			}
 
 			SetObjectDefaults_ManagedSeed(obj)
@@ -216,21 +216,21 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				PullPolicy: ptr.To(corev1.PullIfNotPresent),
+				PullPolicy: new(corev1.PullIfNotPresent),
 			}))
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
 			obj.Spec.Gardenlet = GardenletConfig{
 				Deployment: &GardenletDeployment{
-					Image: &Image{Tag: ptr.To("latest")},
+					Image: &Image{Tag: new("latest")},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        ptr.To("latest"),
-				PullPolicy: ptr.To(corev1.PullAlways),
+				Tag:        new("latest"),
+				PullPolicy: new(corev1.PullAlways),
 			}))
 		})
 
@@ -238,16 +238,16 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Gardenlet = GardenletConfig{
 				Deployment: &GardenletDeployment{
 					Image: &Image{
-						Tag:        ptr.To("foo"),
-						PullPolicy: ptr.To(corev1.PullNever),
+						Tag:        new("foo"),
+						PullPolicy: new(corev1.PullNever),
 					},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        ptr.To("foo"),
-				PullPolicy: ptr.To(corev1.PullNever),
+				Tag:        new("foo"),
+				PullPolicy: new(corev1.PullNever),
 			}))
 		})
 	})

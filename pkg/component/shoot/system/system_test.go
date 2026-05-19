@@ -20,7 +20,6 @@ import (
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -284,7 +283,7 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
+										Protocol: new(corev1.ProtocolTCP),
 										Port:     new(intstr.FromInt32(443)),
 									},
 								},
@@ -314,11 +313,11 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolUDP),
+										Protocol: new(corev1.ProtocolUDP),
 										Port:     new(intstr.FromInt32(8053)),
 									},
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
+										Protocol: new(corev1.ProtocolTCP),
 										Port:     new(intstr.FromInt32(8053)),
 									},
 								},
@@ -339,11 +338,11 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolUDP),
+										Protocol: new(corev1.ProtocolUDP),
 										Port:     new(intstr.FromInt32(53)),
 									},
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
+										Protocol: new(corev1.ProtocolTCP),
 										Port:     new(intstr.FromInt32(53)),
 									},
 								},
@@ -396,7 +395,7 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
+										Protocol: new(corev1.ProtocolTCP),
 										Port:     new(intstr.FromInt32(10250)),
 									},
 								},

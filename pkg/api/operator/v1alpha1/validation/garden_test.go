@@ -1935,12 +1935,12 @@ var _ = Describe("Validation Tests", func() {
 						It("should deny specifying different encryption provider types for k8s and gardener api server", func() {
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Provider: gardencorev1beta1.EncryptionProvider{
-									Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+									Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 								},
 							}
 							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Provider: gardencorev1beta1.EncryptionProvider{
-									Type: ptr.To(gardencorev1beta1.EncryptionProviderType("foo")),
+									Type: new(gardencorev1beta1.EncryptionProviderType("foo")),
 								},
 							}
 
@@ -1956,7 +1956,7 @@ var _ = Describe("Validation Tests", func() {
 						It("should deny specifying different encryption provider types for k8s and gardener api server, when garden api server provider is nil", func() {
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Provider: gardencorev1beta1.EncryptionProvider{
-									Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+									Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 								},
 							}
 							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{}
@@ -1973,12 +1973,12 @@ var _ = Describe("Validation Tests", func() {
 						It("should deny specifying invalid encryption provider type for k8s and gardener api server", func() {
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Provider: gardencorev1beta1.EncryptionProvider{
-									Type: ptr.To(gardencorev1beta1.EncryptionProviderType("foo")),
+									Type: new(gardencorev1beta1.EncryptionProviderType("foo")),
 								},
 							}
 							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 								Provider: gardencorev1beta1.EncryptionProvider{
-									Type: ptr.To(gardencorev1beta1.EncryptionProviderType("foo")),
+									Type: new(gardencorev1beta1.EncryptionProviderType("foo")),
 								},
 							}
 

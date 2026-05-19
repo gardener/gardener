@@ -1649,14 +1649,14 @@ var _ = Describe("Shoot", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To(networkingType),
+						Type: new(networkingType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: extensionType1},
 					},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
-							{Type: ptr.To(dnsProviderType3)},
+							{Type: new(dnsProviderType3)},
 						},
 					},
 				},

@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -101,8 +100,8 @@ var _ = Describe("KubeAPIServer", func() {
 				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 					SNI: &gardenletconfigv1alpha1.SNI{
 						Ingress: &gardenletconfigv1alpha1.SNIIngress{
-							Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
-							ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
+							Namespace:   new(v1beta1constants.DefaultSNIIngressNamespace),
+							ServiceName: new(v1beta1constants.DefaultSNIIngressServiceName),
 							Labels: map[string]string{
 								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
 								"istio":                   "ingressgateway",

@@ -160,7 +160,7 @@ var _ = Describe("VPNShoot", func() {
 						{
 							Alert: "VPNShootNoPods",
 							Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="vpn-shoot"} == 0`),
-							For:   ptr.To(monitoringv1.Duration("30m")),
+							For:   new(monitoringv1.Duration("30m")),
 							Labels: map[string]string{
 								"service":    "vpn",
 								"severity":   "critical",
@@ -175,7 +175,7 @@ var _ = Describe("VPNShoot", func() {
 						{
 							Alert: "VPNHAShootNoPods",
 							Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="vpn-shoot"} == 0`),
-							For:   ptr.To(monitoringv1.Duration("30m")),
+							For:   new(monitoringv1.Duration("30m")),
 							Labels: map[string]string{
 								"service":    "vpn",
 								"severity":   "critical",
@@ -190,7 +190,7 @@ var _ = Describe("VPNShoot", func() {
 						{
 							Alert: "VPNProbeAPIServerProxyFailed",
 							Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
-							For:   ptr.To(monitoringv1.Duration("30m")),
+							For:   new(monitoringv1.Duration("30m")),
 							Labels: map[string]string{
 								"service":    "vpn-test",
 								"severity":   "critical",
@@ -316,20 +316,20 @@ var _ = Describe("VPNShoot", func() {
 						Name:       "vpn-shoot",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "vpn-shoot",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -357,35 +357,35 @@ var _ = Describe("VPNShoot", func() {
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "vpn-shoot-s0",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName:    "vpn-shoot-s1",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName:    "vpn-shoot-s2",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName:    "tunnel-controller",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -407,7 +407,7 @@ var _ = Describe("VPNShoot", func() {
 							"app": "vpn-shoot",
 						},
 					},
-					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+					UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 				},
 			}
 
@@ -969,7 +969,7 @@ var _ = Describe("VPNShoot", func() {
 
 					vpaCopy := vpaHA.DeepCopy()
 					if values.VPAUpdateDisabled {
-						vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+						vpaCopy.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeOff)
 					}
 
 					Expect(managedResource).To(contain(
@@ -996,7 +996,7 @@ var _ = Describe("VPNShoot", func() {
 						)
 
 						vpaCopy := vpaHA.DeepCopy()
-						vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+						vpaCopy.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeOff)
 
 						Expect(managedResource).To(contain(
 							vpaCopy,

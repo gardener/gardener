@@ -90,7 +90,7 @@ var _ = Describe("#Wait", func() {
 				Begin: "1234",
 				End:   "5678",
 			},
-			EvictionRequirement: ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly),
+			EvictionRequirement: new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly),
 		})
 
 		expected = &druidcorev1alpha1.Etcd{

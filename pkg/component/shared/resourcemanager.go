@@ -52,7 +52,7 @@ func runtimeGardenerResourceManagerDefaultValues() resourcemanager.Values {
 		PodTopologySpreadConstraintsEnabled: false,
 		VPAInPlaceUpdatesEnabled:            false,
 		Replicas:                            ptr.To[int32](2),
-		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
+		ResourceClass:                       new(v1beta1constants.SeedResourceManagerClass),
 		ResponsibilityMode:                  resourcemanager.ForRuntime,
 	}
 }
@@ -255,7 +255,7 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
 			Organization:                []string{user.SystemPrivilegedGroup},
 			CertType:                    secretsutils.ClientCert,
-			Validity:                    ptr.To(10 * time.Minute),
+			Validity:                    new(10 * time.Minute),
 			SkipPublishingCACertificate: true,
 		},
 		KubeConfigRequests: []secretsutils.KubeConfigRequest{{

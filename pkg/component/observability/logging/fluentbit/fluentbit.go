@@ -204,7 +204,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 						{
 							Alert: "FluentBitDown",
 							Expr:  intstr.FromString(`absent(up{job="fluent-bit"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("15m")),
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "logging",
 								"severity":   "warning",
@@ -219,7 +219,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 						{
 							Alert: "FluentBitIdleInputPlugins",
 							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m])) == 0`),
-							For:   ptr.To(monitoringv1.Duration("6h")),
+							For:   new(monitoringv1.Duration("6h")),
 							Labels: map[string]string{
 								"service":    "logging",
 								"severity":   "warning",

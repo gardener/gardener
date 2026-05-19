@@ -171,7 +171,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for leader election settings", func() {
 			expectedLeaderElection := componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       ptr.To(true),
+				LeaderElect:       new(true),
 				ResourceLock:      "foo",
 				RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
@@ -210,14 +210,14 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Garden: GardenControllerConfig{
-							ConcurrentSyncs: ptr.To(5),
+							ConcurrentSyncs: new(5),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 							ETCDConfig: &v1alpha1.ETCDConfig{
 								ETCDController:      &v1alpha1.ETCDController{Workers: ptr.To[int64](5)},
 								CustodianController: &v1alpha1.CustodianController{Workers: ptr.To[int64](5)},
 								BackupCompactionController: &v1alpha1.BackupCompactionController{
 									Workers:                   ptr.To[int64](4),
-									EnableBackupCompaction:    ptr.To(true),
+									EnableBackupCompaction:    new(true),
 									EventsThreshold:           ptr.To[int64](900000),
 									MetricsScrapeWaitDuration: &metav1.Duration{Duration: 30 * time.Second},
 								},
@@ -272,7 +272,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Extension: ExtensionControllerConfiguration{
-							ConcurrentSyncs: ptr.To(2),
+							ConcurrentSyncs: new(2),
 						},
 					},
 				}
@@ -295,7 +295,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionCare: ExtensionCareControllerConfiguration{
-							ConcurrentSyncs: ptr.To(2),
+							ConcurrentSyncs: new(2),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 						},
 					},
@@ -319,7 +319,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionRequiredRuntime: ExtensionRequiredRuntimeControllerConfiguration{
-							ConcurrentSyncs: ptr.To(2),
+							ConcurrentSyncs: new(2),
 						},
 					},
 				}
@@ -341,7 +341,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionRequiredVirtual: ExtensionRequiredVirtualControllerConfiguration{
-							ConcurrentSyncs: ptr.To(2),
+							ConcurrentSyncs: new(2),
 						},
 					},
 				}

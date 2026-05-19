@@ -55,7 +55,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Target:         extensionswebhook.TargetShoot,
 		Path:           WebhookName,
 		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: new(true)},
-		FailurePolicy:  ptr.To(admissionregistrationv1.Ignore),
+		FailurePolicy:  new(admissionregistrationv1.Ignore),
 		TimeoutSeconds: ptr.To[int32](5),
 	}, nil
 }

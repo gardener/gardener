@@ -141,7 +141,7 @@ var _ = Describe("Infrastructure", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						// Nodes:    ptr.To(nodesCIDRs[0]),
+						// Nodes:    new(nodesCIDRs[0]),
 						Pods:     new(podsCIDRs[0]),
 						Services: new(servicesCIDRs[0]),
 					},

@@ -240,7 +240,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					Spec:       shoot.Spec,
 				},
 				UpdateStrategy: &seedmanagementv1alpha1.UpdateStrategy{
-					Type: ptr.To(seedmanagementv1alpha1.RollingUpdateStrategyType),
+					Type: new(seedmanagementv1alpha1.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagementv1alpha1.RollingUpdateStrategy{
 						Partition: ptr.To[int32](0),
 					},

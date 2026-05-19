@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -1740,9 +1739,9 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("with nil", nil, false),
-		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
-		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), true),
-		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+		Entry("with AutoRollingUpdate update strategy", new(gardencorev1beta1.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", new(gardencorev1beta1.AutoInPlaceUpdate), true),
+		Entry("with ManualInPlaceUpdate  update strategy", new(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
 	DescribeTable("#IsUpdateStrategyManualInPlace",
@@ -1751,9 +1750,9 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("with nil", nil, false),
-		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
-		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), false),
-		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+		Entry("with AutoRollingUpdate update strategy", new(gardencorev1beta1.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", new(gardencorev1beta1.AutoInPlaceUpdate), false),
+		Entry("with ManualInPlaceUpdate  update strategy", new(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
 	DescribeTable("#IsShootIstioTLSTerminationEnabled",
@@ -1805,9 +1804,9 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with KubeProxy in IPVS mode", nil, false),
 		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{}, false),
-		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(false), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, false),
-		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, true),
-		Entry("with KubeProxy in IPTables mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPTables)}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(false), Mode: new(gardencorev1beta1.ProxyModeIPVS)}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true), Mode: new(gardencorev1beta1.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true), Mode: new(gardencorev1beta1.ProxyModeIPTables)}, false),
 	)
 
 	DescribeTable("#IsOneWorkerPoolLowerKubernetes134",
@@ -1851,7 +1850,7 @@ var _ = Describe("Helper", func() {
 			Entry("Type is set", &gardencorev1beta1.KubeAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(EncryptionProviderType),
+						Type: new(EncryptionProviderType),
 					},
 				},
 			}, "foo"),

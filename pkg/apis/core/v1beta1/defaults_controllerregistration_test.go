@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -50,8 +49,8 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 		})
 
 		It("should not overwrite the primary field", func() {
-			obj.Spec.Resources[0].Primary = ptr.To(false)
-			obj.Spec.Resources[1].Primary = ptr.To(false)
+			obj.Spec.Resources[0].Primary = new(false)
+			obj.Spec.Resources[1].Primary = new(false)
 
 			SetObjectDefaults_ControllerRegistration(obj)
 

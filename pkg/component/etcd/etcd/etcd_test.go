@@ -182,10 +182,10 @@ var _ = Describe("Etcd", func() {
 			}
 			if topologyAwareRoutingEnabled {
 				if versionutils.ConstraintK8sGreaterEqual134.Check(runtimeKubernetesVersion) {
-					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+					clientService.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferSameZone)
 				} else {
 					// For Kubernetes < 1.34, use PreferClose
-					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+					clientService.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferClose)
 				}
 			}
 
@@ -316,7 +316,7 @@ var _ = Describe("Etcd", func() {
 							Name:      secretNamePeerCA,
 							Namespace: testNamespace,
 						},
-						DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+						DataKey: new(secretsutils.DataKeyCertificateBundle),
 					},
 				}
 			}
@@ -334,7 +334,7 @@ var _ = Describe("Etcd", func() {
 						Name:      *peerCASecretName,
 						Namespace: testNamespace,
 					},
-					DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+					DataKey: new(secretsutils.DataKeyCertificateBundle),
 				}
 			}
 
@@ -403,19 +403,19 @@ var _ = Describe("Etcd", func() {
 						Name:       etcdName,
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "etcd",
 								MinAllowed:       minAllowedConfig,
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-								Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeAuto),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								Mode:             new(vpaautoscalingv1.ContainerScalingModeAuto),
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -474,7 +474,7 @@ var _ = Describe("Etcd", func() {
 					Endpoints: []monitoringv1.Endpoint{
 						{
 							Port:   "client",
-							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+							Scheme: new(monitoringv1.SchemeHTTPS),
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
@@ -508,7 +508,7 @@ var _ = Describe("Etcd", func() {
 						},
 						{
 							Port:   "backuprestore",
-							Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+							Scheme: new(monitoringv1.SchemeHTTPS),
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
@@ -604,7 +604,7 @@ var _ = Describe("Etcd", func() {
 							{
 								Alert: "KubeEtcd3" + serviceMonitorAlertName(role) + "HighMemoryConsumption",
 								Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + role + `-0",container="etcd"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="etcd", targetName="etcd-` + role + `", resource="memory"}) > .5`),
-								For:   ptr.To(monitoringv1.Duration("15m")),
+								For:   new(monitoringv1.Duration("15m")),
 								Labels: map[string]string{
 									"service":    "etcd",
 									"severity":   "warning",
@@ -658,7 +658,7 @@ var _ = Describe("Etcd", func() {
 					monitoringv1.Rule{
 						Alert: "KubeEtcd" + testROLE + "DeltaBackupFailed",
 						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + jobNameBackupRestore + `",kind="Incr"} > bool 900) * etcdbr_snapshot_required{job="` + jobNameBackupRestore + `",kind="Incr"}) * on (pod, role) etcd_server_is_leader{job="` + jobNameEtcd + `"} > 0`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "etcd",
 							"severity":   "critical",
@@ -673,7 +673,7 @@ var _ = Describe("Etcd", func() {
 					monitoringv1.Rule{
 						Alert: "KubeEtcd" + testROLE + "FullBackupFailed",
 						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + jobNameBackupRestore + `",kind="Full"} > bool 86400) * etcdbr_snapshot_required{job="` + jobNameBackupRestore + `",kind="Full"}) * on (pod, role) etcd_server_is_leader{job="` + jobNameEtcd + `"} > 0`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "etcd",
 							"severity":   "critical",
@@ -703,7 +703,7 @@ var _ = Describe("Etcd", func() {
 					monitoringv1.Rule{
 						Alert: "KubeEtcd" + testROLE + "BackupRestoreDown",
 						Expr:  intstr.FromString(`(sum(up{job="` + jobNameEtcd + `"}) - sum(up{job="` + jobNameBackupRestore + `"}) > 0) or (rate(etcdbr_snapshotter_failure{job="` + jobNameBackupRestore + `"}[5m]) > 0)`),
-						For:   ptr.To(monitoringv1.Duration("10m")),
+						For:   new(monitoringv1.Duration("10m")),
 						Labels: map[string]string{
 							"service":    "etcd",
 							"severity":   "critical",
@@ -1736,7 +1736,7 @@ var _ = Describe("Etcd", func() {
 										Name:      caName,
 										Namespace: testNamespace,
 									},
-									DataKey: ptr.To(secretsutils.DataKeyCertificateBundle),
+									DataKey: new(secretsutils.DataKeyCertificateBundle),
 								},
 							},
 						},

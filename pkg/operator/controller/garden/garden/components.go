@@ -521,7 +521,7 @@ func (r *Reconciler) newEtcd(
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
-		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementNever)
+		evictionRequirement = new(v1beta1constants.EvictionRequirementNever)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
@@ -535,7 +535,7 @@ func (r *Reconciler) newEtcd(
 		}
 
 	case v1beta1constants.ETCDRoleEvents:
-		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+		evictionRequirement = new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
@@ -887,7 +887,7 @@ func (r *Reconciler) newKubeControllerManager(
 			ServiceAccountToken: new(0),
 		},
 		kubecontrollermanager.ControllerSyncPeriods{
-			ResourceQuota: ptr.To(time.Minute),
+			ResourceQuota: new(time.Minute),
 		},
 		map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 	)
@@ -1530,7 +1530,7 @@ func (r *Reconciler) newPrometheusGarden(
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "200Gi")),
 		Replicas:          2,
-		Retention:         ptr.To(monitoringv1.Duration("30d")),
+		Retention:         new(monitoringv1.Duration("30d")),
 		RetentionSize:     "190GB",
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
@@ -1750,7 +1750,7 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 	}
 
 	values := &extension.Values{
-		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+		Class:      new(extensionsv1alpha1.ExtensionClassGarden),
 		Namespace:  r.GardenNamespace,
 		NamePrefix: new("garden-"),
 		Extensions: make(map[string]extension.Extension),
@@ -1814,7 +1814,7 @@ func (r *Reconciler) newEtcdMainBackupEntry(log logr.Logger, garden *operatorv1a
 		Name:           r.GardenNamespace + "--" + string(garden.UID),
 		Type:           backup.Provider,
 		ProviderConfig: backup.ProviderConfig,
-		Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+		Class:          new(extensionsv1alpha1.ExtensionClassGarden),
 		Region:         region,
 		SecretRef: corev1.SecretReference{
 			Name:      backup.SecretRef.Name,

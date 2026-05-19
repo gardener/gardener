@@ -352,7 +352,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 
 		It("should forbid setting an unknown cgroup driver", func() {
 			oscCopy := osc.DeepCopy()
-			oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverName("unknown"))
+			oscCopy.Spec.CRIConfig.CgroupDriver = new(extensionsv1alpha1.CgroupDriverName("unknown"))
 
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),

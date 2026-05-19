@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -257,7 +256,7 @@ var _ = Describe("buildRef", func() {
 			mustNewTag("example.com/foo:1.0.0"),
 		),
 		Entry("ref with tag and digest",
-			&gardencorev1.OCIRepository{Ref: ptr.To("example.com/foo:1.0.0@" + digest)},
+			&gardencorev1.OCIRepository{Ref: new("example.com/foo:1.0.0@" + digest)},
 			mustNewDigest("example.com/foo:1.0.0@"+digest),
 		),
 		Entry("repository with tag",
@@ -265,7 +264,7 @@ var _ = Describe("buildRef", func() {
 			mustNewTag("example.com/foo:1.0.0"),
 		),
 		Entry("repository with tag and digest",
-			&gardencorev1.OCIRepository{Repository: new("oci://example.com/foo"), Tag: new("1.0.0"), Digest: ptr.To(digest)},
+			&gardencorev1.OCIRepository{Repository: new("oci://example.com/foo"), Tag: new("1.0.0"), Digest: new(digest)},
 			mustNewDigest("example.com/foo@"+digest),
 		),
 		Entry("configure insecure in local setup when using registry.local.gardener.cloud",

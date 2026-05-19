@@ -210,7 +210,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 									// etcds managed by etcd-druid store their data in <data-dir>/new.etcd, so let's
 									// prepare for the take-over already now
 									Path: staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(e.values.Role)) + "/new.etcd",
-									Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+									Type: new(corev1.HostPathDirectoryOrCreate),
 								},
 							},
 						},

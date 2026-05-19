@@ -14,7 +14,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -565,7 +564,7 @@ func (r *Reconciler) checkIfManagedResourcesExist(runtimeClusterIsSelfHostedShoo
 		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(
 			ctx,
 			r.RuntimeClientSet.Client(),
-			ptr.To(v1beta1constants.SeedResourceManagerClass),
+			new(v1beta1constants.SeedResourceManagerClass),
 			excludeNames,
 			excludeNamespaces,
 		)

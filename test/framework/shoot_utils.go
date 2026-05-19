@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -235,7 +234,7 @@ func setKubernetesVersionDependentSettings(shoot *gardencorev1beta1.Shoot) {
 				Addon: gardencorev1beta1.Addon{
 					Enabled: true,
 				},
-				AuthenticationMode: ptr.To(gardencorev1beta1.KubernetesDashboardAuthModeToken),
+				AuthenticationMode: new(gardencorev1beta1.KubernetesDashboardAuthModeToken),
 			}
 		}
 	}

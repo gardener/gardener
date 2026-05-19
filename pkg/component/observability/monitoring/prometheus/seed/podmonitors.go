@@ -7,7 +7,6 @@ package seed
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 // CentralPodMonitors returns the central PodMonitor resources for the seed prometheus.
@@ -85,7 +84,7 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 				// 	{Key: "prometheus.io/port", Operator: metav1.LabelSelectorOpExists},
 				// }},
 				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxy: monitoringv1.HTTPConfigWithProxy{
 						HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 					},

@@ -184,11 +184,11 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service,
 			networkingv1.NetworkPolicyPort{
 				Port:     new(intstr.FromInt32(portMetrics)),
-				Protocol: ptr.To(corev1.ProtocolTCP),
+				Protocol: new(corev1.ProtocolTCP),
 			},
 			networkingv1.NetworkPolicyPort{
 				Port:     new(intstr.FromInt32(portProviderMetrics)),
-				Protocol: ptr.To(corev1.ProtocolTCP),
+				Protocol: new(corev1.ProtocolTCP),
 			}),
 		)
 
@@ -320,7 +320,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -335,16 +335,16 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		}
-		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate)}
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    containerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff)},
 			},
 		}
 		return nil
@@ -360,7 +360,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 				Rules: []monitoringv1.Rule{{
 					Alert: "MachineControllerManagerDown",
 					Expr:  intstr.FromString(`absent(up{job="machine-controller-manager"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("15m")),
+					For:   new(monitoringv1.Duration("15m")),
 					Labels: map[string]string{
 						"service":    v1beta1constants.DeploymentNameMachineControllerManager,
 						"severity":   "critical",

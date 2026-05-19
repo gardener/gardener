@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	namespacedcloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/namespacedcloudprofile"
@@ -197,22 +196,22 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 				{
 					Name:           "machineImage1",
-					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+					UpdateStrategy: new(core.UpdateStrategyMajor),
 					Versions: []core.MachineImageVersion{
 						{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: expiredExpirationDate1}},
 					},
 				},
 				{
 					Name:           "machineImage2",
-					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+					UpdateStrategy: new(core.UpdateStrategyMajor),
 				},
 			}
 
 			namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, namespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal([]core.MachineImage{
-				{Name: "machineImage1", UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
-				{Name: "machineImage2", UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
+				{Name: "machineImage1", UpdateStrategy: new(core.UpdateStrategyMajor)},
+				{Name: "machineImage2", UpdateStrategy: new(core.UpdateStrategyMajor)},
 			}))
 		})
 

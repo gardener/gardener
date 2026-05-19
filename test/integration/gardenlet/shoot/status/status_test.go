@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -94,7 +93,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 									},
 								},
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
 						{
 							Name:    "worker2",
@@ -110,7 +109,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 								Version: new("1.31.1"),
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 						},
 						{
 							Name:    "worker3",
@@ -131,7 +130,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 									},
 								},
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
 						{
 							Name:    "worker4",
@@ -147,7 +146,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 								Version: new("1.30.1"),
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
+							UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
 						},
 						{
 							Name:    "worker5",
@@ -169,7 +168,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 									},
 								},
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
 					},
 				},
@@ -256,7 +255,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Minimum:           2,
 						Maximum:           2,
 						MachineType:       "large",
-						UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy:    new(gardencorev1beta1.ManualInPlaceUpdate),
 						KubernetesVersion: new("1.32.1"),
 					},
 					{
@@ -264,7 +263,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Minimum:           2,
 						Maximum:           2,
 						MachineType:       "large",
-						UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 						KubernetesVersion: new("1.31.1"),
 					},
 					{
@@ -272,7 +271,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Minimum:           2,
 						Maximum:           2,
 						MachineType:       "large",
-						UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy:    new(gardencorev1beta1.ManualInPlaceUpdate),
 						KubernetesVersion: new("1.31.1"),
 					},
 					{
@@ -280,7 +279,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Minimum:           2,
 						Maximum:           2,
 						MachineType:       "large",
-						UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 						KubernetesVersion: new("1.30.1"),
 					},
 				},

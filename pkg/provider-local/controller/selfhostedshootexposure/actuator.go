@@ -17,7 +17,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -156,7 +155,7 @@ func serviceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposure, na
 		},
 		Spec: corev1.ServiceSpec{
 			Type:           corev1.ServiceTypeLoadBalancer,
-			IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyPreferDualStack),
+			IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
 			Ports: []corev1.ServicePort{{
 				Name:       portName,
 				Port:       exposure.Spec.Port,
@@ -211,7 +210,7 @@ func endpointSliceForExposure(exposure *extensionsv1alpha1.SelfHostedShootExposu
 		Ports: []discoveryv1.EndpointPort{{
 			Name:     new(portName),
 			Port:     new(exposure.Spec.Port),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}},
 	}, nil
 }

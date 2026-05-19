@@ -489,7 +489,7 @@ var _ = Describe("VpnSeedServer", func() {
 						"app": "vpn-seed-server",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -672,13 +672,13 @@ var _ = Describe("VpnSeedServer", func() {
 			if !highAvailabilityEnabled {
 				containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 					ContainerName:    "envoy-proxy",
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				})
 			}
 
 			containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName: "*",
-				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 			})
 
 			return &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -847,7 +847,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 				It("should successfully deploy vpa with update mode set to off", func() {
 					actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
-					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, ptr.To(vpaautoscalingv1.UpdateModeOff))
+					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, new(vpaautoscalingv1.UpdateModeOff))
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
 					Expect(actualVPA).To(DeepEqual(expectedVPA))
 				})

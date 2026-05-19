@@ -298,7 +298,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 				It("should allow machine images that only override the update strategy", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{Name: machineImageName, UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
+						{Name: machineImageName, UpdateStrategy: new(core.UpdateStrategyMajor)},
 					}
 
 					Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(BeEmpty())
@@ -309,13 +309,13 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name:           machineImageName,
-							UpdateStrategy: ptr.To(core.UpdateStrategyPatch),
+							UpdateStrategy: new(core.UpdateStrategyPatch),
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        "3.4.6",
 										ExpirationDate: validExpirationDate,
-										Classification: ptr.To(core.ClassificationDeprecated),
+										Classification: new(core.ClassificationDeprecated),
 									},
 									CRI:                      []core.CRI{{Name: "containerd"}},
 									Architectures:            []string{"amd64"},

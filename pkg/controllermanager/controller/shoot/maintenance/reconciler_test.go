@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -142,7 +141,7 @@ var _ = Describe("Shoot Maintenance", func() {
 								Architecture: new("amd64"),
 								Type:         "someMachineType",
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
+							UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
 						},
 					},
 					},
@@ -165,7 +164,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			It("should update machine image version to overall latest. Auto update: already on latest patch for minor, and there is an overall higher version available for in-place updates", func() {
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new(shootCurrentImageVersion + "-inplace")
-				shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(gardencorev1beta1.AutoInPlaceUpdate)
+				shoot.Spec.Provider.Workers[0].UpdateStrategy = new(gardencorev1beta1.AutoInPlaceUpdate)
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())

@@ -249,7 +249,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{
 						Path: "/var/run/docker.sock",
-						Type: ptr.To(corev1.HostPathSocket),
+						Type: new(corev1.HostPathSocket),
 					},
 				},
 			},

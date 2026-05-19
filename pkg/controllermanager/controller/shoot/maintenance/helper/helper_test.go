@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -88,7 +87,7 @@ var _ = Describe("Helper Functions", func() {
 				},
 			},
 			CRI:            &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD},
-			UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+			UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 		}
 
 		shootMachineImage = &gardencorev1beta1.ShootMachineImage{
@@ -164,7 +163,7 @@ var _ = Describe("Helper Functions", func() {
 
 		It("should return an empty machine image if no versions found with in-place update constraint", func() {
 			worker.Machine.Image.Version = new("0.1.0")
-			worker.UpdateStrategy = ptr.To(gardencorev1beta1.AutoInPlaceUpdate)
+			worker.UpdateStrategy = new(gardencorev1beta1.AutoInPlaceUpdate)
 			filteredMachineImages := FilterMachineImageVersions(machineImage, worker, kubeletVersion, machineType, capabilityDefinitions)
 
 			Expect(filteredMachineImages.Versions).Should(BeEmpty())
@@ -223,7 +222,7 @@ var _ = Describe("Helper Functions", func() {
 
 	Describe("#DetermineMachineImageVersion", func() {
 		It("should determine the correct machine image version for patch strategy", func() {
-			machineImage.UpdateStrategy = ptr.To(gardencorev1beta1.UpdateStrategyPatch)
+			machineImage.UpdateStrategy = new(gardencorev1beta1.UpdateStrategyPatch)
 			version, err := DetermineMachineImageVersion(shootMachineImage, machineImage, false)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -231,7 +230,7 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		It("should determine the correct machine image version for minor strategy", func() {
-			machineImage.UpdateStrategy = ptr.To(gardencorev1beta1.UpdateStrategyMinor)
+			machineImage.UpdateStrategy = new(gardencorev1beta1.UpdateStrategyMinor)
 			version, err := DetermineMachineImageVersion(shootMachineImage, machineImage, false)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -239,7 +238,7 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		It("should determine the correct machine image version for major strategy", func() {
-			machineImage.UpdateStrategy = ptr.To(gardencorev1beta1.UpdateStrategyMajor)
+			machineImage.UpdateStrategy = new(gardencorev1beta1.UpdateStrategyMajor)
 			version, err := DetermineMachineImageVersion(shootMachineImage, machineImage, false)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -247,7 +246,7 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		It("should return an error if the current version is expired and no force update version is available", func() {
-			machineImage.UpdateStrategy = ptr.To(gardencorev1beta1.UpdateStrategyMajor)
+			machineImage.UpdateStrategy = new(gardencorev1beta1.UpdateStrategyMajor)
 			machineImage.Versions = []gardencorev1beta1.MachineImageVersion{
 				{
 					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -265,7 +264,7 @@ var _ = Describe("Helper Functions", func() {
 		})
 
 		It("should return an error if the machine image is reaching end of life", func() {
-			machineImage.UpdateStrategy = ptr.To(gardencorev1beta1.UpdateStrategyMajor)
+			machineImage.UpdateStrategy = new(gardencorev1beta1.UpdateStrategyMajor)
 			machineImage.Versions = []gardencorev1beta1.MachineImageVersion{}
 
 			version, err := DetermineMachineImageVersion(shootMachineImage, machineImage, true)

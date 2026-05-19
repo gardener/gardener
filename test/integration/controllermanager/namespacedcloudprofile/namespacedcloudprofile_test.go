@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -566,7 +565,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 							Architectures:    []string{"amd64"},
 						},
 					},
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMajor),
 				},
 			}
 			Expect(namespacedCloudProfile.Spec.MachineImages).To(BeEmpty())

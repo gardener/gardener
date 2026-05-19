@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -126,7 +125,7 @@ var _ = BeforeSuite(func() {
 		},
 		Clock:                         fakeClock,
 		ClassFilter:                   filter,
-		RequeueAfterOnDeletionPending: ptr.To(50 * time.Millisecond),
+		RequeueAfterOnDeletionPending: new(50 * time.Millisecond),
 		GarbageCollectorActivated:     true,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 

@@ -126,7 +126,7 @@ var _ = Describe("KubeProxy", func() {
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: new(false),
-				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
 				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -786,7 +786,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										VolumeSource: corev1.VolumeSource{
 											HostPath: &corev1.HostPathVolumeSource{
 												Path: "/var/lib/kube-proxy",
-												Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+												Type: new(corev1.HostPathDirectoryOrCreate),
 											},
 										},
 									},
@@ -795,7 +795,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										VolumeSource: corev1.VolumeSource{
 											HostPath: &corev1.HostPathVolumeSource{
 												Path: "/var/lib/kube-proxy/mode",
-												Type: ptr.To(corev1.HostPathFileOrCreate),
+												Type: new(corev1.HostPathFileOrCreate),
 											},
 										},
 									},
@@ -814,7 +814,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										VolumeSource: corev1.VolumeSource{
 											HostPath: &corev1.HostPathVolumeSource{
 												Path: "/run/xtables.lock",
-												Type: ptr.To(corev1.HostPathFileOrCreate),
+												Type: new(corev1.HostPathFileOrCreate),
 											},
 										},
 									},
@@ -851,7 +851,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 								{
 									ContainerName:    "kube-proxy",
-									ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+									ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 									MaxAllowed: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("4"),
 										corev1.ResourceMemory: resource.MustParse("10G"),
@@ -859,7 +859,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 								},
 								{
 									ContainerName: "*",
-									Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+									Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 								},
 							},
 						},
@@ -869,7 +869,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 							Name:       daemonSetNameFor(pool),
 						},
 						UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-							UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+							UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 						},
 					},
 				}

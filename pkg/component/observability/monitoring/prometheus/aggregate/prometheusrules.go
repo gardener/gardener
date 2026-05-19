@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
@@ -48,7 +47,7 @@ func CentralPrometheusRules(seedIsGarden bool) []*monitoringv1.PrometheusRule {
 		{
 			Alert: "PodStuckInPending",
 			Expr:  intstr.FromString(`sum_over_time(kube_pod_status_phase{phase="Pending"}[5m]) > 0`),
-			For:   ptr.To(monitoringv1.Duration("10m")),
+			For:   new(monitoringv1.Duration("10m")),
 			Labels: map[string]string{
 				"severity":   "warning",
 				"type":       "seed",

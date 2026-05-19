@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -40,7 +39,7 @@ func (g *gardenerAPIServer) endpointSlice(clusterIP string) *discoveryv1.Endpoin
 		AddressType: GetAddressType(clusterIP),
 		Ports: []discoveryv1.EndpointPort{{
 			Port:     new(int32(servicePort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Protocol: new(corev1.ProtocolTCP),
 		}},
 		Endpoints: []discoveryv1.Endpoint{{
 			Addresses: []string{clusterIP},

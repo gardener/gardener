@@ -747,7 +747,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				{
 					Alert: "KubeStateMetricsSeedDown",
 					Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
-					For:   ptr.To(monitoringv1.Duration("15m")),
+					For:   new(monitoringv1.Duration("15m")),
 					Labels: map[string]string{
 						"service":    "kube-state-metrics-seed",
 						"severity":   "critical",
@@ -762,7 +762,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				{
 					Alert: "KubeStateMetricsShootDown",
 					Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("15m")),
+					For:   new(monitoringv1.Duration("15m")),
 					Labels: map[string]string{
 						"service":    "kube-state-metrics-shoot",
 						"severity":   "info",
@@ -777,7 +777,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				{
 					Alert: "NoWorkerNodes",
 					Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
-					For:   ptr.To(monitoringv1.Duration("25m")),
+					For:   new(monitoringv1.Duration("25m")),
 					Labels: map[string]string{
 						"service":    "nodes",
 						"severity":   "blocker",
@@ -890,7 +890,7 @@ var _ = Describe("KubeStateMetrics", func() {
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -910,7 +910,7 @@ var _ = Describe("KubeStateMetrics", func() {
 						MatchLabels: selectorLabelsForClusterType(nameSuffix),
 					},
 					MaxUnavailable:             &maxUnavailable,
-					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+					UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 				},
 			}
 		}

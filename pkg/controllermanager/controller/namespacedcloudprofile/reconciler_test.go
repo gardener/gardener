@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -163,7 +162,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						Architectures:            []string{"arm64"},
 						KubeletVersionConstraint: new("==1.30.0"),
 					}},
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMajor),
 				},
 			}
 			cloudProfile.Spec.MachineCapabilities = []gardencorev1beta1.CapabilityDefinition{
@@ -377,7 +376,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						Architectures:            []string{"amd64"},
 						KubeletVersionConstraint: new("==1.30.0"),
 					}},
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMajor),
 				},
 			}
 		})
@@ -392,7 +391,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						Architectures:            []string{"arm64"},
 						KubeletVersionConstraint: new("==1.30.0"),
 					}},
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMajor),
 				},
 			}
 
@@ -465,7 +464,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name:           "test-image",
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMinor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMinor),
 				},
 			}
 
@@ -479,7 +478,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			updated := &gardencorev1beta1.NamespacedCloudProfile{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
 			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
-			Expect(updated.Status.CloudProfileSpec.MachineImages[0].UpdateStrategy).To(Equal(ptr.To(gardencorev1beta1.UpdateStrategyMinor)))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].UpdateStrategy).To(Equal(new(gardencorev1beta1.UpdateStrategyMinor)))
 			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
 				"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
 				"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
@@ -729,7 +728,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				// Create NamespacedCloudProfile.
 				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
 					Name:           "machine-image-1",
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMajor),
 					Versions:       []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, Architectures: []string{"amd64", "arm64"}}}},
 				}
 				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
@@ -744,7 +743,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				// Add custom machine image from NamespacedCloudProfile to parent CloudProfile.
 				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
 					Name:           "machine-image-1",
-					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMinor),
+					UpdateStrategy: new(gardencorev1beta1.UpdateStrategyMinor),
 					Versions:       []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}}}},
 				}
 				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{

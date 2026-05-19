@@ -179,7 +179,7 @@ var _ = Describe("ActuatorReconcile", func() {
 					Pools: []extensionsv1alpha1.WorkerPool{
 						{
 							Name:              "pool1",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+							UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 							KubernetesVersion: new("1.32.0"),
 						},
 					},
@@ -473,17 +473,17 @@ var _ = Describe("ActuatorReconcile", func() {
 					Pools: []extensionsv1alpha1.WorkerPool{
 						{
 							Name:              "pool1",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+							UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 							KubernetesVersion: new("1.32.0"),
 						},
 						{
 							Name:              "pool2",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy:    new(gardencorev1beta1.ManualInPlaceUpdate),
 							KubernetesVersion: new("1.31.0"),
 						},
 						{
 							Name:              "pool3",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.AutoRollingUpdate),
+							UpdateStrategy:    new(gardencorev1beta1.AutoRollingUpdate),
 							KubernetesVersion: new("1.31.0"),
 						},
 					},
@@ -559,7 +559,7 @@ var _ = Describe("ActuatorReconcile", func() {
 		})
 
 		It("should not add non in-place update worker pools to the worker status", func() {
-			worker.Spec.Pools[0].UpdateStrategy = ptr.To(gardencorev1beta1.AutoRollingUpdate)
+			worker.Spec.Pools[0].UpdateStrategy = new(gardencorev1beta1.AutoRollingUpdate)
 
 			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
 			Expect(err).NotTo(HaveOccurred())
@@ -574,12 +574,12 @@ var _ = Describe("ActuatorReconcile", func() {
 			worker.Spec.Pools = []extensionsv1alpha1.WorkerPool{
 				{
 					Name:              "pool1",
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 					KubernetesVersion: new("1.32.0"),
 				},
 				{
 					Name:              "pool3",
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 					KubernetesVersion: new("1.32.0"),
 				},
 			}
