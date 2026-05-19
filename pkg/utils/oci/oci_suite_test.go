@@ -21,7 +21,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/auth"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	helmregistry "helm.sh/helm/v3/pkg/registry"
+	helmregistry "helm.sh/helm/v4/pkg/registry"
 
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"

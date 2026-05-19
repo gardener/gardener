@@ -7,7 +7,7 @@ package chartrenderer
 import (
 	"embed"
 
-	"helm.sh/helm/v3/pkg/releaseutil"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 )
 
 // Interface is an interface for rendering Helm Charts from path, name, namespace and values.

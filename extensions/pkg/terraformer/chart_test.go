@@ -7,7 +7,7 @@ package terraformer_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 
 	. "github.com/gardener/gardener/extensions/pkg/terraformer"
 	"github.com/gardener/gardener/pkg/chartrenderer"

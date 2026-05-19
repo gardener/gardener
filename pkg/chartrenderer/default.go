@@ -15,12 +15,15 @@ import (
 	"regexp"
 	"strings"
 
-	helmchart "helm.sh/helm/v3/pkg/chart"
-	helmloader "helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/engine"
-	"helm.sh/helm/v3/pkg/ignore"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v4/pkg/chart/common"
+	commonutil "helm.sh/helm/v4/pkg/chart/common/util"
+	"helm.sh/helm/v4/pkg/chart/loader/archive"
+	helmchart "helm.sh/helm/v4/pkg/chart/v2"
+	helmloader "helm.sh/helm/v4/pkg/chart/v2/loader"
+	chartv2util "helm.sh/helm/v4/pkg/chart/v2/util"
+	"helm.sh/helm/v4/pkg/engine"
+	"helm.sh/helm/v4/pkg/ignore"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -33,7 +36,7 @@ const notesFileSuffix = "NOTES.txt"
 // resulting manifest can be generated.
 type chartRenderer struct {
 	renderer     *engine.Engine
-	capabilities *chartutil.Capabilities
+	capabilities *common.Capabilities
 }
 
 // NewForConfig creates a new ChartRenderer object. It requires a Kubernetes client as input which will be
@@ -56,7 +59,7 @@ func NewForConfig(cfg *rest.Config) (Interface, error) {
 func NewWithServerVersion(serverVersion *version.Info) Interface {
 	return &chartRenderer{
 		renderer: &engine.Engine{},
-		capabilities: &chartutil.Capabilities{KubeVersion: chartutil.KubeVersion{
+		capabilities: &common.Capabilities{KubeVersion: common.KubeVersion{
 			Version: serverVersion.GitVersion,
 			Major:   serverVersion.Major,
 			Minor:   serverVersion.Minor,
@@ -90,32 +93,32 @@ func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, names
 		return nil, fmt.Errorf("failed to parse values for chart %s: %w", chart.Metadata.Name, err)
 	}
 
-	valuesCopy, err := chartutil.ReadValues(parsedValues)
+	valuesCopy, err := common.ReadValues(parsedValues)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read values for chart %s: %w", chart.Metadata.Name, err)
 	}
 
-	if err := chartutil.ProcessDependencies(chart, valuesCopy); err != nil {
+	if err := chartv2util.ProcessDependencies(chart, valuesCopy); err != nil {
 		return nil, fmt.Errorf("failed to process chart %s: %w", chart.Metadata.Name, err)
 	}
 
 	caps := r.capabilities
 	revision := 1
-	options := chartutil.ReleaseOptions{
+	options := common.ReleaseOptions{
 		Name:      releaseName,
 		Namespace: namespace,
 		Revision:  revision,
 		IsInstall: true,
 	}
 
-	valuesToRender, err := chartutil.ToRenderValues(chart, valuesCopy, options, caps)
+	valuesToRender, err := commonutil.ToRenderValues(chart, valuesCopy, options, caps)
 	if err != nil {
 		return nil, err
 	}
 	return r.renderResources(chart, valuesToRender)
 }
 
-func (r *chartRenderer) renderResources(ch *helmchart.Chart, values chartutil.Values) (*RenderedChart, error) {
+func (r *chartRenderer) renderResources(ch *helmchart.Chart, values common.Values) (*RenderedChart, error) {
 	files, err := r.renderer.Render(ch, values)
 	if err != nil {
 		return nil, err
@@ -128,7 +131,7 @@ func (r *chartRenderer) renderResources(ch *helmchart.Chart, values chartutil.Va
 		}
 	}
 
-	_, manifests, err := releaseutil.SortManifests(files, chartutil.DefaultVersionSet, releaseutil.InstallOrder)
+	_, manifests, err := releaseutil.SortManifests(files, common.DefaultVersionSet, releaseutil.InstallOrder)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sort manifests: %w", err)
 	}
@@ -214,12 +217,14 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 	return data
 }
 
-// loadEmbeddedFS is a copy of helm.sh/helm/v3/pkg/chart/loader.LoadDir with the difference that it uses an embed.FS.
-// Keep this func in sync with https://github.com/helm/helm/blob/v3.14.2/pkg/chart/loader/directory.go#L43-L120.
+var utf8bom = []byte{0xEF, 0xBB, 0xBF}
+
+// loadEmbeddedFS is a copy of helm.sh/helm/v4/pkg/chart/v2/loader.LoadDir with the difference that it uses an embed.FS.
+// Keep this func in sync with https://github.com/helm/helm/blob/main/pkg/chart/v2/loader/directory.go
 func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, error) {
 	var (
 		rules = ignore.Empty()
-		files []*helmloader.BufferedFile
+		files []*archive.BufferedFile
 	)
 
 	if helmIgnore, err := embeddedFS.ReadFile(filepath.Join(chartPath, ignore.HelmIgnore)); err == nil {
@@ -230,6 +235,7 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 
 		rules = r
 	}
+	rules.AddDefaults()
 
 	if err := fs.WalkDir(embeddedFS, chartPath, func(path string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
@@ -271,11 +277,17 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 			return fmt.Errorf("cannot load irregular file %s as it has file mode type bits set", path)
 		}
 
+		if fileInfo.Size() > archive.MaxDecompressedFileSize {
+			return fmt.Errorf("chart file %q is larger than the maximum file size %d", fileInfo.Name(), archive.MaxDecompressedFileSize)
+		}
+
 		data, err := embeddedFS.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("error reading %s: %s", normalizedPath, err)
+			return fmt.Errorf("error reading %s: %w", normalizedPath, err)
 		}
-		files = append(files, &helmloader.BufferedFile{Name: normalizedPath, Data: data})
+		data = bytes.TrimPrefix(data, utf8bom)
+
+		files = append(files, &archive.BufferedFile{Name: normalizedPath, Data: data})
 
 		return nil
 	}); err != nil {
