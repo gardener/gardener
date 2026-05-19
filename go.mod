@@ -23,10 +23,10 @@ require (
 	github.com/gardener/dependency-watchdog v1.7.0
 	github.com/gardener/etcd-druid/api v0.36.3
 	github.com/gardener/machine-controller-manager v0.61.3
-	github.com/gardener/terminal-controller-manager v0.35.0
+	github.com/gardener/terminal-controller-manager v0.36.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.3
-	github.com/go-test/deep v1.1.0
+	github.com/go-test/deep v1.1.1
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/gnostic-models v0.7.1
 	github.com/google/go-cmp v0.7.0
@@ -93,7 +93,7 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/gardener/gardener/pkg/apis v1.140.0 // overwritten by replace directive below
+require github.com/gardener/gardener/pkg/apis v1.142.1 // overwritten by replace directive below
 
 replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
 
