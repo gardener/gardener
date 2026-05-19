@@ -27,7 +27,6 @@ spec:
         app: istio-ingressgateway
         foo: bar
         to-target: allowed
-        pod-label: foo
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.29"
       annotations:

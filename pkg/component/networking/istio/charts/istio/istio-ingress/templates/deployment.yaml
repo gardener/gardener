@@ -27,9 +27,6 @@ spec:
       labels:
 {{ toYaml .Values.labels | indent 8 }}
 {{ toYaml .Values.networkPolicyLabels | indent 8 }}
-{{- with .Values.podLabels }}
-{{ toYaml . | indent 8 }}
-{{- end }}
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.29"
       annotations:

@@ -1040,7 +1040,6 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			IstiodNamespace:     "istio-test-system",
 			Annotations:         annotations,
 			Labels:              labels,
-			PodLabels:           map[string]string{"pod-label": "foo"},
 			NetworkPolicyLabels: networkPolicyLabels,
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt32(999)},

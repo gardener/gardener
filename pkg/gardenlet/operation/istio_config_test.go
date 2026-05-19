@@ -14,6 +14,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -27,6 +28,7 @@ var _ = Describe("istioconfig", func() {
 			defaultServiceName         = "default-service"
 			defaultNamespaceName       = "default-namespace"
 			defaultLabels              = map[string]string{"default": "label", "istio": "gateway"}
+			defaultLabelsWithRole      = utils.MergeStringMaps(defaultLabels, map[string]string{istio.RoleKey: istio.RoleSeed})
 			exposureClassName          = "my-exposureclass"
 			exposureClassHandlerName   = "my-handler"
 			exposureClassServiceName   = "exposure-service"
@@ -120,38 +122,38 @@ var _ = Describe("istioconfig", func() {
 			Entry("non-pinned control plane without exposure class", nil, false,
 				Equal(defaultServiceName),
 				Equal(defaultNamespaceName),
-				Equal(defaultLabels),
-				Equal(defaultLabels),
+				Equal(defaultLabelsWithRole),
+				Equal(defaultLabelsWithRole),
 			),
 			Entry("pinned control plane (single zone) without exposure class", &zoneName, false,
 				Equal(defaultServiceName),
 				Equal(defaultNamespaceName+"--"+zoneName),
-				Equal(utils.MergeStringMaps(defaultLabels, map[string]string{"istio": defaultLabels["istio"] + "--zone--" + zoneName})),
-				Equal(defaultLabels),
+				Equal(utils.MergeStringMaps(defaultLabelsWithRole, map[string]string{"istio": defaultLabels["istio"] + "--zone--" + zoneName})),
+				Equal(defaultLabelsWithRole),
 			),
 			Entry("pinned control plane (multi zone) without exposure class", &multiZone, false,
 				Equal(defaultServiceName),
 				Equal(defaultNamespaceName),
-				Equal(defaultLabels),
-				Equal(defaultLabels),
+				Equal(defaultLabelsWithRole),
+				Equal(defaultLabelsWithRole),
 			),
 			Entry("non-pinned control plane with exposure class", nil, true,
 				Equal(exposureClassServiceName),
 				Equal(exposureClassNamespaceName),
-				Equal(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName)),
-				Equal(defaultLabels),
+				Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{istio.RoleKey: istio.RoleSeed})),
+				Equal(defaultLabelsWithRole),
 			),
 			Entry("pinned control plane (single zone) with exposure class", &zoneName, true,
 				Equal(exposureClassServiceName),
 				Equal(exposureClassNamespaceName+"--"+zoneName),
-				Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{"gardener.cloud/role": "exposureclass-handler--zone--" + zoneName})),
-				Equal(defaultLabels),
+				Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{"gardener.cloud/role": "exposureclass-handler--zone--" + zoneName, istio.RoleKey: istio.RoleSeed})),
+				Equal(defaultLabelsWithRole),
 			),
 			Entry("pinned control plane (multi zone) with exposure class", &multiZone, true,
 				Equal(exposureClassServiceName),
 				Equal(exposureClassNamespaceName),
-				Equal(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName)),
-				Equal(defaultLabels),
+				Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{istio.RoleKey: istio.RoleSeed})),
+				Equal(defaultLabelsWithRole),
 			),
 		)
 
@@ -183,14 +185,14 @@ var _ = Describe("istioconfig", func() {
 				Entry("pinned control plane (single zone) without exposure class", &zoneName, false,
 					Equal(defaultServiceName),
 					Equal(defaultNamespaceName),
-					Equal(utils.MergeStringMaps(defaultLabels, map[string]string{"istio": defaultLabels["istio"]})),
-					Equal(defaultLabels),
+					Equal(utils.MergeStringMaps(defaultLabelsWithRole, map[string]string{"istio": defaultLabels["istio"]})),
+					Equal(defaultLabelsWithRole),
 				),
 				Entry("pinned control plane (single zone) with exposure class", &zoneName, true,
 					Equal(exposureClassServiceName),
 					Equal(exposureClassNamespaceName),
-					Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{"gardener.cloud/role": "exposureclass-handler"})),
-					Equal(defaultLabels),
+					Equal(utils.MergeStringMaps(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassLabels, exposureClassHandlerName), map[string]string{"gardener.cloud/role": "exposureclass-handler", istio.RoleKey: istio.RoleSeed})),
+					Equal(defaultLabelsWithRole),
 				),
 			)
 		})

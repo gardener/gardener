@@ -911,10 +911,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		true,
 		map[string]string{
 			istio.DefaultZoneKey: "ingressgateway",
-		},
-		// TODO(maboehm): Merge the podLabels into labels after on release (v1.143)
-		map[string]string{
-			istio.RoleKey: istio.RoleGarden,
+			istio.RoleKey:        istio.RoleGarden,
 		},
 		[]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+operatorv1alpha1.VirtualGardenNamePrefix+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),
