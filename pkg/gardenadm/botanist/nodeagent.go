@@ -140,7 +140,7 @@ func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx contex
 		return nil
 	}
 
-	tokenUsername := strings.Split(string(bootstrapToken), ".")[0]
+	tokenUsername, _, _ := strings.Cut(string(bootstrapToken), ".")
 	username := bootstraptokenapi.BootstrapUserPrefix + tokenUsername
 
 	csrList := &certificatesv1.CertificateSigningRequestList{}

@@ -379,7 +379,7 @@ type httpConnectTransport struct {
 }
 
 func newHTTPConnectTransport(restConfig *rest.Config, targetCluster string, proxyPort int) (*httpConnectTransport, error) {
-	proxyAddress := strings.Split(strings.TrimPrefix(restConfig.Host, "https://"), ":")[0]
+	proxyAddress, _, _ := strings.Cut(strings.TrimPrefix(restConfig.Host, "https://"), ":")
 	connectAddress := strings.TrimPrefix(restConfig.Host, "https://") + ":443"
 
 	tlsConfig, err := tlsConfigForRESTConfig(restConfig, true)
