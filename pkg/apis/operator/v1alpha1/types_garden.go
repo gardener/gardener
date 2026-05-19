@@ -821,7 +821,6 @@ type GardenStatus struct {
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
-
 	// List of addresses that are relevant to the Garden.
 	// These include the Kube API server address of the virtual garden cluster.
 	AdvertisedAddresses []AdvertisedAddress `json:"advertisedAddresses,omitempty"`
