@@ -10,14 +10,11 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -96,29 +93,12 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 
 			managerOptions := mgrOpts.Completed().Options()
 
-			// Operators can enable the source cluster option via SOURCE_CLUSTER environment variable.
-			// In-cluster config will be used if no SOURCE_KUBECONFIG is specified.
-			//
-			// The source cluster is for instance used by Gardener's certificate controller, to maintain certificate
-			// secrets in a different cluster ('runtime-garden') than the cluster where the webhook configurations
-			// are maintained ('virtual-garden').
-			var sourceClusterConfig *rest.Config
-			if sourceClusterEnabled := os.Getenv("SOURCE_CLUSTER"); sourceClusterEnabled != "" {
-				log.Info("Configuring source cluster option")
-				var err error
-				sourceClusterConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("SOURCE_KUBECONFIG"))
-				if err != nil {
-					return err
-				}
-				managerOptions.LeaderElectionConfig = sourceClusterConfig
-			} else {
-				// Restrict the cache for secrets to the configured namespace to avoid the need for cluster-wide list/watch permissions.
-				managerOptions.Cache = cache.Options{
-					ByObject: map[client.Object]cache.ByObject{
-						&corev1.Secret{}: {Namespaces: map[string]cache.Config{webhookOptions.Server.Completed().Namespace: {}}},
-					},
-				}
+			log.Info("Configuring source cluster option")
+			inClusterConfig, err := rest.InClusterConfig()
+			if err != nil {
+				return fmt.Errorf("could not get in-cluster config: %w", err)
 			}
+			managerOptions.LeaderElectionConfig = inClusterConfig
 
 			mgr, err := manager.New(restOpts.Completed().Config, managerOptions)
 			if err != nil {
@@ -132,26 +112,23 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 
-			var sourceCluster cluster.Cluster
-			if sourceClusterConfig != nil {
-				sourceCluster, err = cluster.New(sourceClusterConfig, func(opts *cluster.Options) {
-					opts.Logger = log
-					opts.Cache.DefaultNamespaces = map[string]cache.Config{v1beta1constants.GardenNamespace: {}}
-				})
-				if err != nil {
-					return err
-				}
+			sourceCluster, err := cluster.New(inClusterConfig, func(opts *cluster.Options) {
+				opts.Logger = log
+				opts.Cache.DefaultNamespaces = map[string]cache.Config{v1beta1constants.GardenNamespace: {}}
+			})
+			if err != nil {
+				return err
+			}
 
-				if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, sourceCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
-					return err
-				}
-				if err := mgr.AddReadyzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthz(sourceCluster.GetCache())); err != nil {
-					return err
-				}
+			if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, sourceCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+				return err
+			}
+			if err := mgr.AddReadyzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthz(sourceCluster.GetCache())); err != nil {
+				return err
+			}
 
-				if err = mgr.Add(sourceCluster); err != nil {
-					return err
-				}
+			if err = mgr.Add(sourceCluster); err != nil {
+				return err
 			}
 
 			log.Info("Setting up webhook server")
