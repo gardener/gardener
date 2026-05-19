@@ -143,15 +143,6 @@ function run_post_upgrade_test() {
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
-# TODO(rfranzke): Remove this after v1.142 is released and the upgrade tests can be enabled again.
-if true; then
-  echo "WARNING: The Gardener upgrade tests are not executed in this release because the dev/e2e test setup is currently reworked."
-  echo "See https://github.com/gardener/gardener/issues/11958 for more information."
-  echo "Skipping the tests."
-  echo "After the rework has been finished, this early exit can be removed again (TODO(rfranzke))."
-  exit 0
-fi
-
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 
