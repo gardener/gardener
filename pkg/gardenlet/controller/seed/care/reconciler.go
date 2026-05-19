@@ -7,6 +7,7 @@ package care
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -113,8 +114,8 @@ func (r *Reconciler) performGarbageCollection(ctx context.Context, log logr.Logg
 		return fmt.Errorf("failed listing pods: %w", err)
 	}
 
-	for i := len(podList.Items) - 1; i >= 0; i-- {
-		if podList.Items[i].Namespace == metav1.NamespaceSystem {
+	for i, v := range slices.Backward(podList.Items) {
+		if v.Namespace == metav1.NamespaceSystem {
 			podList.Items = append(podList.Items[:i], podList.Items[i+1:]...)
 		}
 	}

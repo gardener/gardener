@@ -5,6 +5,8 @@
 package helper
 
 import (
+	"slices"
+
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/labels"
@@ -61,7 +63,7 @@ type GardenerResourceDataList []gardencorev1beta1.GardenerResourceData
 
 // Delete deletes an item from the list
 func (g *GardenerResourceDataList) Delete(name string) {
-	for i := len(*g) - 1; i >= 0; i-- {
+	for i := range slices.Backward(*g) {
 		if (*g)[i].Name == name {
 			*g = append((*g)[:i], (*g)[i+1:]...)
 			return
@@ -120,7 +122,7 @@ type ResourceDataList []gardencorev1beta1.ResourceData
 
 // Delete deletes an item from the list
 func (r *ResourceDataList) Delete(ref *autoscalingv1.CrossVersionObjectReference) {
-	for i := len(*r) - 1; i >= 0; i-- {
+	for i := range slices.Backward(*r) {
 		if apiequality.Semantic.DeepEqual((*r)[i].CrossVersionObjectReference, *ref) {
 			*r = append((*r)[:i], (*r)[i+1:]...)
 			return

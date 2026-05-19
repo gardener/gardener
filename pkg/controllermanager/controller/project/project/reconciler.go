@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -384,8 +385,8 @@ func (r *Reconciler) releaseNamespace(ctx context.Context, log logr.Logger, proj
 		delete(namespace.Annotations, v1beta1constants.NamespaceCreatedByProjectController)
 		delete(namespace.Labels, v1beta1constants.ProjectName)
 		delete(namespace.Labels, v1beta1constants.GardenRole)
-		for i := len(namespace.OwnerReferences) - 1; i >= 0; i-- {
-			if ownerRef := namespace.OwnerReferences[i]; ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
+		for i, ownerRef := range slices.Backward(namespace.OwnerReferences) {
+			if ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
 				ownerRef.Kind == "Project" &&
 				ownerRef.Name == project.Name &&
 				ownerRef.UID == project.UID {
