@@ -205,6 +205,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	}
 	garden.Status.Gardener = r.Identity
 	garden.Status.ObservedGeneration = garden.Generation
+	mutateAdvertisedAddresses(garden)
 
 	for _, operation := range operations {
 		switch operation {
@@ -632,4 +633,18 @@ func valiEnabled(networking operatorv1alpha1.RuntimeNetworking) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func mutateAdvertisedAddresses(garden *operatorv1alpha1.Garden) {
+	addrs := []operatorv1alpha1.AdvertisedAddress{}
+	domains := garden.Spec.VirtualCluster.DNS.Domains
+	if len(domains) == 0 {
+		return
+	}
+	addrs = append(addrs, operatorv1alpha1.AdvertisedAddress{
+		Name: operatorv1alpha1.AdvertisedAddressVirtualGarden,
+		URL:  "https://" + v1beta1helper.GetAPIServerDomain(domains[0].Name),
+	})
+
+	garden.Status.AdvertisedAddresses = addrs
 }

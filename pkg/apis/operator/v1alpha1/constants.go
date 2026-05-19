@@ -50,4 +50,7 @@ const (
 
 	// VirtualGardenDefaultSNIIngressNamespace is the default sni ingress namespace of the virtual garden.
 	VirtualGardenDefaultSNIIngressNamespace = VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+
+	// AdvertisedAddressVirtualGarden is a constant that represents the name of the virtual kube-apiserver address.
+	AdvertisedAddressVirtualGarden = "virtual-garden"
 )

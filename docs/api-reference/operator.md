@@ -81,6 +81,54 @@ AdmissionDeploymentSpec contains the deployment specification for the admission 
 </table>
 
 
+<h3 id="advertisedaddress">AdvertisedAddress
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#gardenstatus">GardenStatus</a>)
+</p>
+
+<p>
+AdvertisedAddress contains information for the Garden's servers.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the advertised address. e.g. virtual or discovery-server</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>url</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The URL of the server. e.g. https://api.foo.bar or https://1.2.3.4</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="auditwebhook">AuditWebhook
 </h3>
 
@@ -1913,6 +1961,17 @@ integer
 <td>
 <em>(Optional)</em>
 <p>Credentials contains information about the virtual garden cluster credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>advertisedAddresses</code></br>
+<em>
+<a href="#advertisedaddress">AdvertisedAddress</a> array
+</em>
+</td>
+<td>
+<p>List of addresses that are relevant to the Garden.<br />These include the Kube API server address of the virtual garden cluster.</p>
 </td>
 </tr>
 
