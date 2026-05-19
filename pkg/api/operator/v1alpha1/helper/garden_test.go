@@ -434,6 +434,54 @@ var _ = Describe("helper", func() {
 		}, []string{"reconcile", "rotate-credentials-start", "rotate-ssh-keypair", ""}),
 	)
 
+	Describe("#GetIngressWildcardDomains", func() {
+		var garden *operatorv1alpha1.Garden
+
+		BeforeEach(func() {
+			garden = &operatorv1alpha1.Garden{
+				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []operatorv1alpha1.DNSDomain{
+								{
+									Name:     "ingress.local.gardener.cloud",
+									Provider: ptr.To("primary"),
+								},
+								{
+									Name:     "secondary.local.gardener.cloud",
+									Provider: ptr.To("secondary"),
+								},
+							},
+						},
+					},
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						Gardener: operatorv1alpha1.Gardener{
+							DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
+								Domain: &operatorv1alpha1.DNSDomain{
+									Name:     "discovery.local.gardener.cloud",
+									Provider: ptr.To("primary"),
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should return the ingress wildcard domains only", func() {
+			Expect(GetIngressWildcardDomains(garden)).To(ConsistOf(
+				operatorv1alpha1.DNSDomain{
+					Name:     "*.ingress.local.gardener.cloud",
+					Provider: ptr.To("primary"),
+				},
+				operatorv1alpha1.DNSDomain{
+					Name:     "*.secondary.local.gardener.cloud",
+					Provider: ptr.To("secondary"),
+				},
+			))
+		})
+	})
+
 	Describe("#GetAllIngressDomains", func() {
 		var garden *operatorv1alpha1.Garden
 
