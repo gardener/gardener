@@ -2996,6 +2996,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.SingleProcessOOMKill != nil {
+		in, out := &in.SingleProcessOOMKill, &out.SingleProcessOOMKill
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

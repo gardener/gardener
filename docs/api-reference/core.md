@@ -6093,6 +6093,18 @@ integer
 <p>ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.<br />Default: 0s</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>singleProcessOOMKill</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container<br />cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of<br />as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

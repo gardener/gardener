@@ -1471,6 +1471,11 @@ type KubeletConfig struct {
 	// Default: 0s
 	// +optional
 	ImageMaximumGCAge *metav1.Duration `json:"imageMaximumGCAge,omitempty" protobuf:"bytes,29,opt,name=imageMaximumGCAge"`
+	// SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container
+	// cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of
+	// as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
+	// +optional
+	SingleProcessOOMKill *bool `json:"singleProcessOOMKill,omitempty" protobuf:"varint,30,opt,name=singleProcessOOMKill"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

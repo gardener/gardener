@@ -102,6 +102,7 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
 		MaxParallelImagePulls:            params.MaxParallelImagePulls,
+		SingleProcessOOMKill:             params.SingleProcessOOMKill,
 		ServerTLSBootstrap:               true,
 		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
 		RegisterWithTaints:               nodeTaints,

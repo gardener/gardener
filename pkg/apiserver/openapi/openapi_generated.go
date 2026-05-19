@@ -5380,6 +5380,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},
+					"singleProcessOOMKill": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
