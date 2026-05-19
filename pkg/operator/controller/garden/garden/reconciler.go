@@ -637,14 +637,14 @@ func valiEnabled(networking operatorv1alpha1.RuntimeNetworking) (bool, error) {
 
 func mutateAdvertisedAddresses(garden *operatorv1alpha1.Garden) {
 	addrs := []operatorv1alpha1.AdvertisedAddress{}
-	for _, d := range getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains) {
-		if strings.HasPrefix(d.Name, v1beta1constants.APIServerFQDNPrefix) {
-			addrs = append(addrs, operatorv1alpha1.AdvertisedAddress{
-				Name: operatorv1alpha1.AdvertisedAddressVirtualGarden,
-				URL:  fmt.Sprintf("https://%s", d.Name),
-			})
-		}
+	domains := garden.Spec.VirtualCluster.DNS.Domains
+	if len(domains) == 0 {
+		return
 	}
+	addrs = append(addrs, operatorv1alpha1.AdvertisedAddress{
+		Name: operatorv1alpha1.AdvertisedAddressVirtualGarden,
+		URL:  "https://" + v1beta1helper.GetAPIServerDomain(domains[0].Name),
+	})
 
 	garden.Status.AdvertisedAddresses = addrs
 }
