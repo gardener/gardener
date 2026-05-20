@@ -1,6 +1,6 @@
 module github.com/gardener/gardener
 
-go 1.26.2
+go 1.26.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
