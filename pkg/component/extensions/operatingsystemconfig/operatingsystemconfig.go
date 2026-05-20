@@ -713,12 +713,18 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 
 	kubeletConfigParameters := components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
 	kubeletCLIFlags := components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
+	apiServerURL := o.values.APIServerURL
 	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
 		kubeletConfigParameters = components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(worker.Kubernetes.Kubelet)
 		kubeletCLIFlags = components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(worker.Kubernetes.Kubelet)
 	}
 	if worker.ControlPlane != nil {
 		kubeletConfigParameters.WithStaticPodPath = true
+
+		// Node-level components like gardener-node-agent and kubelet on control plane nodes should connect to the API
+		// server via localhost to avoid unnecessary network hops, i.e., they should not connect to the API server via the
+		// external exposure, which might not be available in a failure scenario.
+		apiServerURL = "https://localhost:443"
 	}
 	setDefaultEvictionMemoryAvailable(kubeletConfigParameters.EvictionHard, kubeletConfigParameters.EvictionSoft, o.values.MachineTypes, worker.Machine.Type)
 
@@ -766,7 +772,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		worker:                                  worker,
 		purpose:                                 purpose,
 		key:                                     oscKey,
-		apiServerURL:                            o.values.APIServerURL,
+		apiServerURL:                            apiServerURL,
 		caBundle:                                caBundle,
 		clusterCASecretName:                     clusterCASecret.Name,
 		clusterCABundle:                         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
