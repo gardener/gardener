@@ -1114,6 +1114,10 @@ type KubeletConfig struct {
 	// Setting it to nil means no limit.
 	// Default: nil
 	MaxParallelImagePulls *int32
+	// SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container
+	// cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of
+	// as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
+	SingleProcessOOMKill *bool
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

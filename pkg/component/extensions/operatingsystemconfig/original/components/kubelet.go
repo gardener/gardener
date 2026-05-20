@@ -52,6 +52,7 @@ type ConfigurableKubeletConfigParameters struct {
 	SystemReserved                   map[string]string
 	WithStaticPodPath                bool
 	MaxParallelImagePulls            *int32
+	SingleProcessOOMKill             *bool
 }
 
 const (
@@ -89,6 +90,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.SeccompDefault = kubeletConfig.SeccompDefault
 		out.SerializeImagePulls = kubeletConfig.SerializeImagePulls
 		out.MaxParallelImagePulls = kubeletConfig.MaxParallelImagePulls
+		out.SingleProcessOOMKill = kubeletConfig.SingleProcessOOMKill
 		out.RegistryPullQPS = kubeletConfig.RegistryPullQPS
 		out.RegistryBurst = kubeletConfig.RegistryBurst
 		out.FeatureGates = kubeletConfig.FeatureGates

@@ -5668,6 +5668,18 @@ func (m *KubeletConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.SingleProcessOOMKill != nil {
+		i--
+		if *m.SingleProcessOOMKill {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf0
+	}
 	if m.ImageMaximumGCAge != nil {
 		{
 			size, err := m.ImageMaximumGCAge.MarshalToSizedBuffer(dAtA[:i])
@@ -15501,6 +15513,9 @@ func (m *KubeletConfig) Size() (n int) {
 		l = m.ImageMaximumGCAge.Size()
 		n += 2 + l + sovGenerated(uint64(l))
 	}
+	if m.SingleProcessOOMKill != nil {
+		n += 3
+	}
 	return n
 }
 
@@ -19678,6 +19693,7 @@ func (this *KubeletConfig) String() string {
 		`MaxParallelImagePulls:` + valueToStringGenerated(this.MaxParallelImagePulls) + `,`,
 		`ImageMinimumGCAge:` + strings.Replace(fmt.Sprintf("%v", this.ImageMinimumGCAge), "Duration", "v11.Duration", 1) + `,`,
 		`ImageMaximumGCAge:` + strings.Replace(fmt.Sprintf("%v", this.ImageMaximumGCAge), "Duration", "v11.Duration", 1) + `,`,
+		`SingleProcessOOMKill:` + valueToStringGenerated(this.SingleProcessOOMKill) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -37416,6 +37432,27 @@ func (m *KubeletConfig) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 30:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SingleProcessOOMKill", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.SingleProcessOOMKill = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

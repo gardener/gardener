@@ -1758,6 +1758,12 @@ message KubeletConfig {
   // Default: 0s
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration imageMaximumGCAge = 29;
+
+  // SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container
+  // cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of
+  // as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
+  // +optional
+  optional bool singleProcessOOMKill = 30;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

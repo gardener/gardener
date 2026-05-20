@@ -297,6 +297,7 @@ spec:
   #   registryPullQPS: 5
   #   registryBurst: 10
   #   maxPods: 110
+  #   singleProcessOOMKill: false
   #   evictionPressureTransitionPeriod: 4m0s
   #   evictionMaxPodGracePeriod: 90
   #   evictionHard:
