@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -84,11 +85,11 @@ func RunAndWait(ctx context.Context, args ...string) *gexec.Session {
 // RunInMachine runs gardenadm in the given machine (sorted lexicographically) with the given arguments and returns the
 // gbytes.Buffers.
 func RunInMachine(ctx context.Context, technicalID string, ordinal int, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
-	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
+	stdOutBuffer, stdErrBuffer := gbytes.NewBuffer(), gbytes.NewBuffer()
 	podName := machinePodName(ctx, technicalID, ordinal)
 	err := RuntimeClient.PodExecutor().ExecuteWithStreams(
 		ctx,
-		technicalID,
+		infrastructure.MachineNamespaceName(technicalID),
 		podName,
 		ContainerName,
 		nil,
@@ -103,7 +104,7 @@ func machinePodName(ctx context.Context, technicalID string, ordinal int) string
 	GinkgoHelper()
 
 	podList := &corev1.PodList{}
-	Expect(RuntimeClient.Client().List(ctx, podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).To(Succeed())
+	Expect(RuntimeClient.Client().List(ctx, podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).To(Succeed())
 
 	Expect(ordinal).To(BeNumerically("<", len(podList.Items)))
 
