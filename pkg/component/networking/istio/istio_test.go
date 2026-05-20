@@ -164,6 +164,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressMisdirectedRequestsEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_misdirected_requests_envoyfilter.yaml")
+			return string(data)
+		}
+
 		istioIngressHTTPConnectGateway = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_http_connect_gateway.yaml")
 			return string(data)
@@ -408,6 +413,7 @@ var _ = Describe("istiod", func() {
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
 				istioIngressEnvoyFilter(),
+				istioIngressMisdirectedRequestsEnvoyFilter(),
 				istioIngressServiceMonitor(),
 				istioIngressTelemetry(),
 			}
