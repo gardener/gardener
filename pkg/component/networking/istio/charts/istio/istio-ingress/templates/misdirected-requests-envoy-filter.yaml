@@ -19,6 +19,7 @@ spec:
     match:
       context: GATEWAY
       listener:
+        portNumber: 9443
         filterChain:
           filter:
             name: envoy.filters.network.http_connection_manager
@@ -34,11 +35,18 @@ spec:
             function envoy_on_request(request_handle)
               local streamInfo = request_handle:streamInfo()
               if streamInfo:requestedServerName() ~= "" then
-                if (string.sub(streamInfo:requestedServerName(), 1, 2) == "*." and not string.find(request_handle:headers():get(":authority"), string.sub(streamInfo:requestedServerName(), 3), 1, true)) then
+                -- Handle wildcard in the requested server name
+                if (string.sub(streamInfo:requestedServerName(), 1, 2) == "*." and not string.find(request_handle:headers():get(":authority"), string.sub(streamInfo:requestedServerName(), 2), 1, true)) then
                   request_handle:respond({[":status"] = "421"}, "Misdirected Request")
                 end
+                -- Handle mismatch between requested server name and :authority header
                 if (string.sub(streamInfo:requestedServerName(), 1, 2) ~= "*." and streamInfo:requestedServerName() ~= request_handle:headers():get(":authority")) then
-                  request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+                  -- Check if the difference is just the port (443) as suffix in the :authority header
+                  local portSuffix = ":443"
+                  local portSuffixLen = string.len(portSuffix)
+                  if (not(string.find(string.sub(request_handle:headers():get(":authority"), -portSuffixLen), portSuffix, 1, true) and streamInfo:requestedServerName() == string.sub(request_handle:headers():get(":authority"), 1, -portSuffixLen - 1))) then
+                    request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+                  end
                 end
               end
             end
