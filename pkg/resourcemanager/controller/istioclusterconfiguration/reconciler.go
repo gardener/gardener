@@ -81,11 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if err := r.reconcileEnvoyFilters(ctx, destinationRules.Items, sourceNamespace, istioIngressNamespaces); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, r.cleanupOrphanEnvoyFilters(ctx, sourceNamespace.Name, istioIngressNamespaces)
+	return reconcile.Result{}, r.reconcileEnvoyFilters(ctx, destinationRules.Items, sourceNamespace, istioIngressNamespaces)
 }
 
 func (r *Reconciler) getIstioIngressNamespaces(ctx context.Context) ([]string, error) {
@@ -235,27 +231,6 @@ func (r *Reconciler) getServiceForDestinationRule(ctx context.Context, destinati
 	}
 
 	return service, nil
-}
-
-func (r *Reconciler) cleanupOrphanEnvoyFilters(ctx context.Context, sourceNamespace string, istioIngressNamespaces []string) error {
-	log := logf.FromContext(ctx)
-
-	var envoyFilters istionetworkingv1alpha3.EnvoyFilterList
-	if err := r.TargetClient.List(ctx, &envoyFilters, client.MatchingLabels{managedByLabelKey: managedByLabelValue}); err != nil {
-		return fmt.Errorf("failed to list EnvoyFilters: %w", err)
-	}
-
-	for _, envoyFilter := range envoyFilters.Items {
-		if envoyFilter.Name == getEnvoyFilterName(sourceNamespace) && !slices.Contains(istioIngressNamespaces, envoyFilter.Namespace) {
-			if err := r.TargetClient.Delete(ctx, envoyFilter); err == nil {
-				log.Info("Deleted orphan EnvoyFilter", "envoyFilter", envoyFilter.Name, "namespace", envoyFilter.Namespace)
-			} else if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed to delete orphan EnvoyFilter %s/%s: %w", envoyFilter.Namespace, envoyFilter.Name, err)
-			}
-		}
-	}
-
-	return nil
 }
 
 func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPProtocolPolicy) *istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch {
