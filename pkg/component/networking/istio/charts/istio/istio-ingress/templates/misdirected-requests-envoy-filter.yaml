@@ -34,7 +34,7 @@ spec:
             function envoy_on_request(request_handle)
               local streamInfo = request_handle:streamInfo()
               if streamInfo:requestedServerName() ~= "" then
-                if (string.sub(streamInfo:requestedServerName(), 1, 2) == "*." and not string.find(request_handle:headers():get(":authority"), string.sub(streamInfo:requestedServerName(), 2))) then
+                if (string.sub(streamInfo:requestedServerName(), 1, 2) == "*." and not string.find(request_handle:headers():get(":authority"), string.sub(streamInfo:requestedServerName(), 3), 1, true)) then
                   request_handle:respond({[":status"] = "421"}, "Misdirected Request")
                 end
                 if (string.sub(streamInfo:requestedServerName(), 1, 2) ~= "*." and streamInfo:requestedServerName() ~= request_handle:headers():get(":authority")) then
