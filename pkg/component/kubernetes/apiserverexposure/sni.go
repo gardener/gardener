@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -19,6 +20,7 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -225,6 +227,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create istio gateway configuration: %w", err)
 	}
+	exportTo := getExportTo(istioGatewayConfigurations)
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -325,9 +328,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	destinationMutateFn := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
+	destinationMutateFn := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), exportTo, hostName)
 	if values.IstioTLSTermination {
-		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
+		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), exportTo, hostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, destinationMutateFn); err != nil {
@@ -335,12 +338,12 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if values.IstioTLSTermination {
-		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
+		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), exportTo, mTLSHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, mTLSDestinationRule, destinationMTLSMutateFn); err != nil {
 			return err
 		}
 
-		destinationConnectionUpgradeMutateFn := istio.DestinationRuleWithTLSTermination(connectionUpgradeDestinationRule, getLabels(), connectionUpgradeHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
+		destinationConnectionUpgradeMutateFn := istio.DestinationRuleWithTLSTermination(connectionUpgradeDestinationRule, getLabels(), exportTo, connectionUpgradeHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, connectionUpgradeDestinationRule, destinationConnectionUpgradeMutateFn); err != nil {
 			return err
 		}
@@ -372,9 +375,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
+		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), exportTo, allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
 		if values.IstioTLSTermination {
-			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, connectionUpgradeHostName, connectionUpgradeRouteName)
+			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), exportTo, allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, connectionUpgradeHostName, connectionUpgradeRouteName)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, configuration.virtualService, virtualServiceMutateFn); err != nil {
@@ -632,4 +635,21 @@ func ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context, c client.
 	}
 
 	return nil
+}
+
+func getExportTo(istioGatewayConfigurations []istioGatewayConfiguration) []string {
+	namespaceSet := sets.NewString()
+
+	for _, configuration := range istioGatewayConfigurations {
+		namespaceSet.Insert(configuration.istioIngressGateway.Namespace)
+
+		if configuration.wildcardConfiguration != nil && configuration.wildcardConfiguration.IstioIngressGateway != nil {
+			namespaceSet.Insert(configuration.wildcardConfiguration.IstioIngressGateway.Namespace)
+		}
+	}
+
+	namespaces := namespaceSet.UnsortedList()
+	slices.Sort(namespaces)
+
+	return namespaces
 }

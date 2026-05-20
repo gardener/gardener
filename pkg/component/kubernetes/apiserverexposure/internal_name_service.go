@@ -17,15 +17,17 @@ import (
 )
 
 type internalNameService struct {
-	client    client.Client
-	namespace string
+	client                client.Client
+	namespace             string
+	istioIngressNamespace string
 }
 
 // NewInternalNameService creates a new instance of Deployer for the service kubernetes.default.svc.cluster.local.
-func NewInternalNameService(c client.Client, namespace string) component.Deployer {
+func NewInternalNameService(c client.Client, namespace string, istioIngressNamespace string) component.Deployer {
 	return &internalNameService{
-		client:    c,
-		namespace: namespace,
+		client:                c,
+		namespace:             namespace,
+		istioIngressNamespace: istioIngressNamespace,
 	}
 }
 
@@ -33,7 +35,7 @@ func (in *internalNameService) Deploy(ctx context.Context) error {
 	svc := in.emptyKubernetesDefaultService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, in.client, svc, func() error {
-		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "networking.istio.io/exportTo", in.istioIngressNamespace)
 		return nil
 	}); err != nil {
 		return err

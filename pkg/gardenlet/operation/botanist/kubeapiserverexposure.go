@@ -60,6 +60,13 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 		nil,
 		clusterIPsFunc,
 		ingressFunc,
+		func() []string {
+			istioIngressNamespaces := []string{b.IstioNamespace()}
+			if b.ControlPlaneWildcardCert != nil && b.WildcardIstioNamespace() != b.IstioNamespace() {
+				istioIngressNamespaces = append(istioIngressNamespaces, b.WildcardIstioNamespace())
+			}
+			return istioIngressNamespaces
+		},
 	)
 }
 

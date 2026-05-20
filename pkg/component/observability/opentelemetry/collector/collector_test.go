@@ -94,17 +94,18 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		format.TruncateThreshold = 100000
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:                   image,
-			KubeRBACProxyImage:      kubeRBACProxyImage,
-			LokiEndpoint:            lokiEndpoint,
-			Replicas:                1,
-			ShootNodeLoggingEnabled: true,
-			WithRBACProxy:           true,
-			IngressHost:             ingressHost,
-			ValiHost:                valiHost,
-			SecretNameServerCA:      v1beta1constants.SecretNameCACluster,
-			PriorityClassName:       "gardener-system-100",
-			ClusterType:             "shoot",
+			Image:                        image,
+			KubeRBACProxyImage:           kubeRBACProxyImage,
+			LokiEndpoint:                 lokiEndpoint,
+			Replicas:                     1,
+			ShootNodeLoggingEnabled:      true,
+			WithRBACProxy:                true,
+			IngressHost:                  ingressHost,
+			ValiHost:                     valiHost,
+			SecretNameServerCA:           v1beta1constants.SecretNameCACluster,
+			PriorityClassName:            "gardener-system-100",
+			ClusterType:                  "shoot",
+			IstioIngressGatewayNamespace: "istio-ingress",
 		}
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, values, fakeSecretManager)
@@ -334,7 +335,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
 					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
 					resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
-					"networking.istio.io/exportTo":                             "*",
+					"networking.istio.io/exportTo":                             "istio-ingress",
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -881,7 +882,7 @@ func getVirtualService() *istionetworkingv1beta1.VirtualService {
 			Labels:    getLabels(),
 		},
 		Spec: istioapinetworkingv1beta1.VirtualService{
-			ExportTo: []string{"*"},
+			ExportTo: []string{"istio-ingress"},
 			Gateways: []string{"logging"},
 			Hosts:    []string{ingressHost, valiHost},
 			Http: []*istioapinetworkingv1beta1.HTTPRoute{
@@ -928,7 +929,7 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 			Labels:    getLabels(),
 		},
 		Spec: istioapinetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"*"},
+			ExportTo: []string{"istio-ingress"},
 			Host:     "opentelemetry-collector-collector.some-namespace.svc.cluster.local",
 			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 				LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{

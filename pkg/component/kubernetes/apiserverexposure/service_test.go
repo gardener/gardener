@@ -37,15 +37,16 @@ var _ = Describe("#Service", func() {
 		values           *ServiceValues
 		expected         *corev1.Service
 
-		ingressIP         string
-		clusterIP         string
-		clusterIPsFunc    func([]string)
-		ingressIPFunc     func(string)
-		namePrefix        string
-		namespace         *corev1.Namespace
-		expectedName      string
-		sniServiceObjKey  client.ObjectKey
-		customAnnotations map[string]string
+		ingressIP                  string
+		clusterIP                  string
+		clusterIPsFunc             func([]string)
+		ingressIPFunc              func(string)
+		istioIngressNamespacesFunc func() []string
+		namePrefix                 string
+		namespace                  *corev1.Namespace
+		expectedName               string
+		sniServiceObjKey           client.ObjectKey
+		customAnnotations          map[string]string
 	)
 
 	BeforeEach(func() {
@@ -68,6 +69,7 @@ var _ = Describe("#Service", func() {
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		clusterIPsFunc = func(c []string) { clusterIP = c[0] }
 		ingressIPFunc = func(c string) { ingressIP = c }
+		istioIngressNamespacesFunc = func() []string { return []string{"istio-foo", "istio-bar"} }
 
 		values = &ServiceValues{
 			NamePrefix: namePrefix,
@@ -142,6 +144,7 @@ var _ = Describe("#Service", func() {
 			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPsFunc,
 			ingressIPFunc,
+			istioIngressNamespacesFunc,
 		)
 	})
 
@@ -180,7 +183,7 @@ var _ = Describe("#Service", func() {
 	Context("when service is not in shoot namespace", func() {
 		BeforeEach(func() {
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": "istio-foo,istio-bar",
 			}, netpolAnnotations())
 		})
 
@@ -193,7 +196,7 @@ var _ = Describe("#Service", func() {
 			Expect(c.Update(ctx, namespace)).To(Succeed())
 
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": "istio-foo,istio-bar",
 			}, shootNetpolAnnotations())
 		})
 
@@ -242,7 +245,7 @@ var _ = Describe("#Service", func() {
 			expectedName = expectedName + "-foo"
 
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": "istio-foo,istio-bar",
 			}, netpolAnnotations())
 
 			expected.Labels = map[string]string{
@@ -259,7 +262,7 @@ var _ = Describe("#Service", func() {
 			customAnnotations = map[string]string{"foo": "bar"}
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": "istio-foo,istio-bar",
 			}, netpolAnnotations())
 		})
 

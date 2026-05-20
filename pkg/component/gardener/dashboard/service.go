@@ -23,7 +23,7 @@ func (g *gardenerDashboard) service() *corev1.Service {
 			Name:        serviceName,
 			Namespace:   g.namespace,
 			Labels:      GetLabels(),
-			Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
+			Annotations: map[string]string{"networking.istio.io/exportTo": istioIngressGatewayNamespace},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,

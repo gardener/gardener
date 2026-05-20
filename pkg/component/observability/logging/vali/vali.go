@@ -120,13 +120,14 @@ type Values struct {
 	InitLargeDirImage  string
 	IsGardenCluster    bool
 
-	ClusterType               component.ClusterType
-	Replicas                  int32
-	PriorityClassName         string
-	IngressHost               string
-	IstioIngressGatewayLabels map[string]string
-	ShootNodeLoggingEnabled   bool
-	Storage                   *resource.Quantity
+	ClusterType                  component.ClusterType
+	Replicas                     int32
+	PriorityClassName            string
+	IngressHost                  string
+	IstioIngressGatewayLabels    map[string]string
+	IstioIngressGatewayNamespace string
+	ShootNodeLoggingEnabled      bool
+	Storage                      *resource.Quantity
 }
 
 // Interface is the interface for the Vali deployer.
@@ -338,17 +339,12 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 
 func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, error) {
 	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
-		gatewayName      = valiName
-		endpoint         = valiconstants.PushEndpoint
-		port             = kubeRBACProxyPort
+		gatewayName = valiName
+		endpoint    = valiconstants.PushEndpoint
+		port        = kubeRBACProxyPort
 	)
 
 	if v.values.IsGardenCluster {
-		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
@@ -356,7 +352,7 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, valiName, tlsSecret.Name),
-			Namespace: ingressNamespace,
+			Namespace: v.values.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,
@@ -378,6 +374,7 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		getLabels(),
+		[]string{v.values.IstioIngressGatewayNamespace},
 		[]string{v.values.IngressHost},
 		gatewayName,
 		uint32(port),
@@ -399,7 +396,7 @@ func (v *vali) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, err
 	}}
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), []string{v.values.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 
@@ -414,7 +411,7 @@ func (v *vali) getService() *corev1.Service {
 				Namespace: v.namespace,
 				Labels:    getLabels(),
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": v.values.IstioIngressGatewayNamespace,
 				},
 			},
 			Spec: corev1.ServiceSpec{

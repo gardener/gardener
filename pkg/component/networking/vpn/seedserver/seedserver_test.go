@@ -432,7 +432,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return &istionetworkingv1beta1.DestinationRule{
 				ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server", Namespace: namespace, ResourceVersion: "1"},
 				Spec: istioapinetworkingv1beta1.DestinationRule{
-					ExportTo: []string{"*"},
+					ExportTo: []string{istioNamespace},
 					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", "vpn-seed-server", namespace),
 					TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 						ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
@@ -498,7 +498,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Name:      ServiceName,
 				Namespace: namespace,
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo":                                              "*",
+					"networking.istio.io/exportTo":                                              istioNamespace,
 					"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]}]`,
 					"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":15000}]`,

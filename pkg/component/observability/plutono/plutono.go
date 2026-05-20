@@ -115,6 +115,8 @@ type Values struct {
 	IncludeIstioDashboards bool
 	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
 	// IsGardenCluster specifies whether the cluster is garden cluster.
@@ -582,7 +584,7 @@ func (p *plutono) getService() *corev1.Service {
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": p.values.IstioIngressGatewayNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -785,10 +787,6 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 
 func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error) {
 	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace      = v1beta1constants.DefaultSNIIngressNamespace
 		credentialsSecretName = p.values.AuthSecretName
 		caName                = v1beta1constants.SecretNameCASeed
 		gatewayName           = name
@@ -802,7 +800,6 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 
 		credentialsSecretName = credentialsSecret.Name
 		caName = operatorv1alpha1.SecretNameCARuntime
-		ingressNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
@@ -850,7 +847,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", p.namespace, name, ingressTLSSecretName),
-			Namespace: ingressNamespace,
+			Namespace: p.values.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,
@@ -872,6 +869,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		utils.MergeStringMaps(getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: credentialsSecretName}),
+		[]string{p.values.IstioIngressGatewayNamespace},
 		[]string{p.values.IngressHost},
 		gatewayName,
 		Port,
@@ -896,7 +894,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	}}, virtualService.Spec.Http...)
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), []string{p.values.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

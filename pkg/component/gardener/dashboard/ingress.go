@@ -22,6 +22,8 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+const istioIngressGatewayNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+
 func (g *gardenerDashboard) ingressHosts() []string {
 	hosts := make([]string, 0, len(g.values.Ingress.Domains))
 	for _, domain := range g.values.Ingress.Domains {
@@ -61,7 +63,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", g.namespace, deploymentName, tlsSecret.Name),
-			Namespace: operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace,
+			Namespace: istioIngressGatewayNamespace,
 			Labels:    GetLabels(),
 		},
 		Data: tlsSecret.Data,
@@ -83,6 +85,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		GetLabels(),
+		[]string{istioIngressGatewayNamespace},
 		g.ingressHosts(),
 		gatewayName,
 		portServer,
@@ -94,7 +97,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 	}
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: g.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, GetLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, GetLabels(), []string{istioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

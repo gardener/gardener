@@ -7,6 +7,7 @@ package apiserverexposure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -72,6 +73,7 @@ func NewService(
 	waiter retry.Ops,
 	clusterIPsFunc func(clusterIPs []string),
 	ingressFunc func(ingressIP string),
+	istioIngressNamespacesFunc func() []string,
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
@@ -108,6 +110,7 @@ func NewService(
 		waiter:                     waiter,
 		clusterIPsFunc:             clusterIPsFunc,
 		ingressFunc:                ingressFunc,
+		istioIngressNamespacesFunc: istioIngressNamespacesFunc,
 	}
 }
 
@@ -120,13 +123,14 @@ type service struct {
 	waiter                     retry.Ops
 	clusterIPsFunc             func(clusterIPs []string)
 	ingressFunc                func(ingressIP string)
+	istioIngressNamespacesFunc func() []string
 }
 
 func (s *service) Deploy(ctx context.Context) error {
 	obj := s.emptyService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", strings.Join(s.istioIngressNamespacesFunc(), ","))
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},

@@ -58,6 +58,8 @@ type Values struct {
 	IsGardenCluster bool
 	// SigningCA is the name of the CA that should be used to sign the server certificate.
 	SigningCA string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 }
 
 type istioBasicAuthServer struct {

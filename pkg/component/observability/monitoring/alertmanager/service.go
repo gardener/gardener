@@ -23,9 +23,6 @@ func (a *alertManager) service() *corev1.Service {
 			Name:      a.name(),
 			Namespace: a.namespace,
 			Labels:    a.getLabels(),
-			Annotations: map[string]string{
-				"networking.istio.io/exportTo": "*",
-			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
@@ -35,6 +32,12 @@ func (a *alertManager) service() *corev1.Service {
 				Port: port,
 			}},
 		},
+	}
+
+	if a.values.ExternalExposure != nil {
+		service.Annotations = map[string]string{
+			"networking.istio.io/exportTo": a.values.ExternalExposure.IstioIngressGatewayNamespace,
+		}
 	}
 
 	networkPolicyPort := networkingv1.NetworkPolicyPort{

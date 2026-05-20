@@ -21,7 +21,7 @@ func (g *gardenerDiscoveryServer) service() *corev1.Service {
 			Name:        ServiceName,
 			Namespace:   g.namespace,
 			Labels:      labels(),
-			Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
+			Annotations: map[string]string{"networking.istio.io/exportTo": istioIngressGatewayNamespace},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,

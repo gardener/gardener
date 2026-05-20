@@ -71,6 +71,8 @@ type Values struct {
 	IngressHost string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the istio ingress gateway.
+	IstioIngressGatewayNamespace string
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 	// PriorityClassName is the priority class name for the OpenTelemetry Collector pods.
@@ -638,7 +640,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`)
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", o.values.IstioIngressGatewayNamespace)
 	}
 
 	return obj
@@ -652,19 +654,13 @@ func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.Access
 }
 
 func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Object, error) {
-	var (
-		// Currently, all observability components are exposed via the same istio ingress gateway.
-		// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-		// See https://github.com/gardener/gardener/issues/11860 for details.
-		ingressNamespace = v1beta1constants.DefaultSNIIngressNamespace
-		name             = "logging"
-	)
+	name := "logging"
 
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", o.namespace, name, tlsSecret.Name),
-			Namespace: ingressNamespace,
+			Namespace: o.values.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,
@@ -686,6 +682,7 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
 		getLabels(),
+		[]string{o.values.IstioIngressGatewayNamespace},
 		[]string{o.values.IngressHost, o.values.ValiHost},
 		name,
 		uint32(collectorconstants.KubeRBACProxyOTLPReceiverPort),
@@ -725,7 +722,7 @@ func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret) ([]client.Ob
 	})
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: o.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), []string{o.values.IstioIngressGatewayNamespace}, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 	destinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{

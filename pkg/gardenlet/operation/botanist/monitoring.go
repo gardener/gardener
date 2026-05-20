@@ -32,9 +32,13 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		emailReceivers = monitoring.Alerting.EmailReceivers
 	}
 
-	var istioLabels map[string]string
+	var (
+		istioLabels    map[string]string
+		istioNamespace string
+	)
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
+		istioNamespace = b.WildcardIstioNamespace()
 	}
 
 	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, alertmanager.Values{
@@ -46,10 +50,11 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		AlertingSMTPSecret: b.LoadSecret(v1beta1constants.GardenRoleAlerting),
 		EmailReceivers:     emailReceivers,
 		ExternalExposure: &alertmanager.ExposureValues{
-			Host:                      b.ComputeAlertManagerHost(),
-			SecretsManager:            b.SecretsManager,
-			SigningCA:                 v1beta1constants.SecretNameCACluster,
-			IstioIngressGatewayLabels: istioLabels,
+			Host:                         b.ComputeAlertManagerHost(),
+			SecretsManager:               b.SecretsManager,
+			SigningCA:                    v1beta1constants.SecretNameCACluster,
+			IstioIngressGatewayLabels:    istioLabels,
+			IstioIngressGatewayNamespace: istioNamespace,
 		},
 	})
 }
@@ -97,9 +102,13 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		externalLabels = utils.MergeStringMaps(externalLabels, b.Config.Monitoring.Shoot.ExternalLabels)
 	}
 
-	var istioLabels map[string]string
+	var (
+		istioLabels    map[string]string
+		istioNamespace string
+	)
 	if !b.Shoot.IsSelfHosted() {
 		istioLabels = b.WildcardIstioLabels()
+		istioNamespace = b.WildcardIstioNamespace()
 	}
 
 	values := prometheus.Values{
@@ -136,6 +145,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			SigningCA:                         v1beta1constants.SecretNameCACluster,
 			BlockManagementAndTargetAPIAccess: true,
 			IstioIngressGatewayLabels:         istioLabels,
+			IstioIngressGatewayNamespace:      istioNamespace,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{
 			ServiceAccountName: shootprometheus.ServiceAccountName,

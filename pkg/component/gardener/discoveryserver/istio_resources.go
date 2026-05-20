@@ -11,11 +11,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+const istioIngressGatewayNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
+
 func (g *gardenerDiscoveryServer) istioResources() ([]client.Object, error) {
+	var exportTo = []string{istioIngressGatewayNamespace}
+
 	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: g.namespace}}
 	if err := istio.GatewayWithTLSPassthrough(
 		gateway,
@@ -31,6 +37,7 @@ func (g *gardenerDiscoveryServer) istioResources() ([]client.Object, error) {
 	if err := istio.VirtualServiceWithSNIMatch(
 		virtualService,
 		labels(),
+		exportTo,
 		[]string{g.values.Domain},
 		deploymentName,
 		portServer,
@@ -40,7 +47,7 @@ func (g *gardenerDiscoveryServer) istioResources() ([]client.Object, error) {
 	}
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: g.namespace}}
-	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, labels(), destinationHost)(); err != nil {
+	if err := istio.DestinationRuleWithLocalityPreference(destinationRule, labels(), exportTo, destinationHost)(); err != nil {
 		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
 	}
 

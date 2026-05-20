@@ -646,7 +646,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 	service := v.emptyService(idx)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", "*")
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", v.istioNamespaceFunc())
 
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
@@ -815,7 +815,7 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 	destinationRule := v.emptyDestinationRule(idx)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, destinationRule, func() error {
 		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
-			ExportTo: []string{"*"},
+			ExportTo: []string{v.istioNamespaceFunc()},
 			Host:     fmt.Sprintf("%s.%s.svc.cluster.local", v.indexedName(idx), v.namespace),
 			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{

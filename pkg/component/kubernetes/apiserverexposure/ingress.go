@@ -71,7 +71,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 
 	destinationHost := kubernetesutils.FQDNForService(i.values.ServiceName, serviceNamespace)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), destinationHost, &tlsMode)); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, destinationHost, &tlsMode)); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, virtualService, func() error {
-			if err := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)(); err != nil {
+			if err := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)(); err != nil {
 				return err
 			}
 			virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{{
@@ -125,7 +125,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, virtualService, istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, virtualService, istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)); err != nil {
 			return err
 		}
 	}

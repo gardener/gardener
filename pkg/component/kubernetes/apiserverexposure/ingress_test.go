@@ -117,7 +117,7 @@ var _ = Describe("#Ingress", func() {
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-foo"},
 				Hosts:    sniHosts,
 				Gateways: []string{"kube-apiserver-ingress"},
 				Tls: []*istioapinetworkingv1beta1.TLSRoute{{
@@ -167,7 +167,7 @@ var _ = Describe("#Ingress", func() {
 				},
 			},
 			Spec: istioapinetworkingv1beta1.DestinationRule{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-foo"},
 				Host:     "foo.bar.svc.cluster.local",
 				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 					ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{

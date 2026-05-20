@@ -25,12 +25,13 @@ var _ = Describe("#InternalNameService", func() {
 		ctx context.Context
 		c   client.Client
 
-		serviceObjKey    client.ObjectKey
-		oldServiceObjKey client.ObjectKey
-		defaultDeployer  component.Deployer
-		namespace        string
-		expected         *corev1.Service
-		old              *corev1.Service
+		serviceObjKey         client.ObjectKey
+		oldServiceObjKey      client.ObjectKey
+		defaultDeployer       component.Deployer
+		namespace             string
+		istioIngressNamespace string
+		expected              *corev1.Service
+		old                   *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -41,6 +42,7 @@ var _ = Describe("#InternalNameService", func() {
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		namespace = "foobar"
+		istioIngressNamespace = "istio-foo"
 		serviceObjKey = client.ObjectKey{Name: "kubernetes", Namespace: "default"}
 		oldServiceObjKey = client.ObjectKey{Name: "kube-apiserver", Namespace: namespace}
 		expected = &corev1.Service{
@@ -52,7 +54,7 @@ var _ = Describe("#InternalNameService", func() {
 				Name:      "kubernetes",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": "istio-foo",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -83,6 +85,7 @@ var _ = Describe("#InternalNameService", func() {
 		defaultDeployer = NewInternalNameService(
 			c,
 			namespace,
+			istioIngressNamespace,
 		)
 	})
 

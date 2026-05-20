@@ -171,7 +171,7 @@ metadata:
   namespace: some-namespace
 spec:
   exportTo:
-  - '*'
+  - ` + prefix + `istio-ingress
   host: ` + prefix + `istio-basic-auth-server.some-namespace.svc.cluster.local
   trafficPolicy:
     connectionPool:
@@ -249,7 +249,7 @@ spec:` + spec + `status: {}
 kind: Service
 metadata:
   annotations:
-    networking.istio.io/exportTo: '*'
+    networking.istio.io/exportTo: ` + prefix + `istio-ingress
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]'
   name: ` + prefix + `istio-basic-auth-server
   namespace: some-namespace
@@ -353,10 +353,11 @@ status: {}
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-virtual-garden-istio-basic-auth-server", Namespace: namespace}})).To(Succeed())
 
 		values = Values{
-			Image:             image,
-			PriorityClassName: priorityClassName,
-			Replicas:          int32(1),
-			SigningCA:         "ca-istio-basic-auth-server",
+			Image:                        image,
+			PriorityClassName:            priorityClassName,
+			Replicas:                     int32(1),
+			SigningCA:                    "ca-istio-basic-auth-server",
+			IstioIngressGatewayNamespace: "istio-ingress",
 		}
 		component = New(c, namespace, fakeSecretManager, values)
 
@@ -443,6 +444,7 @@ status: {}
 				BeforeEach(func() {
 					values.IsGardenCluster = true
 					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
+					values.IstioIngressGatewayNamespace = "virtual-garden-istio-ingress"
 					component = New(c, namespace, fakeSecretManager, values)
 				})
 
@@ -473,6 +475,7 @@ status: {}
 				BeforeEach(func() {
 					values.IsGardenCluster = true
 					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
+					values.IstioIngressGatewayNamespace = "virtual-garden-istio-ingress"
 					component = New(c, namespace, fakeSecretManager, values)
 				})
 

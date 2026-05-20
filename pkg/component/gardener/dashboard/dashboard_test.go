@@ -594,7 +594,7 @@ frontend:
 				},
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9050}]`,
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": "virtual-garden-istio-ingress",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -705,7 +705,7 @@ frontend:
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Gateways: []string{"gardener-dashboard"},
 				Hosts:    []string{"dashboard.first", "dashboard.second"},
 				Http: []*istioapinetworkingv1beta1.HTTPRoute{{
@@ -732,7 +732,7 @@ frontend:
 				},
 			},
 			Spec: istioapinetworkingv1beta1.DestinationRule{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Host:     "gardener-dashboard.some-namespace.svc.cluster.local",
 				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 					LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{

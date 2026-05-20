@@ -8,7 +8,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -28,6 +30,13 @@ var _ = Describe("IstioBasicAuthServer", func() {
 		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
 		botanist = &Botanist{Operation: &operation.Operation{
+			Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+				SNI: &gardenletconfigv1alpha1.SNI{
+					Ingress: &gardenletconfigv1alpha1.SNIIngress{
+						Namespace: ptr.To("istio-ingress"),
+					},
+				},
+			},
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{},

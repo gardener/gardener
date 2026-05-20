@@ -34,7 +34,7 @@ func (i *istioBasicAuthServer) getService(isShootNamespace bool) *corev1.Service
 			Name:      i.getPrefix() + svcName,
 			Namespace: i.namespace,
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": "*",
+				"networking.istio.io/exportTo": i.values.IstioIngressGatewayNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -157,15 +157,10 @@ func (i *istioBasicAuthServer) getEnvoyFilter(
 	configPatches []*istioapinetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch,
 	ownerReference *metav1.OwnerReference,
 ) *istionetworkingv1alpha3.EnvoyFilter {
-	// Currently, all observability components are exposed via the same istio ingress gateway.
-	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
-
 	return &istionetworkingv1alpha3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            fmt.Sprintf("%s-%s%s", i.namespace, i.getPrefix(), name),
-			Namespace:       ingressNamespace,
+			Namespace:       i.values.IstioIngressGatewayNamespace,
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},
 		Spec: istioapinetworkingv1alpha3.EnvoyFilter{
@@ -179,6 +174,7 @@ func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secret
 	if err := istio.DestinationRuleWithTLSTermination(
 		destinationRule,
 		i.getLabels(),
+		[]string{i.values.IstioIngressGatewayNamespace},
 		destinationHost,
 		destinationHost,
 		secretName,
@@ -192,16 +188,11 @@ func (i *istioBasicAuthServer) getDestinationRule(destinationHost string, secret
 }
 
 func (i *istioBasicAuthServer) getTLSSecret(caSecret *corev1.Secret, secretName string, ownerReference *metav1.OwnerReference) *corev1.Secret {
-	// Currently, all observability components are exposed via the same istio ingress gateway.
-	// When zonal gateways or exposure classes should be considered, the namespace needs to be dynamic.
-	// See https://github.com/gardener/gardener/issues/11860 for details.
-	ingressNamespace := i.getPrefix() + v1beta1constants.DefaultSNIIngressNamespace
-
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            secretName,
-			Namespace:       ingressNamespace,
+			Namespace:       i.values.IstioIngressGatewayNamespace,
 			Labels:          i.getLabels(),
 			OwnerReferences: []metav1.OwnerReference{*ownerReference},
 		},

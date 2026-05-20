@@ -23,6 +23,7 @@ func NewIstioBasicAuthServer(
 	priorityClassName string,
 	isGardenCluster bool,
 	signingCA string,
+	istioIngressGatewayNamespace string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -37,11 +38,12 @@ func NewIstioBasicAuthServer(
 		namespace,
 		secretsManager,
 		istiobasicauthserver.Values{
-			Image:             istioBasicAuthServerImage.String(),
-			PriorityClassName: priorityClassName,
-			Replicas:          replicas,
-			IsGardenCluster:   isGardenCluster,
-			SigningCA:         signingCA,
+			Image:                        istioBasicAuthServerImage.String(),
+			PriorityClassName:            priorityClassName,
+			Replicas:                     replicas,
+			IsGardenCluster:              isGardenCluster,
+			SigningCA:                    signingCA,
+			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
 		},
 	)
 

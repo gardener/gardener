@@ -339,7 +339,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
-					"networking.istio.io/exportTo": "*",
+					"networking.istio.io/exportTo": "virtual-garden-istio-ingress",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -456,7 +456,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 			Spec: istioapinetworkingv1alpha3.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Hosts:    []string{"discovery.local.gardener.cloud"},
 				Gateways: []string{"gardener-discovery-server"},
 				Tls: []*istioapinetworkingv1alpha3.TLSRoute{{
@@ -483,7 +483,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 			Spec: istioapinetworkingv1alpha3.DestinationRule{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Host:     "gardener-discovery-server.some-namespace.svc.cluster.local",
 				TrafficPolicy: &istioapinetworkingv1alpha3.TrafficPolicy{
 					LoadBalancer: &istioapinetworkingv1alpha3.LoadBalancerSettings{

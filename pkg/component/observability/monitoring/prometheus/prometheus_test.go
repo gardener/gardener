@@ -84,6 +84,7 @@ honor_labels: true`
 		ingressAuthSecretName     = "foo"
 		ingressHost               = "some-host.example.com"
 		ingressWildcardSecretName = "bar"
+		ingressNamespace          = "istio-ingress"
 
 		fakeClient client.Client
 		deployer   Interface
@@ -98,6 +99,7 @@ honor_labels: true`
 
 		serviceAccount                      *corev1.ServiceAccount
 		service                             *corev1.Service
+		serviceForIngress                   *corev1.Service
 		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
 		role                                *rbacv1.Role
 		roleBinding                         *rbacv1.RoleBinding
@@ -185,7 +187,33 @@ honor_labels: true`
 					"name": name,
 				},
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": "*",
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9090}]`,
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9090}]`,
+					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{"prometheus": name},
+				Ports: []corev1.ServicePort{{
+					Name:       "web",
+					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt32(9090),
+				}},
+			},
+		}
+		serviceForIngress = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+				Annotations: map[string]string{
+					"networking.istio.io/exportTo": "istio-ingress",
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9090}]`,
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":9090}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"shoot"}}]`,
@@ -465,7 +493,7 @@ honor_labels: true`
 				},
 			},
 			Spec: istionetworkingv1alpha3.VirtualService{
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-ingress"},
 				Gateways: []string{
 					"prometheus-" + name,
 				},
@@ -513,7 +541,7 @@ honor_labels: true`
 					OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
 					Tls:              &istionetworkingv1alpha3.ClientTLSSettings{},
 				},
-				ExportTo: []string{"*"},
+				ExportTo: []string{"istio-ingress"},
 			},
 		}
 		tlsSecret = &corev1.Secret{
@@ -792,7 +820,6 @@ honor_labels: true`
 
 				It("should successfully deploy all resources", func() {
 					service.Annotations = map[string]string{
-						"networking.istio.io/exportTo":                                           "*",
 						"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
 						"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 					}
@@ -835,7 +862,7 @@ honor_labels: true`
 
 						Expect(managedResource).To(consistOf(
 							serviceAccount,
-							service,
+							serviceForIngress,
 							clusterRoleBinding,
 							prometheusObj,
 							vpa,
@@ -856,9 +883,10 @@ honor_labels: true`
 				Context("early initialization", func() {
 					BeforeEach(func() {
 						values.Ingress = &IngressValues{
-							AuthSecretName:         ingressAuthSecretName,
-							Host:                   ingressHost,
-							WildcardCertSecretName: &ingressWildcardSecretName,
+							AuthSecretName:               ingressAuthSecretName,
+							Host:                         ingressHost,
+							WildcardCertSecretName:       &ingressWildcardSecretName,
+							IstioIngressGatewayNamespace: ingressNamespace,
 						}
 						deployer = New(logr.Discard(), fakeClient, namespace, values)
 					})
@@ -905,7 +933,7 @@ honor_labels: true`
 
 							Expect(managedResource).To(consistOf(
 								serviceAccount,
-								service,
+								serviceForIngress,
 								clusterRoleBinding,
 								prometheusObj,
 								vpa,
@@ -926,7 +954,7 @@ honor_labels: true`
 
 				Context("late initialization", func() {
 					BeforeEach(func() {
-						values.Ingress = &IngressValues{Host: ingressHost}
+						values.Ingress = &IngressValues{Host: ingressHost, IstioIngressGatewayNamespace: ingressNamespace}
 						deployer = New(logr.Discard(), fakeClient, namespace, values)
 						deployer.SetIngressAuthSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressAuthSecretName}})
 						deployer.SetIngressWildcardCertSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressWildcardSecretName}})

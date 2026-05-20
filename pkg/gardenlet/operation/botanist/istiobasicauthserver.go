@@ -12,6 +12,11 @@ import (
 
 // DefaultIstioBasicAuthServer returns a deployer for the istio-basic-auth-server.
 func (b *Botanist) DefaultIstioBasicAuthServer() (component.DeployWaiter, error) {
+	var istioNamespace string
+	if !b.Shoot.IsSelfHosted() {
+		istioNamespace = b.WildcardIstioNamespace()
+	}
+
 	return shared.NewIstioBasicAuthServer(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
@@ -21,5 +26,6 @@ func (b *Botanist) DefaultIstioBasicAuthServer() (component.DeployWaiter, error)
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		false,
 		v1beta1constants.SecretNameCAIstioBasicAuthServer,
+		istioNamespace,
 	)
 }

@@ -232,7 +232,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager)
+	c.istioBasicAuthServer, err = r.newIstioBasicAuthServer(secretsManager, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -629,6 +629,9 @@ func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *
 		nil,
 		nil,
 		nil,
+		func() []string {
+			return []string{operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace}
+		},
 	)
 }
 
@@ -1059,12 +1062,13 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		v1beta1constants.SeedNginxIngressClass,
 		ingressDomains,
 		ingressGatewayValues[0].Labels,
+		ingressGatewayValues[0].Namespace,
 		false,
 		features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInGarden),
 	)
 }
 
-func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
 	return sharedcomponent.NewIstioBasicAuthServer(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1074,6 +1078,7 @@ func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Inter
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		true,
 		v1beta1constants.SecretNameCAVirtualGardenIstioBasicAuthServer,
+		ingressGatewayValues[0].Namespace,
 	)
 }
 
@@ -1117,6 +1122,7 @@ func (r *Reconciler) newPlutono(
 		wildcardCertSecretName,
 		false,
 		ingressGatewayValues[0].Labels,
+		ingressGatewayValues[0].Namespace,
 	)
 }
 
@@ -1429,6 +1435,7 @@ func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) 
 		"",
 		true,
 		ingressGatewayValues[0].Labels,
+		ingressGatewayValues[0].Namespace,
 	)
 	if err != nil {
 		return nil, err
@@ -1495,12 +1502,13 @@ func (r *Reconciler) newAlertmanager(
 		Replicas:          2,
 		RuntimeVersion:    r.RuntimeVersion,
 		ExternalExposure: &alertmanager.ExposureValues{
-			Host:                      "alertmanager-garden." + ingressDomain,
-			IsGardenCluster:           true,
-			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
-			SecretsManager:            secretsManager,
-			SigningCA:                 operatorv1alpha1.SecretNameCARuntime,
-			WildcardCertSecretName:    wildcardCertSecretName,
+			Host:                         "alertmanager-garden." + ingressDomain,
+			IsGardenCluster:              true,
+			IstioIngressGatewayLabels:    ingressGatewayValues[0].Labels,
+			IstioIngressGatewayNamespace: ingressGatewayValues[0].Namespace,
+			SecretsManager:               secretsManager,
+			SigningCA:                    operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName:       wildcardCertSecretName,
 		},
 	})
 }
@@ -1545,12 +1553,13 @@ func (r *Reconciler) newPrometheusGarden(
 		},
 		Alerting: &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-garden"}}},
 		Ingress: &prometheus.IngressValues{
-			Host:                      "prometheus-garden." + ingressDomain,
-			SecretsManager:            secretsManager,
-			SigningCA:                 operatorv1alpha1.SecretNameCARuntime,
-			WildcardCertSecretName:    wildcardCertSecretName,
-			IsGardenCluster:           true,
-			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
+			Host:                         "prometheus-garden." + ingressDomain,
+			SecretsManager:               secretsManager,
+			SigningCA:                    operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName:       wildcardCertSecretName,
+			IsGardenCluster:              true,
+			IstioIngressGatewayLabels:    ingressGatewayValues[0].Labels,
+			IstioIngressGatewayNamespace: ingressGatewayValues[0].Namespace,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{ServiceAccountName: gardenprometheus.ServiceAccountName},
 	})
@@ -1593,12 +1602,13 @@ func (r *Reconciler) newPrometheusLongTerm(
 			ScrapeConfigs:   longtermprometheus.CentralScrapeConfigs(),
 		},
 		Ingress: &prometheus.IngressValues{
-			Host:                      "prometheus-longterm." + ingressDomain,
-			SecretsManager:            secretsManager,
-			SigningCA:                 operatorv1alpha1.SecretNameCARuntime,
-			WildcardCertSecretName:    wildcardCertSecretName,
-			IsGardenCluster:           true,
-			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
+			Host:                         "prometheus-longterm." + ingressDomain,
+			SecretsManager:               secretsManager,
+			SigningCA:                    operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName:       wildcardCertSecretName,
+			IsGardenCluster:              true,
+			IstioIngressGatewayLabels:    ingressGatewayValues[0].Labels,
+			IstioIngressGatewayNamespace: ingressGatewayValues[0].Namespace,
 		},
 		Cortex: &prometheus.CortexValues{
 			Image:         imageCortex.String(),
