@@ -11,6 +11,7 @@ import (
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -640,7 +641,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingNamespaceSelectors, `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`)
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", o.values.IstioIngressGatewayNamespace)
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, istioapiannotation.NetworkingExportTo.Name, o.values.IstioIngressGatewayNamespace)
 	}
 
 	return obj

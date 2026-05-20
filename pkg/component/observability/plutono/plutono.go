@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -584,7 +585,7 @@ func (p *plutono) getService() *corev1.Service {
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": p.values.IstioIngressGatewayNamespace,
+				istioapiannotation.NetworkingExportTo.Name: p.values.IstioIngressGatewayNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{

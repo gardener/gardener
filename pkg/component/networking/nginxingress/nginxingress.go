@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	istioapiannotation "istio.io/api/annotation"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -668,7 +669,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		serviceController.Spec.Type = corev1.ServiceTypeClusterIP
-		metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, "networking.istio.io/exportTo", n.values.IstioIngressGatewayNamespace)
+		metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, istioapiannotation.NetworkingExportTo.Name, n.values.IstioIngressGatewayNamespace)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(serviceController, []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 		}...))

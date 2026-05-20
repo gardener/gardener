@@ -16,6 +16,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	istioapiannotation "istio.io/api/annotation"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -646,7 +647,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 	service := v.emptyService(idx)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, "networking.istio.io/exportTo", v.istioNamespaceFunc())
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, istioapiannotation.NetworkingExportTo.Name, v.istioNamespaceFunc())
 
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
