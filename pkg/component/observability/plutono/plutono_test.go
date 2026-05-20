@@ -213,7 +213,7 @@ metadata:
 					configMapData += `    - name: prometheus-longterm
       type: prometheus
       access: proxy
-      url: http://prometheus-longterm:80
+      url: http://prometheus-longterm:81
       basicAuth: false
       isDefault: false
       jsonData:
