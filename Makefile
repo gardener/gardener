@@ -270,7 +270,7 @@ test-e2e-%: export KUBECONFIG = $(KUBECONFIG_VIRTUAL_GARDEN_CLUSTER)
 test-e2e-local-operator test-e2e-local-gardenadm-%: export KUBECONFIG = $(KUBECONFIG_RUNTIME_CLUSTER)
 
 # KUBECONFIG_SEED_SECRET_PATH (used to create a Secret for Seeds containing the kubeconfig such that gardenctl works)
-kind-single-node-% kind-multi-node-% kind-multi-zone-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local/kubeconfig
+kind-single-node-% kind-multi-node-% kind-multi-zone-% ci-e2e-kind-upgrade ci-e2e-kind-ha-multi-node-upgrade ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local/kubeconfig
 kind-single-node2-% kind-multi-node2-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-local2/kubeconfig
 remote-%: export KUBECONFIG_SEED_SECRET_PATH = $(DEV_SETUP)/gardenlet/components/kubeconfigs/seed-remote/kubeconfig
 
