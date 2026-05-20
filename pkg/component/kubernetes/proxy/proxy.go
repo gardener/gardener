@@ -115,6 +115,8 @@ type WorkerPool struct {
 	KubernetesVersion *semver.Version
 	// Image is the container image used for kube-proxy for this worker pool.
 	Image string
+	// ControlPlane is true for the control plane worker pool of a self-hosted shoot.
+	ControlPlane bool
 }
 
 func (k *kubeProxy) Deploy(ctx context.Context) error {

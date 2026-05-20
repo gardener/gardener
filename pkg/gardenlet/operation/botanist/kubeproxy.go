@@ -98,6 +98,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 			Name:              worker.Name,
 			KubernetesVersion: kubernetesVersion,
 			Image:             image.String(),
+			ControlPlane:      worker.ControlPlane != nil,
 		}
 	}
 
@@ -122,11 +123,13 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 			return nil, err
 		}
 
+		_, isControlPlaneNode := node.Labels["node-role.kubernetes.io/control-plane"]
 		key := workerPoolKey(poolName, kubernetesVersionString)
 		poolKeyToPoolInfo[key] = kubeproxy.WorkerPool{
 			Name:              poolName,
 			KubernetesVersion: kubernetesVersion,
 			Image:             image.String(),
+			ControlPlane:      isControlPlaneNode,
 		}
 	}
 
