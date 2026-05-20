@@ -306,12 +306,16 @@ func getEnvoyFilterName(sourceNamespace string) string {
 
 func resolveExportTo(exportTo []string, sourceNamespace string, istioIngressNamespaces []string) []string {
 	if len(exportTo) == 0 {
-		return istioIngressNamespaces
+		// "~" is the default export for services and destination rules in Gardener.
+		// See https://github.com/gardener/gardener/blob/master/pkg/component/networking/istio/charts/istio/istio-istiod/templates/configmap.yaml
+		return []string{}
 	}
 
 	var targetNamespaces []string
 	for _, export := range exportTo {
 		switch export {
+		case "~":
+			return []string{}
 		case "*":
 			return istioIngressNamespaces
 		case ".":

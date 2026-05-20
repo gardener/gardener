@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/istioclusterconfiguration"
+	"github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -512,7 +513,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(envoyFilter2.Spec.ConfigPatches).To(HaveLen(1))
 			})
 
-			It("should export to all istio-ingress namespaces when exportTo is empty", func() {
+			It("should not export to any namespace when exportTo is empty", func() {
 				destinationRule.Spec.ExportTo = nil
 				Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
 
@@ -521,10 +522,10 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(reconcile.Result{}))
 
 				envoyFilter1 := &istionetworkingv1alpha3.EnvoyFilter{}
-				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter1)).To(Succeed())
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter1)).To(matchers.BeNotFoundError())
 
 				envoyFilter2 := &istionetworkingv1alpha3.EnvoyFilter{}
-				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: "istio-ingress--extra"}, envoyFilter2)).To(Succeed())
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: "istio-ingress--extra"}, envoyFilter2)).To(matchers.BeNotFoundError())
 			})
 
 			It("should export only to the named namespace", func() {
