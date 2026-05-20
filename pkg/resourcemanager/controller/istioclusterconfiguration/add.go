@@ -8,6 +8,8 @@ import (
 	"context"
 	"slices"
 
+	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -170,7 +172,9 @@ func (r *Reconciler) DestinationRulePredicate() predicate.Predicate {
 
 			return newDestinationRule.Spec.Host != oldDestinationRule.Spec.Host ||
 				!apiequality.Semantic.DeepEqual(newDestinationRule.Spec.ExportTo, oldDestinationRule.Spec.ExportTo) ||
-				!apiequality.Semantic.DeepEqual(newDestinationRule.Spec.TrafficPolicy, oldDestinationRule.Spec.TrafficPolicy)
+				// TrafficPolicy contains nested proto-generated types with unexported fields (e.g. sizeCache int32 in ConnectionPoolSettings).
+				// apiequality.Semantic.DeepEqual panics on these via reflection; protocmp.Transform() handles them correctly.
+				!cmp.Equal(newDestinationRule.Spec.TrafficPolicy, oldDestinationRule.Spec.TrafficPolicy, protocmp.Transform())
 		},
 	}
 }

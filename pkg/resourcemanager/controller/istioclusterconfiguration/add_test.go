@@ -100,6 +100,22 @@ var _ = Describe("Add", func() {
 				}
 				Expect(pred.Update(event.UpdateEvent{ObjectOld: oldDestinationRule, ObjectNew: destinationRule})).To(BeTrue())
 			})
+
+			It("should return false when comparing trafficPolicy with unexported proto fields because nothing changes", func() {
+				trafficPolicy := &istioapinetworkingv1beta1.TrafficPolicy{
+					ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
+						Http: &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+							UseClientProtocol: true,
+						},
+					},
+				}
+				oldDestinationRule := destinationRule.DeepCopy()
+				oldDestinationRule.Spec.TrafficPolicy = trafficPolicy
+				newDestinationRule := destinationRule.DeepCopy()
+				newDestinationRule.Spec.TrafficPolicy = trafficPolicy.DeepCopy()
+
+				Expect(pred.Update(event.UpdateEvent{ObjectOld: oldDestinationRule, ObjectNew: newDestinationRule})).To(BeFalse())
+			})
 		})
 
 		Describe("#Delete", func() {
