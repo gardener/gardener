@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
+	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -140,12 +141,20 @@ func (r *Reconciler) reconcileEnvoyFilters(ctx context.Context, destinationRules
 			continue
 		}
 
+		serviceExportTo := strings.Split(service.Annotations[istioapiannotation.NetworkingExportTo.Name], ",")
+		serviceTargetNamespaces := resolveExportTo(serviceExportTo, service.Namespace, targetNamespaces)
+
 		for _, port := range service.Spec.Ports {
 			protocolMode := istioutils.DetermineProtocolMode(destinationRule, port)
 			clusterName := fmt.Sprintf("outbound|%d||%s", port.Port, kubernetesutils.FQDNForService(service.Name, service.Namespace))
 			patch := getEnvoyConfigPatch(clusterName, protocolMode)
 
 			for _, targetNamespace := range targetNamespaces {
+				if !slices.Contains(serviceTargetNamespaces, targetNamespace) {
+					log.V(1).Info("Service is not exported to target namespace, skipping", "service", service.Name, "namespace", service.Namespace, "targetNamespace", targetNamespace)
+					continue
+				}
+
 				envoyConfigPatches[targetNamespace] = append(envoyConfigPatches[targetNamespace], patch)
 			}
 		}

@@ -70,8 +70,9 @@ var _ = Describe("Reconciler", func() {
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-apiserver",
-				Namespace: sourceNamespace.Name,
+				Name:        "kube-apiserver",
+				Namespace:   sourceNamespace.Name,
+				Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
@@ -319,8 +320,9 @@ var _ = Describe("Reconciler", func() {
 		It("should handle multiple DestinationRules in one namespace", func() {
 			service2 := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-seed-server",
-					Namespace: sourceNamespace.Name,
+					Name:        "vpn-seed-server",
+					Namespace:   sourceNamespace.Name,
+					Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -559,6 +561,100 @@ var _ = Describe("Reconciler", func() {
 					Expect(envoyFilter.Namespace).NotTo(Equal(istioIngressNamespace.Name))
 					Expect(envoyFilter.Namespace).NotTo(Equal("istio-ingress--extra"))
 				}
+			})
+		})
+
+		Context("service exportTo annotation", func() {
+			var istioIngressNamespace2 *corev1.Namespace
+
+			BeforeEach(func() {
+				istioIngressNamespace2 = &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "istio-ingress--extra",
+						Labels: map[string]string{
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress,
+						},
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				Expect(fakeClient.Create(ctx, istioIngressNamespace2)).To(Succeed())
+			})
+
+			It("should not create EnvoyFilters when the service has no exportTo annotation", func() {
+				delete(service.Annotations, "networking.istio.io/exportTo")
+				Expect(fakeClient.Update(ctx, service)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilterList := &istionetworkingv1alpha3.EnvoyFilterList{}
+				Expect(fakeClient.List(ctx, envoyFilterList)).To(Succeed())
+				Expect(envoyFilterList.Items).To(BeEmpty())
+			})
+
+			It("should not create EnvoyFilters when the service exportTo annotation is '~'", func() {
+				service.Annotations["networking.istio.io/exportTo"] = "~"
+				Expect(fakeClient.Update(ctx, service)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilterList := &istionetworkingv1alpha3.EnvoyFilterList{}
+				Expect(fakeClient.List(ctx, envoyFilterList)).To(Succeed())
+				Expect(envoyFilterList.Items).To(BeEmpty())
+			})
+
+			It("should export to all istio-ingress namespaces when the service exportTo annotation is '*'", func() {
+				service.Annotations["networking.istio.io/exportTo"] = "*"
+				Expect(fakeClient.Update(ctx, service)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilter1 := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter1)).To(Succeed())
+				Expect(envoyFilter1.Spec.ConfigPatches).To(HaveLen(1))
+
+				envoyFilter2 := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace2.Name}, envoyFilter2)).To(Succeed())
+				Expect(envoyFilter2.Spec.ConfigPatches).To(HaveLen(1))
+			})
+
+			It("should export only to the istio-ingress namespaces named in the service exportTo annotation", func() {
+				service.Annotations["networking.istio.io/exportTo"] = istioIngressNamespace.Name
+				Expect(fakeClient.Update(ctx, service)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(Succeed())
+				Expect(envoyFilter.Spec.ConfigPatches).To(HaveLen(1))
+
+				envoyFilterList := &istionetworkingv1alpha3.EnvoyFilterList{}
+				Expect(fakeClient.List(ctx, envoyFilterList, client.InNamespace(istioIngressNamespace2.Name))).To(Succeed())
+				Expect(envoyFilterList.Items).To(BeEmpty())
+			})
+
+			It("should respect the intersection of DestinationRule and service exportTo", func() {
+				destinationRule.Spec.ExportTo = []string{istioIngressNamespace.Name}
+				Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
+				service.Annotations["networking.istio.io/exportTo"] = istioIngressNamespace2.Name
+				Expect(fakeClient.Update(ctx, service)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				envoyFilterList := &istionetworkingv1alpha3.EnvoyFilterList{}
+				Expect(fakeClient.List(ctx, envoyFilterList)).To(Succeed())
+				Expect(envoyFilterList.Items).To(BeEmpty())
 			})
 		})
 

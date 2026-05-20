@@ -64,8 +64,9 @@ var _ = Describe("IstioClusterConfiguration controller tests", Serial, func() {
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-apiserver",
-				Namespace: sourceNamespace.Name,
+				Name:        "kube-apiserver",
+				Namespace:   sourceNamespace.Name,
+				Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
