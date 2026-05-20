@@ -1,0 +1,52 @@
+# Envoy proxy and istio do not support HTTP/2 client connection coalescing natively.
+# Clients, especially web browsers, may open a single HTTP/2 connection and send requests
+# targeted at different hosts all backed by the same IP address and wildcard certificate.
+# Returning 421 for requests where the server name and the authority header do not match
+# indicates to the client that it should open a new connection for the request.
+# Issues:
+# - https://github.com/envoyproxy/envoy/issues/6767
+# - https://github.com/istio/istio/issues/13589
+# Documentation:
+# - https://istio.io/latest/docs/ops/common-problems/network-issues/#404-errors-occur-when-multiple-gateways-configured-with-same-tls-certificate
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: misdirected-requests
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 9443
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: envoy.filters.http.router
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.lua
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+          inlineCode: |
+            function envoy_on_request(request_handle)
+              local streamInfo = request_handle:streamInfo()
+              if streamInfo:requestedServerName() ~= "" then
+                -- Handle wildcard in the requested server name
+                if (string.sub(streamInfo:requestedServerName(), 1, 2) == "*." and not string.find(request_handle:headers():get(":authority"), string.sub(streamInfo:requestedServerName(), 2), 1, true)) then
+                  request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+                end
+                -- Handle mismatch between requested server name and :authority header
+                if (string.sub(streamInfo:requestedServerName(), 1, 2) ~= "*." and streamInfo:requestedServerName() ~= request_handle:headers():get(":authority")) then
+                  -- Check if the difference is just the port (443) as suffix in the :authority header
+                  local portSuffix = ":443"
+                  local portSuffixLen = string.len(portSuffix)
+                  if (not(string.find(string.sub(request_handle:headers():get(":authority"), -portSuffixLen), portSuffix, 1, true) and streamInfo:requestedServerName() == string.sub(request_handle:headers():get(":authority"), 1, -portSuffixLen - 1))) then
+                    request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+                  end
+                end
+              end
+            end
