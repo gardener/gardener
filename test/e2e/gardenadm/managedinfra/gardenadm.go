@@ -208,10 +208,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 		It("should connect to the shoot", func(ctx SpecContext) {
 			By("Forward port to control plane machine pod")
-			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), technicalID, machinePodName(ctx, technicalID, 0), localPort, 443)
+			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), infrastructure.MachineNamespaceName(technicalID), machinePodName(ctx, technicalID, 0), localPort, 443)
 			Expect(err).NotTo(HaveOccurred())
 
 			go func() {
+				GinkgoRecover()
 				if err := fw.ForwardPorts(); err != nil {
 					Fail("Error forwarding ports: " + err.Error())
 				}
