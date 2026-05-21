@@ -189,11 +189,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 				maps.Copy(imagesCopy, images)
 				imagesCopy["hyperkube"] = &imagevector.Image{Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/hyperkube"), Tag: ptr.To("v" + k8sVersion.String())}
 
+				apiServerURLForWorker := apiServerURL
+				if worker.ControlPlane != nil {
+					apiServerURLForWorker = "https://localhost:443"
+				}
+
 				initUnits, initFiles, _ := initConfigFn(
 					worker,
 					imagesCopy["gardener-node-agent"].String(),
 					&nodeagentconfigv1alpha1.NodeAgentConfiguration{APIServer: nodeagentconfigv1alpha1.APIServer{
-						Server:   apiServerURL,
+						Server:   apiServerURLForWorker,
 						CABundle: []byte(caBundle),
 					}},
 				)

@@ -193,6 +193,50 @@ users:
 				Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
 			})
 
+			It("with a control plane worker pool from worker spec", func() {
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							Version: kubernetesVersionControlPlane.String(),
+						},
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{
+								{
+									Name:         poolName1,
+									ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+								},
+								{
+									Name: poolName2,
+									Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+										Version: ptr.To(kubernetesVersionPool2.String()),
+									},
+								},
+							},
+						},
+					},
+				})
+
+				kubeProxy.EXPECT().SetWorkerPools(gomock.AssignableToTypeOf([]kubeproxy.WorkerPool{})).DoAndReturn(func(actual []kubeproxy.WorkerPool) {
+					verifyWorkerPools(actual, []kubeproxy.WorkerPool{
+						{
+							Name:              poolName1,
+							KubernetesVersion: kubernetesVersionControlPlane,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane.String(),
+							ControlPlane:      true,
+						},
+						{
+							Name:              poolName2,
+							KubernetesVersion: kubernetesVersionPool2,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2.String(),
+							ControlPlane:      false,
+						},
+					})
+				})
+				kubeProxy.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
+			})
+
 			It("with still existing worker pools", func() {
 				for _, node := range []*corev1.Node{
 					{
@@ -261,6 +305,57 @@ users:
 							Name:              "pool4",
 							KubernetesVersion: semver.MustParse("1.27.3"),
 							Image:             repositoryKubeProxyImage + ":v1.27.3",
+						},
+					})
+				})
+				kubeProxy.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
+			})
+
+			It("with control plane nodes identified by node label", func() {
+				for _, node := range []*corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "cp-node",
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               poolName1,
+								"worker.gardener.cloud/kubernetes-version": kubernetesVersionControlPlane.String(),
+								"node-role.kubernetes.io/control-plane":    "",
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "worker-node",
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               poolName2,
+								"worker.gardener.cloud/kubernetes-version": kubernetesVersionPool2.String(),
+							},
+						},
+					},
+				} {
+					Expect(fakeShootClient.Create(ctx, node)).To(Succeed())
+				}
+
+				kubeProxy.EXPECT().SetWorkerPools(gomock.AssignableToTypeOf([]kubeproxy.WorkerPool{})).DoAndReturn(func(actual []kubeproxy.WorkerPool) {
+					verifyWorkerPools(actual, []kubeproxy.WorkerPool{
+						{
+							Name:              poolName1,
+							KubernetesVersion: kubernetesVersionControlPlane,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane.String(),
+							ControlPlane:      true,
+						},
+						{
+							Name:              poolName2,
+							KubernetesVersion: kubernetesVersionPool2,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2.String(),
+							ControlPlane:      false,
+						},
+						{
+							Name:              poolName3,
+							KubernetesVersion: kubernetesVersionPool3,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3.String(),
 						},
 					})
 				})

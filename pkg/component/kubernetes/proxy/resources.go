@@ -25,6 +25,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -241,7 +242,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 							v1beta1constants.LabelWorkerPool:              pool.Name,
 							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion.String(),
 						},
-						InitContainers:    k.getInitContainers(pool.Image, pool.KubernetesVersion),
+						InitContainers:    k.getInitContainers(pool.Image, pool.ControlPlane, pool.KubernetesVersion),
 						PriorityClassName: "system-node-critical",
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
@@ -261,7 +262,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 						HostNetwork:        true,
 						ServiceAccountName: k.serviceAccount.Name,
 						Containers: []corev1.Container{
-							k.getKubeProxyContainer(pool.Image, false, pool.KubernetesVersion),
+							k.getKubeProxyContainer(pool.Image, false, pool.ControlPlane, pool.KubernetesVersion),
 							{
 								// sidecar container with fix for conntrack
 								Name:            containerNameConntrackFix,
@@ -495,7 +496,7 @@ func (k *kubeProxy) getMode() kubeproxyconfigv1alpha1.ProxyMode {
 	}
 }
 
-func (k *kubeProxy) getInitContainers(image string, kubernetesVersion *semver.Version) []corev1.Container {
+func (k *kubeProxy) getInitContainers(image string, controlPlaneNode bool, kubernetesVersion *semver.Version) []corev1.Container {
 	initContainers := []corev1.Container{
 		{
 			Name:            "cleanup",
@@ -544,17 +545,17 @@ func (k *kubeProxy) getInitContainers(image string, kubernetesVersion *semver.Ve
 		},
 	}
 
-	initContainers = append(initContainers, k.getKubeProxyContainer(image, true, kubernetesVersion))
+	initContainers = append(initContainers, k.getKubeProxyContainer(image, true, controlPlaneNode, kubernetesVersion))
 
 	return initContainers
 }
 
-func (k *kubeProxy) getKubeProxyContainer(image string, init bool, kubernetesVersion *semver.Version) corev1.Container {
+func (k *kubeProxy) getKubeProxyContainer(image string, init, controlPlaneNode bool, kubernetesVersion *semver.Version) corev1.Container {
 	container := corev1.Container{
 		Name:            containerName,
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         k.computeCommand(init, kubernetesVersion),
+		Command:         k.computeCommand(init, controlPlaneNode, kubernetesVersion),
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -623,10 +624,19 @@ func (k *kubeProxy) getKubeProxyContainer(image string, init bool, kubernetesVer
 	return container
 }
 
-func (k *kubeProxy) computeCommand(init bool, kubernetesVersion *semver.Version) []string {
+func (k *kubeProxy) computeCommand(init, controlPlaneNode bool, kubernetesVersion *semver.Version) []string {
 	command := []string{
 		"/usr/local/bin/kube-proxy",
 		fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
+	}
+
+	if controlPlaneNode {
+		// kube-proxy pods on control plane nodes should connect to the API server via localhost to avoid unnecessary
+		// network hops, i.e., they should not connect to the API server via the external exposure, which might not be
+		// available in a failure scenario.
+		// The --master flag overwrites the address specified in the kubeconfig, so that all kube-proxy DaemonSets can keep
+		// using the same kubeconfig secret.
+		command = append(command, fmt.Sprintf("--master=https://localhost:%d", kubeapiserverconstants.Port))
 	}
 
 	// kube-proxy versions in the range [1.33.0, 1.33.6) are affected by https://github.com/kubernetes/kubernetes/issues/132678.

@@ -572,6 +572,11 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					kubeProxyContainerLogVerbosity = 1
 				}
 
+				baseCommand := []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml"}
+				if pool.ControlPlane {
+					baseCommand = append(baseCommand, "--master=https://localhost:443")
+				}
+
 				ds := &appsv1.DaemonSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        daemonSetNameFor(pool),
@@ -609,7 +614,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Command:         []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml", fmt.Sprintf("--v=%d", kubeProxyContainerLogVerbosity)},
+										Command:         append(baseCommand, fmt.Sprintf("--v=%d", kubeProxyContainerLogVerbosity)),
 										Image:           pool.Image,
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "kube-proxy",
@@ -693,7 +698,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										},
 									},
 									{
-										Command:         []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml", "--v=2", "--init-only"},
+										Command:         append(baseCommand, "--v=2", "--init-only"),
 										Image:           pool.Image,
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "kube-proxy-init",
@@ -1235,6 +1240,95 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceForMajorMinorVersionOnly).To(consistOf(vpaFor(pool)))
 				Expect(managedResource).To(DeepEqual(expectedMr))
+			}
+		})
+
+		It("should successfully deploy all resources for a self-hosted shoot", func() {
+			values.WorkerPools[0].ControlPlane = true
+			component = New(c, namespace, values)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
+			expectedMR := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResourceCentral.Name,
+					Namespace:       managedResourceCentral.Namespace,
+					ResourceVersion: "1",
+					Labels: map[string]string{
+						"origin":    "gardener",
+						"component": "kube-proxy",
+					},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					KeepObjects:  ptr.To(false),
+				},
+			}
+			Expect(managedResourceCentral).To(contain(configMapFor(values.ProxyMode)))
+
+			managedResourceSecretCentral = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceCentral.Spec.SecretRefs[0].Name,
+				Namespace: namespace,
+			}}
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
+			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecretCentral.Labels).To(Equal(map[string]string{
+				"resources.gardener.cloud/garbage-collectable-reference": "true",
+				"component": "kube-proxy",
+				"origin":    "gardener",
+			}))
+			expectedMR.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecretCentral.Name}}
+			utilruntime.Must(references.InjectAnnotations(expectedMR))
+			Expect(managedResourceCentral).To(DeepEqual(expectedMR))
+
+			for _, pool := range values.WorkerPools {
+				By(pool.Name)
+
+				managedResource := managedResourceForPool(pool)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				poolExpectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin":             "gardener",
+							"component":          "kube-proxy",
+							"role":               "pool",
+							"pool-name":          pool.Name,
+							"kubernetes-version": pool.KubernetesVersion.String(),
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						KeepObjects:  ptr.To(false),
+					},
+				}
+
+				managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResource.Spec.SecretRefs[0].Name,
+					Namespace: namespace,
+				}}
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.ProxyMode, values.VPAEnabled)))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
+					"component":          "kube-proxy",
+					"kubernetes-version": pool.KubernetesVersion.String(),
+					"origin":             "gardener",
+					"pool-name":          pool.Name,
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+					"role": "pool",
+				}))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
+				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
+				Expect(managedResource).To(DeepEqual(poolExpectedMr))
 			}
 		})
 	})
