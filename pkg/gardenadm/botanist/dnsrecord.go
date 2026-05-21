@@ -64,7 +64,7 @@ func (b *GardenadmBotanist) externalDNSRecordValues(ctx context.Context) ([]stri
 }
 
 func (b *GardenadmBotanist) extensionExposureDNSRecordValues() ([]string, extensionsv1alpha1.DNSRecordType, error) {
-	ingress := b.Shoot.Components.Extensions.SelfHostedShootExposure.GetIngress()
+	ingress := b.Shoot.Components.Extensions.SelfHostedShootExposure.Ingress
 	if len(ingress) == 0 {
 		return nil, "", fmt.Errorf("SelfHostedShootExposure has no ingress yet")
 	}

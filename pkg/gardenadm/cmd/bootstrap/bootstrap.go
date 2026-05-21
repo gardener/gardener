@@ -349,13 +349,14 @@ func run(ctx context.Context, opts *Options) error {
 	fmt.Fprintf(opts.Out, `
 Warning: this command is work in progress.
 
-You can connect to the self-hosted Shoot cluster control-plane by
-generating a kubeconfig with the helper script:
+For now, you can connect to the self-hosted Shoot cluster control-plane by
+fetching the kubeconfig from the secret "%[1]s/kubeconfig"
+on the bootstrap cluster:
 
-  ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > ./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
-  export KUBECONFIG=$PWD/dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+  kubectl get secret -n %[1]s kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode > %[1]s-kubeconfig.yaml
+  export KUBECONFIG=$PWD/%[1]s-kubeconfig.yaml
   kubectl get nodes
-`)
+`, b.Shoot.GetInfo().Status.TechnicalID)
 	return nil
 }
 

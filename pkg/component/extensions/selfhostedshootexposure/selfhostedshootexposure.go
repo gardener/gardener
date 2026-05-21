@@ -16,21 +16,10 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 )
-
-// Interface manages a SelfHostedShootExposure extension resource.
-type Interface interface {
-	component.DeployWaiter
-	// SetEndpoints replaces the endpoints in the values; the next Deploy call will use the new list.
-	SetEndpoints([]extensionsv1alpha1.ControlPlaneEndpoint)
-	// GetIngress returns the LoadBalancer ingress from the in-memory exposure object's status.
-	// It is populated by Wait once the extension controller reports the resource as Ready.
-	GetIngress() []corev1.LoadBalancerIngress
-}
 
 // Values contains the values used to create a SelfHostedShootExposure resource.
 type Values struct {
@@ -53,7 +42,7 @@ type Values struct {
 type SelfHostedShootExposure struct {
 	log    logr.Logger
 	client client.Client
-	values *Values
+	Values *Values
 
 	// exposed for testing
 	Clock               clock.PassiveClock
@@ -62,6 +51,9 @@ type SelfHostedShootExposure struct {
 	WaitTimeout         time.Duration
 
 	exposure *extensionsv1alpha1.SelfHostedShootExposure
+
+	// Ingress is the LoadBalancer ingress reported by the extension controller.
+	Ingress []corev1.LoadBalancerIngress
 }
 
 // New creates a new SelfHostedShootExposure component with the default clock and wait settings.
@@ -73,7 +65,7 @@ func New(
 	return &SelfHostedShootExposure{
 		log:    log,
 		client: c,
-		values: values,
+		Values: values,
 
 		Clock:               &clock.RealClock{},
 		WaitInterval:        5 * time.Second,
@@ -98,12 +90,12 @@ func (s *SelfHostedShootExposure) Deploy(ctx context.Context) error {
 
 		s.exposure.Spec = extensionsv1alpha1.SelfHostedShootExposureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type:  s.values.Type,
-				Class: s.values.Class,
+				Type:  s.Values.Type,
+				Class: s.Values.Class,
 			},
-			CredentialsRef: s.values.CredentialsRef,
+			CredentialsRef: s.Values.CredentialsRef,
 			Port:           kubeapiserverconstants.Port,
-			Endpoints:      s.values.Endpoints,
+			Endpoints:      s.Values.Endpoints,
 		}
 		return nil
 	})
@@ -120,7 +112,7 @@ func (s *SelfHostedShootExposure) Destroy(ctx context.Context) error {
 	)
 }
 
-// Wait waits until the SelfHostedShootExposure resource is ready.
+// Wait waits until the SelfHostedShootExposure resource is ready and sets the Ingress field.
 func (s *SelfHostedShootExposure) Wait(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
@@ -131,7 +123,10 @@ func (s *SelfHostedShootExposure) Wait(ctx context.Context) error {
 		s.WaitInterval,
 		s.WaitSevereThreshold,
 		s.WaitTimeout,
-		nil,
+		func(_ context.Context) error {
+			s.Ingress = s.exposure.Status.Ingress
+			return nil
+		},
 	)
 }
 
@@ -146,15 +141,4 @@ func (s *SelfHostedShootExposure) WaitCleanup(ctx context.Context) error {
 		s.WaitInterval,
 		s.WaitTimeout,
 	)
-}
-
-// SetEndpoints replaces the endpoints in the values; the next Deploy call will use the new list.
-func (s *SelfHostedShootExposure) SetEndpoints(endpoints []extensionsv1alpha1.ControlPlaneEndpoint) {
-	s.values.Endpoints = endpoints
-}
-
-// GetIngress returns the LoadBalancer ingress from the in-memory exposure object's status.
-// It is populated by Wait once the extension controller reports the resource as Ready.
-func (s *SelfHostedShootExposure) GetIngress() []corev1.LoadBalancerIngress {
-	return s.exposure.Status.Ingress
 }

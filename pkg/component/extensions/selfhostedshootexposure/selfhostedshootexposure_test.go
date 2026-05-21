@@ -110,7 +110,7 @@ var _ = Describe("SelfHostedShootExposure", func() {
 			Expect(actual.Spec.CredentialsRef).To(Equal(credRef))
 		})
 
-		It("should update endpoints set via SetEndpoints", func() {
+		It("should use endpoints set via Values.Endpoints", func() {
 			endpoints := []extensionsv1alpha1.ControlPlaneEndpoint{
 				{
 					NodeName: "node-1",
@@ -119,7 +119,7 @@ var _ = Describe("SelfHostedShootExposure", func() {
 					},
 				},
 			}
-			deployer.SetEndpoints(endpoints)
+			deployer.Values.Endpoints = endpoints
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 
 			actual := &extensionsv1alpha1.SelfHostedShootExposure{}

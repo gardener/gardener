@@ -5,6 +5,7 @@
 package botanist
 
 import (
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -18,7 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
-	mockselfhostedshootexposure "github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure/mock"
+	"github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -33,7 +34,7 @@ var _ = Describe("DNSRecord", func() {
 		fakeClient client.Client
 
 		externalDNSRecord       *mockdnsrecord.MockInterface
-		selfHostedShootExposure *mockselfhostedshootexposure.MockInterface
+		selfHostedShootExposure *selfhostedshootexposure.SelfHostedShootExposure
 	)
 
 	BeforeEach(func() {
@@ -42,7 +43,7 @@ var _ = Describe("DNSRecord", func() {
 
 		ctrl := gomock.NewController(GinkgoT())
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
-		selfHostedShootExposure = mockselfhostedshootexposure.NewMockInterface(ctrl)
+		selfHostedShootExposure = selfhostedshootexposure.New(logr.Discard(), fakeClient, &selfhostedshootexposure.Values{})
 
 		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
@@ -219,22 +220,20 @@ var _ = Describe("DNSRecord", func() {
 			})
 
 			It("should fail if SelfHostedShootExposure has no ingress yet", func(ctx SpecContext) {
-				selfHostedShootExposure.EXPECT().GetIngress().Return(nil)
-
 				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("SelfHostedShootExposure has no ingress yet"))
 			})
 
 			It("should fail if all ingress entries have neither IP nor hostname", func(ctx SpecContext) {
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{{IP: "", Hostname: ""}})
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{{IP: "", Hostname: ""}}
 
 				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("SelfHostedShootExposure ingress has neither IP(s) nor hostname(s)"))
 			})
 
 			It("should use IPs when available", func(ctx SpecContext) {
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{
 					{IP: "10.0.0.1"},
 					{IP: "10.0.0.2"},
-				})
+				}
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1", "10.0.0.2"})
@@ -245,9 +244,9 @@ var _ = Describe("DNSRecord", func() {
 			})
 
 			It("should fall back to hostnames when no IPs are present", func(ctx SpecContext) {
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{
 					{Hostname: "lb.example.com"},
-				})
+				}
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeCNAME)
 				externalDNSRecord.EXPECT().SetValues([]string{"lb.example.com"})
@@ -258,10 +257,10 @@ var _ = Describe("DNSRecord", func() {
 			})
 
 			It("should prefer IPs over hostnames when both are present across entries", func(ctx SpecContext) {
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{
 					{IP: "10.0.0.1"},
 					{Hostname: "lb.example.com"},
-				})
+				}
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
@@ -273,10 +272,10 @@ var _ = Describe("DNSRecord", func() {
 
 			It("should filter dual-stack IPs to the first IP family", func(ctx SpecContext) {
 				setExtensionExposure(gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6)
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{
 					{IP: "10.0.0.1"},
 					{IP: "fd12::1"},
-				})
+				}
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
@@ -288,9 +287,9 @@ var _ = Describe("DNSRecord", func() {
 
 			It("should fall back to the second IP family when no IPs match the first", func(ctx SpecContext) {
 				setExtensionExposure(gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4)
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{
 					{IP: "10.0.0.1"},
-				})
+				}
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
@@ -302,9 +301,9 @@ var _ = Describe("DNSRecord", func() {
 
 			It("should fail if ingress IPs do not match any configured IP family", func(ctx SpecContext) {
 				setExtensionExposure(gardencorev1beta1.IPFamilyIPv6)
-				selfHostedShootExposure.EXPECT().GetIngress().Return([]corev1.LoadBalancerIngress{
+				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{
 					{IP: "10.0.0.1"},
-				})
+				}
 
 				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("do not match any configured IP family")))
 			})

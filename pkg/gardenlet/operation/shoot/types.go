@@ -164,7 +164,7 @@ type Extensions struct {
 	Infrastructure          infrastructure.Interface
 	Network                 network.Interface
 	OperatingSystemConfig   operatingsystemconfig.Interface
-	SelfHostedShootExposure selfhostedshootexposure.Interface
+	SelfHostedShootExposure *selfhostedshootexposure.SelfHostedShootExposure
 	Worker                  worker.Interface
 }
 
