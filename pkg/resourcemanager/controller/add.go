@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/istioclusterconfiguration"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
@@ -71,6 +72,14 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 			Config: cfg.Controllers.NetworkPolicy,
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
+		}
+	}
+
+	if cfg.Controllers.IstioClusterConfiguration.Enabled {
+		if err := (&istioclusterconfiguration.Reconciler{
+			Config: cfg.Controllers.IstioClusterConfiguration,
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding istio cluster configuration controller: %w", err)
 		}
 	}
 

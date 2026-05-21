@@ -13,6 +13,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -411,7 +412,7 @@ func (v *vali) getService() *corev1.Service {
 				Namespace: v.namespace,
 				Labels:    getLabels(),
 				Annotations: map[string]string{
-					"networking.istio.io/exportTo": v.values.IstioIngressGatewayNamespace,
+					istioapiannotation.NetworkingExportTo.Name: v.values.IstioIngressGatewayNamespace,
 				},
 			},
 			Spec: corev1.ServiceSpec{

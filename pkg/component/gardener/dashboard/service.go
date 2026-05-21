@@ -5,6 +5,7 @@
 package dashboard
 
 import (
+	istioapiannotation "istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +24,7 @@ func (g *gardenerDashboard) service() *corev1.Service {
 			Name:        serviceName,
 			Namespace:   g.namespace,
 			Labels:      GetLabels(),
-			Annotations: map[string]string{"networking.istio.io/exportTo": istioIngressGatewayNamespace},
+			Annotations: map[string]string{istioapiannotation.NetworkingExportTo.Name: istioIngressGatewayNamespace},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,

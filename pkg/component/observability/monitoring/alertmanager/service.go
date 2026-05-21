@@ -5,6 +5,7 @@
 package alertmanager
 
 import (
+	istioapiannotation "istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,7 @@ func (a *alertManager) service() *corev1.Service {
 
 	if a.values.ExternalExposure != nil {
 		service.Annotations = map[string]string{
-			"networking.istio.io/exportTo": a.values.ExternalExposure.IstioIngressGatewayNamespace,
+			istioapiannotation.NetworkingExportTo.Name: a.values.ExternalExposure.IstioIngressGatewayNamespace,
 		}
 	}
 

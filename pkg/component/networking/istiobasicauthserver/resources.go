@@ -7,6 +7,7 @@ package istiobasicauthserver
 import (
 	"fmt"
 
+	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -34,7 +35,7 @@ func (i *istioBasicAuthServer) getService(isShootNamespace bool) *corev1.Service
 			Name:      i.getPrefix() + svcName,
 			Namespace: i.namespace,
 			Annotations: map[string]string{
-				"networking.istio.io/exportTo": i.values.IstioIngressGatewayNamespace,
+				istioapiannotation.NetworkingExportTo.Name: i.values.IstioIngressGatewayNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{

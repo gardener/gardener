@@ -7,6 +7,7 @@ package apiserverexposure
 import (
 	"context"
 
+	istioapiannotation "istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +36,7 @@ func (in *internalNameService) Deploy(ctx context.Context) error {
 	svc := in.emptyKubernetesDefaultService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, in.client, svc, func() error {
-		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "networking.istio.io/exportTo", in.istioIngressNamespace)
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, istioapiannotation.NetworkingExportTo.Name, in.istioIngressNamespace)
 		return nil
 	}); err != nil {
 		return err

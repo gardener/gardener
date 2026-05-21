@@ -5,6 +5,7 @@
 package discoveryserver
 
 import (
+	istioapiannotation "istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ func (g *gardenerDiscoveryServer) service() *corev1.Service {
 			Name:        ServiceName,
 			Namespace:   g.namespace,
 			Labels:      labels(),
-			Annotations: map[string]string{"networking.istio.io/exportTo": istioIngressGatewayNamespace},
+			Annotations: map[string]string{istioapiannotation.NetworkingExportTo.Name: istioIngressGatewayNamespace},
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,

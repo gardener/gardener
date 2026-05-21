@@ -112,6 +112,13 @@ func SetDefaults_NetworkPolicyControllerConfig(obj *NetworkPolicyControllerConfi
 	}
 }
 
+// SetDefaults_IstioClusterConfigurationControllerConfig sets defaults for the IstioClusterConfigurationControllerConfig object.
+func SetDefaults_IstioClusterConfigurationControllerConfig(obj *IstioClusterConfigurationControllerConfig) {
+	if obj.Enabled && obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
 // SetDefaults_HealthControllerConfig sets defaults for the HealthControllerConfig object.
 func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 	if obj.ConcurrentSyncs == nil {

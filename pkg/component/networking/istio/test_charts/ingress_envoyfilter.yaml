@@ -33,15 +33,6 @@ spec:
       operation: MERGE
       value:
         per_connection_buffer_limit_bytes: 32768 # 32 KiB
-  - applyTo: CLUSTER
-    match:
-      context: GATEWAY
-      cluster:
-        portNumber: 999
-    patch:
-      operation: MERGE
-      value:
-        per_connection_buffer_limit_bytes: 32768 # 32 KiB
   # Some LoadBalancers do not set KEEPALIVE when they open a TCP connection
   # to the Istio Ingress Gateway. For long living connections it can cause
   # silent timeouts.
