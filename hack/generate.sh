@@ -91,7 +91,20 @@ run_target() {
       ;;
     manifests)
       local which=()
-      local mode="${MODE:-parallel}"
+      # In CI default to sequential mode so the package-changed optimization in
+      # generate-parallel.sh is bypassed. The optimization diffs against
+      # `master` and cannot detect drift that already exists on master itself
+      # (e.g. a CRD whose source type changed via a transitive dependency in a
+      # prior PR that did not regenerate it). Locally, prefer parallel for
+      # speed.
+      local mode="$MODE"
+      if [[ -z "$mode" ]]; then
+        if [[ -n "${CI:-}" ]]; then
+          mode="sequential"
+        else
+          mode="parallel"
+        fi
+      fi
 
       if [[ -z "$MANIFESTS_DIRS" ]]; then
         which=("${DEFAULT_MANIFESTS_DIRS[@]}")
