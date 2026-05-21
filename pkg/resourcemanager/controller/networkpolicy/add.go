@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -234,9 +236,11 @@ func (r *Reconciler) VirtualServicePredicate() predicate.Predicate {
 
 			return !apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Hosts, virtualService.Spec.Hosts) ||
 				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Gateways, virtualService.Spec.Gateways) ||
-				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Http, virtualService.Spec.Http) ||
-				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Tls, virtualService.Spec.Tls) ||
-				!apiequality.Semantic.DeepEqual(oldVirtualService.Spec.Tcp, virtualService.Spec.Tcp)
+				// Http/Tls/Tcp contain nested proto-generated types with unexported fields (e.g. sizeCache int32 in StringMatch).
+				// apiequality.Semantic.DeepEqual panics on these via reflection; protocmp.Transform() handles them correctly.
+				!cmp.Equal(oldVirtualService.Spec.Http, virtualService.Spec.Http, protocmp.Transform()) ||
+				!cmp.Equal(oldVirtualService.Spec.Tls, virtualService.Spec.Tls, protocmp.Transform()) ||
+				!cmp.Equal(oldVirtualService.Spec.Tcp, virtualService.Spec.Tcp, protocmp.Transform())
 		},
 	}
 }
