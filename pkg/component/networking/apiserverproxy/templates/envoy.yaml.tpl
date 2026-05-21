@@ -55,10 +55,6 @@ static_resources:
             # hostname is irrelevant as it will be dropped by envoy, we still need it for the configuration though
             hostname: "{{ .proxySeedServerHost }}:443"
             headers_to_add:
-            # TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
-            - header:
-                key: Reversed-VPN
-                value: "{{ .reversedVPNHeaderValue }}"
             - header:
                 key: X-Gardener-Destination
                 value: "{{ .gardenerDestinationHeaderValue }}"

@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -45,10 +44,8 @@ const (
 	configMapName       = "apiserver-proxy-config"
 	name                = "apiserver-proxy"
 
-	// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
-	proxySeedServerPort = 8132
-	adminPort           = 16910
-	portNameMetrics     = "metrics"
+	adminPort       = 16910
+	portNameMetrics = "metrics"
 
 	volumeNameConfig   = "proxy-config"
 	volumeNameAdminUDS = "admin-uds"
@@ -211,20 +208,13 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		gardenerDestinationHeaderValue = apiserverexposure.GetAPIServerProxyTargetClusterName(a.namespace)
 	}
 
-	seedServerPort := proxySeedServerPort
-	if features.DefaultFeatureGate.Enabled(features.UseUnifiedHTTPProxyPort) {
-		seedServerPort = vpnseedserver.HTTPProxyGatewayPort
-	}
-
 	if err := tplEnvoy.Execute(&envoyYAML, map[string]any{
 		"advertiseIPAddress":             a.values.advertiseIPAddress,
 		"dnsLookupFamily":                a.values.DNSLookupFamily,
 		"adminPort":                      adminPort,
 		"proxySeedServerHost":            a.values.ProxySeedServerHost,
-		"proxySeedServerPort":            seedServerPort,
+		"proxySeedServerPort":            vpnseedserver.HTTPProxyGatewayPort,
 		"gardenerDestinationHeaderValue": gardenerDestinationHeaderValue,
-		// TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
-		"reversedVPNHeaderValue": gardenerDestinationHeaderValue,
 	}); err != nil {
 		return nil, err
 	}
