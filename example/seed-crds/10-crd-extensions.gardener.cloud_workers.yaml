@@ -445,6 +445,12 @@ spec:
                             SerializeImagePulls describes whether the images are pulled one at a time.
                             Default: true
                           type: boolean
+                        singleProcessOOMKill:
+                          description: |-
+                            SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container
+                            cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of
+                            as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
+                          type: boolean
                         streamingConnectionIdleTimeout:
                           description: |-
                             StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
