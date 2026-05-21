@@ -25,6 +25,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -635,7 +636,7 @@ func (k *kubeProxy) computeCommand(init, controlPlaneNode bool, kubernetesVersio
 		// available in a failure scenario.
 		// The --master flag overwrites the address specified in the kubeconfig, so that all kube-proxy DaemonSets can keep
 		// using the same kubeconfig secret.
-		command = append(command, "--master=https://localhost:443")
+		command = append(command, fmt.Sprintf("--master=https://localhost:%d", kubeapiserverconstants.Port))
 	}
 
 	// kube-proxy versions in the range [1.33.0, 1.33.6) are affected by https://github.com/kubernetes/kubernetes/issues/132678.

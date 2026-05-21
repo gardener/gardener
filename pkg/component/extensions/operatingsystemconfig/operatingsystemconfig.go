@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
@@ -724,7 +725,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		// Node-level components like gardener-node-agent and kubelet on control plane nodes should connect to the API
 		// server via localhost to avoid unnecessary network hops, i.e., they should not connect to the API server via the
 		// external exposure, which might not be available in a failure scenario.
-		apiServerURL = "https://localhost:443"
+		apiServerURL = fmt.Sprintf("https://localhost:%d", kubeapiserverconstants.Port)
 	}
 	setDefaultEvictionMemoryAvailable(kubeletConfigParameters.EvictionHard, kubeletConfigParameters.EvictionSoft, o.values.MachineTypes, worker.Machine.Type)
 
