@@ -72,7 +72,6 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.priorityClassName,
 		testValues.istiodEnabled,
 		testValues.labels,
-		testValues.podLabels,
 		[]string{testValues.kubeAPIServerPolicyLabel},
 		testValues.lbAnnotations,
 		testValues.loadBalancerClass,
@@ -131,7 +130,6 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				Ports:                              testValues.servicePorts,
 				LoadBalancerIP:                     testValues.serviceExternalIP,
 				Labels:                             testValues.labels,
-				PodLabels:                          testValues.podLabels,
 				NetworkPolicyLabels:                networkPolicyLabels,
 				Namespace:                          "shared-istio-test-some-istio-ingress",
 				PriorityClassName:                  testValues.priorityClassName,
@@ -547,12 +545,12 @@ var _ = Describe("Istio", func() {
 			Expect(GetIstioZoneLabels(labels, zone)).To(matcher)
 		},
 
-		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{istio.DefaultZoneKey: "istio-value"})),
-		Entry("no zone, but gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, nil, Equal(map[string]string{"gardener.cloud/role": "gardener-role"})),
-		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway"})),
-		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, ptr.To("my-zone"), Equal(map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone"})),
-		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, ptr.To("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone"})),
-		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, ptr.To("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway--zone--my-zone"})),
+		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{istio.DefaultZoneKey: "istio-value", istio.RoleKey: istio.RoleSeed})),
+		Entry("no zone, but gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, nil, Equal(map[string]string{"gardener.cloud/role": "gardener-role", istio.RoleKey: istio.RoleSeed})),
+		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway", istio.RoleKey: istio.RoleSeed})),
+		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, ptr.To("my-zone"), Equal(map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
+		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, ptr.To("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
+		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, ptr.To("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
 	)
 
 	DescribeTable("#IsZonalIstioExtension",

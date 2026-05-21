@@ -34,7 +34,6 @@ var (
 type IngressGatewayValues struct {
 	Annotations                        map[string]string
 	Labels                             map[string]string
-	PodLabels                          map[string]string // TODO(maboehm): Remove this parameter after one release (v1.143)
 	NetworkPolicyLabels                map[string]string
 	LoadBalancerClass                  *string
 	ExternalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
@@ -103,7 +102,6 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 		values := map[string]any{
 			"trustDomain":                        istioIngressGateway.TrustDomain,
 			"labels":                             istioIngressGateway.Labels,
-			"podLabels":                          istioIngressGateway.PodLabels,
 			"networkPolicyLabels":                istioIngressGateway.NetworkPolicyLabels,
 			"annotations":                        istioIngressGateway.Annotations,
 			"loadBalancerClass":                  istioIngressGateway.LoadBalancerClass,
