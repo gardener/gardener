@@ -63,9 +63,10 @@ func (b *Botanist) DeploySelfHostedShootExposure(ctx context.Context) error {
 		if len(node.Status.Addresses) == 0 {
 			return fmt.Errorf("node %q has no addresses", node.Name)
 		}
+		nodeCopy := node.DeepCopy()
 		endpoints = append(endpoints, extensionsv1alpha1.ControlPlaneEndpoint{
-			NodeName:  node.Name,
-			Addresses: node.Status.Addresses,
+			NodeName:  nodeCopy.Name,
+			Addresses: nodeCopy.Status.Addresses,
 		})
 	}
 
