@@ -27,9 +27,16 @@ package_changed() {
     git diff --quiet master -- go.mod 2>/dev/null
     return $?
   else
-    # For internal packages, check if package directory changed
-    local pkg_path="${package#$current_module/}"
-    git diff --quiet master -- "$pkg_path" 2>/dev/null
+    # For internal packages, check if the package or any of its transitive
+    # internal dependencies changed (e.g. a referenced type in pkg/apis/core).
+    local dep_paths
+    dep_paths=$(go list -deps "$package" 2>/dev/null | grep "^${current_module}/" | sed "s|^${current_module}/||")
+    if [ -z "$dep_paths" ]; then
+      local pkg_path="${package#$current_module/}"
+      git diff --quiet master -- "$pkg_path" 2>/dev/null
+      return $?
+    fi
+    git diff --quiet master -- $dep_paths 2>/dev/null
     return $?
   fi
 }
@@ -287,4 +294,4 @@ echo "$ROOTS" | while IFS= read -r dir; do
     echo "github.com/gardener/gardener/$dir"
   fi
   # TODO(rrhubenov): Revisit whether MAX_PARALLEL_WORKERS will be needed after prow cluster nodes start using coreutils >= 9.8. Ref: https://github.com/gardener/gardener/pull/13903#issuecomment-3835448178
-done | parallel --will-cite $([ "${MAX_PARALLEL_WORKERS}" != "" ] && echo "-j ${MAX_PARALLEL_WORKERS}") 'echo "Generate {}"; go generate {}'
+done | parallel --will-cite $([ "${MAX_PARALLEL_WORKERS:-}" != "" ] && echo "-j ${MAX_PARALLEL_WORKERS}") 'echo "Generate {}"; go generate {}'
