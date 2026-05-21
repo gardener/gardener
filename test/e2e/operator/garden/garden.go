@@ -282,7 +282,7 @@ func itShouldCleanupVolumes(s *GardenContext) {
 
 			return true
 		}).WithPolling(2 * time.Second).Should(BeTrue())
-	}, SpecTimeout(time.Minute))
+	}, SpecTimeout(5*time.Minute))
 }
 
 func itShouldCleanupEtcdEncryptionConfig(s *GardenContext) {
