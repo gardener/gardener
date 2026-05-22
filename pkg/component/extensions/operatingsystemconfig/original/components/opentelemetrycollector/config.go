@@ -117,6 +117,7 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 Environment=KUBECONFIG=` + openTelemetryCollectorKubeconfigPath + `
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:]) GOMEMLIMIT=` + goMemLimit + `"
+ExecStartPre=/bin/sh -c "test -e ` + PathAuthToken + `"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentelemetry-collector --config=` + PathConfig),
 		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
 	}
