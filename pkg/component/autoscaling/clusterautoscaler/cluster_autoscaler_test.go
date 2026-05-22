@@ -566,6 +566,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Verbs:     []string{"watch", "list", "get"},
 				},
 				{
+					APIGroups: []string{"resource.k8s.io"},
+					Resources: []string{"resourceslices", "resourceclaims", "deviceclasses"},
+					Verbs:     []string{"watch", "list", "get"},
+				},
+				{
 					APIGroups: []string{"coordination.k8s.io"},
 					Resources: []string{"leases"},
 					Verbs:     []string{"create"},
