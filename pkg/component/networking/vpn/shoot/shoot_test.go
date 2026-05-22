@@ -65,18 +65,16 @@ var _ = Describe("VPNShoot", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		endPoint                        = "10.0.0.1"
-		openVPNPort               int32 = 8132
-		reversedVPNHeader               = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
-		reversedVPNHeaderTemplate       = "outbound|1194||vpn-seed-server-%d.shoot--project--shoot-name.svc.cluster.local"
+		endPoint                  = "10.0.0.1"
+		reversedVPNHeader         = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
+		reversedVPNHeaderTemplate = "outbound|1194||vpn-seed-server-%d.shoot--project--shoot-name.svc.cluster.local"
 
 		values = Values{
 			Image: image,
 			ReversedVPN: ReversedVPNValues{
-				Endpoint:    endPoint,
-				OpenVPNPort: openVPNPort,
-				Header:      reversedVPNHeader,
-				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+				Endpoint:   endPoint,
+				Header:     reversedVPNHeader,
+				IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
 			SeedPodNetwork: "10.1.0.0/16",
 			Network: NetworkValues{
@@ -457,11 +455,15 @@ var _ = Describe("VPNShoot", func() {
 					},
 					corev1.EnvVar{
 						Name:  "OPENVPN_PORT",
-						Value: strconv.Itoa(int(openVPNPort)),
+						Value: strconv.Itoa(8443),
 					},
 					corev1.EnvVar{
 						Name:  "REVERSED_VPN_HEADER",
 						Value: header,
+					},
+					corev1.EnvVar{
+						Name:  "REVERSED_VPN_HEADER_KEY",
+						Value: "X-Gardener-Destination",
 					},
 					corev1.EnvVar{
 						Name:  "IS_SHOOT_CLIENT",
@@ -484,13 +486,6 @@ var _ = Describe("VPNShoot", func() {
 						Value: values.Network.NodeCIDRs[0].String(),
 					},
 				)
-
-				if headerKey := values.ReversedVPN.HeaderKey; headerKey != "" {
-					env = append(env, corev1.EnvVar{
-						Name:  "REVERSED_VPN_HEADER_KEY",
-						Value: headerKey,
-					})
-				}
 
 				volumeMounts = append(volumeMounts,
 					corev1.VolumeMount{
@@ -908,11 +903,7 @@ var _ = Describe("VPNShoot", func() {
 			})
 		})
 
-		Context("VPNShoot with header key", func() {
-			BeforeEach(func() {
-				values.ReversedVPN.HeaderKey = "X-Gardener-Destination"
-			})
-
+		Context("VPNShoot with X-Gardener-Destination header", func() {
 			It("should successfully deploy all resources", func() {
 				var (
 					secretNameClient  = expectVPNShootSecret(manifests)

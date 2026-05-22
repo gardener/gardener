@@ -50,7 +50,7 @@ var _ = Describe("APIServerProxy", func() {
 		values                 Values
 		component              Interface
 		advertiseIPAddress     string
-		reversedVPNHeaderValue string
+		destinationHeaderValue string
 
 		managedResourceName = "shoot-core-apiserver-proxy"
 		namespace           = "shoot--internal--internal"
@@ -187,7 +187,7 @@ var _ = Describe("APIServerProxy", func() {
 
 	BeforeEach(func() {
 		advertiseIPAddress = "10.2.170.21"
-		reversedVPNHeaderValue = "outbound|443||kube-apiserver.shoot--internal--internal.svc.cluster.local"
+		destinationHeaderValue = "outbound|443||kube-apiserver.shoot--internal--internal.svc.cluster.local"
 		values = Values{
 			Image:               image,
 			SidecarImage:        sidecarImage,
@@ -252,7 +252,7 @@ var _ = Describe("APIServerProxy", func() {
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
 			Expect(managedResource).To(consistOf(
-				getConfigYAML(hash, values.DNSLookupFamily, advertiseIPAddress, reversedVPNHeaderValue),
+				getConfigYAML(hash, values.DNSLookupFamily, advertiseIPAddress, destinationHeaderValue),
 				getDaemonSet(hash, advertiseIPAddress),
 				service,
 				serviceAccount,
@@ -272,7 +272,7 @@ var _ = Describe("APIServerProxy", func() {
 
 		Context("IPv4", func() {
 			It("should deploy the managed resource successfully", func() {
-				testFunc("00d55bbf") // hash of envoy config with V4_ONLY DNS + port 8443 (default: UseUnifiedHTTPProxyPort=true)
+				testFunc("ea6c7299") // hash of envoy config with V4_ONLY DNS + port 8443
 			})
 		})
 
@@ -283,18 +283,18 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("25408ef2") // hash of envoy config with V6_ONLY DNS + port 8443 (default: UseUnifiedHTTPProxyPort=true)
+				testFunc("b608555c") // hash of envoy config with V6_ONLY DNS + port 8443
 			})
 		})
 
 		Context("IstioTLSTermination", func() {
 			BeforeEach(func() {
 				values.IstioTLSTermination = true
-				reversedVPNHeaderValue = fmt.Sprintf("%s--kube-apiserver-socket", namespace)
+				destinationHeaderValue = fmt.Sprintf("%s--kube-apiserver-socket", namespace)
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("3b9cdaf4") // hash of envoy config with IstioTLSTermination + port 8443 (default: UseUnifiedHTTPProxyPort=true)
+				testFunc("7ff2f6b1") // hash of envoy config with IstioTLSTermination + port 8443
 			})
 		})
 	})
@@ -481,10 +481,6 @@ static_resources:
             # hostname is irrelevant as it will be dropped by envoy, we still need it for the configuration though
             hostname: "api.internal.local.:443"
             headers_to_add:
-            # TODO(hown3d): Drop with RemoveHTTPProxyLegacyPort feature gate
-            - header:
-                key: Reversed-VPN
-                value: "` + xGardenerDestination + `"
             - header:
                 key: X-Gardener-Destination
                 value: "` + xGardenerDestination + `"

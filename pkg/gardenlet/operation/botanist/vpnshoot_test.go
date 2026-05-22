@@ -22,12 +22,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockvpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -129,14 +127,7 @@ var _ = Describe("VPNShoot", func() {
 			vpnShoot.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
 		})
 
-		It("should set the network ranges and deploy", func() {
-			vpnShoot.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployVPNShoot(ctx)).To(Succeed())
-		})
-
-		It("should report a constraint if feature gate UseUnifiedHTTPProxyPort is enabled and remove it if disabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseUnifiedHTTPProxyPort, true))
-
+		It("should set the network ranges, deploy, and report the constraint", func() {
 			vpnShoot.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployVPNShoot(ctx)).To(Succeed())
 			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -145,22 +136,6 @@ var _ = Describe("VPNShoot", func() {
 				OfType(gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort),
 				WithStatus(gardencorev1beta1.ConditionTrue),
 				WithReason("ShootUsesUnifiedHTTPProxyPort"),
-			))
-
-			By("disabling the feature gate again")
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseUnifiedHTTPProxyPort, false))
-
-			// Since we will call DeployVPNShoot again, we expect the calls to be made again
-			vpnShoot.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
-			vpnShoot.EXPECT().SetServiceNetworkCIDRs(botanist.Shoot.Networks.Services)
-			vpnShoot.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
-			vpnShoot.EXPECT().Deploy(ctx)
-
-			Expect(botanist.DeployVPNShoot(ctx)).To(Succeed())
-			Expect(botanist.GardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-
-			Expect(shoot.Status.Constraints).NotTo(ContainCondition(
-				OfType(gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort),
 			))
 		})
 

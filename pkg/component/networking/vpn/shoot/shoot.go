@@ -70,12 +70,8 @@ const (
 type ReversedVPNValues struct {
 	// Header is the header value for the ReversedVPN.
 	Header string
-	// HeaderKey is the actual header for the ReversedVPN.
-	HeaderKey string
 	// Endpoint is the endpoint for the ReversedVPN.
 	Endpoint string
-	// OpenVPNPort is the port for the ReversedVPN.
-	OpenVPNPort int32
 	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
 }
@@ -774,11 +770,15 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 		},
 		corev1.EnvVar{
 			Name:  "OPENVPN_PORT",
-			Value: strconv.Itoa(int(v.values.ReversedVPN.OpenVPNPort)),
+			Value: strconv.Itoa(vpnseedserver.HTTPProxyGatewayPort),
 		},
 		corev1.EnvVar{
 			Name:  "REVERSED_VPN_HEADER",
 			Value: v.indexedReversedHeader(index),
+		},
+		corev1.EnvVar{
+			Name:  "REVERSED_VPN_HEADER_KEY",
+			Value: "X-Gardener-Destination",
 		},
 		corev1.EnvVar{
 			Name:  "IS_SHOOT_CLIENT",
@@ -801,13 +801,6 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
 		},
 	)
-
-	if headerKey := v.values.ReversedVPN.HeaderKey; headerKey != "" {
-		envVariables = append(envVariables, corev1.EnvVar{
-			Name:  "REVERSED_VPN_HEADER_KEY",
-			Value: headerKey,
-		})
-	}
 
 	if index != nil {
 		envVariables = append(envVariables,

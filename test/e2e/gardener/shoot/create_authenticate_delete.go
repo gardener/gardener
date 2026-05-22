@@ -28,7 +28,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
@@ -275,13 +274,7 @@ func copyRESTConfigAndInjectAuthorization(restConfig *rest.Config, authorization
 }
 
 func getAPIServerProxyClient(restConfig *rest.Config, targetShoot *gardencorev1beta1.Shoot) (client.Client, error) {
-	proxyPort := vpnseedserver.GatewayPort
-	newHTTPProxyPortConstraint := v1beta1helper.GetCondition(targetShoot.Status.Constraints, gardencorev1beta1.ShootUsesUnifiedHTTPProxyPort)
-	if newHTTPProxyPortConstraint != nil && newHTTPProxyPortConstraint.Status == gardencorev1beta1.ConditionTrue {
-		proxyPort = vpnseedserver.HTTPProxyGatewayPort
-	}
-
-	transport, err := newHTTPConnectTransport(restConfig, apiserverexposure.GetAPIServerProxyTargetClusterName(targetShoot.Status.TechnicalID), proxyPort)
+	transport, err := newHTTPConnectTransport(restConfig, apiserverexposure.GetAPIServerProxyTargetClusterName(targetShoot.Status.TechnicalID), vpnseedserver.HTTPProxyGatewayPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP connect transport: %w", err)
 	}
