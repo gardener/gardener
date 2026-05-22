@@ -42,6 +42,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -76,6 +77,7 @@ func New(
 	config *gardencorev1beta1.ClusterAutoscaler,
 	workerConfig []gardencorev1beta1.Worker,
 	runtimeVersion *semver.Version,
+	targetVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
 		client:         client,
@@ -86,6 +88,7 @@ func New(
 		config:         config,
 		workerConfig:   workerConfig,
 		runtimeVersion: runtimeVersion,
+		targetVersion:  targetVersion,
 	}
 }
 
@@ -99,6 +102,7 @@ type clusterAutoscaler struct {
 	workerConfig   []gardencorev1beta1.Worker
 	maxNodesTotal  int64
 	runtimeVersion *semver.Version
+	targetVersion  *semver.Version
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -596,11 +600,6 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string,
 					Verbs:     []string{"watch", "list", "get"},
 				},
 				{
-					APIGroups: []string{"resource.k8s.io"},
-					Resources: []string{"resourceslices", "resourceclaims", "deviceclasses"},
-					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
 					APIGroups: []string{"coordination.k8s.io"},
 					Resources: []string{"leases"},
 					Verbs:     []string{"create"},
@@ -677,6 +676,15 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string,
 			},
 		}
 	)
+
+	if versionutils.ConstraintK8sGreaterEqual135.Check(c.targetVersion) {
+		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+			APIGroups: []string{"resource.k8s.io"},
+			Resources: []string{"resourceslices", "resourceclaims", "deviceclasses"},
+			Verbs:     []string{"watch", "list", "get"},
+		})
+	}
+
 	objects := []client.Object{clusterRole, clusterRoleBinding, role, rolebinding}
 
 	if workersHavePrioritiesConfigured {
