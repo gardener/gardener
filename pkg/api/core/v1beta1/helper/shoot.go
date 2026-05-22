@@ -622,6 +622,13 @@ func HasManagedInfrastructure(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil
 }
 
+// HasExtensionExposure returns true if the shoot's control plane is configured to use a
+// SelfHostedShootExposure extension object to expose the API server.
+func HasExtensionExposure(shoot *gardencorev1beta1.Shoot) bool {
+	pool := ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)
+	return pool != nil && pool.ControlPlane.Exposure != nil && pool.ControlPlane.Exposure.Extension != nil
+}
+
 // ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is self-hosted.
 func ControlPlaneWorkerPoolForShoot(workers []gardencorev1beta1.Worker) *gardencorev1beta1.Worker {
 	idx := slices.IndexFunc(workers, func(worker gardencorev1beta1.Worker) bool {

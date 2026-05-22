@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/component/extensions/network"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/component/garden/backupentry"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -154,16 +155,17 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	ContainerRuntime      containerruntime.Interface
-	ControlPlane          controlplane.Interface
-	ExternalDNSRecord     dnsrecord.Interface
-	InternalDNSRecord     dnsrecord.Interface
-	IngressDNSRecord      dnsrecord.Interface
-	Extension             extension.Interface
-	Infrastructure        infrastructure.Interface
-	Network               network.Interface
-	OperatingSystemConfig operatingsystemconfig.Interface
-	Worker                worker.Interface
+	ContainerRuntime        containerruntime.Interface
+	ControlPlane            controlplane.Interface
+	ExternalDNSRecord       dnsrecord.Interface
+	InternalDNSRecord       dnsrecord.Interface
+	IngressDNSRecord        dnsrecord.Interface
+	Extension               extension.Interface
+	Infrastructure          infrastructure.Interface
+	Network                 network.Interface
+	OperatingSystemConfig   operatingsystemconfig.Interface
+	SelfHostedShootExposure *selfhostedshootexposure.SelfHostedShootExposure
+	Worker                  worker.Interface
 }
 
 // SystemComponents contains references to system components.

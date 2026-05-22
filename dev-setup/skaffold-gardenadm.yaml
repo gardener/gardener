@@ -103,6 +103,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount
             - pkg/component/extensions/operatingsystemconfig/utils
+            - pkg/component/extensions/selfhostedshootexposure
             - pkg/component/extensions/worker
             - pkg/component/garden/backupbucket
             - pkg/component/garden/backupentry
@@ -629,6 +630,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount
             - pkg/component/extensions/operatingsystemconfig/utils
+            - pkg/component/extensions/selfhostedshootexposure
             - pkg/component/extensions/worker
             - pkg/component/garden/backupbucket
             - pkg/component/garden/backupentry

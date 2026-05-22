@@ -356,9 +356,6 @@ on the bootstrap cluster:
   kubectl get secret -n %[1]s kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode > %[1]s-kubeconfig.yaml
   export KUBECONFIG=$PWD/%[1]s-kubeconfig.yaml
   kubectl get nodes
-
-Note that the API server of the self-hosted Shoot cluster control-plane might
-not be accessible from your current machine.
 `, b.Shoot.GetInfo().Status.TechnicalID)
 	return nil
 }

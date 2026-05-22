@@ -1668,6 +1668,34 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#HasExtensionExposure", func() {
+		It("should return false when shoot has no control plane worker pool", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{}}}}}
+			Expect(HasExtensionExposure(shoot)).To(BeFalse())
+		})
+
+		It("should return false when control plane worker pool has no Exposure", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
+			}}}}
+			Expect(HasExtensionExposure(shoot)).To(BeFalse())
+		})
+
+		It("should return false when Exposure is set but Extension is nil (DNS exposure)", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{Exposure: &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}}}},
+			}}}}
+			Expect(HasExtensionExposure(shoot)).To(BeFalse())
+		})
+
+		It("should return true when control plane worker pool has Exposure.Extension set", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{Exposure: &gardencorev1beta1.Exposure{Extension: &gardencorev1beta1.ExtensionExposure{Type: ptr.To("local")}}}},
+			}}}}
+			Expect(HasExtensionExposure(shoot)).To(BeTrue())
+		})
+	})
+
 	Describe("#ControlPlaneWorkerPoolForShoot", func() {
 		It("should return nil because shoot has no workers", func() {
 			shoot := &gardencorev1beta1.Shoot{}

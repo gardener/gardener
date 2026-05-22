@@ -213,28 +213,12 @@ $ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/
 
 ### Connecting to the Self-Hosted Shoot Cluster
 
-`gardenadm init` stores the kubeconfig of the self-hosted shoot cluster in the `/etc/kubernetes/admin.conf` file on the control plane machine.
-To connect to the self-hosted shoot cluster, set the `KUBECONFIG` environment variable and execute `kubectl` within a `bash` shell in the machine pod:
+`gardenadm init` provisions a LoadBalancer for the shoot's API server via the `SelfHostedShootExposure` extension, so the cluster is directly reachable from your host machine.
+Generate a kubeconfig and write it to the default location:
 
 ```shell
-$ machine="$(kubectl -n shoot--garden--root get po -l app=machine -oname | head -1 | cut -d/ -f2)"
-$ kubectl -n shoot--garden--root exec -it $machine -- bash
-root@machine-shoot--garden--root-control-plane-58ffc-2l6s7:/# export KUBECONFIG=/etc/kubernetes/admin.conf
-root@machine-shoot--garden--root-control-plane-58ffc-2l6s7:/# kubectl get node
-NAME                                                    STATUS   ROLES    AGE     VERSION
-machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.35.0
-```
-
-`gardenadm bootstrap` copies the kubeconfig from the control plane machine to the bootstrap cluster.
-You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
-
-```shell
-$ kubectl get secret -n shoot--garden--root kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 --decode | sed 's/api.root.garden.external.local.gardener.cloud/localhost:6443/' > /tmp/shoot--garden--root.conf
-$ machine="$(kubectl -n shoot--garden--root get po -l app=machine -oname | head -1 | cut -d/ -f2)"
-$ kubectl -n shoot--garden--root port-forward pod/$machine 6443:443
-
-# in a new terminal
-$ export KUBECONFIG=/tmp/shoot--garden--root.conf
+$ ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > ./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+$ export KUBECONFIG=./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 $ kubectl get no
 NAME                                                    STATUS   ROLES    AGE     VERSION
 machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.35.0

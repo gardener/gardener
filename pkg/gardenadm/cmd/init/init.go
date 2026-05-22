@@ -306,13 +306,21 @@ func run(ctx context.Context, opts *Options) error {
 			waitUntilExtensionControllersInPodNetworkReady,
 		)
 
-		// Later on, we will expose the control plane via a LoadBalancer and point the DNSRecord to it.
-		// TODO(timebertt): adapt this step to consider the external LoadBalancer if it is already available
+		// When extension-based exposure is configured, first deploy the SelfHostedShootExposure object
+		// so the extension controller provisions the necessary resources. The DNSRecord step then reads the
+		// resulting ingress from the status. For DNS-based exposure the SelfHostedShootExposure
+		// step is skipped and the DNSRecord step points directly at the control-plane node addresses.
+		deploySelfHostedShootExposure = g.Add(flow.Task{
+			Name:         "Deploying SelfHostedShootExposure",
+			Fn:           b.DeploySelfHostedShootExposure,
+			SkipIf:       !b.Shoot.HasExtensionExposure(),
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Restoring external DNSRecord",
 			Fn:           b.RestoreExternalDNSRecord,
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped, deploySelfHostedShootExposure),
 		})
 		reconcileBackupBucket = g.Add(flow.Task{
 			Name:         "Deploying BackupBucket for ETCD data",

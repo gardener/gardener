@@ -717,3 +717,9 @@ func (s *Shoot) RunsControlPlane() bool {
 func (s *Shoot) HasManagedInfrastructure() bool {
 	return v1beta1helper.HasManagedInfrastructure(s.GetInfo())
 }
+
+// HasExtensionExposure returns true if the shoot's control plane is configured to use a
+// SelfHostedShootExposure extension object to expose the API server.
+func (s *Shoot) HasExtensionExposure() bool {
+	return v1beta1helper.HasExtensionExposure(s.GetInfo())
+}
