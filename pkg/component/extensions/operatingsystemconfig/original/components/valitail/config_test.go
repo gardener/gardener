@@ -69,7 +69,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStartPre=/bin/sh -c "test -e /var/lib/valitail/auth-token"
+ExecStartPre=/bin/sh -c "test -s /var/lib/valitail/auth-token"
 ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 
 				valitailDaemonUnit := extensionsv1alpha1.Unit{
