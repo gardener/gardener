@@ -128,7 +128,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			Hibernation: &gardencorev1beta1.Hibernation{
 				Enabled: new(false),
 			},
-			Purpose: (*gardencorev1beta1.ShootPurpose)(new("evaluation")),
+			Purpose: new(gardencorev1beta1.ShootPurpose("evaluation")),
 		},
 		Status: gardencorev1beta1.ShootStatus{
 			LastOperation: &gardencorev1beta1.LastOperation{

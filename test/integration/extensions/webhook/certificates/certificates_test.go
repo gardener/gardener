@@ -384,7 +384,7 @@ var _ = Describe("Certificates tests", func() {
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				// here variable failurePolicyFail can't be used as it can be overwritten to
 				// `Ignore` by previous tests
-				FailurePolicy:      (*admissionregistrationv1.FailurePolicyType)(new("Fail")),
+				FailurePolicy:      new(admissionregistrationv1.FailurePolicyType("Fail")),
 				MatchPolicy:        &matchPolicyExact,
 				SideEffects:        &sideEffectsNone,
 				TimeoutSeconds:     &timeoutSeconds,
