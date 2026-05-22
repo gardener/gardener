@@ -238,6 +238,23 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: virtualService, ObjectNew: virtualService})).To(BeFalse())
 			})
 
+			It("should return false because nothing changed when http rules contain a StringMatch", func() {
+				virtualService.Spec.Http = append(virtualService.Spec.Http, &istioapinetworkingv1beta1.HTTPRoute{
+					Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+						{
+							Uri: &istioapinetworkingv1beta1.StringMatch{
+								MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+									Prefix: "/api",
+								},
+							},
+						},
+					},
+				})
+				oldVirtualService := virtualService.DeepCopy()
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldVirtualService, ObjectNew: virtualService})).To(BeFalse())
+			})
+
 			It("should return true because the hosts were changed", func() {
 				oldVirtualService := virtualService.DeepCopy()
 				virtualService.Spec.Hosts = append(virtualService.Spec.Hosts, "new.host")
