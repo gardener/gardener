@@ -72,61 +72,89 @@ var _ = Describe("Pod Utils", func() {
 		})
 
 		DescribeTable("should visit and mutate PodSpec",
-			func(obj runtime.Object, getSpec func(runtime.Object) *corev1.PodSpec) {
+			func(build func() runtime.Object, getPodSpec func(runtime.Object) *corev1.PodSpec) {
+				obj := build()
+
 				Expect(VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
 					podSpec.RestartPolicy = corev1.RestartPolicyOnFailure
 				})).To(Succeed())
 
-				Expect(getSpec(obj).RestartPolicy).To(Equal(corev1.RestartPolicyOnFailure))
+				Expect(getPodSpec(obj).RestartPolicy).To(Equal(corev1.RestartPolicyOnFailure))
+				Expect(getPodSpec(obj).InitContainers).To(HaveLen(2))
+				Expect(getPodSpec(obj).Containers).To(HaveLen(2))
 			},
 			Entry("corev1.Pod",
-				&corev1.Pod{Spec: podSpec},
+				func() runtime.Object {
+					return &corev1.Pod{Spec: podSpec}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*corev1.Pod).Spec },
 			),
 			Entry("appsv1.Deployment",
-				&appsv1.Deployment{Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1.Deployment{Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1.Deployment).Spec.Template.Spec },
 			),
 			Entry("appsv1beta2.Deployment",
-				&appsv1beta2.Deployment{Spec: appsv1beta2.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1beta2.Deployment{Spec: appsv1beta2.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1beta2.Deployment).Spec.Template.Spec },
 			),
 			Entry("appsv1beta1.Deployment",
-				&appsv1beta1.Deployment{Spec: appsv1beta1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1beta1.Deployment{Spec: appsv1beta1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1beta1.Deployment).Spec.Template.Spec },
 			),
 			Entry("appsv1.StatefulSet",
-				&appsv1.StatefulSet{Spec: appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1.StatefulSet{Spec: appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1.StatefulSet).Spec.Template.Spec },
 			),
 			Entry("appsv1beta2.StatefulSet",
-				&appsv1beta2.StatefulSet{Spec: appsv1beta2.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1beta2.StatefulSet{Spec: appsv1beta2.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1beta2.StatefulSet).Spec.Template.Spec },
 			),
 			Entry("appsv1beta1.StatefulSet",
-				&appsv1beta1.StatefulSet{Spec: appsv1beta1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1beta1.StatefulSet{Spec: appsv1beta1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1beta1.StatefulSet).Spec.Template.Spec },
 			),
 			Entry("appsv1.DaemonSet",
-				&appsv1.DaemonSet{Spec: appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1.DaemonSet{Spec: appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1.DaemonSet).Spec.Template.Spec },
 			),
 			Entry("appsv1beta2.DaemonSet",
-				&appsv1beta2.DaemonSet{Spec: appsv1beta2.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &appsv1beta2.DaemonSet{Spec: appsv1beta2.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*appsv1beta2.DaemonSet).Spec.Template.Spec },
 			),
 			Entry("batchv1.Job",
-				&batchv1.Job{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}},
+				func() runtime.Object {
+					return &batchv1.Job{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec { return &o.(*batchv1.Job).Spec.Template.Spec },
 			),
 			Entry("batchv1.CronJob",
-				&batchv1.CronJob{Spec: batchv1.CronJobSpec{JobTemplate: batchv1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}}},
+				func() runtime.Object {
+					return &batchv1.CronJob{Spec: batchv1.CronJobSpec{JobTemplate: batchv1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec {
 					return &o.(*batchv1.CronJob).Spec.JobTemplate.Spec.Template.Spec
 				},
 			),
 			Entry("batchv1beta1.CronJob",
-				&batchv1beta1.CronJob{Spec: batchv1beta1.CronJobSpec{JobTemplate: batchv1beta1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}}},
+				func() runtime.Object {
+					return &batchv1beta1.CronJob{Spec: batchv1beta1.CronJobSpec{JobTemplate: batchv1beta1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}}}
+				},
 				func(o runtime.Object) *corev1.PodSpec {
 					return &o.(*batchv1beta1.CronJob).Spec.JobTemplate.Spec.Template.Spec
 				},
