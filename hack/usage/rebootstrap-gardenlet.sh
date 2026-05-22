@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -258,7 +258,7 @@ function update_gardenlet_configuration() {
 
   # Create the new ConfigMap with updated configuration
   kubectl --kubeconfig="$SEED_KUBECONFIG" -n "$GARDENLET_NAMESPACE" create configmap "$new_configmap_name" \
-    --from-file="config.yaml=${temp_config}"
+    --from-file="${config_key//\\/}=${temp_config}"
 
   # Clean up temp file
   rm -f "$temp_config"
@@ -304,7 +304,7 @@ function delete_expired_kubeconfig() {
   fi
 }
 
-function restart_gardenlet() {
+function wait_for_gardenlet_rollout() {
   log_info "Waiting for gardenlet deployment rollout..."
 
   if kubectl --kubeconfig="$SEED_KUBECONFIG" -n "$GARDENLET_NAMESPACE" get deployment "$GARDENLET_DEPLOYMENT_NAME" &> /dev/null; then
@@ -382,6 +382,9 @@ function verify_bootstrap() {
   done
   echo
 
+  log_info "Deleting bootstrap token secret"
+  kubectl --kubeconfig=$GARDEN_KUBECONFIG -n kube-system delete secret bootstrap-token-$BOOTSTRAP_TOKEN_ID --ignore-not-found
+
   if [[ $seed_elapsed -ge $seed_max_wait ]]; then
     log_warn "⚠ Timeout waiting for gardenlet to report ready status"
     log_warn "  The bootstrap may still be in progress. Check seed status manually:"
@@ -399,9 +402,6 @@ function verify_bootstrap() {
   log_info ""
   log_info "2. Check seed conditions:"
   log_info "   kubectl --kubeconfig=$GARDEN_KUBECONFIG get seed $SEED_NAME -o yaml | yq eval .status.conditions"
-  log_info ""
-  log_info "3. Once everything is working, clean up the bootstrap token:"
-  log_info "   kubectl --kubeconfig=$GARDEN_KUBECONFIG -n kube-system delete secret bootstrap-token-$BOOTSTRAP_TOKEN_ID"
 }
 
 # Parse command line arguments
@@ -449,9 +449,9 @@ validate_requirements
 create_bootstrap_token
 get_garden_cluster_info
 create_bootstrap_kubeconfig_secret
-update_gardenlet_configuration
 delete_expired_kubeconfig
-restart_gardenlet
+update_gardenlet_configuration
+wait_for_gardenlet_rollout
 verify_bootstrap
 
 log_info ""
