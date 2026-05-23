@@ -107,6 +107,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
+ExecStartPre=/bin/sh -c "test -s ` + PathAuthToken + `"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/valitail -config.file=` + PathConfig),
 		FilePaths: []string{PathConfig, PathCACert, valitailBinaryPath},
 	}
