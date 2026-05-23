@@ -514,79 +514,91 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 		}
 
-		clusterRoleShoot = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:target:cluster-autoscaler",
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"events", "endpoints"},
-					Verbs:     []string{"create", "patch"},
+		clusterRoleShootFor = func(k8sVersionGreaterEqual135 bool) *rbacv1.ClusterRole {
+			clusterRole := &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener.cloud:target:cluster-autoscaler",
 				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods/eviction"},
-					Verbs:     []string{"create"},
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"events", "endpoints"},
+						Verbs:     []string{"create", "patch"},
+					},
+					{
+						APIGroups: []string{""},
+						Resources: []string{"pods/eviction"},
+						Verbs:     []string{"create"},
+					},
+					{
+						APIGroups: []string{""},
+						Resources: []string{"pods/status"},
+						Verbs:     []string{"update"},
+					},
+					{
+						APIGroups:     []string{""},
+						Resources:     []string{"endpoints"},
+						ResourceNames: []string{"cluster-autoscaler"},
+						Verbs:         []string{"get", "update"},
+					},
+					{
+						APIGroups: []string{""},
+						Resources: []string{"nodes"},
+						Verbs:     []string{"watch", "list", "get", "update"},
+					},
+					{
+						APIGroups: []string{""},
+						Resources: []string{"namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
+						Verbs:     []string{"watch", "list", "get"},
+					},
+					{
+						APIGroups: []string{"apps", "extensions"},
+						Resources: []string{"daemonsets", "replicasets", "statefulsets"},
+						Verbs:     []string{"watch", "list", "get"},
+					},
+					{
+						APIGroups: []string{"policy"},
+						Resources: []string{"poddisruptionbudgets"},
+						Verbs:     []string{"watch", "list"},
+					},
+					{
+						APIGroups: []string{"storage.k8s.io"},
+						Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities", "volumeattachments"},
+						Verbs:     []string{"watch", "list", "get"},
+					},
+					{
+						APIGroups: []string{"coordination.k8s.io"},
+						Resources: []string{"leases"},
+						Verbs:     []string{"create"},
+					},
+					{
+						APIGroups:     []string{"coordination.k8s.io"},
+						ResourceNames: []string{"cluster-autoscaler"},
+						Resources:     []string{"leases"},
+						Verbs:         []string{"get", "update"},
+					},
+					{
+						APIGroups: []string{"batch", "extensions"},
+						Resources: []string{"jobs"},
+						Verbs:     []string{"get", "list", "patch", "watch"},
+					},
+					{
+						APIGroups: []string{"batch"},
+						Resources: []string{"jobs", "cronjobs"},
+						Verbs:     []string{"get", "list", "watch"},
+					},
 				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods/status"},
-					Verbs:     []string{"update"},
-				},
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"endpoints"},
-					ResourceNames: []string{"cluster-autoscaler"},
-					Verbs:         []string{"get", "update"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"nodes"},
-					Verbs:     []string{"watch", "list", "get", "update"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
+			}
+
+			if k8sVersionGreaterEqual135 {
+				clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+					APIGroups: []string{"resource.k8s.io"},
+					Resources: []string{"resourceslices", "resourceclaims", "deviceclasses"},
 					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups: []string{"apps", "extensions"},
-					Resources: []string{"daemonsets", "replicasets", "statefulsets"},
-					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups: []string{"policy"},
-					Resources: []string{"poddisruptionbudgets"},
-					Verbs:     []string{"watch", "list"},
-				},
-				{
-					APIGroups: []string{"storage.k8s.io"},
-					Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities", "volumeattachments"},
-					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups:     []string{"coordination.k8s.io"},
-					ResourceNames: []string{"cluster-autoscaler"},
-					Resources:     []string{"leases"},
-					Verbs:         []string{"get", "update"},
-				},
-				{
-					APIGroups: []string{"batch", "extensions"},
-					Resources: []string{"jobs"},
-					Verbs:     []string{"get", "list", "patch", "watch"},
-				},
-				{
-					APIGroups: []string{"batch"},
-					Resources: []string{"jobs", "cronjobs"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-			},
+				})
+			}
+
+			return clusterRole
 		}
 
 		clusterRoleBindingShoot = &rbacv1.ClusterRoleBinding{
@@ -678,14 +690,14 @@ var _ = Describe("ClusterAutoscaler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil)
+		clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, withWorkerConfig bool, withPriorityExpander bool) {
+			test := func(withConfig bool, withWorkerConfig bool, withPriorityExpander bool, k8sVersionGreaterEqual135 bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				var shootWorkerConfig []gardencorev1beta1.Worker
 				if withConfig {
@@ -700,7 +712,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 					shootWorkerConfig = workerConfig
 				}
 
-				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.33.1"))
+				shootVersion := "1.33.1"
+				if k8sVersionGreaterEqual135 {
+					shootVersion = "1.35.0"
+				}
+
+				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.33.1"), semver.MustParse(shootVersion))
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
@@ -712,11 +729,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 				utilruntime.Must(references.InjectAnnotations(managedResource))
 				Expect(actualMr).To(DeepEqual(managedResource))
-
 				if withWorkerConfig {
-					Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot, priorityExpanderConfigMap))
+					Expect(managedResource).To(consistOf(clusterRoleShootFor(k8sVersionGreaterEqual135), clusterRoleBindingShoot, roleShoot, roleBindingShoot, priorityExpanderConfigMap))
 				} else {
-					Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot))
+					Expect(managedResource).To(consistOf(clusterRoleShootFor(k8sVersionGreaterEqual135), clusterRoleBindingShoot, roleShoot, roleBindingShoot))
 				}
 
 				actualServiceAccount := &corev1.ServiceAccount{}
@@ -757,16 +773,18 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
-			It("w/o config", func() { test(false, false, false) })
-			It("w/ config", func() { test(true, false, false) })
-			It("w/ config, w/ workerConfig", func() { test(true, true, false) })
-			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true) })
+			It("w/o config", func() { test(false, false, false, false) })
+			It("w/o config, k8s v1.35", func() { test(false, false, false, true) })
+			It("w/ config", func() { test(true, false, false, false) })
+			It("w/ config, k8s v1.35", func() { test(true, false, false, true) })
+			It("w/ config, w/ workerConfig", func() { test(true, true, false, false) })
+			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true, false) })
 		})
 	})
 
 	Describe("#Destroy", func() {
 		BeforeEach(func() {
-			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil)
+			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
 			clusterAutoscaler.SetNamespaceUID(namespaceUID)
 			clusterAutoscaler.SetMachineDeployments(machineDeployments)
 			Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
@@ -793,7 +811,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			}).Build()
 
-			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil)
+			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
 			clusterAutoscaler.SetNamespaceUID(namespaceUID)
 			clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
