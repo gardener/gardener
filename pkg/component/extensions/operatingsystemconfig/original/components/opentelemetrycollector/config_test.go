@@ -67,6 +67,7 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 Environment=KUBECONFIG=/var/lib/opentelemetry-collector/kubeconfig
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:]) GOMEMLIMIT=1600MiB"
+ExecStartPre=/bin/sh -c "test -s /var/lib/opentelemetry-collector/auth-token"
 ExecStart=/opt/bin/opentelemetry-collector --config=` + PathConfig
 
 			otelDaemonUnit := extensionsv1alpha1.Unit{
