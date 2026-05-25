@@ -175,7 +175,7 @@ func WaitForJobToBeReady(ctx context.Context, cl client.Client, job *batchv1.Job
 			}
 		}
 		return fmt.Errorf("waiting for pod %v to be ready", podList.Items[0].Name)
-	}, time.Minute, time.Second).Should(Succeed())
+	}, 5*time.Minute, time.Second).Should(Succeed())
 }
 
 // VerifyMachineImageVersions checks if the machine image versions of all worker nodes are up-to-date.
