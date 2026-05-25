@@ -105,9 +105,11 @@ var _ = Describe("handler", func() {
 
 	Context("create", func() {
 		It("should fail because the check for other internal domain secrets failed", func() {
+			matched := false
 			errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
 				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 					if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("SecretList") {
+						matched = true
 						return fakeErr
 					}
 					return c.List(ctx, list, opts...)
@@ -122,6 +124,7 @@ var _ = Describe("handler", func() {
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
 			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
+			Expect(matched).To(BeTrue(), "interceptor list filter was never triggered")
 		})
 
 		It("should fail because another internal domain secret exists in the garden namespace", func() {
@@ -179,9 +182,11 @@ var _ = Describe("handler", func() {
 			})
 
 			It("should fail because the check for other internal domain secrets failed", func() {
+				matched := false
 				errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
 					List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 						if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("SecretList") {
+							matched = true
 							return fakeErr
 						}
 						return c.List(ctx, list, opts...)
@@ -196,6 +201,7 @@ var _ = Describe("handler", func() {
 				Expect(ok).To(BeTrue())
 				Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
 				Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
+				Expect(matched).To(BeTrue(), "interceptor list filter was never triggered")
 			})
 
 			It("should fail because another internal domain secret exists in the garden namespace", func() {
@@ -231,9 +237,11 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should forbid because the domain is changed but shoot listing failed", func() {
+			matched := false
 			errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
 				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 					if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList") {
+						matched = true
 						return fakeErr
 					}
 					return c.List(ctx, list, opts...)
@@ -251,6 +259,7 @@ var _ = Describe("handler", func() {
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
 			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
+			Expect(matched).To(BeTrue(), "interceptor list filter was never triggered")
 		})
 
 		It("should forbid because the global domain is changed but shoots exist", func() {
@@ -302,9 +311,11 @@ var _ = Describe("handler", func() {
 
 	Context("delete", func() {
 		It("should fail because the shoot listing fails", func() {
+			matched := false
 			errClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
 				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 					if pml, ok := list.(*metav1.PartialObjectMetadataList); ok && pml.GetObjectKind().GroupVersionKind() == gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList") {
+						matched = true
 						return fakeErr
 					}
 					return c.List(ctx, list, opts...)
@@ -319,6 +330,7 @@ var _ = Describe("handler", func() {
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusInternalServerError)))
 			Expect(statusError.Status().Message).To(ContainSubstring(fakeErr.Error()))
+			Expect(matched).To(BeTrue(), "interceptor list filter was never triggered")
 		})
 
 		It("should fail because at least one shoot exists", func() {

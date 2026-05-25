@@ -17,8 +17,7 @@ type ResourceManager struct {
 	Secrets     resourcemanager.Secrets
 	Values      resourcemanager.Values
 
-	DeployCalled  bool
-	DestroyCalled bool
+	DeployCalled bool
 }
 
 // GetReplicas returns the Replicas field.
@@ -39,19 +38,20 @@ func (f *ResourceManager) SetBootstrapControlPlaneNode(bool) {}
 // Deploy records that it was called and returns DeployError.
 func (f *ResourceManager) Deploy(_ context.Context) error {
 	f.DeployCalled = true
-	err := f.DeployError
-	f.DeployError = nil
-	return err
+	return f.DeployError
 }
 
 // Destroy records that it was called.
 func (f *ResourceManager) Destroy(_ context.Context) error {
-	f.DestroyCalled = true
 	return nil
 }
 
-// Wait is a no-op.
-func (f *ResourceManager) Wait(_ context.Context) error { return nil }
+// Wait records that it was called.
+func (f *ResourceManager) Wait(_ context.Context) error {
+	return nil
+}
 
-// WaitCleanup is a no-op.
-func (f *ResourceManager) WaitCleanup(_ context.Context) error { return nil }
+// WaitCleanup records that it was called.
+func (f *ResourceManager) WaitCleanup(_ context.Context) error {
+	return nil
+}

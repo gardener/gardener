@@ -242,7 +242,7 @@ var _ = Describe("Worker", func() {
 						Annotations: map[string]string{"checksum/data-script": checksum2},
 					},
 				}
-				secret3WithoutLabel = corev1.Secret{
+				secret3WithoutWorkerPoolLabel = corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "secret3",
 						Namespace:   metav1.NamespaceSystem,
@@ -264,7 +264,7 @@ var _ = Describe("Worker", func() {
 
 			Expect(c.Create(ctx, &secret1)).To(Succeed())
 			Expect(c.Create(ctx, &secret2)).To(Succeed())
-			Expect(c.Create(ctx, &secret3WithoutLabel)).To(Succeed())
+			Expect(c.Create(ctx, &secret3WithoutWorkerPoolLabel)).To(Succeed())
 			Expect(c.Create(ctx, &secret4WithoutAnnotations)).To(Succeed())
 
 			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")

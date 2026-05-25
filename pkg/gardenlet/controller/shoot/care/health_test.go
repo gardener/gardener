@@ -7,6 +7,7 @@ package care_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -269,6 +270,8 @@ var _ = Describe("health check", func() {
 					// Add the role label needed for the List filter
 					if meta.Labels == nil {
 						meta.Labels = map[string]string{}
+					} else {
+						meta.Labels = maps.Clone(meta.Labels)
 					}
 					meta.Labels["gardener.cloud/role"] = "operating-system-config"
 					meta.Namespace = metav1.NamespaceSystem

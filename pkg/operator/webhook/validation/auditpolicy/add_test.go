@@ -394,30 +394,14 @@ rules:
 			It("fails getting cm for Gardener APIServer", func() {
 				garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 				fakeErr := errors.New("fake")
-				errClient := fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithInterceptorFuncs(interceptor.Funcs{
-					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if _, ok := obj.(*corev1.ConfigMap); ok {
-							return fakeErr
-						}
-						return c.Get(ctx, key, obj, opts...)
-					},
-				}).Build()
-				handler = NewHandler(errClient, fakeClient, decoder, gardenNs)
+				handler = NewHandler(configMapErrorInterceptingClient(fakeErr), fakeClient, decoder, gardenNs)
 				test(admissionv1.Create, nil, garden, false, statusCodeInternalError, "could not retrieve ConfigMap garden/fake-cm-name: fake", "")
 			})
 
 			It("fails getting cm for KubeAPIServer", func() {
 				garden.Spec.VirtualCluster.Gardener.APIServer = nil
 				fakeErr := errors.New("fake")
-				errClient := fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithInterceptorFuncs(interceptor.Funcs{
-					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if _, ok := obj.(*corev1.ConfigMap); ok {
-							return fakeErr
-						}
-						return c.Get(ctx, key, obj, opts...)
-					},
-				}).Build()
-				handler = NewHandler(errClient, fakeClient, decoder, gardenNs)
+				handler = NewHandler(configMapErrorInterceptingClient(fakeErr), fakeClient, decoder, gardenNs)
 				test(admissionv1.Create, nil, garden, false, statusCodeInternalError, "could not retrieve ConfigMap garden/fake-cm-name: fake", "")
 			})
 
@@ -561,3 +545,14 @@ rules:
 		})
 	})
 })
+
+func configMapErrorInterceptingClient(err error) client.Client {
+	return fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, ok := obj.(*corev1.ConfigMap); ok {
+				return err
+			}
+			return c.Get(ctx, key, obj, opts...)
+		},
+	}).Build()
+}

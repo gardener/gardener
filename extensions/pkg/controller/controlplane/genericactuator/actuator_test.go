@@ -406,7 +406,7 @@ var _ = Describe("Actuator", func() {
 			Expect(requeue).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
-			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
+			expectSecretsManagedBySecretsManager(ctx, fakeClient, "wanted secrets should get created",
 				"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-67817cb3",
 				"cloud-controller-manager-c249bd1b",
 			)
@@ -429,33 +429,22 @@ webhooks:
 					Type:       corev1.SecretTypeOpaque,
 				}
 
-				createdMRForShootWebhooks.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForShootWebhooks.Name}}
-				utilruntime.Must(references.InjectAnnotations(createdMRForShootWebhooks))
-				expectManagedResourceCreated(c, createdMRSecretForShootWebhooks, createdMRForShootWebhooks)
+				expectManagedResourceCreated(ctx, c, createdMRSecretForShootWebhooks, createdMRForShootWebhooks)
 			}
 
-			createdMRForCPShootChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootChart.Name}}
-			utilruntime.Must(references.InjectAnnotations(createdMRForCPShootChart))
-			expectManagedResourceCreated(c, createdMRSecretForCPShootChart, createdMRForCPShootChart)
-			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootChart))
+			expectManagedResourceCreated(ctx, c, createdMRSecretForCPShootChart, createdMRForCPShootChart)
 
 			if withShootCRDsChart {
-				createdMRForCPShootCRDsChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootCRDsChart.Name}}
-				utilruntime.Must(references.InjectAnnotations(createdMRForCPShootCRDsChart))
-
-				expectManagedResourceCreated(c, createdMRSecretForCPShootCRDsChart, createdMRForCPShootCRDsChart)
+				expectManagedResourceCreated(ctx, c, createdMRSecretForCPShootCRDsChart, createdMRForCPShootCRDsChart)
 			}
 
-			createdMRForStorageClassesChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForStorageClassesChart.Name}}
-			utilruntime.Must(references.InjectAnnotations(createdMRForStorageClassesChart))
-
-			expectManagedResourceCreated(c, createdMRSecretForStorageClassesChart, createdMRForStorageClassesChart)
+			expectManagedResourceCreated(ctx, c, createdMRSecretForStorageClassesChart, createdMRForStorageClassesChart)
 
 			if configName != "" {
-				expectManagedResourceCreated(c, createdMRSecretForConfigurationSeedChart, createdMRForConfigurationSeedChart)
+				expectManagedResourceCreated(ctx, c, createdMRSecretForConfigurationSeedChart, createdMRForConfigurationSeedChart)
 			}
 
-			expectManagedResourceCreated(c, createdMRSecretForControlPlaneSeedChart, createdMRForControlPlaneSeedChart)
+			expectManagedResourceCreated(ctx, c, createdMRSecretForControlPlaneSeedChart, createdMRForControlPlaneSeedChart)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
 		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
@@ -582,7 +571,7 @@ webhooks:
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
 
-			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
+			expectSecretsManagedBySecretsManager(ctx, fakeClient, "all secrets managed by SecretsManager should get cleaned up")
 		},
 		Entry("should delete secrets and charts", cloudProviderConfigName, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
 		Entry("should delete secrets and charts (no config)", "", &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
@@ -633,22 +622,23 @@ func consistOfObjects(names ...string) gomegatypes.GomegaMatcher {
 	return MatchAllElements(objectIdentifier, elements)
 }
 
-func expectSecretsManagedBySecretsManager(c client.Reader, description string, secretNames ...string) {
+func expectSecretsManagedBySecretsManager(ctx context.Context, c client.Reader, description string, secretNames ...string) {
 	secretList := &corev1.SecretList{}
-	ExpectWithOffset(1, c.List(context.Background(), secretList, client.MatchingLabels{"managed-by": "secrets-manager"})).To(Succeed())
+	ExpectWithOffset(1, c.List(ctx, secretList, client.MatchingLabels{"managed-by": "secrets-manager"})).To(Succeed())
 	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...), description)
 }
 
-func expectManagedResourceCreated(c client.Client, s *corev1.Secret, mr *resourcesv1alpha1.ManagedResource) {
+func expectManagedResourceCreated(ctx context.Context, c client.Client, s *corev1.Secret, mr *resourcesv1alpha1.ManagedResource) {
 	utilruntime.Must(kubernetesutils.MakeUnique(s))
 
 	mrSecret := &corev1.Secret{}
-	Expect(c.Get(context.Background(), client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, mrSecret)).To(Succeed())
+	Expect(c.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, mrSecret)).To(Succeed())
 	Expect(mrSecret.Data).To(Equal(s.Data))
 	Expect(mrSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 
 	managedResource := &resourcesv1alpha1.ManagedResource{}
-	Expect(c.Get(context.Background(), client.ObjectKey{Namespace: mr.Namespace, Name: mr.Name}, managedResource)).To(Succeed())
+	Expect(c.Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: mr.Name}, managedResource)).To(Succeed())
 	Expect(managedResource.Spec.Class).To(Equal(mr.Spec.Class))
 	Expect(managedResource.Spec.SecretRefs).To(ConsistOf(corev1.LocalObjectReference{Name: s.Name}))
+	Expect(managedResource.Annotations).To(HaveKeyWithValue(references.AnnotationKey(references.KindSecret, s.Name), s.Name))
 }
