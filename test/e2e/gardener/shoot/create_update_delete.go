@@ -14,6 +14,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/zerodowntimevalidator"
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
+	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
 const (
@@ -42,7 +45,7 @@ const (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Update, Delete", Label("simple"), func() {
-		test := func(s *ShootContext) {
+		test := func(s *ShootContext, withInPlaceUpdatePools bool) {
 			BeforeTestSetup(func() {
 				s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 					Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
@@ -51,7 +54,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				s.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
 
 				if !v1beta1helper.IsWorkerless(s.Shoot) {
-					// create two additional worker pools which explicitly specify the kubernetes version
+					// create worker pools which explicitly specify the kubernetes version and with different update strategies
 					pool1 := s.Shoot.Spec.Provider.Workers[0]
 					pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
 					pool2.Name += "2"
@@ -59,6 +62,33 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					pool3.Name += "3"
 					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(kubernetesSourceVersion)}
 					s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, *pool2, *pool3)
+
+					if withInPlaceUpdatePools {
+						pool4 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+						pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
+						pool4.Minimum = 2
+						pool4.Maximum = 2
+						pool4.MaxUnavailable = new(intstr.FromInt(1))
+						pool4.MaxSurge = new(intstr.FromInt(0))
+
+						pool5 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+						pool5.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+							Version: new(kubernetesSourceVersion),
+							Kubelet: &gardencorev1beta1.KubeletConfig{
+								CPUManagerPolicy: new("none"),
+								EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+									MemoryAvailable: new("100Mi"),
+									NodeFSAvailable: new("100Mi"),
+								},
+							},
+						}
+
+						pool6 := DefaultWorker("auto-surge", new(gardencorev1beta1.AutoInPlaceUpdate))
+						pool6.MaxSurge = new(intstr.FromInt(1))
+						pool6.MaxUnavailable = new(intstr.FromInt(0))
+
+						s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, pool4, pool5, pool6)
+					}
 				}
 			})
 
@@ -75,6 +105,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyViewerKubeconfigShootAccess(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
+				if withInPlaceUpdatePools {
+					inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
+				}
 				verifyWorkerNodeLabels(s)
 
 				It("Verify reported CIDRs", func(ctx SpecContext) {
@@ -110,10 +143,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyNodeKubernetesVersions(s)
 
 			var (
-				cloudProfile                  *gardencorev1beta1.CloudProfile
-				controlPlaneKubernetesVersion string
-				poolNameToKubernetesVersion   map[string]string
+				nodesOfInPlaceWorkersBeforeTest sets.Set[string]
+				cloudProfile                    *gardencorev1beta1.CloudProfile
+				controlPlaneKubernetesVersion   string
+				poolNameToKubernetesVersion     map[string]string
 			)
+
+			if withInPlaceUpdatePools {
+				It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
+					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+				}, SpecTimeout(2*time.Minute))
+			}
 
 			It("Get CloudProfile", func(ctx SpecContext) {
 				Eventually(ctx, func() error {
@@ -140,11 +180,35 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						s.Log.Info("Updating worker pool Kubernetes version", "pool", worker.Name, "version", workerPoolVersion)
 						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
 					}
+
+					if !withInPlaceUpdatePools {
+						continue
+					}
+
+					switch worker.Name {
+					case "auto":
+						s.Log.Info("Updating worker pool machine image version", "pool", worker.Name, "version", "2.0.0")
+						s.Shoot.Spec.Provider.Workers[i].Machine.Image.Version = new("2.0.0")
+					case "manual":
+						s.Log.Info("Updating worker pool Kubelet config", "pool", worker.Name)
+						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
+							CPUManagerPolicy: new("static"),
+							EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+								MemoryAvailable: new("200Mi"),
+								NodeFSAvailable: new("200Mi"),
+							},
+						}
+					}
 				}
+
 				Eventually(ctx, func() error {
 					return s.GardenClient.Patch(ctx, s.Shoot, patch)
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
+
+			if withInPlaceUpdatePools {
+				inplace.ItShouldVerifyInPlaceUpdateStart(s, true, true)
+			}
 
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -156,6 +220,20 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+
+				if withInPlaceUpdatePools {
+					It("should compare the node names after the test", func(ctx SpecContext) {
+						totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
+						s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
+
+						nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+						s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
+
+						Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
+					}, SpecTimeout(2*time.Minute))
+
+					inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
+				}
 			}
 
 			ItShouldAnnotateShoot(s, map[string]string{
@@ -182,17 +260,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")))
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")), true)
 		})
 
 		Context("Shoot with workers and layer 4 load balancing", Ordered, Label("basic"), func() {
 			shoot := DefaultShoot("e2e-layer4-lb")
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
-			test(NewTestContext().ForShoot(shoot))
+			test(NewTestContext().ForShoot(shoot), false)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")))
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")), false)
 		})
 	})
 })
