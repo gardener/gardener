@@ -60,12 +60,14 @@ func (v *SSHKeypairVerifier) Before(_ context.Context) {
 
 	It("Verify that old SSH key(s) are accepted", func(ctx SpecContext) {
 		Eventually(ctx, func(_ Gomega) {
-			authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
+			allAuthorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
-			if v.old2KeypairData != nil {
-				Expect(authorizedKeys).To(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
+			for _, authorizedKeys := range allAuthorizedKeys {
+				Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
+				if v.old2KeypairData != nil {
+					Expect(authorizedKeys).To(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
+				}
 			}
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
@@ -105,13 +107,15 @@ func (v *SSHKeypairVerifier) AfterPrepared(_ context.Context) {
 
 	It("Verify that new SSH keys are accepted", func(ctx SpecContext) {
 		Eventually(ctx, func(_ Gomega) {
-			authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
+			allAuthorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(authorizedKeys).To(ContainSubstring(string(secret.Data["id_rsa.pub"])))
-			Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
-			if v.old2KeypairData != nil {
-				Expect(authorizedKeys).NotTo(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
+			for _, authorizedKeys := range allAuthorizedKeys {
+				Expect(authorizedKeys).To(ContainSubstring(string(secret.Data["id_rsa.pub"])))
+				Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
+				if v.old2KeypairData != nil {
+					Expect(authorizedKeys).NotTo(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
+				}
 			}
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
@@ -128,34 +132,39 @@ func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {}
 
 // Since we can't (and do not want ;-)) trying to really SSH into the machine pods from our test environment, we can
 // only check whether the `.ssh/authorized_keys` file on the worker nodes has the expected content.
-func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) (string, error) {
+func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) ([]string, error) {
 	podList := &corev1.PodList{}
 	if err := v.SeedClient.List(ctx, podList, client.InNamespace(v.Shoot.Status.TechnicalID), client.MatchingLabels{
 		"app":              "machine",
 		"machine-provider": "local",
 	}); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if len(podList.Items) != 1 {
-		return "", fmt.Errorf("expected exactly one result when listing all machine pods: %+v", podList.Items)
+	if len(podList.Items) == 0 {
+		return nil, fmt.Errorf("no machine pods found in namespace %s", v.Shoot.Status.TechnicalID)
 	}
 
-	stdout, _, err := v.SeedClientSet.PodExecutor().Execute(
-		ctx,
-		v.Shoot.Status.TechnicalID,
-		podList.Items[0].Name,
-		"node",
-		"cat", "/home/gardener/.ssh/authorized_keys",
-	)
-	if err != nil {
-		return "", err
+	var results []string
+	for _, pod := range podList.Items {
+		stdout, _, err := v.SeedClientSet.PodExecutor().Execute(
+			ctx,
+			v.Shoot.Status.TechnicalID,
+			pod.Name,
+			"node",
+			"cat", "/home/gardener/.ssh/authorized_keys",
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result, err := io.ReadAll(stdout)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, string(result))
 	}
 
-	result, err := io.ReadAll(stdout)
-	if err != nil {
-		return "", err
-	}
-
-	return string(result), nil
+	return results, nil
 }
