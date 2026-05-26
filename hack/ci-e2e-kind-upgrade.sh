@@ -66,19 +66,9 @@ function copy_virtual_garden_kubeconfig_from_old_gardener_version_folder() {
 function install_previous_release() {
   pushd "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE" >/dev/null
   copy_kubeconfig_files_to_old_gardener_version_folder
-  remove_provider_local_service_controller
   make gardener-up
   copy_virtual_garden_kubeconfig_from_old_gardener_version_folder
   popd >/dev/null
-}
-
-# TODO(timebertt): remove this after v1.141 has been released.
-# In the upgrade tests, `make kind-up` is executed with the new version of Gardener, which includes deploying cloud-controller-manager-local to the kind cluster.
-# However, `make gardener-up` is executed with the old version of Gardener, which still includes the service controller in gardener-extension-provider-local.
-# This leads to a conflict between cloud-controller-manager-local and service controller, as they both try to reconcile LoadBalancer services.
-# This function removes the service controller from the previous version of Gardener to rely on cloud-controller-manager-local throughout the upgrade test.
-function remove_provider_local_service_controller() {
-  sed -i '/servicecontroller/d' cmd/gardener-extension-provider-local/app/options.go
 }
 
 function upgrade_to_next_release() {
