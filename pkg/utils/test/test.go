@@ -14,13 +14,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/component-base/featuregate"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 // WithVar sets the given var to the src value and returns a function to revert to the original state.
@@ -175,107 +169,6 @@ func WithTempFile(dir, pattern string, content []byte, fileName *string) func() 
 			ginkgo.Fail(fmt.Sprintf("could not delete temp file %s: %v", file.Name(), err))
 		}
 	}
-}
-
-// EXPECTPatch is a helper function for a GoMock call expecting a patch with the mock client.
-func EXPECTPatch(ctx any, c *mockclient.MockClient, expectedObj, mergeFrom client.Object, patchType types.PatchType, rets ...any) *gomock.Call {
-	var expectedPatch client.Patch
-
-	switch patchType {
-	case types.MergePatchType:
-		expectedPatch = client.MergeFrom(mergeFrom)
-	case types.StrategicMergePatchType:
-		expectedPatch = client.StrategicMergeFrom(mergeFrom.DeepCopyObject().(client.Object))
-	}
-
-	return expectPatch(ctx, c, expectedObj, expectedPatch, rets...)
-}
-
-// EXPECTStatusPatch is a helper function for a GoMock call expecting a status patch with the mock client.
-func EXPECTStatusPatch(ctx any, c *mockclient.MockStatusWriter, expectedObj, mergeFrom client.Object, patchType types.PatchType, rets ...any) *gomock.Call {
-	var expectedPatch client.Patch
-
-	switch patchType {
-	case types.MergePatchType:
-		expectedPatch = client.MergeFrom(mergeFrom)
-	case types.StrategicMergePatchType:
-		expectedPatch = client.StrategicMergeFrom(mergeFrom.DeepCopyObject().(client.Object))
-	}
-
-	return expectStatusPatch(ctx, c, expectedObj, expectedPatch, rets...)
-}
-
-// EXPECTPatchWithOptimisticLock is a helper function for a GoMock call with the mock client
-// expecting a merge patch with optimistic lock.
-func EXPECTPatchWithOptimisticLock(ctx any, c *mockclient.MockClient, expectedObj, mergeFrom client.Object, patchType types.PatchType, rets ...any) *gomock.Call {
-	var expectedPatch client.Patch
-
-	switch patchType {
-	case types.MergePatchType:
-		expectedPatch = client.MergeFromWithOptions(mergeFrom, client.MergeFromWithOptimisticLock{})
-	case types.StrategicMergePatchType:
-		expectedPatch = client.StrategicMergeFrom(mergeFrom.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
-	}
-
-	return expectPatch(ctx, c, expectedObj, expectedPatch, rets...)
-}
-
-func expectPatch(ctx any, c *mockclient.MockClient, expectedObj client.Object, expectedPatch client.Patch, rets ...any) *gomock.Call {
-	expectedData, expectedErr := expectedPatch.Data(expectedObj)
-	Expect(expectedErr).NotTo(HaveOccurred())
-
-	if rets == nil {
-		rets = []any{nil}
-	}
-
-	// match object key here, but verify contents only inside DoAndReturn.
-	// This is to tell gomock, for which object we expect the given patch, but to enable rich yaml diff between
-	// actual and expected via `DeepEqual`.
-	return c.
-		EXPECT().
-		Patch(ctx, HasObjectKeyOf(expectedObj), gomock.Any()).
-		DoAndReturn(func(_ context.Context, obj client.Object, patch client.Patch, _ ...client.PatchOption) error {
-			// if one of these Expects fails and Patch is called in some goroutine (e.g. via flow.Parallel)
-			// the failures will not be shown, as the ginkgo panic is not recovered, so the test is hard to fix
-			defer ginkgo.GinkgoRecover()
-
-			Expect(obj).To(DeepEqual(expectedObj))
-			data, err := patch.Data(obj)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
-			Expect(string(data)).To(Equal(string(expectedData)))
-			return nil
-		}).
-		Return(rets...)
-}
-
-func expectStatusPatch(ctx any, c *mockclient.MockStatusWriter, expectedObj client.Object, expectedPatch client.Patch, rets ...any) *gomock.Call {
-	expectedData, expectedErr := expectedPatch.Data(expectedObj)
-	Expect(expectedErr).NotTo(HaveOccurred())
-
-	if rets == nil {
-		rets = []any{nil}
-	}
-
-	// match object key here, but verify contents only inside DoAndReturn.
-	// This is to tell gomock, for which object we expect the given patch, but to enable rich yaml diff between
-	// actual and expected via `DeepEqual`.
-	return c.
-		EXPECT().
-		Patch(ctx, HasObjectKeyOf(expectedObj), gomock.Any()).
-		DoAndReturn(func(_ context.Context, obj client.Object, patch client.Patch, _ ...client.PatchOption) error {
-			// if one of these Expects fails and Patch is called in some goroutine (e.g. via flow.Parallel)
-			// the failures will not be shown, as the ginkgo panic is not recovered, so the test is hard to fix
-			defer ginkgo.GinkgoRecover()
-
-			Expect(obj).To(DeepEqual(expectedObj))
-			data, err := patch.Data(obj)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
-			Expect(string(data)).To(Equal(string(expectedData)))
-			return nil
-		}).
-		Return(rets...)
 }
 
 // CEventually is like gomega.Eventually but with a context.Context. When it has a deadline then the gomega.Eventually

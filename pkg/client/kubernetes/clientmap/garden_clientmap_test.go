@@ -11,11 +11,13 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -24,15 +26,14 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("GardenClientMap", func() {
 	var (
 		ctx               context.Context
 		log               logr.Logger
-		ctrl              *gomock.Controller
-		mockRuntimeClient *mockclient.MockClient
+		scheme            *runtime.Scheme
+		fakeRuntimeClient client.Client
 
 		cm                     ClientMap
 		key                    ClientSetKey
@@ -46,8 +47,11 @@ var _ = Describe("GardenClientMap", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		log = logr.Discard()
-		ctrl = gomock.NewController(GinkgoT())
-		mockRuntimeClient = mockclient.NewMockClient(ctrl)
+
+		scheme = runtime.NewScheme()
+		Expect(operatorclient.AddRuntimeSchemeToScheme(scheme)).To(Succeed())
+
+		fakeRuntimeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -66,14 +70,10 @@ var _ = Describe("GardenClientMap", func() {
 		}
 		clientOptions = client.Options{Scheme: operatorclient.VirtualScheme}
 		factory = &GardenClientSetFactory{
-			RuntimeClient:          mockRuntimeClient,
+			RuntimeClient:          fakeRuntimeClient,
 			ClientConnectionConfig: clientConnectionConfig,
 		}
 		cm = NewGardenClientMap(log, factory)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#GetClient", func() {
@@ -87,10 +87,12 @@ var _ = Describe("GardenClientMap", func() {
 		It("should fail constructing a new ClientSet (in-cluster) because token is not populated", func() {
 			fakeCS := fakekubernetes.NewClientSet()
 
-			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
-					return nil
-				})
+			Expect(fakeRuntimeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-internal",
+					Namespace: "garden",
+				},
+			})).To(Succeed())
 
 			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
@@ -110,30 +112,14 @@ var _ = Describe("GardenClientMap", func() {
 
 		It("should correctly construct a new ClientSet (in-cluster)", func() {
 			fakeCS := fakekubernetes.NewClientSet()
-			gomock.InOrder(
-				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-						(&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      key.Name,
-								Namespace: key.Namespace,
-							},
-							Data: dataWithPopulatedToken(),
-						}).DeepCopyInto(obj.(*corev1.Secret))
-						return nil
-					}),
-				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-						(&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      key.Name,
-								Namespace: key.Namespace,
-							},
-							Data: dataWithPopulatedToken(),
-						}).DeepCopyInto(obj.(*corev1.Secret))
-						return nil
-					}),
-			)
+
+			Expect(fakeRuntimeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-internal",
+					Namespace: "garden",
+				},
+				Data: dataWithPopulatedToken(),
+			})).To(Succeed())
 
 			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
@@ -168,10 +154,12 @@ var _ = Describe("GardenClientMap", func() {
 
 		It("should fail if Get gardener-internal Secret fails", func() {
 			fakeErr := errors.New("fake")
-			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+
+			factory.RuntimeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return fakeErr
-				})
+				},
+			}).Build()
 
 			hash, err := factory.CalculateClientSetHash(ctx, key)
 			Expect(hash).To(BeEmpty())
@@ -179,18 +167,12 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		It("should correctly calculate hash", func() {
-			gomock.InOrder(
-				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-						(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
-						return nil
-					}),
-				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-						(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
-						return nil
-					}),
-			)
+			Expect(fakeRuntimeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-internal",
+					Namespace: "garden",
+				},
+			})).To(Succeed())
 
 			hash, err := factory.CalculateClientSetHash(ctx, key)
 			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))

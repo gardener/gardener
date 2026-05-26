@@ -13,6 +13,8 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
@@ -20,7 +22,6 @@ import (
 	extensionsmockcloudprovider "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 func TestCloudProvider(t *testing.T) {
@@ -30,15 +31,17 @@ func TestCloudProvider(t *testing.T) {
 
 var _ = Describe("Mutator", func() {
 	var (
-		mgr    test.FakeManager
-		ctrl   *gomock.Controller
-		logger = log.Log.WithName("test")
+		ctrl       *gomock.Controller
+		mgr        test.FakeManager
+		fakeClient client.Client
+		logger     = log.Log.WithName("test")
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c := mockclient.NewMockClient(ctrl)
-		mgr = test.FakeManager{Client: c}
+
+		fakeClient = fakeclient.NewClientBuilder().Build()
+		mgr = test.FakeManager{Client: fakeClient}
 	})
 
 	AfterEach(func() {

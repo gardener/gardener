@@ -12,9 +12,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockvpa "github.com/gardener/gardener/pkg/component/autoscaling/vpa/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -42,14 +43,9 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 	})
 
 	Describe("#DefaultVerticalPodAutoscaler", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-			kubernetesClient.EXPECT().Version().AnyTimes()
-			kubernetesClient.EXPECT().Client().AnyTimes()
-
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fakeclient.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithVersion("1.31.1").Build()
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Seed.KubernetesVersion = semver.MustParse("v1.31.1")
 			botanist.Shoot = &shootpkg.Shoot{}

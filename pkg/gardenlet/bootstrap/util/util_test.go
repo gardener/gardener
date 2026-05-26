@@ -12,14 +12,12 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -33,27 +31,21 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Util", func() {
 	var log = logr.Discard()
 
-	Describe("Util Tests requiring a mock client", func() {
+	Describe("Util Tests requiring a fake client", func() {
 		var (
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-			ctx  = context.TODO()
+			c   client.Client
+			ctx = context.TODO()
 
 			secretKey client.ObjectKey
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
-
-			c.EXPECT().Scheme().Return(kubernetes.GardenScheme).AnyTimes()
+			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 			secretKey = client.ObjectKey{
 				Namespace: "garden",
@@ -61,16 +53,8 @@ var _ = Describe("Util", func() {
 			}
 		})
 
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		Describe("#GetKubeconfigFromSecret", func() {
 			It("should not return an error because the secret does not exist", func() {
-				c.EXPECT().
-					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretKey.Name))
-
 				kubeconfig, err := GetKubeconfigFromSecret(ctx, c, secretKey)
 
 				Expect(kubeconfig).To(BeNil())
@@ -80,16 +64,15 @@ var _ = Describe("Util", func() {
 			It("should not return an error", func() {
 				kubeconfigContent := []byte("testing")
 
-				c.EXPECT().
-					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
-						secret.Name = secretKey.Name
-						secret.Namespace = secretKey.Namespace
-						secret.Data = map[string][]byte{
-							kubernetes.KubeConfig: kubeconfigContent,
-						}
-						return nil
-					})
+				Expect(c.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      secretKey.Name,
+						Namespace: secretKey.Namespace,
+					},
+					Data: map[string][]byte{
+						kubernetes.KubeConfig: kubeconfigContent,
+					},
+				})).To(Succeed())
 
 				kubeconfig, err := GetKubeconfigFromSecret(ctx, c, secretKey)
 
@@ -101,7 +84,6 @@ var _ = Describe("Util", func() {
 		Describe("#UpdateGardenKubeconfigSecret", func() {
 			var (
 				certClientConfig *rest.Config
-				expectedSecret   *corev1.Secret
 			)
 
 			BeforeEach(func() {
@@ -109,84 +91,64 @@ var _ = Describe("Util", func() {
 					Insecure: false,
 					CAFile:   "filepath",
 				}}
-
-				expectedSecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      secretKey.Name,
-						Namespace: secretKey.Namespace,
-					},
-				}
 			})
 
 			It("should create the kubeconfig secret", func() {
-				c.EXPECT().
-					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretKey.Name))
-
 				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
-
-				expectedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
-
-				c.EXPECT().Create(ctx, expectedSecret)
 
 				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, secretKey)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).To(Equal(expectedKubeconfig))
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, secretKey, secret)).To(Succeed())
+				Expect(secret.Data).To(HaveKeyWithValue(kubernetes.KubeConfig, expectedKubeconfig))
 			})
 
 			It("should update the kubeconfig secret", func() {
-				expectedSecret.Annotations = map[string]string{"gardener.cloud/operation": "renew"}
-
-				c.EXPECT().
-					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						expectedSecret.DeepCopyInto(obj)
-						return nil
-					})
+				// Create existing secret with renew annotation
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        secretKey.Name,
+						Namespace:   secretKey.Namespace,
+						Annotations: map[string]string{"gardener.cloud/operation": "renew"},
+					},
+				}
+				Expect(c.Create(ctx, existingSecret)).To(Succeed())
 
 				expectedKubeconfig, err := CreateKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
-				expectedCopy := expectedSecret.DeepCopy()
-				delete(expectedCopy.Annotations, "gardener.cloud/operation")
-				expectedCopy.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
-				test.EXPECTPatch(ctx, c, expectedCopy, expectedSecret, types.MergePatchType)
-
 				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, secretKey)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).To(Equal(expectedKubeconfig))
+
+				// Verify the secret was patched: renew annotation removed, kubeconfig data set
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, secretKey, secret)).To(Succeed())
+				Expect(secret.Annotations).NotTo(HaveKey("gardener.cloud/operation"))
+				Expect(secret.Data).To(HaveKeyWithValue(kubernetes.KubeConfig, expectedKubeconfig))
 			})
 		})
 
 		Describe("#UpdateGardenKubeconfigCAIfChanged", func() {
 			var (
-				secretReference        corev1.SecretReference
 				certClientConfig       *rest.Config
-				expectedSecret         *corev1.Secret
 				gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			)
 
 			BeforeEach(func() {
-				secretReference = corev1.SecretReference{
-					Name:      "secret",
-					Namespace: "garden",
-				}
-
 				certClientConfig = &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 					Insecure: false,
 					CAData:   []byte("foo"),
 				}}
 
-				expectedSecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      secretReference.Name,
-						Namespace: secretReference.Namespace,
-					},
-				}
-
 				gardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-					KubeconfigSecret: &secretReference,
+					KubeconfigSecret: &corev1.SecretReference{
+						Name:      secretKey.Name,
+						Namespace: secretKey.Namespace,
+					},
 				}
 			})
 
@@ -211,23 +173,17 @@ var _ = Describe("Util", func() {
 				expectedUpdatedKubeconfig, err := CreateKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
-				updatedSecret := expectedSecret.DeepCopy()
-				expectedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
-				updatedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedUpdatedKubeconfig}
+				// Create secret with original kubeconfig
+				Expect(c.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      secretKey.Name,
+						Namespace: secretKey.Namespace,
+					},
+					Data: map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig},
+				})).To(Succeed())
 
-				c.EXPECT().
-					Get(ctx, client.ObjectKeyFromObject(caConfigMap), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
-						caConfigMap.DeepCopyInto(obj)
-						return nil
-					})
-				c.EXPECT().
-					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-						expectedSecret.DeepCopyInto(obj)
-						return nil
-					})
-				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
+				// Create the CA configmap in garden cluster
+				Expect(c.Create(ctx, caConfigMap)).To(Succeed())
 
 				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
@@ -251,30 +207,16 @@ var _ = Describe("Util", func() {
 			)
 
 			It("should successfully refresh the bootstrap token", func() {
-				// There are 3 calls requesting the same secret in the code. This can be improved.
-				// However it is not critical as bootstrap token generation does not happen too frequently
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-					s.Data = map[string][]byte{
+				// Create bootstrap token secret with expired timestamp
+				Expect(c.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      bootstrapTokenSecretName,
+						Namespace: metav1.NamespaceSystem,
+					},
+					Data: map[string][]byte{
 						bootstraptokenapi.BootstrapTokenExpirationKey: []byte(timestampInThePast),
-					}
-					return nil
-				})
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(nil).Times(2)
-
-				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
-						Expect(s.Name).To(Equal(bootstrapTokenSecretName))
-						Expect(s.Namespace).To(Equal(metav1.NamespaceSystem))
-						Expect(s.Type).To(Equal(bootstraptokenapi.SecretTypeBootstrapToken))
-						Expect(s.Data).ToNot(BeNil())
-						Expect(s.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]).ToNot(BeNil())
-						Expect(s.Data[bootstraptokenapi.BootstrapTokenIDKey]).To(Equal([]byte(tokenID)))
-						Expect(s.Data[bootstraptokenapi.BootstrapTokenSecretKey]).ToNot(BeNil())
-						Expect(s.Data[bootstraptokenapi.BootstrapTokenExpirationKey]).ToNot(BeNil())
-						Expect(s.Data[bootstraptokenapi.BootstrapTokenUsageAuthentication]).To(Equal([]byte("true")))
-						Expect(s.Data[bootstraptokenapi.BootstrapTokenUsageSigningKey]).To(Equal([]byte("true")))
-						return nil
-					})
+					},
+				})).To(Succeed())
 
 				kubeconfig, err := ComputeGardenletKubeconfigWithBootstrapToken(ctx, c, restConfig, tokenID, description, validity)
 				Expect(err).ToNot(HaveOccurred())
@@ -283,17 +225,37 @@ var _ = Describe("Util", func() {
 				rest, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(rest.Host).To(Equal(restConfig.Host))
+
+				bootstrapSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      bootstrapTokenSecretName,
+						Namespace: metav1.NamespaceSystem,
+					},
+				}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(bootstrapSecret), bootstrapSecret)).To(Succeed())
+				Expect(bootstrapSecret.Type).To(Equal(bootstraptokenapi.SecretTypeBootstrapToken))
+				Expect(bootstrapSecret.Data).ToNot(BeNil())
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]).ToNot(BeNil())
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenIDKey]).To(Equal([]byte(tokenID)))
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenSecretKey]).ToNot(BeNil())
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenExpirationKey]).ToNot(BeNil())
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenUsageAuthentication]).To(Equal([]byte("true")))
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenUsageSigningKey]).To(Equal([]byte("true")))
 			})
 
 			It("should reuse existing bootstrap token", func() {
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: bootstrapTokenSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
-					s.Data = map[string][]byte{
+				// Create bootstrap token secret with future expiration
+				Expect(c.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      bootstrapTokenSecretName,
+						Namespace: metav1.NamespaceSystem,
+					},
+					Data: map[string][]byte{
 						bootstraptokenapi.BootstrapTokenExpirationKey: []byte(timestampInTheFuture),
 						bootstraptokenapi.BootstrapTokenIDKey:         []byte("dummy"),
 						bootstraptokenapi.BootstrapTokenSecretKey:     []byte(bootstrapTokenSecretName),
-					}
-					return nil
-				})
+					},
+				})).To(Succeed())
 
 				kubeconfig, err := ComputeGardenletKubeconfigWithBootstrapToken(ctx, c, restConfig, tokenID, description, validity)
 				Expect(err).ToNot(HaveOccurred())
@@ -302,6 +264,16 @@ var _ = Describe("Util", func() {
 				rest, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(rest.Host).To(Equal(restConfig.Host))
+
+				bootstrapSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      bootstrapTokenSecretName,
+						Namespace: metav1.NamespaceSystem,
+					},
+				}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(bootstrapSecret), bootstrapSecret)).To(Succeed())
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenIDKey]).To(Equal([]byte("dummy")))
+				Expect(bootstrapSecret.Data[bootstraptokenapi.BootstrapTokenSecretKey]).To(Equal([]byte(bootstrapTokenSecretName)))
 			})
 		})
 

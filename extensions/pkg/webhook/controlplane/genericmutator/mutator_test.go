@@ -24,6 +24,7 @@ import (
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -33,10 +34,10 @@ import (
 	extensionsmockgenericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator/mock"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubelet "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
 	mockutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
@@ -68,16 +69,15 @@ func TestControlPlane(t *testing.T) {
 
 var _ = Describe("Mutator", func() {
 	var (
-		ctrl   *gomock.Controller
-		logger = log.Log.WithName("test")
-		mgr    test.FakeManager
-		c      *mockclient.MockClient
+		ctrl       *gomock.Controller
+		mgr        test.FakeManager
+		fakeClient client.Client
+		logger     = log.Log.WithName("test")
 
 		kubernetesVersion       = "1.33.3"
 		kubernetesVersionSemver = semver.MustParse(kubernetesVersion)
 
-		clusterKey = client.ObjectKey{Name: namespace}
-		cluster    = &extensionscontroller.Cluster{
+		cluster = &extensionscontroller.Cluster{
 			CloudProfile: &gardencorev1beta1.CloudProfile{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
@@ -107,9 +107,9 @@ var _ = Describe("Mutator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		// Create fake manager and client
-		c = mockclient.NewMockClient(ctrl)
-		mgr = test.FakeManager{Client: c}
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		mgr = test.FakeManager{Client: fakeClient}
+
 	})
 
 	AfterEach(func() {
@@ -290,7 +290,7 @@ var _ = Describe("Mutator", func() {
 		)
 
 		DescribeTable("EnsureETCD", func(newObj, oldObj *druidcorev1alpha1.Etcd) {
-			c.EXPECT().Get(context.Background(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
+			Expect(fakeClient.Create(context.Background(), clusterObject(cluster))).To(Succeed())
 
 			ensurer.EXPECT().EnsureETCD(context.Background(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, _, _ *druidcorev1alpha1.Etcd) {
 				_, err := gctx.GetCluster(ctx)
@@ -464,7 +464,7 @@ var _ = Describe("Mutator", func() {
 						},
 					}
 
-					c.EXPECT().Get(context.Background(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
+					Expect(fakeClient.Create(context.Background(), clusterObject(cluster))).To(Succeed())
 				})
 
 				It("should invoke appropriate ensurer methods with OperatingSystemConfig", func() {
@@ -628,18 +628,11 @@ func checkProvisionOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystem
 	ExpectWithOffset(1, customFile).To(Not(BeNil()))
 }
 
-func clientGet(result client.Object) any {
-	return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-		switch obj.(type) {
-		case *extensionsv1alpha1.Cluster:
-			*obj.(*extensionsv1alpha1.Cluster) = *result.(*extensionsv1alpha1.Cluster)
-		}
-		return nil
-	}
-}
-
 func clusterObject(cluster *extensionscontroller.Cluster) *extensionsv1alpha1.Cluster {
 	return &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
 		Spec: extensionsv1alpha1.ClusterSpec{
 			CloudProfile: runtime.RawExtension{
 				Raw: encode(cluster.CloudProfile),

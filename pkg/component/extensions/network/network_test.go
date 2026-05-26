@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testclock "k8s.io/utils/clock/testing"
@@ -48,8 +47,6 @@ var _ = Describe("#Network", func() {
 		networkServiceV6Mask = 108
 	)
 	var (
-		ctrl *gomock.Controller
-
 		ctx              context.Context
 		c                client.Client
 		scheme           *runtime.Scheme
@@ -69,8 +66,6 @@ var _ = Describe("#Network", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
 
@@ -128,10 +123,6 @@ var _ = Describe("#Network", func() {
 		}
 
 		defaultDepWaiter = network.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#Deploy", func() {

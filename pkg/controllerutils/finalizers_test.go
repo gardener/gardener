@@ -10,14 +10,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	. "github.com/gardener/gardener/pkg/controllerutils"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const resourceVersion = "42"
@@ -26,8 +28,7 @@ var _ = Describe("Finalizers", func() {
 	var (
 		ctx context.Context
 
-		ctrl       *gomock.Controller
-		mockWriter *mockclient.MockWriter
+		scheme *runtime.Scheme
 
 		obj client.Object
 	)
@@ -35,15 +36,11 @@ var _ = Describe("Finalizers", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		ctrl = gomock.NewController(GinkgoT())
-		mockWriter = mockclient.NewMockWriter(ctrl)
+		scheme = runtime.NewScheme()
+		Expect(kubernetesscheme.AddToScheme(scheme)).To(Succeed())
 
 		obj = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "some-ns", Name: "some-name"}}
 		obj.SetResourceVersion(resourceVersion)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("RemoveFinalizers", func() {
@@ -51,13 +48,18 @@ var _ = Describe("Finalizers", func() {
 			It(fmt.Sprintf("should succeed %v, %v", existingFinalizers, finalizer), func() {
 				obj.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
 
-				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Type()).To(Equal(types.MergePatchType))
-					Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers)))
-					return nil
-				})
+				patchCalled := false
+				fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					Patch: func(_ context.Context, _ client.WithWatch, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+						patchCalled = true
+						Expect(patch.Type()).To(Equal(types.MergePatchType))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers)))
+						return nil
+					},
+				}).Build()
 
-				Expect(RemoveFinalizers(ctx, mockWriter, obj, finalizer)).To(Succeed())
+				Expect(RemoveFinalizers(ctx, fakeClient, obj, finalizer)).To(Succeed())
+				Expect(patchCalled).To(BeTrue())
 			})
 		}
 
@@ -72,13 +74,18 @@ var _ = Describe("Finalizers", func() {
 			It(fmt.Sprintf("should succeed %v", existingFinalizers), func() {
 				obj.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
 
-				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Type()).To(Equal(types.MergePatchType))
-					Expect(patch.Data(o)).To(BeEquivalentTo(expectedPatchFinalizers))
-					return nil
-				})
+				patchCalled := false
+				fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					Patch: func(_ context.Context, _ client.WithWatch, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+						patchCalled = true
+						Expect(patch.Type()).To(Equal(types.MergePatchType))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedPatchFinalizers))
+						return nil
+					},
+				}).Build()
 
-				Expect(RemoveAllFinalizers(ctx, mockWriter, obj)).To(Succeed())
+				Expect(RemoveAllFinalizers(ctx, fakeClient, obj)).To(Succeed())
+				Expect(patchCalled).To(BeTrue())
 			})
 		}
 

@@ -18,23 +18,25 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	extensionpkg "github.com/gardener/gardener/pkg/component/extensions/extension"
 	mockextension "github.com/gardener/gardener/pkg/component/extensions/extension/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Extensions", func() {
 	var (
 		ctrl         *gomock.Controller
 		extension    *mockextension.MockInterface
-		gardenClient *mockclient.MockClient
+		gardenClient client.Client
 		botanist     *Botanist
 
 		ctx        = context.TODO()
@@ -46,7 +48,7 @@ var _ = Describe("Extensions", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		extension = mockextension.NewMockInterface(ctrl)
-		gardenClient = mockclient.NewMockClient(ctrl)
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		botanist = &Botanist{Operation: &operation.Operation{
 			GardenClient:  gardenClient,
 			SeedClientSet: fakekubernetes.NewClientSet(),
@@ -78,6 +80,7 @@ var _ = Describe("Extensions", func() {
 			fooExtensionType         = "foo"
 			fooReconciliationTimeout = metav1.Duration{Duration: 5 * time.Minute}
 			fooRegistration          = gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo-registration"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
@@ -95,6 +98,7 @@ var _ = Describe("Extensions", func() {
 
 			barExtensionType = "bar"
 			barRegistration  = gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "bar-registration"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
@@ -106,6 +110,7 @@ var _ = Describe("Extensions", func() {
 				},
 			}
 			barRegistrationSupportedForWorkerless = gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{Name: "bar-registration-workerless"},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
@@ -129,7 +134,12 @@ var _ = Describe("Extensions", func() {
 		)
 
 		It("should return the error because listing failed", func() {
-			gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).Return(fakeErr)
+			gardenClientWithErr := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+					return fakeErr
+				},
+			}).Build()
+			botanist.GardenClient = gardenClientWithErr
 
 			ext, err := botanist.DefaultExtension(ctx)
 			Expect(ext).To(BeNil())
@@ -141,10 +151,9 @@ var _ = Describe("Extensions", func() {
 				botanist.Shoot.GetInfo().Spec.Extensions = extensions
 				botanist.Shoot.IsWorkerless = workerless
 
-				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-					(&gardencorev1beta1.ControllerRegistrationList{Items: registrations}).DeepCopyInto(list.(*gardencorev1beta1.ControllerRegistrationList))
-					return nil
-				})
+				for i := range registrations {
+					Expect(gardenClient.Create(ctx, &registrations[i])).To(Succeed())
+				}
 
 				ext, err := botanist.DefaultExtension(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -260,6 +269,7 @@ var _ = Describe("Extensions", func() {
 					fooRegistration,
 					barRegistration,
 					{
+						ObjectMeta: metav1.ObjectMeta{Name: "other-registration"},
 						Spec: gardencorev1beta1.ControllerRegistrationSpec{
 							Resources: []gardencorev1beta1.ControllerResource{
 								{

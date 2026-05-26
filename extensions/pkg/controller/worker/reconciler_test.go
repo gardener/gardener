@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -31,7 +31,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	testutils "github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Worker Reconcile", func() {
@@ -97,8 +96,7 @@ var _ = Describe("Worker Reconcile", func() {
 	)
 
 	DescribeTable("Reconcile function", func(t *test) {
-		apiReader := mockclient.NewMockReader(ctrl)
-		mgr := testutils.FakeManager{Client: t.fields.client, APIReader: apiReader}
+		mgr := testutils.FakeManager{Client: t.fields.client, APIReader: t.fields.client}
 		reconciler := worker.NewReconciler(mgr, t.fields.actuator(ctrl))
 
 		got, err := reconciler.Reconcile(ctx, t.args.request)
@@ -110,7 +108,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("reconcile", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationReconcile),
@@ -125,7 +123,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(
 						addDeletionTimestampToWorker(
 							addOperationAnnotationToWorker(
@@ -147,7 +145,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("migrate", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
@@ -162,7 +160,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("migrate", errors.New("test")),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
@@ -177,7 +175,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("migrate", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeMigrate,
@@ -194,7 +192,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("migrate", errors.New("test")),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeMigrate,
@@ -211,7 +209,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("delete", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
 					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
@@ -224,7 +222,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("delete", errors.New("test")),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
 					getCluster()).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build(),
 			},
@@ -237,7 +235,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("restore", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
@@ -252,7 +250,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("restore", errors.New("test")),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
@@ -267,7 +265,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("reconcile", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
@@ -284,7 +282,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("reconcile", nil),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
@@ -301,7 +299,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("reconcile", errors.New("test")),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
@@ -318,7 +316,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newMockActuator("reconcile", errors.New("test")),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
+				client: fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,

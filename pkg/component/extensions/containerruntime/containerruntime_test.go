@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,8 +37,6 @@ var _ = Describe("#ContainerRuntime", func() {
 		workerNames           = []string{"worker1", "worker2"}
 		containerRuntimeTypes = []string{"type1", "type2"}
 
-		ctrl *gomock.Controller
-
 		ctx      context.Context
 		s        *runtime.Scheme
 		c        client.Client
@@ -55,7 +52,6 @@ var _ = Describe("#ContainerRuntime", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		now = time.Unix(60, 0)
 		fakeClock = testclock.NewFakeClock(now)
 
@@ -119,10 +115,6 @@ var _ = Describe("#ContainerRuntime", func() {
 			Workers:   workers,
 		}
 		defaultDepWaiter = containerruntime.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
 	})
 
 	Describe("#Deploy", func() {

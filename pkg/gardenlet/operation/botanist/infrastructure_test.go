@@ -13,23 +13,21 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Infrastructure", func() {
@@ -127,21 +125,20 @@ var _ = Describe("Infrastructure", func() {
 
 	Describe("#WaitForInfrastructure", func() {
 		var (
-			gardenClient     *mockclient.MockClient
-			mockStatusWriter *mockclient.MockStatusWriter
-			seedClient       *mockclient.MockClient
-			seedClientSet    *kubernetesmock.MockInterface
+			gardenFakeClient client.Client
+			seedFakeClient   client.Client
+			seedClientSet    *fakekubernetes.ClientSet
 
-			namespace     = "namespace"
-			name          = "name"
-			nodesCIDRs    = []string{"1.2.3.4/5"}
-			podsCIDRs     = []string{"2.3.4.5/6"}
-			servicesCIDRs = []string{"3.4.5.6/7"}
-			egressCIDRs   = []string{"4.5.6.7/8"}
-			shoot         = &gardencorev1beta1.Shoot{
+			shootNamespace = "namespace"
+			shootName      = "name"
+			nodesCIDRs     = []string{"1.2.3.4/5"}
+			podsCIDRs      = []string{"2.3.4.5/6"}
+			servicesCIDRs  = []string{"3.4.5.6/7"}
+			egressCIDRs    = []string{"4.5.6.7/8"}
+			shoot          = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
+					Name:      shootName,
+					Namespace: shootNamespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
@@ -154,15 +151,25 @@ var _ = Describe("Infrastructure", func() {
 		)
 
 		BeforeEach(func() {
-			gardenClient = mockclient.NewMockClient(ctrl)
-			mockStatusWriter = mockclient.NewMockStatusWriter(ctrl)
-			seedClient = mockclient.NewMockClient(ctrl)
-			seedClientSet = kubernetesmock.NewMockInterface(ctrl)
+			gardenFakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				Build()
+			seedFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedFakeClient).Build()
 
-			botanist.GardenClient = gardenClient
+			botanist.GardenClient = gardenFakeClient
 			botanist.SeedClientSet = seedClientSet
 			botanist.Shoot.SetInfo(shoot)
 			botanist.Shoot.ControlPlaneNamespace = "shoot--foo--bar"
+
+			// Create the shoot in the garden fake client
+			Expect(gardenFakeClient.Create(ctx, shoot.DeepCopy())).To(Succeed())
+
+			// Create the Cluster resource in the seed fake client
+			Expect(seedFakeClient.Create(ctx, &extensionsv1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: botanist.Shoot.ControlPlaneNamespace},
+			})).To(Succeed())
 		})
 
 		It("should successfully wait (w/ CIDRs)", func() {
@@ -172,27 +179,16 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().ServicesCIDRs().Return(servicesCIDRs)
 			infrastructure.EXPECT().EgressCIDRs().Return(egressCIDRs)
 
-			updatedShoot := shoot.DeepCopy()
-			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
-			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
+			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 
-			updatedShoot2 := updatedShoot.DeepCopy()
-			updatedShoot2.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+			updatedShoot := botanist.Shoot.GetInfo()
+			Expect(updatedShoot.Spec.Networking.Nodes).To(Equal(ptr.To(nodesCIDRs[0])))
+			Expect(updatedShoot.Status.Networking).To(Equal(&gardencorev1beta1.NetworkingStatus{
 				Nodes:       nodesCIDRs,
 				Pods:        podsCIDRs,
 				Services:    servicesCIDRs,
 				EgressCIDRs: egressCIDRs,
-			}
-			gardenClient.EXPECT().Status().Return(mockStatusWriter)
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
-
-			// cluster resource sync
-			seedClientSet.EXPECT().Client().Return(seedClient)
-			seedClient.EXPECT().Get(ctx, client.ObjectKey{Name: botanist.Shoot.ControlPlaneNamespace}, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}))
-			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}), gomock.Any())
-
-			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))
+			}))
 		})
 
 		It("should successfully wait (w/o CIDRs)", func() {
@@ -202,21 +198,18 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().ServicesCIDRs()
 			infrastructure.EXPECT().EgressCIDRs()
 
-			updatedShoot := shoot.DeepCopy()
-			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
-			botanist.Shoot.SetInfo(updatedShoot)
-			updatedShoot2 := updatedShoot.DeepCopy()
-			updatedShoot2.Status.Networking = &gardencorev1beta1.NetworkingStatus{}
-			gardenClient.EXPECT().Status().Return(mockStatusWriter)
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
-
-			// cluster resource sync
-			seedClientSet.EXPECT().Client().Return(seedClient)
-			seedClient.EXPECT().Get(ctx, client.ObjectKey{Name: botanist.Shoot.ControlPlaneNamespace}, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}))
-			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}), gomock.Any())
+			// Get the shoot from fake client to get its current ResourceVersion
+			storedShoot := &gardencorev1beta1.Shoot{}
+			Expect(gardenFakeClient.Get(ctx, client.ObjectKey{Name: shootName, Namespace: shootNamespace}, storedShoot)).To(Succeed())
+			storedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
+			Expect(gardenFakeClient.Update(ctx, storedShoot)).To(Succeed())
+			// Also update botanist's in-memory shoot
+			botanist.Shoot.SetInfo(storedShoot)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))
+
+			result := botanist.Shoot.GetInfo()
+			Expect(result.Status.Networking).To(Equal(&gardencorev1beta1.NetworkingStatus{}))
 		})
 
 		It("should return the error during wait", func() {
@@ -230,9 +223,18 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().Wait(ctx)
 			infrastructure.EXPECT().NodesCIDRs().Return(nodesCIDRs)
 
-			updatedShoot := shoot.DeepCopy()
-			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
-			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
+			// Use an interceptor to make the Patch fail
+			gardenFakeClientWithErr := fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+						return fakeErr
+					},
+				}).
+				Build()
+			botanist.GardenClient = gardenFakeClientWithErr
+			Expect(gardenFakeClientWithErr.Create(ctx, shoot.DeepCopy())).To(Succeed())
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
 			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))

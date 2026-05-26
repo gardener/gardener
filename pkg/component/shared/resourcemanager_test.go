@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	fakeresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/fake"
 	. "github.com/gardener/gardener/pkg/component/shared"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -162,7 +163,7 @@ var _ = Describe("ResourceManager", func() {
 
 	Describe("#DeployGardenerResourceManager", func() {
 		var (
-			resourceManager *fakeResourceManager
+			resourceManager *fakeresourcemanager.ResourceManager
 			fakeErr         = errors.New("fake err")
 
 			fakeClient    client.Client
@@ -181,7 +182,7 @@ var _ = Describe("ResourceManager", func() {
 		BeforeEach(func() {
 			namespace = "fake-ns"
 
-			resourceManager = &fakeResourceManager{}
+			resourceManager = &fakeresourcemanager.ResourceManager{}
 
 			now = time.Unix(60, 0)
 			DeferCleanup(test.WithVar(&Now, now))
@@ -236,13 +237,13 @@ var _ = Describe("ResourceManager", func() {
 				It("should set the secrets and deploy", func() {
 					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 
-					Expect(resourceManager.replicas).To(PointTo(Equal(int32(2))))
-					Expect(resourceManager.secrets.BootstrapKubeconfig).To(BeNil())
+					Expect(resourceManager.Replicas).To(PointTo(Equal(int32(2))))
+					Expect(resourceManager.Secrets.BootstrapKubeconfig).To(BeNil())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), bootstrapKubeconfigSecret)).To(BeNotFoundError())
 				})
 
 				It("should fail when the deploy function fails", func() {
-					resourceManager.deployError = fakeErr
+					resourceManager.DeployError = fakeErr
 					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
 				})
 			})
@@ -257,8 +258,8 @@ var _ = Describe("ResourceManager", func() {
 				})
 
 				AfterEach(func() {
-					Expect(resourceManager.replicas).To(PointTo(Equal(int32(2))))
-					Expect(resourceManager.secrets.BootstrapKubeconfig).To(BeNil())
+					Expect(resourceManager.Replicas).To(PointTo(Equal(int32(2))))
+					Expect(resourceManager.Secrets.BootstrapKubeconfig).To(BeNil())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), bootstrapKubeconfigSecret)).To(Succeed())
 				})
 
@@ -378,23 +379,3 @@ var _ = Describe("ResourceManager", func() {
 		})
 	})
 })
-
-type fakeResourceManager struct {
-	replicas    *int32
-	deployError error
-	secrets     resourcemanager.Secrets
-}
-
-func (f *fakeResourceManager) GetReplicas() *int32                  { return f.replicas }
-func (f *fakeResourceManager) SetReplicas(r *int32)                 { f.replicas = r }
-func (f *fakeResourceManager) SetSecrets(s resourcemanager.Secrets) { f.secrets = s }
-func (f *fakeResourceManager) GetValues() resourcemanager.Values    { return resourcemanager.Values{} }
-func (f *fakeResourceManager) SetBootstrapControlPlaneNode(bool)    {}
-func (f *fakeResourceManager) Deploy(_ context.Context) error {
-	err := f.deployError
-	f.deployError = nil
-	return err
-}
-func (f *fakeResourceManager) Destroy(_ context.Context) error     { return nil }
-func (f *fakeResourceManager) Wait(_ context.Context) error        { return nil }
-func (f *fakeResourceManager) WaitCleanup(_ context.Context) error { return nil }

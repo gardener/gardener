@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,8 +48,6 @@ const (
 
 var _ = Describe("DNSRecord", func() {
 	var (
-		ctrl *gomock.Controller
-
 		c client.Client
 
 		scheme *runtime.Scheme
@@ -73,8 +70,6 @@ var _ = Describe("DNSRecord", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).To(Succeed())
 		Expect(corev1.AddToScheme(scheme)).To(Succeed())
@@ -144,7 +139,6 @@ var _ = Describe("DNSRecord", func() {
 
 	AfterEach(func() {
 		cleanup()
-		ctrl.Finish()
 	})
 
 	Describe("#Deploy", func() {

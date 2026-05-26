@@ -9,34 +9,28 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/test"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("Utils", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		fakeClient client.Client
+		ctx        context.Context
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		ctx = context.TODO()
 	})
 
 	Describe("UnsafeGuessKind", func() {
@@ -56,7 +50,7 @@ var _ = Describe("Utils", func() {
 			worker := &extensionsv1alpha1.Worker{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Worker",
-					APIVersion: "TestApi",
+					APIVersion: "extensions.gardener.cloud/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "test-worker",
@@ -64,18 +58,19 @@ var _ = Describe("Utils", func() {
 					Annotations: annotations,
 				},
 			}
-			workerWithAnnotation := worker.DeepCopy()
-			expectedWorker := worker.DeepCopy()
-			delete(expectedWorker.Annotations, annotation)
+			Expect(fakeClient.Create(ctx, worker.DeepCopy())).To(Succeed())
 
-			ctx := context.TODO()
-			test.EXPECTPatch(ctx, c, expectedWorker, workerWithAnnotation, types.MergePatchType)
-
-			Expect(RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
+			Expect(RemoveAnnotation(ctx, fakeClient, worker, annotation)).To(Succeed())
 			Expect(worker.Annotations).To(HaveLen(1))
 			notdeletedAnnotation, ok := worker.Annotations["test-no-delete-annotation-key"]
 			Expect(ok).To(BeTrue())
 			Expect(notdeletedAnnotation).To(BeEquivalentTo("test-no-delete-annotation-value"))
+
+			// Verify final state in the fake client
+			result := &extensionsv1alpha1.Worker{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(worker), result)).To(Succeed())
+			Expect(result.Annotations).NotTo(HaveKey(annotation))
+			Expect(result.Annotations).To(HaveKeyWithValue("test-no-delete-annotation-key", "test-no-delete-annotation-value"))
 		})
 	})
 
@@ -245,7 +240,6 @@ var _ = Describe("Utils", func() {
 
 	Describe("#GetObjectByReference", func() {
 		var (
-			ctx       = context.TODO()
 			secretRef = &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: "v1",
 				Kind:       "Secret",
@@ -274,23 +268,23 @@ var _ = Describe("Utils", func() {
 			}
 		)
 
-		It("should call client.Get and return the result", func() {
-			secret := &corev1.Secret{}
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + secretRef.Name}, secret).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
-					refSecret.DeepCopyInto(secret)
-					return nil
-				})
-			Expect(GetObjectByReference(ctx, c, secretRef, namespace, secret)).To(Succeed())
-			Expect(secret).To(Equal(refSecret))
+		It("should call client.Get and return the result for a secret reference", func() {
+			Expect(fakeClient.Create(ctx, refSecret.DeepCopy())).To(Succeed())
 
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "workload-identity-ref-" + workloadIdentityRef.Name}, secret).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
-					refWorkloadIdentity.DeepCopyInto(secret)
-					return nil
-				})
-			Expect(GetObjectByReference(ctx, c, workloadIdentityRef, namespace, secret)).To(Succeed())
-			Expect(secret).To(Equal(refWorkloadIdentity))
+			secret := &corev1.Secret{}
+			Expect(GetObjectByReference(ctx, fakeClient, secretRef, namespace, secret)).To(Succeed())
+			Expect(secret.Name).To(Equal(refSecret.Name))
+			Expect(secret.Namespace).To(Equal(refSecret.Namespace))
+			Expect(secret.Data).To(Equal(refSecret.Data))
+		})
+
+		It("should call client.Get and return the result for a workload identity reference", func() {
+			Expect(fakeClient.Create(ctx, refWorkloadIdentity.DeepCopy())).To(Succeed())
+
+			secret := &corev1.Secret{}
+			Expect(GetObjectByReference(ctx, fakeClient, workloadIdentityRef, namespace, secret)).To(Succeed())
+			Expect(secret.Name).To(Equal(refWorkloadIdentity.Name))
+			Expect(secret.Namespace).To(Equal(refWorkloadIdentity.Namespace))
 		})
 	})
 })

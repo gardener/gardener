@@ -7,6 +7,7 @@ package care_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -16,7 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +38,6 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("health check", func() {
@@ -239,9 +238,6 @@ var _ = Describe("health check", func() {
 
 	Describe("#CheckClusterNodes", func() {
 		var (
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-
 			workerPoolName1            = "cpu-worker-1"
 			workerPoolName2            = "cpu-worker-2"
 			cloudConfigSecretChecksum1 = "foo"
@@ -261,21 +257,33 @@ var _ = Describe("health check", func() {
 			}
 		)
 
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		DescribeTable("#CheckClusterNodes",
 			func(k8sversion *semver.Version, nodes []corev1.Node, workerPools []gardencorev1beta1.Worker, oscSecretMeta map[string]metav1.ObjectMeta, desiredMachines int32, leases []coordinationv1.Lease, conditionMatcher types.GomegaMatcher) {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
-					*list = corev1.NodeList{Items: nodes}
-					return nil
-				})
+				// Create a fake shoot client populated with the nodes, OSC secrets, and leases for this test entry
+				fakeShootClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+				for i := range nodes {
+					node := nodes[i]
+					Expect(fakeShootClient.Create(ctx, &node)).To(Succeed())
+				}
+				for _, meta := range oscSecretMeta {
+					// Add the role label needed for the List filter
+					if meta.Labels == nil {
+						meta.Labels = map[string]string{}
+					} else {
+						meta.Labels = maps.Clone(meta.Labels)
+					}
+					meta.Labels["gardener.cloud/role"] = "operating-system-config"
+					meta.Namespace = metav1.NamespaceSystem
+					Expect(fakeShootClient.Create(ctx, &corev1.Secret{ObjectMeta: meta})).To(Succeed())
+				}
+				for i := range leases {
+					lease := leases[i]
+					if lease.Namespace == "" {
+						lease.Namespace = metav1.NamespaceSystem
+					}
+					Expect(fakeShootClient.Create(ctx, &lease)).To(Succeed())
+				}
 
 				if desiredMachines == 0 {
 					desiredMachines = int32(len(nodes))
@@ -284,28 +292,6 @@ var _ = Describe("health check", func() {
 					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: desiredMachines},
 				})).To(Succeed())
-
-				secretListOptions := []client.ListOption{
-					client.InNamespace(metav1.NamespaceSystem),
-					client.MatchingLabels{"gardener.cloud/role": "operating-system-config"},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), secretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					*list = corev1.SecretList{}
-					for _, m := range oscSecretMeta {
-						list.Items = append(list.Items, corev1.Secret{
-							ObjectMeta: m,
-						})
-					}
-					return nil
-				})
-
-				if leases != nil {
-					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&coordinationv1.LeaseList{}), client.InNamespace(metav1.NamespaceSystem)).DoAndReturn(func(_ context.Context, list *coordinationv1.LeaseList, _ ...client.ListOption) error {
-						*list = coordinationv1.LeaseList{Items: leases}
-						return nil
-					})
-				}
 
 				shootObj := &shootpkg.Shoot{
 					ControlPlaneNamespace: controlPlaneNamespace,
@@ -341,7 +327,7 @@ var _ = Describe("health check", func() {
 					nil,
 				)
 
-				exitCondition, err := health.CheckClusterNodes(ctx, fakekubernetes.NewClientSetBuilder().WithClient(c).Build(), condition)
+				exitCondition, err := health.CheckClusterNodes(ctx, fakekubernetes.NewClientSetBuilder().WithClient(fakeShootClient).Build(), condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},

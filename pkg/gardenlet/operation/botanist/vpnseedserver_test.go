@@ -16,10 +16,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -46,13 +47,9 @@ var _ = Describe("VPNSeedServer", func() {
 	})
 
 	Describe("#DefaultVPNSeedServer", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
-			kubernetesClient.EXPECT().Version()
-
-			botanist.SeedClientSet = kubernetesClient
+			fakeClient := fakeclient.NewClientBuilder().Build()
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithVersion("1.31.1").Build()
 			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -78,9 +75,6 @@ var _ = Describe("VPNSeedServer", func() {
 		})
 
 		It("should successfully create a vpn seed server interface", func() {
-			kubernetesClient.EXPECT().Client()
-			kubernetesClient.EXPECT().Version()
-
 			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
 			Expect(vpnSeedServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
@@ -88,8 +82,6 @@ var _ = Describe("VPNSeedServer", func() {
 
 		DescribeTable("should correctly set the deployment replicas",
 			func(hibernated, highAvailable bool, expectedReplicas int) {
-				kubernetesClient.EXPECT().Client()
-				kubernetesClient.EXPECT().Version()
 				botanist.Shoot.HibernationEnabled = hibernated
 				if highAvailable {
 					botanist.Shoot.VPNHighAvailabilityEnabled = highAvailable
