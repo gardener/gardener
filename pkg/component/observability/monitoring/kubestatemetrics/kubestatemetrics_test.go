@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -459,7 +458,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					Name: "kubeconfig",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -498,8 +497,8 @@ var _ = Describe("KubeStateMetrics", func() {
 					Labels:    deploymentLabels,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](0),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					Replicas:             new(int32(0)),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector:             &metav1.LabelSelector{MatchLabels: selectorLabels},
 					Strategy: appsv1.DeploymentStrategy{
 						Type: appsv1.RollingUpdateDeploymentStrategyType,

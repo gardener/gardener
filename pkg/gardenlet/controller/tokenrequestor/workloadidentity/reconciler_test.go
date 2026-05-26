@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -220,7 +219,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("should always renew the token after 24h", func() {
 			expectedRenewDuration = 24 * time.Hour * 50 / 100
-			fakeCreateWorkloadIdentityToken(ptr.To[int64](3600 * 100))
+			fakeCreateWorkloadIdentityToken(new(int64(3600 * 100)))
 
 			Expect(seedClient.Create(ctx, secret)).To(Succeed())
 			Expect(gardenClient.Create(ctx, workloadIdentity)).To(Succeed())

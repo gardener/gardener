@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -273,7 +272,7 @@ var _ = Describe("DNSRecord validation tests", func() {
 			newDNSRecord.Spec.Region = new("region")
 			newDNSRecord.Spec.Zone = new("zone")
 			newDNSRecord.Spec.Values = []string{"5.6.7.8"}
-			newDNSRecord.Spec.TTL = ptr.To[int64](300)
+			newDNSRecord.Spec.TTL = new(int64(300))
 
 			errorList := ValidateDNSRecordUpdate(newDNSRecord, dns)
 

@@ -251,7 +251,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             new(ptr.Deref(v.values.Recommender.Replicas, 1)),
-		RevisionHistoryLimit: ptr.To[int32](2),
+		RevisionHistoryLimit: new(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{

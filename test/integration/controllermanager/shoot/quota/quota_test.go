@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +38,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "Project",
 				},
-				ClusterLifetimeDays: ptr.To[int32](1),
+				ClusterLifetimeDays: new(int32(1)),
 			},
 		}
 

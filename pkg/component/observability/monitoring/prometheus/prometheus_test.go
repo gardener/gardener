@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -349,8 +348,8 @@ honor_labels: true`
 							},
 						},
 						PriorityClassName: priorityClassName,
-						Replicas:          ptr.To[int32](1),
-						Shards:            ptr.To[int32](1),
+						Replicas:          new(int32(1)),
+						Shards:            new(int32(1)),
 						Image:             &image,
 						ImagePullPolicy:   corev1.PullIfNotPresent,
 						Version:           version,
@@ -361,7 +360,7 @@ honor_labels: true`
 							},
 						},
 						ServiceAccountName: "prometheus-" + name,
-						SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
+						SecurityContext:    &corev1.PodSecurityContext{RunAsUser: new(int64(0))},
 						Storage: &monitoringv1.StorageSpec{
 							VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 								EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
@@ -382,7 +381,7 @@ honor_labels: true`
 						ProbeNamespaceSelector:          &metav1.LabelSelector{},
 						ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
 						Web: &monitoringv1.PrometheusWebSpec{
-							MaxConnections: ptr.To[int32](1024),
+							MaxConnections: new(int32(1024)),
 						},
 					},
 					RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},

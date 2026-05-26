@@ -13,7 +13,6 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -97,8 +96,8 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 					Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-						ReplicaCount:         ptr.To[int32](1),
-						RevisionHistoryLimit: ptr.To[int32](1),
+						ReplicaCount:         new(int32(1)),
+						RevisionHistoryLimit: new(int32(1)),
 						Image: &seedmanagementv1alpha1.Image{
 							PullPolicy: new(corev1.PullIfNotPresent),
 						},

@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -468,7 +467,7 @@ var _ = Describe("health check", func() {
 				int32(1),
 				[]coordinationv1.Lease{{
 					ObjectMeta: metav1.ObjectMeta{Name: "gardener-node-agent-" + nodeName},
-					Spec:       coordinationv1.LeaseSpec{RenewTime: &metav1.MicroTime{Time: time.Now()}, LeaseDurationSeconds: ptr.To[int32](40)},
+					Spec:       coordinationv1.LeaseSpec{RenewTime: &metav1.MicroTime{Time: time.Now()}, LeaseDurationSeconds: new(int32(40))},
 				}},
 				BeNil()),
 			Entry("should report NodeAgentUnhealthy for managed node without lease",
@@ -915,9 +914,9 @@ var _ = Describe("health check", func() {
 		)
 
 		BeforeEach(func() {
-			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
-			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
-			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
+			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: new(int32(1))}}
+			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: new(int32(1))}}
+			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: new(int32(1))}}
 		})
 
 		It("should report an error because a required relevant deployment does not exist", func() {
@@ -938,7 +937,7 @@ var _ = Describe("health check", func() {
 
 		It("should report names because some relevant deployment have replicas == 0 and meltdown annotation is set", func() {
 			deploymentKCM.Spec.Replicas = nil
-			deploymentMCM.Spec.Replicas = ptr.To[int32](0)
+			deploymentMCM.Spec.Replicas = new(int32(0))
 
 			// Set meltdown annotation only on deploymentMCM
 			if deploymentMCM.Annotations == nil {
@@ -969,7 +968,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To[int32](40),
+					LeaseDurationSeconds: new(int32(40)),
 				},
 			}
 
@@ -991,7 +990,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To[int32](40),
+					LeaseDurationSeconds: new(int32(40)),
 				},
 			}
 		)
@@ -1037,7 +1036,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To[int32](40),
+					LeaseDurationSeconds: new(int32(40)),
 				},
 			}
 
@@ -1057,7 +1056,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To[int32](40),
+					LeaseDurationSeconds: new(int32(40)),
 				},
 			}
 

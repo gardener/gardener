@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -330,7 +329,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},
@@ -361,7 +360,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot: new(true),
-							RunAsUser:    ptr.To[int64](65534),
+							RunAsUser:    new(int64(65534)),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},

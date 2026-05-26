@@ -71,7 +71,7 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		EnableServer:                     new(true),
 		EnforceNodeAllocatable:           []string{"pods"},
 		EventBurst:                       50,
-		EventRecordQPS:                   ptr.To[int32](50),
+		EventRecordQPS:                   new(int32(50)),
 		EvictionHard:                     params.EvictionHard,
 		EvictionMinimumReclaim:           params.EvictionMinimumReclaim,
 		EvictionSoft:                     params.EvictionSoft,
@@ -88,7 +88,7 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		ImageMinimumGCAge:                metav1.Duration{Duration: 2 * time.Minute},
 		ImageMaximumGCAge:                metav1.Duration{Duration: 0 * time.Second},
 		KubeAPIBurst:                     50,
-		KubeAPIQPS:                       ptr.To[int32](50),
+		KubeAPIQPS:                       new(int32(50)),
 		KubeReserved:                     params.KubeReserved,
 		MaxOpenFiles:                     1000000,
 		MaxPods:                          *params.MaxPods,
@@ -212,7 +212,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.EvictionMaxPodGracePeriod == nil {
-		c.EvictionMaxPodGracePeriod = ptr.To[int32](90)
+		c.EvictionMaxPodGracePeriod = new(int32(90))
 	}
 
 	if c.FailSwapOn == nil {
@@ -220,11 +220,11 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.ImageGCHighThresholdPercent == nil {
-		c.ImageGCHighThresholdPercent = ptr.To[int32](50)
+		c.ImageGCHighThresholdPercent = new(int32(50))
 	}
 
 	if c.ImageGCLowThresholdPercent == nil {
-		c.ImageGCLowThresholdPercent = ptr.To[int32](40)
+		c.ImageGCLowThresholdPercent = new(int32(40))
 	}
 
 	if c.SerializeImagePulls == nil {
@@ -241,7 +241,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.MaxPods == nil {
-		c.MaxPods = ptr.To[int32](110)
+		c.MaxPods = new(int32(110))
 	}
 
 	if c.ContainerLogMaxSize == nil {

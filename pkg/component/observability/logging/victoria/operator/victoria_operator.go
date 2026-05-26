@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -132,8 +131,8 @@ func (v *victoriaOperator) deployment() *appsv1.Deployment {
 			Labels:    GetLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

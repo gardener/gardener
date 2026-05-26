@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -796,7 +795,7 @@ var _ = Describe("Strategy", func() {
 
 		Context("maxEmptyBulkDelete", func() {
 			It("should set spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete to nil", func() {
-				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{MaxEmptyBulkDelete: ptr.To[int32](10)}
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{MaxEmptyBulkDelete: new(int32(10))}
 				strategy.Canonicalize(shoot)
 				Expect(shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(BeNil())
 			})

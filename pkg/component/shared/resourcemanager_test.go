@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -76,7 +75,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				PodTopologySpreadConstraintsEnabled: false,
 				VPAInPlaceUpdatesEnabled:            false,
-				Replicas:                            ptr.To[int32](2),
+				Replicas:                            new(int32(2)),
 				ResourceClass:                       new("seed"),
 				ResponsibilityMode:                  resourcemanager.ForRuntime,
 			}))
@@ -104,7 +103,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				PodTopologySpreadConstraintsEnabled: false,
 				VPAInPlaceUpdatesEnabled:            false,
-				Replicas:                            ptr.To[int32](2),
+				Replicas:                            new(int32(2)),
 				ResourceClass:                       new("seed"),
 				ResponsibilityMode:                  resourcemanager.ForRuntime,
 			}))

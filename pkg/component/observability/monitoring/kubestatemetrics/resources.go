@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -216,7 +215,7 @@ func (k *kubeStateMetrics) deployment(
 
 	deployment.Labels = deploymentLabels
 	deployment.Spec.Replicas = &k.values.Replicas
-	deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
+	deployment.Spec.RevisionHistoryLimit = new(int32(2))
 	deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: k.getLabels()}
 	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,

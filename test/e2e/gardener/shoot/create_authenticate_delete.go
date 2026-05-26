@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -310,7 +309,7 @@ func httpClientForRESTConfig(restConfig *rest.Config) (string, *http.Client, err
 }
 
 func viewerClientWithCustomTransport(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, transport http.RoundTripper) (kubernetes.Interface, error) {
-	viewer, err := access.RequestViewerKubeconfigForShoot(ctx, gardenClient, shoot, ptr.To[int64](7200))
+	viewer, err := access.RequestViewerKubeconfigForShoot(ctx, gardenClient, shoot, new(int64(7200)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to request viewer kubeconfig: %w", err)
 	}

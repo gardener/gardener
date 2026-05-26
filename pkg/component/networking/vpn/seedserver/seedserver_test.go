@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -198,7 +197,7 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 						},
 					},
-					TerminationGracePeriodSeconds: ptr.To[int64](30),
+					TerminationGracePeriodSeconds: new(int64(30)),
 					Volumes: []corev1.Volume{
 						{
 							Name: "dev-net-tun",
@@ -213,7 +212,7 @@ var _ = Describe("VpnSeedServer", func() {
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -252,7 +251,7 @@ var _ = Describe("VpnSeedServer", func() {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameTLSAuth,
-									DefaultMode: ptr.To[int32](0400),
+									DefaultMode: new(int32(0400)),
 								},
 							},
 						},
@@ -380,7 +379,7 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             new(values.Replicas),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: "vpn-seed-server",
 					}},
@@ -412,8 +411,8 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 				Spec: appsv1.StatefulSetSpec{
 					PodManagementPolicy:  appsv1.ParallelPodManagement,
-					Replicas:             ptr.To[int32](3),
-					RevisionHistoryLimit: ptr.To[int32](1),
+					Replicas:             new(int32(3)),
+					RevisionHistoryLimit: new(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: "vpn-seed-server",
 					}},

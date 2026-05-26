@@ -10,7 +10,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
@@ -37,7 +36,7 @@ func createShootClientFromDynamicKubeconfig(
 	kubernetes.Interface,
 	error,
 ) {
-	kubeconfig, err := requestFn(ctx, gardenClient, shoot, ptr.To[int64](7200))
+	kubeconfig, err := requestFn(ctx, gardenClient, shoot, new(int64(7200)))
 	if err != nil {
 		return nil, err
 	}

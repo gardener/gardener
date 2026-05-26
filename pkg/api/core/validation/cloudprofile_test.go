@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -1937,7 +1936,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				It("should allow positive maxNodesTotal", func() {
 					cloudProfile.Spec.Limits = &core.Limits{
-						MaxNodesTotal: ptr.To[int32](100),
+						MaxNodesTotal: new(int32(100)),
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
@@ -1945,7 +1944,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				It("should forbid zero maxNodesTotal", func() {
 					cloudProfile.Spec.Limits = &core.Limits{
-						MaxNodesTotal: ptr.To[int32](0),
+						MaxNodesTotal: new(int32(0)),
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1956,7 +1955,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				It("should forbid negative maxNodesTotal", func() {
 					cloudProfile.Spec.Limits = &core.Limits{
-						MaxNodesTotal: ptr.To[int32](-1),
+						MaxNodesTotal: new(int32(-1)),
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2614,7 +2613,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 		Context("limits validation", func() {
 			It("should allow adding limits", func() {
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -2622,7 +2621,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 			It("should allow removing limits", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -2631,7 +2630,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			It("should allow adding maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -2639,7 +2638,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 			It("should allow removing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{}
 
@@ -2648,10 +2647,10 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 			It("should allow unchanged maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -2659,10 +2658,10 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 			It("should allow increasing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](1000),
+					MaxNodesTotal: new(int32(1000)),
 				}
 
 				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -2670,10 +2669,10 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 			It("should forbid decreasing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](10),
+					MaxNodesTotal: new(int32(10)),
 				}
 
 				Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{

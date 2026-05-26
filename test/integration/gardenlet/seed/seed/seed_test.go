@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -154,14 +153,14 @@ var _ = Describe("Seed controller tests", func() {
 				ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 					BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 						EnableBackupCompaction: new(false),
-						EventsThreshold:        ptr.To[int64](1),
-						Workers:                ptr.To[int64](1),
+						EventsThreshold:        new(int64(1)),
+						Workers:                new(int64(1)),
 					},
 					CustodianController: &gardenletconfigv1alpha1.CustodianController{
-						Workers: ptr.To[int64](1),
+						Workers: new(int64(1)),
 					},
 					ETCDController: &gardenletconfigv1alpha1.ETCDController{
-						Workers: ptr.To[int64](1),
+						Workers: new(int64(1)),
 					},
 				},
 				SeedConfig: &gardenletconfigv1alpha1.SeedConfig{

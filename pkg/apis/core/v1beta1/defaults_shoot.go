@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
@@ -82,10 +81,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// these fields are relevant only for shoot with workers
 	if len(obj.Spec.Provider.Workers) > 0 {
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To[int64](300)
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = new(int64(300))
 		}
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To[int64](300)
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = new(int64(300))
 		}
 
 		if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -104,7 +103,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			// The default is mostly only relevant for the local setup.
 			// For most providers, the values is dependent on the infrastructure.
 			// Either this value is ignored or should be set explicitly by the user.
-			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](64)
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(int32(64))
 		}
 
 		if IsDualStack(obj.Spec.Networking.IPFamilies) {
@@ -116,7 +115,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 				// The default is mostly only relevant for the local setup.
 				// For most providers, the values is dependent on the infrastructure.
 				// Either this value is ignored or should be set explicitly by the user.
-				obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](64)
+				obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = new(int32(64))
 			}
 		}
 
@@ -173,10 +172,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge = &metav1.Duration{}
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = ptr.To[int32](50)
+			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = new(int32(50))
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = ptr.To[int32](40)
+			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = new(int32(40))
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
 			// SerializeImagePulls defaults to true when MaxParallelImagePulls is not set
@@ -230,10 +229,10 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Requests = &APIServerRequests{}
 	}
 	if obj.Requests.MaxNonMutatingInflight == nil {
-		obj.Requests.MaxNonMutatingInflight = ptr.To[int32](400)
+		obj.Requests.MaxNonMutatingInflight = new(int32(400))
 	}
 	if obj.Requests.MaxMutatingInflight == nil {
-		obj.Requests.MaxMutatingInflight = ptr.To[int32](200)
+		obj.Requests.MaxMutatingInflight = new(int32(200))
 	}
 	if obj.EventTTL == nil {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
@@ -242,7 +241,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Logging = &APIServerLogging{}
 	}
 	if obj.Logging.Verbosity == nil {
-		obj.Logging.Verbosity = ptr.To[int32](2)
+		obj.Logging.Verbosity = new(int32(2))
 	}
 	if obj.EncryptionConfig == nil {
 		obj.EncryptionConfig = &EncryptionConfig{}
@@ -394,7 +393,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
 	}
 	if obj.MaxGracefulTerminationSeconds == nil {
-		obj.MaxGracefulTerminationSeconds = ptr.To[int32](600)
+		obj.MaxGracefulTerminationSeconds = new(int32(600))
 	}
 	if obj.IgnoreDaemonsetsUtilization == nil {
 		obj.IgnoreDaemonsetsUtilization = new(false)
@@ -403,7 +402,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.EmitPerNodeGroupMetrics = new(false)
 	}
 	if obj.Verbosity == nil {
-		obj.Verbosity = ptr.To[int32](2)
+		obj.Verbosity = new(int32(2))
 	}
 	if obj.NewPodScaleUpDelay == nil {
 		obj.NewPodScaleUpDelay = &metav1.Duration{Duration: 0}
@@ -412,11 +411,11 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		if obj.MaxEmptyBulkDelete != nil {
 			obj.MaxScaleDownParallelism = obj.MaxEmptyBulkDelete
 		} else {
-			obj.MaxScaleDownParallelism = ptr.To[int32](10)
+			obj.MaxScaleDownParallelism = new(int32(10))
 		}
 	}
 	if obj.MaxDrainParallelism == nil {
-		obj.MaxDrainParallelism = ptr.To[int32](1)
+		obj.MaxDrainParallelism = new(int32(1))
 	}
 	if obj.InitialNodeGroupBackoffDuration == nil {
 		obj.InitialNodeGroupBackoffDuration = &metav1.Duration{Duration: 5 * time.Minute}

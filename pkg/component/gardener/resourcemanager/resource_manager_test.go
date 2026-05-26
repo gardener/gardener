@@ -32,7 +32,6 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -198,8 +197,8 @@ var _ = Describe("ResourceManager", func() {
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
 		}
 
-		defaultNotReadyTolerationSeconds = ptr.To[int64](60)
-		defaultUnreachableTolerationSeconds = ptr.To[int64](120)
+		defaultNotReadyTolerationSeconds = new(int64(60))
+		defaultUnreachableTolerationSeconds = new(int64(120))
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -554,7 +553,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: ptr.To[int32](2),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "gardener-resource-manager",
@@ -678,11 +677,11 @@ var _ = Describe("ResourceManager", func() {
 									Name: "kube-api-access-gardener",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 											Sources: []corev1.VolumeProjection{
 												{
 													ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-														ExpirationSeconds: ptr.To[int64](43200),
+														ExpirationSeconds: new(int64(43200)),
 														Path:              "token",
 													},
 												},
@@ -717,7 +716,7 @@ var _ = Describe("ResourceManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 										},
 									},
 								},
@@ -738,7 +737,7 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			if bootstrapControlPlaneNode {
-				deployment.Spec.Replicas = ptr.To[int32](1)
+				deployment.Spec.Replicas = new(int32(1))
 				deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 				deployment.Spec.Template.Spec.Tolerations = append(deployment.Spec.Template.Spec.Tolerations,
 					corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
@@ -760,7 +759,7 @@ var _ = Describe("ResourceManager", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  *secretNameBootstrapKubeconfig,
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 						},
 					},
 				})
@@ -774,7 +773,7 @@ var _ = Describe("ResourceManager", func() {
 					Name: "kubeconfig",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -832,7 +831,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					{
 						MaxSkew:           1,
-						MinDomains:        ptr.To[int32](2),
+						MinDomains:        new(int32(2)),
 						TopologyKey:       "topology.kubernetes.io/zone",
 						WhenUnsatisfiable: "DoNotSchedule",
 						LabelSelector: &metav1.LabelSelector{
@@ -993,7 +992,7 @@ var _ = Describe("ResourceManager", func() {
 						FailurePolicy:           &failurePolicyFail,
 						MatchPolicy:             &matchPolicyExact,
 						SideEffects:             &sideEffect,
-						TimeoutSeconds:          ptr.To[int32](10),
+						TimeoutSeconds:          new(int32(10)),
 					},
 				},
 			}
@@ -1044,7 +1043,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				})
 			}
 
@@ -1084,7 +1083,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				admissionregistrationv1.MutatingWebhook{
 					Name: "kubernetes-service-host.resources.gardener.cloud",
@@ -1124,7 +1123,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyIgnore,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](2),
+					TimeoutSeconds:          new(int32(2)),
 				},
 			)
 
@@ -1158,7 +1157,7 @@ var _ = Describe("ResourceManager", func() {
 						FailurePolicy:           &failurePolicyFail,
 						MatchPolicy:             &matchPolicyExact,
 						SideEffects:             &sideEffect,
-						TimeoutSeconds:          ptr.To[int32](10),
+						TimeoutSeconds:          new(int32(10)),
 					},
 					admissionregistrationv1.MutatingWebhook{
 						Name: "pod-virtual-garden-kube-apiserver-load-balancing.resources.gardener.cloud",
@@ -1193,7 +1192,7 @@ var _ = Describe("ResourceManager", func() {
 						FailurePolicy:           &failurePolicyFail,
 						MatchPolicy:             &matchPolicyExact,
 						SideEffects:             &sideEffect,
-						TimeoutSeconds:          ptr.To[int32](10),
+						TimeoutSeconds:          new(int32(10)),
 					},
 				)
 			}
@@ -1233,7 +1232,7 @@ var _ = Describe("ResourceManager", func() {
 				FailurePolicy:           &failurePolicyFail,
 				MatchPolicy:             &matchPolicyExact,
 				SideEffects:             &sideEffect,
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 			},
 				admissionregistrationv1.MutatingWebhook{
 					Name: "vpa-in-place-updates.resources.gardener.cloud",
@@ -1266,7 +1265,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 			)
 
@@ -1659,7 +1658,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "cr-deletion-protection.resources.gardener.cloud",
@@ -1708,7 +1707,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.backupbuckets.resources.gardener.cloud",
@@ -1734,7 +1733,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.backupentries.resources.gardener.cloud",
@@ -1760,7 +1759,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.bastions.resources.gardener.cloud",
@@ -1786,7 +1785,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.containerruntimes.resources.gardener.cloud",
@@ -1812,7 +1811,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.controlplanes.resources.gardener.cloud",
@@ -1838,7 +1837,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.dnsrecords.resources.gardener.cloud",
@@ -1864,7 +1863,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.etcds.resources.gardener.cloud",
@@ -1890,7 +1889,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.extensions.resources.gardener.cloud",
@@ -1916,7 +1915,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.infrastructures.resources.gardener.cloud",
@@ -1942,7 +1941,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.networks.resources.gardener.cloud",
@@ -1968,7 +1967,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.operatingsystemconfigs.resources.gardener.cloud",
@@ -1994,7 +1993,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.selfhostedshootexposures.resources.gardener.cloud",
@@ -2020,7 +2019,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 				{
 					Name: "validation.extensions.workers.resources.gardener.cloud",
@@ -2046,7 +2045,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          ptr.To[int32](10),
+					TimeoutSeconds:          new(int32(10)),
 				},
 			},
 		}
@@ -2962,7 +2961,7 @@ subjects:
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
 				timer := time.AfterFunc(10*time.Millisecond, func() {
-					deployment.Spec.Replicas = ptr.To[int32](0)
+					deployment.Spec.Replicas = new(int32(0))
 					Expect(fakeClient.Update(ctx, deployment)).To(Succeed())
 
 					deployment.Status.Conditions = []appsv1.DeploymentCondition{
@@ -3053,7 +3052,7 @@ subjects:
 				deployment = deploymentFor(configMap.Name, false, nil, false)
 				resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 
-				deployment.Spec.Replicas = ptr.To[int32](0)
+				deployment.Spec.Replicas = new(int32(0))
 				deployment.Status.Conditions = []appsv1.DeploymentCondition{
 					{
 						Type:   appsv1.DeploymentAvailable,

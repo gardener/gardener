@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -235,7 +234,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, l.client, deployment, func() error {
 		deployment.Labels = getLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To[int32](1),
+			RevisionHistoryLimit: new(int32(1)),
 			Replicas:             new(l.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),

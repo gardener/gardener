@@ -249,12 +249,12 @@ var _ = Describe("Garden controller tests", func() {
 						ConcurrentSyncs: new(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
-							ETCDController:      &gardenletconfigv1alpha1.ETCDController{Workers: ptr.To[int64](5)},
-							CustodianController: &gardenletconfigv1alpha1.CustodianController{Workers: ptr.To[int64](5)},
+							ETCDController:      &gardenletconfigv1alpha1.ETCDController{Workers: new(int64(5))},
+							CustodianController: &gardenletconfigv1alpha1.CustodianController{Workers: new(int64(5))},
 							BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 								EnableBackupCompaction: new(false),
-								Workers:                ptr.To[int64](5),
-								EventsThreshold:        ptr.To[int64](100),
+								Workers:                new(int64(5)),
+								EventsThreshold:        new(int64(100)),
 							},
 						},
 					},
@@ -305,8 +305,8 @@ var _ = Describe("Garden controller tests", func() {
 				Spec: operatorv1alpha1.ExtensionSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{Kind: "Extension", Type: extensionType},
-						{Kind: "Extension", Type: extensionTypeBeforeKAS, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: ptr.To[gardencorev1beta1.ControllerResourceLifecycleStrategy]("BeforeKubeAPIServer")}},
-						{Kind: "Extension", Type: extensionTypeAfterWorker, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: ptr.To[gardencorev1beta1.ControllerResourceLifecycleStrategy]("AfterWorker")}},
+						{Kind: "Extension", Type: extensionTypeBeforeKAS, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: new(gardencorev1beta1.ControllerResourceLifecycleStrategy("BeforeKubeAPIServer"))}},
+						{Kind: "Extension", Type: extensionTypeAfterWorker, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: new(gardencorev1beta1.ControllerResourceLifecycleStrategy("AfterWorker"))}},
 					},
 				},
 			}
@@ -989,7 +989,7 @@ func newDeployment(name, namespace string) *appsv1.Deployment {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-			Replicas: ptr.To[int32](1),
+			Replicas: new(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 				Spec: corev1.PodSpec{

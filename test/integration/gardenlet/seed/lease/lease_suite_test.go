@@ -18,7 +18,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -185,7 +184,7 @@ var _ = BeforeSuite(func() {
 	healthManager = healthz.NewDefaultHealthz()
 
 	Expect(lease.AddToManager(mgr, mgr, kubernetesClient.RESTClient(), gardenletconfigv1alpha1.SeedControllerConfiguration{
-		LeaseResyncSeconds: ptr.To[int32](1),
+		LeaseResyncSeconds: new(int32(1)),
 	}, healthManager, seed.Name, fakeClock, &testNamespace.Name)).To(Succeed())
 
 	By("Start manager")

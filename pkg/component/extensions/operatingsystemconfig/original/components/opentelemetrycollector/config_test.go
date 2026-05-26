@@ -7,7 +7,6 @@ package opentelemetrycollector_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -79,7 +78,7 @@ ExecStart=/opt/bin/opentelemetry-collector --config=` + PathConfig
 
 			otelConfigFile := extensionsv1alpha1.File{
 				Path:        "/var/lib/opentelemetry-collector/config/config",
-				Permissions: ptr.To[uint32](0400),
+				Permissions: new(uint32(0400)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -234,7 +233,7 @@ service:
 
 			otelBinaryFile := extensionsv1alpha1.File{
 				Path:        "/opt/bin/opentelemetry-collector",
-				Permissions: ptr.To[uint32](0700),
+				Permissions: new(uint32(0700)),
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           ctx.Images["opentelemetry-collector"].String(),
@@ -245,7 +244,7 @@ service:
 
 			caBundleFile := extensionsv1alpha1.File{
 				Path:        "/var/lib/opentelemetry-collector/ca.crt",
-				Permissions: ptr.To[uint32](0400),
+				Permissions: new(uint32(0400)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -255,7 +254,7 @@ service:
 			}
 			kubeconfig := extensionsv1alpha1.File{
 				Path:        "/var/lib/opentelemetry-collector/kubeconfig",
-				Permissions: ptr.To[uint32](0600),
+				Permissions: new(uint32(0600)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "",

@@ -392,8 +392,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-updater",
@@ -858,8 +858,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-recommender",
@@ -1171,8 +1171,8 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "vpa-admission-controller",
@@ -1246,7 +1246,7 @@ var _ = Describe("VPA", func() {
 								Name: "vpa-tls-certs",
 								VolumeSource: corev1.VolumeSource{
 									Projected: &corev1.ProjectedVolumeSource{
-										DefaultMode: ptr.To[int32](420),
+										DefaultMode: new(int32(420)),
 										Sources: []corev1.VolumeProjection{
 											{
 												Secret: &corev1.SecretProjection{
@@ -1542,7 +1542,7 @@ var _ = Describe("VPA", func() {
 				MatchPolicy:        &webhookMatchPolicy,
 				ReinvocationPolicy: &webhookReinvocationPolicy,
 				SideEffects:        &webhookSideEffects,
-				TimeoutSeconds:     ptr.To[int32](10),
+				TimeoutSeconds:     new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Rule: admissionregistrationv1.Rule{
@@ -1793,7 +1793,7 @@ var _ = Describe("VPA", func() {
 					Service: &admissionregistrationv1.ServiceReference{
 						Name:      "vpa-webhook",
 						Namespace: namespace,
-						Port:      ptr.To[int32](443),
+						Port:      new(int32(443)),
 					},
 				}
 
@@ -1823,16 +1823,16 @@ var _ = Describe("VPA", func() {
 				valuesRecommender.RecommendationUpperBoundCPUPercentile = new(float64(0.494))
 				valuesRecommender.MemoryHistogramDecayHalfLife = &metav1.Duration{Duration: 1337 * time.Minute}
 				valuesRecommender.MemoryAggregationInterval = &metav1.Duration{Duration: 42 * time.Minute}
-				valuesRecommender.MemoryAggregationIntervalCount = ptr.To[int64](99)
+				valuesRecommender.MemoryAggregationIntervalCount = new(int64(99))
 				valuesRecommender.MaxAllowed = map[corev1.ResourceName]resource.Quantity{
 					"cpu":    resource.MustParse("8"),
 					"memory": resource.MustParse("32Gi"),
 				}
-				valuesRecommender.UpdateWorkerCount = ptr.To[int64](111)
+				valuesRecommender.UpdateWorkerCount = new(int64(111))
 
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
-				valuesUpdater.EvictionRateBurst = ptr.To[int32](1)
+				valuesUpdater.EvictionRateBurst = new(int32(1))
 				valuesUpdater.EvictionRateLimit = new(float64(2.34))
 				valuesUpdater.EvictionTolerance = new(float64(5.67))
 

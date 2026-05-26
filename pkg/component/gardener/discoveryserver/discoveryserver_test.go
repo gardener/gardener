@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -195,8 +194,8 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             new(int32(1)),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":  "gardener",
@@ -217,9 +216,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot: new(true),
-							RunAsUser:    ptr.To[int64](65532),
-							RunAsGroup:   ptr.To[int64](65532),
-							FSGroup:      ptr.To[int64](65532),
+							RunAsUser:    new(int64(65532)),
+							RunAsGroup:   new(int64(65532)),
+							FSGroup:      new(int64(65532)),
 						},
 						Containers: []corev1.Container{
 							{
@@ -307,7 +306,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-discovery-server-tls",
-										DefaultMode: ptr.To[int32](0400),
+										DefaultMode: new(int32(0400)),
 									},
 								},
 							},
@@ -316,7 +315,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  workloadIdentitySecret.GetName(),
-										DefaultMode: ptr.To[int32](0400),
+										DefaultMode: new(int32(0400)),
 									},
 								},
 							},

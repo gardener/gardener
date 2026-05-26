@@ -11,7 +11,6 @@ import (
 	"html/template"
 
 	machinecontroller "github.com/gardener/machine-controller-manager/pkg/util/provider/machinecontroller"
-	"k8s.io/utils/ptr"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,7 +50,7 @@ func Config(
 		nodeInitFiles = []extensionsv1alpha1.File{
 			{
 				Path:        nodeagentconfigv1alpha1.BootstrapTokenFilePath,
-				Permissions: ptr.To[uint32](0640),
+				Permissions: new(uint32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: machinecontroller.BootstrapTokenPlaceholder,
@@ -61,7 +60,7 @@ func Config(
 			},
 			{
 				Path:        PathInitScript,
-				Permissions: ptr.To[uint32](0755),
+				Permissions: new(uint32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -71,7 +70,7 @@ func Config(
 			},
 			{
 				Path:        nodeagentconfigv1alpha1.MachineNameFilePath,
-				Permissions: ptr.To[uint32](0640),
+				Permissions: new(uint32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: machinecontroller.MachineNamePlaceholder,

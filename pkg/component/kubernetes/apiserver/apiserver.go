@@ -519,7 +519,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 		var (
 			retryError *retry.Error
 			headBytes  *int64
-			tailLines  = ptr.To[int64](10)
+			tailLines  = new(int64(10))
 		)
 
 		if !errors.As(err, &retryError) {

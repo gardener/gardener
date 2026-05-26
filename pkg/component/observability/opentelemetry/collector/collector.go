@@ -18,7 +18,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -584,8 +583,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				},
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: new(false),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65534),
+					RunAsUser:                new(int64(65532)),
+					RunAsGroup:               new(int64(65534)),
 					RunAsNonRoot:             new(true),
 					ReadOnlyRootFilesystem:   new(true),
 				},
@@ -613,8 +612,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				},
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: new(false),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65534),
+					RunAsUser:                new(int64(65532)),
+					RunAsGroup:               new(int64(65534)),
 					RunAsNonRoot:             new(true),
 					ReadOnlyRootFilesystem:   new(true),
 				},

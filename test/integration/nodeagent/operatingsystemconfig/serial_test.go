@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -87,19 +86,19 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 					{
 						Path:        "/example/file/" + hostName1,
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "data"}},
-						Permissions: ptr.To[uint32](0777),
+						Permissions: new(uint32(0777)),
 						HostName:    &hostName1,
 					},
 					{
 						Path:        "/example/file/" + hostName2,
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "data"}},
-						Permissions: ptr.To[uint32](0777),
+						Permissions: new(uint32(0777)),
 						HostName:    &hostName2,
 					},
 					{
 						Path:        "/example/file/" + hostName3,
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "data"}},
-						Permissions: ptr.To[uint32](0777),
+						Permissions: new(uint32(0777)),
 						HostName:    &hostName3,
 					},
 				},

@@ -69,7 +69,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				ObjectMeta: objectMeta,
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: labels,
@@ -88,7 +88,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				ObjectMeta: objectMeta,
 				Spec: appsv1.StatefulSetSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "foo"}},
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: labels,
@@ -174,7 +174,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 							Context("current replicas are higher than the computed replicas", func() {
 								BeforeEach(func() {
-									setReplicas(ptr.To[int32](5))
+									setReplicas(new(int32(5)))
 								})
 
 								It("should not mutate the replicas", func() {
@@ -191,7 +191,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 						Context("when replicas are 0", func() {
 							BeforeEach(func() {
-								setReplicas(ptr.To[int32](0))
+								setReplicas(new(int32(0)))
 							})
 
 							It("should not mutate the replicas", func() {
@@ -509,7 +509,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						var labelSelector *metav1.LabelSelector
 
 						BeforeEach(func() {
-							setReplicas(ptr.To[int32](2))
+							setReplicas(new(int32(2)))
 
 							switch o := getObj().(type) {
 							case *appsv1.Deployment:
@@ -550,7 +550,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
-												MinDomains:        ptr.To[int32](2),
+												MinDomains:        new(int32(2)),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     labelSelector,
 												MatchLabelKeys:    matchLabelKeys,
@@ -607,7 +607,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
-												MinDomains:        ptr.To[int32](2),
+												MinDomains:        new(int32(2)),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     labelSelector,
 												MatchLabelKeys:    matchLabelKeys,
@@ -627,7 +627,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								It("should add topology spread constraints", func() {
 									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{
 										TopologyKey:       corev1.LabelHostname,
-										MinDomains:        ptr.To[int32](2),
+										MinDomains:        new(int32(2)),
 										MaxSkew:           1,
 										WhenUnsatisfiable: corev1.DoNotSchedule,
 										LabelSelector:     labelSelector,
@@ -645,7 +645,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
 										corev1.TopologySpreadConstraint{
 											TopologyKey:       corev1.LabelHostname,
-											MinDomains:        ptr.To[int32](2),
+											MinDomains:        new(int32(2)),
 											MaxSkew:           1,
 											WhenUnsatisfiable: corev1.DoNotSchedule,
 											LabelSelector:     labelSelector,
@@ -738,7 +738,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								Key:               "foo",
 								Operator:          "Exists",
 								Effect:            "NoExecute",
-								TolerationSeconds: ptr.To[int64](15),
+								TolerationSeconds: new(int64(15)),
 							},
 							{
 								Key:      "node.kubernetes.io/not-ready",
@@ -783,7 +783,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							Key:               "node.kubernetes.io/not-ready",
 							Operator:          "Exists",
 							Effect:            "NoExecute",
-							TolerationSeconds: ptr.To[int64](300),
+							TolerationSeconds: new(int64(300)),
 						}}
 
 						BeforeEach(func() {
@@ -798,7 +798,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To[int64](300),
+									TolerationSeconds: new(int64(300)),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
@@ -815,7 +815,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							Key:               "node.kubernetes.io/unreachable",
 							Operator:          "Exists",
 							Effect:            "NoExecute",
-							TolerationSeconds: ptr.To[int64](300),
+							TolerationSeconds: new(int64(300)),
 						}}
 
 						BeforeEach(func() {
@@ -838,7 +838,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Operator:          "Exists",
 									Effect:            "NoExecute",
 									Value:             "",
-									TolerationSeconds: ptr.To[int64](300),
+									TolerationSeconds: new(int64(300)),
 								},
 							))
 						})

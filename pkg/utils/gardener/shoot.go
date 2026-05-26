@@ -484,7 +484,7 @@ func GenerateGenericKubeconfigVolume(genericKubeconfigName, accessSecretName, vo
 		Name: volumeName,
 		VolumeSource: corev1.VolumeSource{
 			Projected: &corev1.ProjectedVolumeSource{
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: new(int32(420)),
 				Sources: []corev1.VolumeProjection{
 					{
 						Secret: &corev1.SecretProjection{

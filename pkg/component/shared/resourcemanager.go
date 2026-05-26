@@ -51,7 +51,7 @@ func runtimeGardenerResourceManagerDefaultValues() resourcemanager.Values {
 		},
 		PodTopologySpreadConstraintsEnabled: false,
 		VPAInPlaceUpdatesEnabled:            false,
-		Replicas:                            ptr.To[int32](2),
+		Replicas:                            new(int32(2)),
 		ResourceClass:                       new(v1beta1constants.SeedResourceManagerClass),
 		ResponsibilityMode:                  resourcemanager.ForRuntime,
 	}

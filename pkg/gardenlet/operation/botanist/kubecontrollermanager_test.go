@@ -17,7 +17,6 @@ import (
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -116,7 +115,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 			Context("kube-apiserver is already scaled down", func() {
 				BeforeEach(func() {
-					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0))
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(new(int32(0)))
 					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
 
@@ -131,7 +130,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 			Context("last operation is nil or neither of type 'create' nor 'restore'", func() {
 				BeforeEach(func() {
-					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1)).MaxTimes(1)
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(new(int32(1))).MaxTimes(1)
 					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
 
@@ -193,7 +192,7 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.HibernationEnabled = true
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
-						Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](0)},
+						Spec:       appsv1.DeploymentSpec{Replicas: new(int32(0))},
 					})).To(Succeed())
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
@@ -210,14 +209,14 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.HibernationEnabled = true
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
-						Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)},
+						Spec:       appsv1.DeploymentSpec{Replicas: new(int32(1))},
 					})).To(Succeed())
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 
 				It("hibernation disabled", func() {
-					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1))
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(new(int32(1)))
 					botanist.Shoot.HibernationEnabled = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
@@ -234,7 +233,7 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.HibernationEnabled = true
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
-						Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](0)},
+						Spec:       appsv1.DeploymentSpec{Replicas: new(int32(0))},
 					})).To(Succeed())
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
@@ -250,14 +249,14 @@ var _ = Describe("KubeControllerManager", func() {
 					botanist.Shoot.HibernationEnabled = true
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
-						Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)},
+						Spec:       appsv1.DeploymentSpec{Replicas: new(int32(1))},
 					})).To(Succeed())
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
 
 				It("hibernation disabled", func() {
-					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1))
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(new(int32(1)))
 					botanist.Shoot.HibernationEnabled = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
@@ -277,7 +276,7 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should fail when the deploy function fails", func() {
-			kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](0))
+			kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(new(int32(0)))
 			kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 			kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
@@ -300,14 +299,14 @@ var _ = Describe("KubeControllerManager", func() {
 		It("should scale the KCM deployment", func() {
 			Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace},
-				Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](0)},
+				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(0))},
 			})).To(Succeed())
 
 			Expect(botanist.ScaleKubeControllerManagerToOne(ctx)).To(Succeed())
 
 			deployment := &appsv1.Deployment{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, deployment)).To(Succeed())
-			Expect(deployment.Spec.Replicas).To(Equal(ptr.To[int32](1)))
+			Expect(deployment.Spec.Replicas).To(Equal(new(int32(1))))
 		})
 
 		It("should fail when the scale call fails", func() {

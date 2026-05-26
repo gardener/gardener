@@ -20,7 +20,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -228,7 +227,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getPoolLabels(pool),
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(
@@ -328,7 +327,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: k.configMapCleanupScript.Name,
 										},
-										DefaultMode: ptr.To[int32](0777),
+										DefaultMode: new(int32(0777)),
 									},
 								},
 							},
@@ -467,7 +466,7 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		MetricsBindAddress: fmt.Sprintf("0.0.0.0:%d", portMetrics),
 		Mode:               k.getMode(),
 		Conntrack: kubeproxyconfigv1alpha1.KubeProxyConntrackConfiguration{
-			MaxPerCore: ptr.To[int32](524288),
+			MaxPerCore: new(int32(524288)),
 		},
 		FeatureGates: k.values.FeatureGates,
 	}

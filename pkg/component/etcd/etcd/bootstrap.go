@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -538,7 +537,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 			Name:      druidServiceName,
 			Namespace: b.namespace,
 			Path:      new("/webhooks/etcdcomponents"),
-			Port:      ptr.To[int32](webhookServerServicePort),
+			Port:      new(int32(webhookServerServicePort)),
 		},
 		CABundle: caBundle,
 	}
@@ -556,7 +555,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 				FailurePolicy:           new(admissionregistrationv1.Fail),
 				MatchPolicy:             new(admissionregistrationv1.Exact),
 				SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					druidcorev1alpha1.LabelManagedByKey: druidcorev1alpha1.LabelManagedByValue,
@@ -636,7 +635,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 				FailurePolicy:           new(admissionregistrationv1.Fail),
 				MatchPolicy:             new(admissionregistrationv1.Exact),
 				SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
@@ -664,8 +663,8 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 			}, b.labels()),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: b.labels(),
 			},
@@ -719,7 +718,7 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  serverSecretName,
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 								},
 							},
 						},

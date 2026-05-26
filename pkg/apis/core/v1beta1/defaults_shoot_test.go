@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -53,38 +52,38 @@ var _ = Describe("Shoot defaulting", func() {
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
 						obj.Spec.Provider.Workers = []Worker{{}}
 						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-							MaxPods: ptr.To[int32](250),
+							MaxPods: new(int32(250)),
 						}
 
 						SetObjectDefaults_Shoot(obj)
 
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](23)))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(new(int32(23))))
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 					})
 
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
 						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-							MaxPods: ptr.To[int32](64),
+							MaxPods: new(int32(64)),
 						}
 						obj.Spec.Provider.Workers = []Worker{{
 							Name: "1",
 							Kubernetes: &WorkerKubernetes{
 								Kubelet: &KubeletConfig{
-									MaxPods: ptr.To[int32](100),
+									MaxPods: new(int32(100)),
 								},
 							},
 						}, {
 							Name: "2",
 							Kubernetes: &WorkerKubernetes{
 								Kubelet: &KubeletConfig{
-									MaxPods: ptr.To[int32](260),
+									MaxPods: new(int32(260)),
 								},
 							},
 						}}
 
 						SetObjectDefaults_Shoot(obj)
 
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](22)))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(new(int32(22))))
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 					})
 				})
@@ -105,7 +104,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 					It("should not default NodeCIDRMaskSize if NodeCIDRMaskSizeIPv6 is set by user for IPv6 single stack", func() {
 						obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{
-							NodeCIDRMaskSizeIPv6: ptr.To[int32](80),
+							NodeCIDRMaskSizeIPv6: new(int32(80)),
 						}
 						SetObjectDefaults_Shoot(obj)
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(80))))
@@ -767,7 +766,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for log verbosity level", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: ptr.To[int32](3)}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: new(int32(3))}}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -1087,11 +1086,11 @@ var _ = Describe("Shoot defaulting", func() {
 				MaxGracefulTerminationSeconds:   new(int32(60 * 60 * 24)),
 				IgnoreDaemonsetsUtilization:     new(true),
 				EmitPerNodeGroupMetrics:         new(true),
-				Verbosity:                       ptr.To[int32](4),
+				Verbosity:                       new(int32(4)),
 				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:              ptr.To[int32](20),
-				MaxScaleDownParallelism:         ptr.To[int32](15),
-				MaxDrainParallelism:             ptr.To[int32](5),
+				MaxEmptyBulkDelete:              new(int32(20)),
+				MaxScaleDownParallelism:         new(int32(15)),
+				MaxDrainParallelism:             new(int32(5)),
 				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
 				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
 				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
@@ -1135,10 +1134,10 @@ var _ = Describe("Shoot defaulting", func() {
 				MaxGracefulTerminationSeconds:   new(int32(60 * 60 * 24)),
 				IgnoreDaemonsetsUtilization:     new(true),
 				EmitPerNodeGroupMetrics:         new(true),
-				Verbosity:                       ptr.To[int32](4),
+				Verbosity:                       new(int32(4)),
 				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:              ptr.To[int32](17),
-				MaxDrainParallelism:             ptr.To[int32](5),
+				MaxEmptyBulkDelete:              new(int32(17)),
+				MaxDrainParallelism:             new(int32(5)),
 				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
 				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
 				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
@@ -1204,7 +1203,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
 				EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
-				EvictionRateBurst:                        ptr.To[int32](2),
+				EvictionRateBurst:                        new(int32(2)),
 				EvictionRateLimit:                        new(1.0),
 				EvictionTolerance:                        &evictionTolerance,
 				RecommendationMarginFraction:             &recommendationMarginFraction,
@@ -1219,7 +1218,7 @@ var _ = Describe("Shoot defaulting", func() {
 				RecommendationUpperBoundMemoryPercentile: new(0.494),
 				MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
 				MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
-				MemoryAggregationIntervalCount:           ptr.To[int64](42),
+				MemoryAggregationIntervalCount:           new(int64(42)),
 			}
 
 			SetObjectDefaults_Shoot(obj)

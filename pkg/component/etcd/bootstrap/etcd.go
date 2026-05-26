@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -104,7 +103,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: e.labels(),
 			},
-			Replicas: ptr.To[int32](0),
+			Replicas: new(int32(0)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: e.labels()},
 				Spec: corev1.PodSpec{

@@ -26,7 +26,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -289,7 +288,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				MinReadySeconds:      30,
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Replicas:             &replicas,
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -332,9 +331,9 @@ var _ = Describe("GardenerAPIServer", func() {
 						PriorityClassName:            "gardener-garden-system-500",
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot: new(true),
-							RunAsUser:    ptr.To[int64](65532),
-							RunAsGroup:   ptr.To[int64](65532),
-							FSGroup:      ptr.To[int64](65532),
+							RunAsUser:    new(int64(65532)),
+							RunAsGroup:   new(int64(65532)),
+							FSGroup:      new(int64(65532)),
 						},
 						Containers: []corev1.Container{{
 							Name:            "gardener-apiserver",
@@ -469,7 +468,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "etcd-client",
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							},
@@ -478,7 +477,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver",
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							},
@@ -515,7 +514,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver-etcd-encryption-configuration-fe8711ae",
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							},

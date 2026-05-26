@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -126,7 +125,7 @@ var _ = Describe("ActuatorReconcile", func() {
 					Strategy:             machineDeployment.Strategy,
 					Replicas:             replicas,
 					MinReadySeconds:      500,
-					RevisionHistoryLimit: ptr.To[int32](0),
+					RevisionHistoryLimit: new(int32(0)),
 					Template: machinev1alpha1.MachineTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: templateLabels,

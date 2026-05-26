@@ -870,7 +870,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
 		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to 'localhost'.
 		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"})
-		replicas = ptr.To[int32](1)
+		replicas = new(int32(1))
 		priorityClassName = "system-cluster-critical"
 	}
 
@@ -878,7 +878,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
+		deployment.Spec.RevisionHistoryLimit = new(int32(2))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: r.appLabel()}
 		deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 			Type:          appsv1.RollingUpdateDeploymentStrategyType,
@@ -984,7 +984,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						Name: volumeNameAPIServerAccess,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](420),
+								DefaultMode: new(int32(420)),
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
@@ -1023,7 +1023,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretServer.Name,
-								DefaultMode: ptr.To[int32](420),
+								DefaultMode: new(int32(420)),
 							},
 						},
 					},
@@ -1048,7 +1048,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  r.secrets.BootstrapKubeconfig.Name,
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 						},
 					},
 				})
@@ -1428,7 +1428,7 @@ func NewCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 		},
 		{
 			Name: "cr-deletion-protection.resources.gardener.cloud",
@@ -1471,7 +1471,7 @@ func NewCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 		},
 	}
 }
@@ -1618,7 +1618,7 @@ func NewExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			FailurePolicy:           new(admissionregistrationv1.Fail),
 			MatchPolicy:             new(admissionregistrationv1.Exact),
 			SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 		})
 	}
 
@@ -1655,7 +1655,7 @@ func (r *resourceManager) newProjectedTokenMountMutatingWebhook(namespaceSelecto
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1679,7 +1679,7 @@ func NewPodKubeAPIServerLoadBalancingMutatingWebhook(namespaceSelector, objectSe
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1703,7 +1703,7 @@ func NewPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		FailurePolicy:           new(admissionregistrationv1.Ignore),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1751,7 +1751,7 @@ func NewPodTopologySpreadConstraintsMutatingWebhook(
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1792,7 +1792,7 @@ func NewSeccompProfileMutatingWebhook(
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1841,7 +1841,7 @@ func NewKubernetesServiceHostMutatingWebhook(
 		FailurePolicy:           new(admissionregistrationv1.Ignore),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](2),
+		TimeoutSeconds:          new(int32(2)),
 	}
 }
 
@@ -1878,7 +1878,7 @@ func NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Exact),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1936,7 +1936,7 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Equivalent),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -1975,7 +1975,7 @@ func NewInPlaceUpdatesWebhook(
 		FailurePolicy:           new(admissionregistrationv1.Fail),
 		MatchPolicy:             new(admissionregistrationv1.Equivalent),
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -2121,9 +2121,9 @@ func (r *resourceManager) SetBootstrapControlPlaneNode(bootstrap bool) {
 	r.values.BootstrapControlPlaneNode = bootstrap
 	r.values.HighAvailabilityConfigWebhookEnabled = !bootstrap
 	if bootstrap {
-		r.values.Replicas = ptr.To[int32](1)
+		r.values.Replicas = new(int32(1))
 	} else {
-		r.values.Replicas = ptr.To[int32](2)
+		r.values.Replicas = new(int32(2))
 	}
 }
 

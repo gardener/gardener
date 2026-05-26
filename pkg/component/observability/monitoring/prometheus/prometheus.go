@@ -58,7 +58,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 				},
 				PriorityClassName: p.values.PriorityClassName,
 				Replicas:          &p.values.Replicas,
-				Shards:            ptr.To[int32](1),
+				Shards:            new(int32(1)),
 				Image:             &p.values.Image,
 				ImagePullPolicy:   corev1.PullIfNotPresent,
 				Version:           p.values.Version,
@@ -69,7 +69,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 					}),
 				},
 				ServiceAccountName: p.name(),
-				SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
+				SecurityContext:    &corev1.PodSecurityContext{RunAsUser: new(int64(0))},
 				Storage: &monitoringv1.StorageSpec{
 					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
@@ -90,7 +90,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 				ProbeNamespaceSelector:          &metav1.LabelSelector{},
 				ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
 				Web: &monitoringv1.PrometheusWebSpec{
-					MaxConnections: ptr.To[int32](1024),
+					MaxConnections: new(int32(1024)),
 				},
 			},
 			RuleSelector:          &metav1.LabelSelector{MatchLabels: monitoringutils.Labels(p.values.Name)},

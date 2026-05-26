@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -372,7 +371,7 @@ var _ = Describe("Certificates tests", func() {
 						Name:      "gardener-extension-" + extensionName,
 						Namespace: extensionNamespace.Name,
 						Path:      new("/" + seedWebhookPath),
-						Port:      ptr.To[int32](12345),
+						Port:      new(int32(12345)),
 					},
 				},
 				Rules: []admissionregistrationv1.RuleWithOperations{

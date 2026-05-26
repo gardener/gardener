@@ -5,8 +5,6 @@
 package valitail
 
 import (
-	"k8s.io/utils/ptr"
-
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -56,7 +54,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		units = append(units, getValitailUnit())
 		files = append(files, valitailConfigFile, getValitailCAFile(ctx), extensionsv1alpha1.File{
 			Path:        valitailBinaryPath,
-			Permissions: ptr.To[uint32](0755),
+			Permissions: new(uint32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ContainerImageNameValitail].String(),

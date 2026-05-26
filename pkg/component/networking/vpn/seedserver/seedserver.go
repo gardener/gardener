@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -400,7 +399,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					},
 				},
 			},
-			TerminationGracePeriodSeconds: ptr.To[int64](30),
+			TerminationGracePeriodSeconds: new(int64(30)),
 			Volumes: []corev1.Volume{
 				{
 					Name: volumeNameDevNetTun,
@@ -415,7 +414,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Name: volumeNameCerts,
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -454,7 +453,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretTLSAuth.Name,
-							DefaultMode: ptr.To[int32](0400),
+							DefaultMode: new(int32(0400)),
 						},
 					},
 				},
@@ -581,7 +580,7 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
 			Replicas:             new(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			RevisionHistoryLimit: new(int32(1)),
 			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
@@ -624,7 +623,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             new(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: deploymentName,
 			}},

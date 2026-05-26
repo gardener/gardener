@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -80,7 +79,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 			},
 			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
 				ScaleUp: &autoscalingv2.HPAScalingRules{
-					StabilizationWindowSeconds: ptr.To[int32](60),
+					StabilizationWindowSeconds: new(int32(60)),
 					Policies: []autoscalingv2.HPAScalingPolicy{
 						// Allow to upscale 100% of the current number of pods every 1 minute to see whether any upscale recommendation will still hold true after the cluster has settled
 						{
@@ -91,7 +90,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 					},
 				},
 				ScaleDown: &autoscalingv2.HPAScalingRules{
-					StabilizationWindowSeconds: ptr.To[int32](1800),
+					StabilizationWindowSeconds: new(int32(1800)),
 					Policies: []autoscalingv2.HPAScalingPolicy{
 						// Allow to downscale one pod every 5 minutes to see whether any downscale recommendation will still hold true after the cluster has settled (conservatively)
 						{

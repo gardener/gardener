@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -80,8 +79,8 @@ func (g *gardenerDashboard) deployment(
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
@@ -99,9 +98,9 @@ func (g *gardenerDashboard) deployment(
 					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Containers: []corev1.Container{
 						{
@@ -215,7 +214,7 @@ func (g *gardenerDashboard) deployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameSession,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 									Items: []corev1.KeyToPath{{
 										Key:  secretsutils.DataKeyPassword,
 										Path: dataKeySessionSecret,
@@ -259,7 +258,7 @@ func (g *gardenerDashboard) deployment(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretSessionPrevious.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 					Items: []corev1.KeyToPath{{
 						Key:  secretsutils.DataKeyPassword,
 						Path: dataKeySessionSecretPrevious,
@@ -280,7 +279,7 @@ func (g *gardenerDashboard) deployment(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  g.values.OIDC.SecretRef.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		})
@@ -296,7 +295,7 @@ func (g *gardenerDashboard) deployment(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  g.values.GitHub.SecretRef.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		})

@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -80,7 +79,7 @@ WantedBy=multi-user.target`),
 			))
 			Expect(files).To(ConsistOf(append(expectedFiles, extensionsv1alpha1.File{
 				Path:        "/opt/bin/gardener-node-agent",
-				Permissions: ptr.To[uint32](0755),
+				Permissions: new(uint32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           "gardener-node-agent:v1",
@@ -142,7 +141,7 @@ WantedBy=multi-user.target`))
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
-				Permissions: ptr.To[uint32](0600),
+				Permissions: new(uint32(0600)),
 				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caBundle: ` + utils.EncodeBase64(caBundle) + `
   server: ` + apiServerURL + `

@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -275,7 +274,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getSelector(),
 				},
@@ -380,7 +379,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 											"NET_BIND_SERVICE",
 										},
 									},
-									RunAsUser: ptr.To[int64](0),
+									RunAsUser: new(int64(0)),
 								},
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{

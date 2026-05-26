@@ -10,7 +10,6 @@ import (
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -22,7 +21,7 @@ var _ = Describe("StatefulSet", func() {
 			Expect(err).To(matcher)
 		},
 		Entry("healthy", &appsv1.StatefulSet{
-			Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](1)},
+			Spec:   appsv1.StatefulSetSpec{Replicas: new(int32(1))},
 			Status: appsv1.StatefulSetStatus{CurrentReplicas: 1, ReadyReplicas: 1},
 		}, BeNil()),
 		Entry("healthy with nil replicas", &appsv1.StatefulSet{
@@ -32,7 +31,7 @@ var _ = Describe("StatefulSet", func() {
 			ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		}, HaveOccurred()),
 		Entry("not enough ready replicas", &appsv1.StatefulSet{
-			Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+			Spec:   appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 			Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 		}, HaveOccurred()),
 	)
@@ -48,7 +47,7 @@ var _ = Describe("StatefulSet", func() {
 					Generation: 42,
 				},
 				Spec: appsv1.StatefulSetSpec{
-					Replicas: ptr.To[int32](3),
+					Replicas: new(int32(3)),
 				},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 42,

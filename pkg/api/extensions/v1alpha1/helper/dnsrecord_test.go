@@ -7,7 +7,6 @@ package helper_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -30,6 +29,6 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("nil value", nil, int64(120)),
-		Entry("non-nil value", ptr.To[int64](300), int64(300)),
+		Entry("non-nil value", new(int64(300)), int64(300)),
 	)
 })

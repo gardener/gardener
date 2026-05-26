@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -402,7 +401,7 @@ func CreateTokenForServiceAccount(ctx context.Context, k8sClient kubernetes.Inte
 
 // NewClientFromServiceAccount returns a kubernetes client for a service account.
 func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, serviceAccount *corev1.ServiceAccount) (kubernetes.Interface, error) {
-	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, ptr.To[int64](3600))
+	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, new(int64(3600)))
 	if err != nil {
 		return nil, err
 	}

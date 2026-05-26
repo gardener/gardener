@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -42,7 +41,7 @@ func (a *alertManager) alertManager() *monitoringv1.Alertmanager {
 					corev1.ResourceMemory: resource.MustParse("20Mi"),
 				},
 			},
-			SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
+			SecurityContext: &corev1.PodSecurityContext{RunAsUser: new(int64(0))},
 			Storage: &monitoringv1.StorageSpec{
 				VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 					EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "alertmanager-db"},

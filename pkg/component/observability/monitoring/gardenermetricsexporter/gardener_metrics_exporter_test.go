@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -629,8 +628,8 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -724,7 +723,7 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 							Name: "kubeconfig",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{

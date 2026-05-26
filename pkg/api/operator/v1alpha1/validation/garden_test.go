@@ -23,7 +23,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/validation"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -2004,10 +2003,10 @@ var _ = Describe("Validation Tests", func() {
 							Entry("valid (unset)", nil, BeEmpty()),
 							Entry("valid (fields unset)", &gardencorev1beta1.WatchCacheSizes{}, BeEmpty()),
 							Entry("valid (default=0)", &gardencorev1beta1.WatchCacheSizes{
-								Default: ptr.To[int32](0),
+								Default: new(int32(0)),
 							}, BeEmpty()),
 							Entry("valid (default>0)", &gardencorev1beta1.WatchCacheSizes{
-								Default: ptr.To[int32](42),
+								Default: new(int32(42)),
 							}, BeEmpty()),
 							Entry("invalid (default<0)", &gardencorev1beta1.WatchCacheSizes{
 								Default: new(negativeSize),
@@ -2112,16 +2111,16 @@ var _ = Describe("Validation Tests", func() {
 							Entry("valid (unset)", nil, BeEmpty()),
 							Entry("valid (fields unset)", &gardencorev1beta1.APIServerLogging{}, BeEmpty()),
 							Entry("valid (verbosity=0)", &gardencorev1beta1.APIServerLogging{
-								Verbosity: ptr.To[int32](0),
+								Verbosity: new(int32(0)),
 							}, BeEmpty()),
 							Entry("valid (httpAccessVerbosity=0)", &gardencorev1beta1.APIServerLogging{
-								HTTPAccessVerbosity: ptr.To[int32](0),
+								HTTPAccessVerbosity: new(int32(0)),
 							}, BeEmpty()),
 							Entry("valid (verbosity>0)", &gardencorev1beta1.APIServerLogging{
-								Verbosity: ptr.To[int32](3),
+								Verbosity: new(int32(3)),
 							}, BeEmpty()),
 							Entry("valid (httpAccessVerbosity>0)", &gardencorev1beta1.APIServerLogging{
-								HTTPAccessVerbosity: ptr.To[int32](3),
+								HTTPAccessVerbosity: new(int32(3)),
 							}, BeEmpty()),
 							Entry("invalid (verbosity<0)", &gardencorev1beta1.APIServerLogging{
 								Verbosity: new(negativeSize),
@@ -2139,8 +2138,8 @@ var _ = Describe("Validation Tests", func() {
 					Context("Requests", func() {
 						It("should not allow too high values for max inflight requests fields", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.APIServerRequests{
-								MaxNonMutatingInflight: ptr.To[int32](123123123),
-								MaxMutatingInflight:    ptr.To[int32](412412412),
+								MaxNonMutatingInflight: new(int32(123123123)),
+								MaxMutatingInflight:    new(int32(412412412)),
 							}
 
 							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{

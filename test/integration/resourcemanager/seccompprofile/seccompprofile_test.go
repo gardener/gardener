@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,7 +59,7 @@ var _ = Describe("SeccompProfile tests", func() {
 	It("should not overwrite any values in security context during pod mutation", func() {
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{
 			RunAsNonRoot:       new(false),
-			RunAsUser:          ptr.To[int64](3),
+			RunAsUser:          new(int64(3)),
 			SupplementalGroups: []int64{4, 5, 6},
 		}
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
@@ -68,7 +67,7 @@ var _ = Describe("SeccompProfile tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 		Expect(pod.Spec.SecurityContext).To(Equal(&corev1.PodSecurityContext{
 			RunAsNonRoot:       new(false),
-			RunAsUser:          ptr.To[int64](3),
+			RunAsUser:          new(int64(3)),
 			SupplementalGroups: []int64{4, 5, 6},
 			SeccompProfile: &corev1.SeccompProfile{
 				Type: "RuntimeDefault",

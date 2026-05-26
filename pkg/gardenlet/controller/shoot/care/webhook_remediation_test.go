@@ -14,7 +14,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -82,11 +81,11 @@ var _ = Describe("WebhookRemediation", func() {
 		It("should succeed when there are only excluded webhooks", func() {
 			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: ptr.To[int32](30),
+				TimeoutSeconds: new(int32(30)),
 			}}
 			mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: ptr.To[int32](30),
+				TimeoutSeconds: new(int32(30)),
 			}}
 
 			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "remediation.webhook.shoot.gardener.cloud/exclude", "true")
@@ -107,11 +106,11 @@ var _ = Describe("WebhookRemediation", func() {
 		It("should succeed when there are only Gardener-managed webhooks", func() {
 			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: ptr.To[int32](30),
+				TimeoutSeconds: new(int32(30)),
 			}}
 			mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 				Name:           "some-webhook.example.com",
-				TimeoutSeconds: ptr.To[int32](30),
+				TimeoutSeconds: new(int32(30)),
 			}}
 
 			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/managed-by", "gardener")
@@ -133,7 +132,7 @@ var _ = Describe("WebhookRemediation", func() {
 			validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 				Name:           "some-webhook.example.com",
 				FailurePolicy:  &fail,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Rule: admissionregistrationv1.Rule{
@@ -172,7 +171,7 @@ var _ = Describe("WebhookRemediation", func() {
 				It("timeoutSeconds", func() {
 					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 						Name:           "some-webhook.example.com",
-						TimeoutSeconds: ptr.To[int32](30),
+						TimeoutSeconds: new(int32(30)),
 					}}
 					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
 
@@ -186,7 +185,7 @@ var _ = Describe("WebhookRemediation", func() {
 				It("timeoutSeconds when failurePolicy=Ignore", func() {
 					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 						Name:           "some-webhook.example.com",
-						TimeoutSeconds: ptr.To[int32](30),
+						TimeoutSeconds: new(int32(30)),
 						FailurePolicy:  &ignore,
 					}}
 					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
@@ -340,7 +339,7 @@ var _ = Describe("WebhookRemediation", func() {
 				It("timeoutSeconds", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 						Name:           "some-webhook.example.com",
-						TimeoutSeconds: ptr.To[int32](30),
+						TimeoutSeconds: new(int32(30)),
 					}}
 					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
 
@@ -355,7 +354,7 @@ var _ = Describe("WebhookRemediation", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{
 						{
 							Name:           "some-webhook1.example.com",
-							TimeoutSeconds: ptr.To[int32](30),
+							TimeoutSeconds: new(int32(30)),
 							FailurePolicy:  &ignore,
 						},
 					}
@@ -372,7 +371,7 @@ var _ = Describe("WebhookRemediation", func() {
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{
 						{
 							Name:           "some-webhook1.example.com",
-							TimeoutSeconds: ptr.To[int32](10),
+							TimeoutSeconds: new(int32(10)),
 							FailurePolicy:  &ignore,
 							ObjectSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
@@ -394,7 +393,7 @@ var _ = Describe("WebhookRemediation", func() {
 						},
 						{
 							Name:           "some-webhook2.example.com",
-							TimeoutSeconds: ptr.To[int32](10),
+							TimeoutSeconds: new(int32(10)),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
 								{
@@ -411,7 +410,7 @@ var _ = Describe("WebhookRemediation", func() {
 						},
 						{
 							Name:           "some-webhook3.example.com",
-							TimeoutSeconds: ptr.To[int32](1),
+							TimeoutSeconds: new(int32(1)),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
 								{

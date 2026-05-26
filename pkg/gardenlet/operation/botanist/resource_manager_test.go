@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -75,8 +74,8 @@ var _ = Describe("ResourceManager", func() {
 		})
 
 		It("should consider node toleration configuration", func() {
-			notReadyTolerationSeconds := ptr.To[int64](60)
-			unreachableTolerationSeconds := ptr.To[int64](120)
+			notReadyTolerationSeconds := new(int64(60))
+			unreachableTolerationSeconds := new(int64(120))
 
 			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 				NodeToleration: &gardenletconfigv1alpha1.NodeToleration{
@@ -210,7 +209,7 @@ var _ = Describe("ResourceManager", func() {
 			DeferCleanup(test.WithVar(&shared.Now, now))
 
 			rm = &fakeresourcemanager.ResourceManager{}
-			kubeAPIServer = &fakeKubeAPIServer{autoscalingReplicas: ptr.To[int32](1)}
+			kubeAPIServer = &fakeKubeAPIServer{autoscalingReplicas: new(int32(1))}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -297,7 +296,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 						},
 					})
-					kubeAPIServer.autoscalingReplicas = ptr.To[int32](0)
+					kubeAPIServer.autoscalingReplicas = new(int32(0))
 
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 					Expect(rm.Replicas).To(PointTo(Equal(int32(0))))
@@ -349,7 +348,7 @@ var _ = Describe("ResourceManager", func() {
 
 			Context("shoot is not hibernated", func() {
 				It("should set the secrets and deploy", func() {
-					kubeAPIServer.autoscalingReplicas = ptr.To[int32](2)
+					kubeAPIServer.autoscalingReplicas = new(int32(2))
 
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 					Expect(rm.Replicas).To(PointTo(Equal(int32(2))))
@@ -455,7 +454,7 @@ var _ = Describe("ResourceManager", func() {
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 							Status: gardencorev1beta1.ShootStatus{IsHibernated: true},
 						})
-						rm.Replicas = ptr.To[int32](2)
+						rm.Replicas = new(int32(2))
 					})
 
 					bootstrapTests()

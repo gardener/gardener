@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,7 +28,7 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	if deployment.Spec.MinReadySeconds > 5 {
 		deployment.Spec.MinReadySeconds = 5
 	}
-	deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = ptr.To[int64](3)
+	deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = new(int64(3))
 
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.ReadinessProbe != nil {

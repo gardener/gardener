@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -551,9 +550,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged:   new(true),
-									RunAsUser:    ptr.To[int64](0),
+									RunAsUser:    new(int64(0)),
 									RunAsNonRoot: new(false),
-									RunAsGroup:   ptr.To[int64](0),
+									RunAsGroup:   new(int64(0)),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -664,7 +663,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: ptr.To[int32](0520),
+									DefaultMode: new(int32(0520)),
 								},
 							},
 						}},
@@ -776,8 +775,8 @@ wait
 				},
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: new(false),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65534),
+					RunAsUser:                new(int64(65532)),
+					RunAsGroup:               new(int64(65534)),
 					RunAsNonRoot:             new(true),
 					ReadOnlyRootFilesystem:   new(true),
 				},

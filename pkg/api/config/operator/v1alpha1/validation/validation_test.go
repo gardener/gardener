@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/config/operator/v1alpha1/validation"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
@@ -265,8 +264,8 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		It("should pass with valid toleration options", func() {
 			conf.NodeToleration = &operatorconfigv1alpha1.NodeTolerationConfiguration{
-				DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
-				DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
+				DefaultNotReadyTolerationSeconds:    new(int64(60)),
+				DefaultUnreachableTolerationSeconds: new(int64(120)),
 			}
 
 			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())

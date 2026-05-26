@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -41,7 +40,7 @@ var _ = Describe("scale", func() {
 
 			ss := &appsv1.StatefulSet{}
 			Expect(fakeClient.Get(ctx, key, ss)).To(Succeed())
-			Expect(ss.Spec.Replicas).To(Equal(ptr.To[int32](2)))
+			Expect(ss.Spec.Replicas).To(Equal(new(int32(2))))
 		})
 	})
 
@@ -55,7 +54,7 @@ var _ = Describe("scale", func() {
 
 			dep := &appsv1.Deployment{}
 			Expect(fakeClient.Get(ctx, key, dep)).To(Succeed())
-			Expect(dep.Spec.Replicas).To(Equal(ptr.To[int32](2)))
+			Expect(dep.Spec.Replicas).To(Equal(new(int32(2))))
 		})
 	})
 
@@ -63,7 +62,7 @@ var _ = Describe("scale", func() {
 		It("should wait until deployment was scaled", func() {
 			Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace, Generation: 2},
-				Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](2)},
+				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(2))},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 2,
 					Replicas:           2,
@@ -79,7 +78,7 @@ var _ = Describe("scale", func() {
 		It("should wait until statefulset was scaled", func() {
 			Expect(fakeClient.Create(ctx, &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace, Generation: 2},
-				Spec:       appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:       appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 2,
 					Replicas:           2,
@@ -107,7 +106,7 @@ var _ = Describe("scale", func() {
 
 			Expect(fakeClient.Create(ctx, &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace, Generation: 2},
-				Spec:       appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:       appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 2,
 					Replicas:           2,

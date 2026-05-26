@@ -644,8 +644,8 @@ func ComputeExpectedGardenletConfiguration(
 				Burst: 130,
 			},
 			KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-				AutoRotationJitterPercentageMin: ptr.To[int32](70),
-				AutoRotationJitterPercentageMax: ptr.To[int32](90),
+				AutoRotationJitterPercentageMin: new(int32(70)),
+				AutoRotationJitterPercentageMax: new(int32(90)),
 			},
 		},
 		SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
@@ -680,8 +680,8 @@ func ComputeExpectedGardenletConfiguration(
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
-				LeaseResyncSeconds:       ptr.To[int32](2),
-				LeaseResyncMissThreshold: ptr.To[int32](10),
+				LeaseResyncSeconds:       new(int32(2)),
+				LeaseResyncMissThreshold: new(int32(10)),
 			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: new(false),
@@ -693,7 +693,7 @@ func ComputeExpectedGardenletConfiguration(
 				RetryDuration: &metav1.Duration{
 					Duration: 12 * time.Hour,
 				},
-				DNSEntryTTLSeconds: ptr.To[int64](120),
+				DNSEntryTTLSeconds: new(int64(120)),
 			},
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
@@ -856,20 +856,20 @@ func ComputeExpectedGardenletConfiguration(
 		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 				EnableBackupCompaction:    new(false),
-				EventsThreshold:           ptr.To[int64](1000000),
+				EventsThreshold:           new(int64(1000000)),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
-				Workers:                   ptr.To[int64](3),
+				Workers:                   new(int64(3)),
 			},
 			CustodianController: &gardenletconfigv1alpha1.CustodianController{
-				Workers: ptr.To[int64](10),
+				Workers: new(int64(10)),
 			},
 			ETCDController: &gardenletconfigv1alpha1.ETCDController{
-				Workers: ptr.To[int64](50),
+				Workers: new(int64(50)),
 			},
 		},
 		NodeToleration: &gardenletconfigv1alpha1.NodeToleration{
-			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
-			DefaultUnreachableTolerationSeconds: ptr.To[int64](60),
+			DefaultNotReadyTolerationSeconds:    new(int64(60)),
+			DefaultUnreachableTolerationSeconds: new(int64(60)),
 		},
 	}
 
@@ -959,8 +959,8 @@ func ComputeExpectedGardenletDeploymentSpec(
 	}
 
 	deployment := appsv1.DeploymentSpec{
-		RevisionHistoryLimit: ptr.To[int32](2),
-		Replicas:             ptr.To[int32](2),
+		RevisionHistoryLimit: new(int32(2)),
+		Replicas:             new(int32(2)),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"app":  "gardener",
@@ -976,9 +976,9 @@ func ComputeExpectedGardenletDeploymentSpec(
 				ServiceAccountName: "gardenlet",
 				SecurityContext: &corev1.PodSecurityContext{
 					RunAsNonRoot: new(true),
-					RunAsUser:    ptr.To[int64](65532),
-					RunAsGroup:   ptr.To[int64](65532),
-					FSGroup:      ptr.To[int64](65532),
+					RunAsUser:    new(int64(65532)),
+					RunAsGroup:   new(int64(65532)),
+					FSGroup:      new(int64(65532)),
 					SeccompProfile: &corev1.SeccompProfile{
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
 					},
@@ -1035,13 +1035,13 @@ func ComputeExpectedGardenletDeploymentSpec(
 					{
 						Key:               "node.kubernetes.io/not-ready",
 						Operator:          "Exists",
-						TolerationSeconds: ptr.To[int64](60),
+						TolerationSeconds: new(int64(60)),
 						Effect:            "NoExecute",
 					},
 					{
 						Key:               "node.kubernetes.io/unreachable",
 						Operator:          "Exists",
-						TolerationSeconds: ptr.To[int64](60),
+						TolerationSeconds: new(int64(60)),
 						Effect:            "NoExecute",
 					},
 				},
@@ -1049,11 +1049,11 @@ func ComputeExpectedGardenletDeploymentSpec(
 					Name: "kube-api-access-gardener",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 									Path:              "token",
-									ExpirationSeconds: ptr.To[int64](43200),
+									ExpirationSeconds: new(int64(43200)),
 								}},
 								{ConfigMap: &corev1.ConfigMapProjection{
 									LocalObjectReference: corev1.LocalObjectReference{

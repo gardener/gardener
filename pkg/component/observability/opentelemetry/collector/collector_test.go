@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -145,7 +144,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name: "kubeconfig",
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](420),
+					DefaultMode: new(int32(420)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -209,8 +208,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 			SecurityContext: &corev1.SecurityContext{
 				AllowPrivilegeEscalation: new(false),
-				RunAsUser:                ptr.To[int64](65532),
-				RunAsGroup:               ptr.To[int64](65534),
+				RunAsUser:                new(int64(65532)),
+				RunAsGroup:               new(int64(65534)),
 				RunAsNonRoot:             new(true),
 				ReadOnlyRootFilesystem:   new(true),
 			},
@@ -238,8 +237,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 			SecurityContext: &corev1.SecurityContext{
 				AllowPrivilegeEscalation: new(false),
-				RunAsUser:                ptr.To[int64](65532),
-				RunAsGroup:               ptr.To[int64](65534),
+				RunAsUser:                new(int64(65532)),
+				RunAsGroup:               new(int64(65534)),
 				RunAsNonRoot:             new(true),
 				ReadOnlyRootFilesystem:   new(true),
 			},
@@ -348,7 +347,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 					Image:             image,
-					Replicas:          ptr.To[int32](1),
+					Replicas:          new(int32(1)),
 					PriorityClassName: "gardener-system-100",
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: new(false),

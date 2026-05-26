@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -226,7 +225,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  userDataSecret.Name,
-						DefaultMode: ptr.To[int32](0777),
+						DefaultMode: new(int32(0777)),
 					},
 				},
 			},

@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -1748,7 +1747,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				shoot134.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 					EnableAnonymousAuthentication: new(true),
 					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
-						Default: ptr.To[int32](50),
+						Default: new(int32(50)),
 					},
 				}
 				dnsCredentialsSecretName := "dns-credentials-secret"

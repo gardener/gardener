@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -589,7 +588,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 						},
 					},
 					Spec: appsv1.DaemonSetSpec{
-						RevisionHistoryLimit: ptr.To[int32](2),
+						RevisionHistoryLimit: new(int32(2)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app":     "kubernetes",
@@ -777,7 +776,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 												LocalObjectReference: corev1.LocalObjectReference{
 													Name: configMapCleanupScriptName,
 												},
-												DefaultMode: ptr.To[int32](511),
+												DefaultMode: new(int32(511)),
 											},
 										},
 									},

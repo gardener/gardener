@@ -132,8 +132,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 					// valid and then renews it.
 					return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, s.GardenClient, s.ManagedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
 						Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
-						AutoRotationJitterPercentageMin: ptr.To[int32](40),
-						AutoRotationJitterPercentageMax: ptr.To[int32](41),
+						AutoRotationJitterPercentageMin: new(int32(40)),
+						AutoRotationJitterPercentageMax: new(int32(41)),
 					})
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
@@ -221,7 +221,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) *seedmanagementv1alpha1.Ma
 			Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 				Config: *rawGardenletConfig,
 				Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-					ReplicaCount: ptr.To[int32](1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
+					ReplicaCount: new(int32(1)), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
 				},
 			},
 		},

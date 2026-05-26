@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 )
@@ -499,7 +498,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for ProjectedTokenMountWebhookConfig", func() {
 			obj.Webhooks.ProjectedTokenMount = ProjectedTokenMountWebhookConfig{
 				Enabled:           true,
-				ExpirationSeconds: ptr.To[int64](1234),
+				ExpirationSeconds: new(int64(1234)),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)

@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/config"
 	. "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -98,8 +97,8 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.GardenClientConnection.KubeconfigValidity).To(Equal(&KubeconfigValidity{
-				AutoRotationJitterPercentageMin: ptr.To[int32](70),
-				AutoRotationJitterPercentageMax: ptr.To[int32](90),
+				AutoRotationJitterPercentageMin: new(int32(70)),
+				AutoRotationJitterPercentageMax: new(int32(90)),
 			}))
 		})
 
@@ -108,8 +107,8 @@ var _ = Describe("Defaults", func() {
 			obj.GardenClientConnection = &GardenClientConnection{
 				KubeconfigValidity: &KubeconfigValidity{
 					Validity:                        &v,
-					AutoRotationJitterPercentageMin: ptr.To[int32](10),
-					AutoRotationJitterPercentageMax: ptr.To[int32](50),
+					AutoRotationJitterPercentageMin: new(int32(10)),
+					AutoRotationJitterPercentageMax: new(int32(50)),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -326,8 +325,8 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				Seed: &SeedControllerConfiguration{
 					SyncPeriod:               &syncPeriod,
-					LeaseResyncSeconds:       ptr.To[int32](1),
-					LeaseResyncMissThreshold: ptr.To[int32](5),
+					LeaseResyncSeconds:       new(int32(1)),
+					LeaseResyncMissThreshold: new(int32(5)),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -377,7 +376,7 @@ var _ = Describe("Defaults", func() {
 					RespectSyncPeriodOverwrite: new(true),
 					ReconcileInMaintenanceOnly: new(true),
 					RetryDuration:              &v,
-					DNSEntryTTLSeconds:         ptr.To[int64](60),
+					DNSEntryTTLSeconds:         new(int64(60)),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -736,7 +735,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the ETCD controller", func() {
 			obj.ETCDConfig = &ETCDConfig{
-				ETCDController: &ETCDController{Workers: ptr.To[int64](5)},
+				ETCDController: &ETCDController{Workers: new(int64(5))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -753,7 +752,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the ETCD custodian controller", func() {
 			obj.ETCDConfig = &ETCDConfig{
-				CustodianController: &CustodianController{Workers: ptr.To[int64](5)},
+				CustodianController: &CustodianController{Workers: new(int64(5))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -775,9 +774,9 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 30 * time.Second}
 			obj.ETCDConfig = &ETCDConfig{
 				BackupCompactionController: &BackupCompactionController{
-					Workers:                   ptr.To[int64](4),
+					Workers:                   new(int64(4)),
 					EnableBackupCompaction:    new(true),
-					EventsThreshold:           ptr.To[int64](900000),
+					EventsThreshold:           new(int64(900000)),
 					MetricsScrapeWaitDuration: &v,
 				}}
 			SetObjectDefaults_GardenletConfiguration(obj)

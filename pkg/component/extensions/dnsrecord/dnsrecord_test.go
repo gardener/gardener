@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -674,7 +673,7 @@ var _ = Describe("DNSRecord", func() {
 				Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
 				Entry("zone changes", func() { values.Zone = new("new-zone") }, func() { expectedDNSRecord.Spec.Zone = new("new-zone") }),
 				Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
-				Entry("TTL changes", func() { values.TTL = ptr.To[int64](1337) }, func() { expectedDNSRecord.Spec.TTL = ptr.To[int64](1337) }),
+				Entry("TTL changes", func() { values.TTL = new(int64(1337)) }, func() { expectedDNSRecord.Spec.TTL = new(int64(1337)) }),
 				Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
 			)
 		})

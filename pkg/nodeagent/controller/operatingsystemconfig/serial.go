@@ -148,7 +148,7 @@ func (l *leaderElector) tryAcquireOrRenew(ctx context.Context) error {
 	setLeaseSpec := func() {
 		if !l.acquiredByMe() {
 			l.lease.Spec.HolderIdentity = &l.identity
-			l.lease.Spec.LeaseDurationSeconds = ptr.To[int32](600)
+			l.lease.Spec.LeaseDurationSeconds = new(int32(600))
 			l.lease.Spec.AcquireTime = &metav1.MicroTime{Time: l.clock.Now().UTC()}
 		}
 		l.lease.Spec.RenewTime = &metav1.MicroTime{Time: l.clock.Now().UTC()}

@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
@@ -73,7 +72,7 @@ WantedBy=multi-user.target`),
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/gardener-node-agent/credentials/bootstrap-token",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Data: "<<BOOTSTRAP_TOKEN>>",
@@ -83,7 +82,7 @@ WantedBy=multi-user.target`),
 					},
 					extensionsv1alpha1.File{
 						Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
-						Permissions: ptr.To[uint32](0600),
+						Permissions: new(uint32(0600)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caBundle: ` + utils.EncodeBase64(caBundle) + `
   server: ` + apiServerURL + `
@@ -110,7 +109,7 @@ server: {}
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/gardener-node-agent/init.sh",
-						Permissions: ptr.To[uint32](0755),
+						Permissions: new(uint32(0755)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -151,7 +150,7 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/gardener-node-agent/machine-name",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Data: "<<MACHINE_NAME>>",
@@ -186,7 +185,7 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 				Expect(err).NotTo(HaveOccurred())
 				Expect(files).To(ContainElement(extensionsv1alpha1.File{
 					Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
-					Permissions: ptr.To[uint32](0600),
+					Permissions: new(uint32(0600)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caBundle: ` + utils.EncodeBase64(caBundle) + `
   server: ` + apiServerURL + `

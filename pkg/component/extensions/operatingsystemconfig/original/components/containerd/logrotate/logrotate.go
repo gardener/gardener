@@ -5,8 +5,6 @@
 package logrotate
 
 import (
-	"k8s.io/utils/ptr"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -19,7 +17,7 @@ import (
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: new(uint32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Data: pathLogFiles + ` {

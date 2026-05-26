@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/config"
 	"github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -213,12 +212,12 @@ var _ = Describe("Defaults", func() {
 							ConcurrentSyncs: new(5),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 							ETCDConfig: &v1alpha1.ETCDConfig{
-								ETCDController:      &v1alpha1.ETCDController{Workers: ptr.To[int64](5)},
-								CustodianController: &v1alpha1.CustodianController{Workers: ptr.To[int64](5)},
+								ETCDController:      &v1alpha1.ETCDController{Workers: new(int64(5))},
+								CustodianController: &v1alpha1.CustodianController{Workers: new(int64(5))},
 								BackupCompactionController: &v1alpha1.BackupCompactionController{
-									Workers:                   ptr.To[int64](4),
+									Workers:                   new(int64(4)),
 									EnableBackupCompaction:    new(true),
-									EventsThreshold:           ptr.To[int64](900000),
+									EventsThreshold:           new(int64(900000)),
 									MetricsScrapeWaitDuration: &metav1.Duration{Duration: 30 * time.Second},
 								},
 							},

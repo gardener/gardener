@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -536,7 +535,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 				{
-					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("invalid-op"),
+					Op:   new(extensionsv1alpha1.PluginPathOperation("invalid-op")),
 					Path: []string{"foo"},
 				},
 			}
@@ -597,7 +596,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 				{
 					Path: []string{"foo"},
-					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("remove"),
+					Op:   new(extensionsv1alpha1.PluginPathOperation("remove")),
 					Values: &apiextensionsv1.JSON{
 						Raw: []byte(`[1]`),
 					},

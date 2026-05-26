@@ -7,7 +7,6 @@ package helper_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -16,7 +15,7 @@ import (
 var _ = Describe("Extension", func() {
 	Describe("#GetExtensionClassOrDefault", func() {
 		It("should return the given extension class", func() {
-			Expect(GetExtensionClassOrDefault(ptr.To[extensionsv1alpha1.ExtensionClass]("garden"))).To(BeEquivalentTo("garden"))
+			Expect(GetExtensionClassOrDefault(new(extensionsv1alpha1.ExtensionClass("garden")))).To(BeEquivalentTo("garden"))
 		})
 
 		It("should return the given default class", func() {

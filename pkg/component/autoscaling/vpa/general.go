@@ -14,7 +14,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -214,7 +213,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		MatchPolicy:             &matchPolicy,
 		ReinvocationPolicy:      &reinvocationPolicy,
 		SideEffects:             &sideEffects,
-		TimeoutSeconds:          ptr.To[int32](10),
+		TimeoutSeconds:          new(int32(10)),
 		Rules: []admissionregistrationv1.RuleWithOperations{
 			{
 				Rule: admissionregistrationv1.Rule{

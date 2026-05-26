@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -62,7 +61,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when watchCacheSizes.default is set",
-				&operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{Default: ptr.To[int32](50)}}},
+				&operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{Default: new(int32(50))}}},
 				ContainElement(Equal("you are setting the spec.virtualCluster.kubernetes.kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
 			),
 		)

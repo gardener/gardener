@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -50,7 +49,7 @@ var _ = Describe("Translator", func() {
 								Annotations: map[string]string{"bar": "baz"},
 							},
 							Spec: corev1.PodSpec{
-								SecurityContext:          &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+								SecurityContext:          &corev1.PodSecurityContext{FSGroup: new(int64(65534))},
 								ServiceAccountName:       "remove-me",
 								DeprecatedServiceAccount: "remove-me",
 							},
@@ -65,7 +64,7 @@ var _ = Describe("Translator", func() {
 				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
-					Permissions: ptr.To[uint32](0640),
+					Permissions: new(uint32(0640)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -107,7 +106,7 @@ status: {}
 				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
-					Permissions: ptr.To[uint32](0640),
+					Permissions: new(uint32(0640)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -218,7 +217,7 @@ kind: Config
 								Items:                []corev1.KeyToPath{{Key: "secret2file2.txt", Path: "mystery.txt"}},
 							}},
 						},
-						DefaultMode: ptr.To[int32](0666),
+						DefaultMode: new(int32(0666)),
 					}}},
 				}
 
@@ -228,7 +227,7 @@ kind: Config
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -274,32 +273,32 @@ status: {}
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file2.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap2.Data["cm2file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
@@ -310,7 +309,7 @@ kind: Config
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/mystery.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret2.Data["secret2file2.txt"])}},
 					},
 				))
@@ -335,7 +334,7 @@ kind: Config
 								Annotations: map[string]string{"bar": "baz"},
 							},
 							Spec: corev1.PodSpec{
-								SecurityContext:          &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+								SecurityContext:          &corev1.PodSecurityContext{FSGroup: new(int64(65534))},
 								ServiceAccountName:       "remove-me",
 								DeprecatedServiceAccount: "remove-me",
 							},
@@ -354,7 +353,7 @@ kind: Config
 				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
-					Permissions: ptr.To[uint32](0640),
+					Permissions: new(uint32(0640)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -403,7 +402,7 @@ status: {}
 				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
-					Permissions: ptr.To[uint32](0640),
+					Permissions: new(uint32(0640)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -521,7 +520,7 @@ kind: Config
 								Items:                []corev1.KeyToPath{{Key: "secret2file2.txt", Path: "mystery.txt"}},
 							}},
 						},
-						DefaultMode: ptr.To[int32](0666),
+						DefaultMode: new(int32(0666)),
 					}}},
 				}
 
@@ -531,7 +530,7 @@ kind: Config
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + statefulSet.Name + ".yaml",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -583,32 +582,32 @@ status: {}
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[0].Name + "/cm1file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[0].Name + "/cm1file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file2.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[1].Name + "/secret1file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[1].Name + "/secret1file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[2].Name + "/cm2file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap2.Data["cm2file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[2].Name + "/cm2file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
@@ -619,7 +618,7 @@ kind: Config
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + statefulSet.Name + "/" + statefulSet.Spec.Template.Spec.Volumes[2].Name + "/mystery.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret2.Data["secret2file2.txt"])}},
 					},
 				))
@@ -652,7 +651,7 @@ kind: Config
 				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
-					Permissions: ptr.To[uint32](0640),
+					Permissions: new(uint32(0640)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -692,7 +691,7 @@ status: {}
 				Expect(hash).NotTo(BeEmpty())
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
-					Permissions: ptr.To[uint32](0640),
+					Permissions: new(uint32(0640)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -801,7 +800,7 @@ kind: Config
 								Items:                []corev1.KeyToPath{{Key: "secret2file2.txt", Path: "mystery.txt"}},
 							}},
 						},
-						DefaultMode: ptr.To[int32](0666),
+						DefaultMode: new(int32(0666)),
 					}}},
 				}
 
@@ -811,7 +810,7 @@ kind: Config
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -855,32 +854,32 @@ status: {}
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[0].Name + "/cm1file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[0].Name + "/cm1file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file2.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[1].Name + "/secret1file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[1].Name + "/secret1file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/cm2file1.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap2.Data["cm2file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/cm2file2.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
@@ -891,7 +890,7 @@ kind: Config
 					},
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/static-pods/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/mystery.txt",
-						Permissions: ptr.To[uint32](0640),
+						Permissions: new(uint32(0640)),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret2.Data["secret2file2.txt"])}},
 					},
 				))

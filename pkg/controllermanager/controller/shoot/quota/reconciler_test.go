@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,7 +32,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
-		lifetime           = ptr.To[int32](1)
+		lifetime           = new(int32(1))
 		namespace          = "test-namespace"
 		quotaName          = "test-quota"
 		quota              *gardencorev1beta1.Quota
@@ -59,7 +58,7 @@ var _ = Describe("Reconciler", func() {
 				Namespace: namespace,
 			},
 			Spec: gardencorev1beta1.QuotaSpec{
-				ClusterLifetimeDays: ptr.To[int32](1),
+				ClusterLifetimeDays: new(int32(1)),
 			},
 		}
 

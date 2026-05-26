@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -201,7 +200,7 @@ var _ = Describe("KubeScheduler", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: ptr.To[int32](1),
+					RevisionHistoryLimit: new(int32(1)),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -224,9 +223,9 @@ var _ = Describe("KubeScheduler", func() {
 							AutomountServiceAccountToken: new(false),
 							SecurityContext: &corev1.PodSecurityContext{
 								RunAsNonRoot: new(true),
-								RunAsUser:    ptr.To[int64](65532),
-								RunAsGroup:   ptr.To[int64](65532),
-								FSGroup:      ptr.To[int64](65532),
+								RunAsUser:    new(int64(65532)),
+								RunAsGroup:   new(int64(65532)),
+								FSGroup:      new(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -286,7 +285,7 @@ var _ = Describe("KubeScheduler", func() {
 									Name: "client-ca",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 											Sources: []corev1.VolumeProjection{
 												{
 													Secret: &corev1.SecretProjection{
@@ -308,7 +307,7 @@ var _ = Describe("KubeScheduler", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},

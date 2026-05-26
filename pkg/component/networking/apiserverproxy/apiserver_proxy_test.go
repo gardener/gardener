@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -604,7 +603,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 					"role": "apiserver-proxy",
 				},
 			},
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{

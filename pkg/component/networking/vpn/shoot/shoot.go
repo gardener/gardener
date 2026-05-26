@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -699,7 +698,7 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             new(int32(replicas)),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -726,7 +725,7 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 		},
 		Spec: appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             new(int32(replicas)), // #nosec: G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
@@ -861,7 +860,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 			Name: item.volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](0400),
+					DefaultMode: new(int32(0400)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -901,7 +900,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretTLSAuth.Name,
-				DefaultMode: ptr.To[int32](0400),
+				DefaultMode: new(int32(0400)),
 			},
 		},
 	})

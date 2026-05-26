@@ -71,7 +71,7 @@ func (b *GardenadmBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alp
 
 	return append(files, extensionsv1alpha1.File{
 		Path:        PathKubeconfig,
-		Permissions: ptr.To[uint32](0600),
+		Permissions: new(uint32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(userKubeconfigSecret.Data[secretsutils.DataKeyKubeconfig])}},
 	}), nil
 }

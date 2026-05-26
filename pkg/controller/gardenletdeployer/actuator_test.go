@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -165,8 +164,8 @@ var _ = Describe("Interface", func() {
 		}
 		gardenlet = seedmanagementv1alpha1.GardenletConfig{
 			Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-				ReplicaCount:         ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](1),
+				ReplicaCount:         new(int32(1)),
+				RevisionHistoryLimit: new(int32(1)),
 				Image: &seedmanagementv1alpha1.Image{
 					PullPolicy: new(corev1.PullIfNotPresent),
 				},

@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -417,7 +416,7 @@ var _ = Describe("Vali", func() {
 
 			sts = &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{Name: valiStatefulSetName, Namespace: gardenNamespace, Generation: 2},
-				Spec:       appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:       appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 			}
 
 			managedResource = &resourcesv1alpha1.ManagedResource{
@@ -1100,7 +1099,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: ptr.To[int32](1),
+			Replicas: new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -1114,7 +1113,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 					PriorityClassName:            priorityClassName,
 					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:             ptr.To[int64](10001),
+						FSGroup:             new(int64(10001)),
 						FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 					},
 					InitContainers: []corev1.Container{
@@ -1128,9 +1127,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							SecurityContext: &corev1.SecurityContext{
 								Privileged:   new(true),
-								RunAsUser:    ptr.To[int64](0),
+								RunAsUser:    new(int64(0)),
 								RunAsNonRoot: new(false),
-								RunAsGroup:   ptr.To[int64](0),
+								RunAsGroup:   new(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -1197,8 +1196,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: new(false),
-								RunAsUser:                ptr.To[int64](10001),
-								RunAsGroup:               ptr.To[int64](10001),
+								RunAsUser:                new(int64(10001)),
+								RunAsGroup:               new(int64(10001)),
 								RunAsNonRoot:             new(true),
 								ReadOnlyRootFilesystem:   new(true),
 							},
@@ -1235,8 +1234,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: new(false),
-								RunAsUser:                ptr.To[int64](10001),
-								RunAsGroup:               ptr.To[int64](10001),
+								RunAsUser:                new(int64(10001)),
+								RunAsGroup:               new(int64(10001)),
 								RunAsNonRoot:             new(true),
 								ReadOnlyRootFilesystem:   new(true),
 							},
@@ -1250,7 +1249,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: ptr.To[int32](0520),
+									DefaultMode: new(int32(0520)),
 								},
 							},
 						},
@@ -1348,8 +1347,8 @@ wait
 				},
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: new(false),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65534),
+					RunAsUser:                new(int64(65532)),
+					RunAsGroup:               new(int64(65534)),
 					RunAsNonRoot:             new(true),
 					ReadOnlyRootFilesystem:   new(true),
 				},
@@ -1385,7 +1384,7 @@ wait
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](420),
+						DefaultMode: new(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{

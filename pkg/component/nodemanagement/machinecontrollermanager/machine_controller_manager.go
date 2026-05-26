@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -226,7 +225,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &m.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
+		deployment.Spec.RevisionHistoryLimit = new(int32(2))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -291,7 +290,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 				ServiceAccountName:            serviceAccount.Name,
-				TerminationGracePeriodSeconds: ptr.To[int64](5),
+				TerminationGracePeriodSeconds: new(int64(5)),
 				Tolerations:                   []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
 			},
 		}

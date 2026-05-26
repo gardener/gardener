@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/seedmanagement/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -79,7 +78,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				Generation: 1,
 			},
 			Spec: seedmanagement.ManagedSeedSetSpec{
-				Replicas: ptr.To[int32](1),
+				Replicas: new(int32(1)),
 				Selector: *metav1.SetAsLabelSelector(labels.Set{
 					"foo": "bar",
 				}),
@@ -94,10 +93,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				UpdateStrategy: &seedmanagement.UpdateStrategy{
 					Type: new(seedmanagement.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagement.RollingUpdateStrategy{
-						Partition: ptr.To[int32](0),
+						Partition: new(int32(0)),
 					},
 				},
-				RevisionHistoryLimit: ptr.To[int32](10),
+				RevisionHistoryLimit: new(int32(10)),
 			},
 			Status: seedmanagement.ManagedSeedSetStatus{
 				ObservedGeneration: 1,
@@ -106,7 +105,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				NextReplicaNumber:  2,
 				CurrentReplicas:    0,
 				UpdatedReplicas:    1,
-				CollisionCount:     ptr.To[int32](1),
+				CollisionCount:     new(int32(1)),
 			},
 		}
 	})
@@ -370,7 +369,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newManagedSeedSet.Spec.Selector = *metav1.SetAsLabelSelector(labels.Set{
 				"bar": "baz",
 			})
-			newManagedSeedSet.Spec.RevisionHistoryLimit = ptr.To[int32](20)
+			newManagedSeedSet.Spec.RevisionHistoryLimit = new(int32(20))
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
 
@@ -548,7 +547,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 
 		It("should forbid decrementing the next replica number or the collision count", func() {
 			newManagedSeedSet.Status.NextReplicaNumber = 1
-			newManagedSeedSet.Status.CollisionCount = ptr.To[int32](0)
+			newManagedSeedSet.Status.CollisionCount = new(int32(0))
 
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
 

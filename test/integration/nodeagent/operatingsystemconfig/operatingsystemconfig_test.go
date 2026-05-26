@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -207,7 +206,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file1 = extensionsv1alpha1.File{
 			Path:        "/example/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file1"}},
-			Permissions: ptr.To[uint32](0777),
+			Permissions: new(uint32(0777)),
 		}
 		file2 = extensionsv1alpha1.File{
 			Path:    "/another/file",
@@ -216,38 +215,38 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file3 = extensionsv1alpha1.File{
 			Path:        "/third/file",
 			Content:     extensionsv1alpha1.FileContent{ImageRef: &extensionsv1alpha1.FileContentImageRef{Image: "foo-image", FilePathInImage: "/foo-file"}},
-			Permissions: ptr.To[uint32](0750),
+			Permissions: new(uint32(0750)),
 		}
 		Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, file3.Content.ImageRef.FilePathInImage), []byte("file3"), 0755)).To(Succeed())
 		file4 = extensionsv1alpha1.File{
 			Path:        "/unchanged/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file4"}},
-			Permissions: ptr.To[uint32](0750),
+			Permissions: new(uint32(0750)),
 		}
 		file5 = extensionsv1alpha1.File{
 			Path:        "/changed/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file5"}},
-			Permissions: ptr.To[uint32](0750),
+			Permissions: new(uint32(0750)),
 		}
 		file6 = extensionsv1alpha1.File{
 			Path:        "/sixth/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file6"}},
-			Permissions: ptr.To[uint32](0750),
+			Permissions: new(uint32(0750)),
 		}
 		file7 = extensionsv1alpha1.File{
 			Path:        "/seventh/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
-			Permissions: ptr.To[uint32](0750),
+			Permissions: new(uint32(0750)),
 		}
 		file8 = extensionsv1alpha1.File{
 			Path:        "/opt/bin/init-containerd",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file8"}},
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 		}
 		file9 = extensionsv1alpha1.File{
 			Path:        "/secretref/file",
 			Content:     extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "file9-secret", DataKey: "content"}},
-			Permissions: ptr.To[uint32](0750),
+			Permissions: new(uint32(0750)),
 		}
 
 		By("Create Secret referenced by file9")
@@ -767,7 +766,7 @@ units: {}
 		By("Update Operating System Config")
 		operatingSystemConfig.Spec.CRIConfig.Containerd.Plugins = append(operatingSystemConfig.Spec.CRIConfig.Containerd.Plugins, extensionsv1alpha1.PluginConfig{
 			Path: []string{"foo"},
-			Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("remove"),
+			Op:   new(extensionsv1alpha1.PluginPathOperation("remove")),
 		})
 
 		var err error
@@ -1142,7 +1141,7 @@ metadata:
 						Image:           "kubelet:v1.31.3",
 					},
 				},
-				Permissions: ptr.To[uint32](0755),
+				Permissions: new(uint32(0755)),
 			}
 			Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, kubeletFile.Content.ImageRef.FilePathInImage), []byte("some-data"), 0755)).To(Succeed())
 
@@ -1167,7 +1166,7 @@ kubeReserved:
 `)),
 					},
 				},
-				Permissions: ptr.To[uint32](0600),
+				Permissions: new(uint32(0600)),
 			}
 
 			nodeAgentConfig = &nodeagentconfigv1alpha1.NodeAgentConfiguration{
@@ -1193,7 +1192,7 @@ kind: NodeAgentConfiguration
 `)),
 					},
 				},
-				Permissions: ptr.To[uint32](0600),
+				Permissions: new(uint32(0600)),
 			}
 
 			operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, kubeletConfigFile, kubeletFile, nodeAgentConfigFile)

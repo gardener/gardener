@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -100,7 +99,7 @@ var _ = Describe("StatefulSet", func() {
 		Context("when the statefulset does not have enough ready replicas", func() {
 			BeforeEach(func() {
 				sts := newHealthyStatefulSet()
-				sts.Spec.Replicas = ptr.To[int32](3)
+				sts.Spec.Replicas = new(int32(3))
 				sts.Status.ReadyReplicas = 1
 				fakeClient := fake.NewClientBuilder().WithObjects(sts).Build()
 				checker.InjectSourceClient(fakeClient)
@@ -277,7 +276,7 @@ func newHealthyStatefulSet() *appsv1.StatefulSet {
 			Generation: 1,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: ptr.To[int32](3),
+			Replicas: new(int32(3)),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "test"}},
 		},
 		Status: appsv1.StatefulSetStatus{

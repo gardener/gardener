@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -54,7 +53,7 @@ var _ = Describe("Options", func() {
 			(&CleanOptions{
 				ListOptions:                []client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}},
 				DeleteOptions:              []client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll},
-				FinalizeGracePeriodSeconds: ptr.To[int64](42),
+				FinalizeGracePeriodSeconds: new(int64(42)),
 				ErrorToleration:            []TolerateErrorFunc{apierrors.IsConflict},
 				IgnoreLeftovers:            []IgnoreLeftoverFunc{func(_ logr.Logger, _ client.Object) bool { return false }},
 			}).ApplyToClean(co)

@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -141,15 +140,15 @@ webhooks:
 	JustBeforeEach(func() {
 		etcdConfig = &gardenletconfigv1alpha1.ETCDConfig{
 			ETCDController: &gardenletconfigv1alpha1.ETCDController{
-				Workers: ptr.To[int64](25),
+				Workers: new(int64(25)),
 			},
 			CustodianController: &gardenletconfigv1alpha1.CustodianController{
-				Workers: ptr.To[int64](3),
+				Workers: new(int64(3)),
 			},
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
-				Workers:                   ptr.To[int64](3),
+				Workers:                   new(int64(3)),
 				EnableBackupCompaction:    new(true),
-				EventsThreshold:           ptr.To[int64](1000000),
+				EventsThreshold:           new(int64(1000000)),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: time.Second * 60},
 				ActiveDeadlineDuration:    &metav1.Duration{Duration: time.Hour * 3},
 			},
@@ -373,8 +372,8 @@ webhooks:
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](1),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
@@ -439,7 +438,7 @@ webhooks:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "etcd-druid-webhook",
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 										},
 									},
 								},
@@ -474,8 +473,8 @@ webhooks:
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](1),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
@@ -552,7 +551,7 @@ webhooks:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "etcd-druid-webhook",
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 										},
 									},
 								},
@@ -631,14 +630,14 @@ webhooks:
 								Name:      "etcd-druid",
 								Namespace: namespace,
 								Path:      new("/webhooks/etcdcomponents"),
-								Port:      ptr.To[int32](443),
+								Port:      new(int32(443)),
 							},
 							CABundle: nil,
 						},
 						FailurePolicy:           new(admissionregistrationv1.Fail),
 						MatchPolicy:             new(admissionregistrationv1.Exact),
 						SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-						TimeoutSeconds:          ptr.To[int32](10),
+						TimeoutSeconds:          new(int32(10)),
 						AdmissionReviewVersions: []string{"v1", "v1beta1"},
 						ObjectSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"app.kubernetes.io/managed-by": "etcd-druid"}},
 						Rules: []admissionregistrationv1.RuleWithOperations{
@@ -714,7 +713,7 @@ webhooks:
 								Name:      "etcd-druid",
 								Namespace: namespace,
 								Path:      new("/webhooks/etcdcomponents"),
-								Port:      ptr.To[int32](443),
+								Port:      new(int32(443)),
 							},
 							CABundle: nil,
 						},

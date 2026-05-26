@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -65,7 +64,7 @@ WantedBy=multi-user.target
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user-authorized-keys",
-					Permissions: ptr.To[uint32](0644),
+					Permissions: new(uint32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -75,7 +74,7 @@ WantedBy=multi-user.target
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user/run.sh",
-					Permissions: ptr.To[uint32](0755),
+					Permissions: new(uint32(0755)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

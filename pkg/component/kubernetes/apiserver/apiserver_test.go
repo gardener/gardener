@@ -38,7 +38,6 @@ import (
 	"k8s.io/client-go/testing"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -246,12 +245,12 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 
 				Entry("replicas is nil", AutoscalingConfig{Replicas: nil}),
-				Entry("replicas is 0", AutoscalingConfig{Replicas: ptr.To[int32](0)}),
+				Entry("replicas is 0", AutoscalingConfig{Replicas: new(int32(0))}),
 			)
 
 			It("should successfully deploy the HPA resource", func() {
 				autoscalingConfig := AutoscalingConfig{
-					Replicas:    ptr.To[int32](2),
+					Replicas:    new(int32(2)),
 					MinReplicas: 4,
 					MaxReplicas: 6,
 				}
@@ -279,7 +278,7 @@ var _ = Describe("KubeAPIServer", func() {
 				}
 				hpaBehaviour := &autoscalingv2.HorizontalPodAutoscalerBehavior{
 					ScaleUp: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](60),
+						StabilizationWindowSeconds: new(int32(60)),
 						Policies: []autoscalingv2.HPAScalingPolicy{
 							{
 								Type:          autoscalingv2.PercentScalingPolicy,
@@ -289,7 +288,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 					ScaleDown: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](1800),
+						StabilizationWindowSeconds: new(int32(1800)),
 						Policies: []autoscalingv2.HPAScalingPolicy{
 							{
 								Type:          autoscalingv2.PodsScalingPolicy,
@@ -2855,7 +2854,7 @@ kind: AuthorizationConfiguration
 					},
 					SecurityContext: &corev1.SecurityContext{
 						RunAsNonRoot: new(false),
-						RunAsUser:    ptr.To[int64](0),
+						RunAsUser:    new(int64(0)),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -3001,8 +3000,8 @@ kind: AuthorizationConfiguration
 					},
 					SecurityContext: &corev1.SecurityContext{
 						RunAsNonRoot: new(false),
-						RunAsGroup:   ptr.To[int64](0),
-						RunAsUser:    ptr.To[int64](0),
+						RunAsGroup:   new(int64(0)),
+						RunAsUser:    new(int64(0)),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -3031,7 +3030,7 @@ kind: AuthorizationConfiguration
 						Name: "vpn-seed-client",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: new(int32(0640)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -3070,7 +3069,7 @@ kind: AuthorizationConfiguration
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretNameVPNSeedServerTLSAuth,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: new(int32(0640)),
 							},
 						},
 					},
@@ -3138,8 +3137,8 @@ kind: AuthorizationConfiguration
 						Values: apiserver.Values{
 							EnabledAdmissionPlugins: admissionPlugins,
 							Logging: &gardencorev1beta1.APIServerLogging{
-								Verbosity:           ptr.To[int32](3),
-								HTTPAccessVerbosity: ptr.To[int32](3),
+								Verbosity:           new(int32(3)),
+								HTTPAccessVerbosity: new(int32(3)),
 							},
 							RuntimeVersion: runtimeVersion,
 						},
@@ -3368,7 +3367,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameEtcd,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3377,7 +3376,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServiceAccountKey,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3386,7 +3385,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServiceAccountKeyBundle,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3403,7 +3402,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameKubeAggregator,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3412,7 +3411,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameETCDEncryptionConfig,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3421,7 +3420,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServer,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3488,7 +3487,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameKubeAPIServerToKubelet,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3780,8 +3779,8 @@ anonymous:
 
 				It("should configure the request settings if provided", func() {
 					requests := &gardencorev1beta1.APIServerRequests{
-						MaxNonMutatingInflight: ptr.To[int32](123),
-						MaxMutatingInflight:    ptr.To[int32](456),
+						MaxNonMutatingInflight: new(int32(123)),
+						MaxMutatingInflight:    new(int32(456)),
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -3944,7 +3943,7 @@ anonymous:
 
 				It("should configure the watch cache settings if provided", func() {
 					watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-						Default: ptr.To[int32](123),
+						Default: new(int32(123)),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
 							{Resource: "foo", CacheSize: 456},
 							{Resource: "bar", CacheSize: 789, APIGroup: new("baz")},
@@ -3979,8 +3978,8 @@ anonymous:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
-						DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
+						DefaultNotReadyTolerationSeconds:    new(int64(120)),
+						DefaultUnreachableTolerationSeconds: new(int64(130)),
 						Images:                              images,
 						Version:                             version,
 					})
@@ -3995,8 +3994,8 @@ anonymous:
 
 				It("should configure the KubeAPISeverLogging settings if provided", func() {
 					logging := &gardencorev1beta1.APIServerLogging{
-						Verbosity:           ptr.To[int32](3),
-						HTTPAccessVerbosity: ptr.To[int32](3),
+						Verbosity:           new(int32(3)),
+						HTTPAccessVerbosity: new(int32(3)),
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -4073,7 +4072,7 @@ anonymous:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameHTTPProxyClient,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -4169,7 +4168,7 @@ anonymous:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "existing-secret",
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -4178,7 +4177,7 @@ anonymous:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "kube-apiserver-tls-sni-1-ec321de5",
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -4189,7 +4188,7 @@ anonymous:
 					values.Audit = &apiserver.AuditConfig{
 						Webhook: &apiserver.AuditWebhook{
 							Kubeconfig:   []byte("foo"),
-							BatchMaxSize: ptr.To[int32](30),
+							BatchMaxSize: new(int32(30)),
 							Version:      new("audit.k8s.io/v1beta1"),
 						},
 					}
@@ -4479,7 +4478,7 @@ anonymous:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To[int32](0)
+				deploy.Spec.Replicas = new(int32(0))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -4551,7 +4550,7 @@ anonymous:
 
 	Describe("#GetAutoscalingReplicas", func() {
 		It("should properly get the field", func() {
-			v := ptr.To[int32](2)
+			v := new(int32(2))
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetAutoscalingReplicas()).To(Equal(v))
 		})
@@ -4559,7 +4558,7 @@ anonymous:
 
 	Describe("#SetAutoscalingReplicas", func() {
 		It("should properly set the field", func() {
-			v := ptr.To[int32](2)
+			v := new(int32(2))
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetValues().Autoscaling.Replicas).To(Equal(v))
 		})

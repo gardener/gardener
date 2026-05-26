@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -77,7 +76,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 				MatchLabels: i.getLabels(),
 			},
 			Replicas:             &i.values.Replicas,
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
@@ -143,9 +142,9 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 					PriorityClassName: i.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Volumes: volumes,
 				},

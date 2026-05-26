@@ -192,7 +192,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             new(ptr.Deref(v.values.AdmissionController.Replicas, 1)),
-		RevisionHistoryLimit: ptr.To[int32](2),
+		RevisionHistoryLimit: new(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(admissionController)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -248,7 +248,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Name: volumeNameCertificates,
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{

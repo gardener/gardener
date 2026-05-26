@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -418,7 +417,7 @@ status:
 								MaxUnavailable: &maxUnavailable,
 							},
 						},
-						RevisionHistoryLimit: ptr.To[int32](2),
+						RevisionHistoryLimit: new(int32(2)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								labelKey:     labelValue,
@@ -587,7 +586,7 @@ status:
 												LocalObjectReference: corev1.LocalObjectReference{
 													Name: coredns.CustomConfigMapName,
 												},
-												DefaultMode: ptr.To[int32](420),
+												DefaultMode: new(int32(420)),
 												Optional:    new(true),
 											},
 										},
@@ -611,8 +610,8 @@ status:
 						SecurityContext: &corev1.SecurityContext{
 							AllowPrivilegeEscalation: new(false),
 							RunAsNonRoot:             new(true),
-							RunAsUser:                ptr.To[int64](65532),
-							RunAsGroup:               ptr.To[int64](65532),
+							RunAsUser:                new(int64(65532)),
+							RunAsGroup:               new(int64(65532)),
 						},
 						Args: []string{
 							"-inputDir=/etc/custom",

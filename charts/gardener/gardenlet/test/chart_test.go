@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/version"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -374,7 +373,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					},
 				},
 			}, &seedmanagement.GardenletDeployment{
-				ReplicaCount: ptr.To[int32](2),
+				ReplicaCount: new(int32(2)),
 			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-7ce49ea8"}),
 		Entry("verify deployment with only one replica", nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
@@ -389,7 +388,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					},
 				},
 			}, &seedmanagement.GardenletDeployment{
-				ReplicaCount: ptr.To[int32](1),
+				ReplicaCount: new(int32(1)),
 			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-7ce49ea8"}),
 		Entry("verify deployment with only one zone", nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
@@ -414,7 +413,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		}),
 
 		Entry("verify deployment with custom replica count", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			ReplicaCount: ptr.To[int32](3),
+			ReplicaCount: new(int32(3)),
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-e03f6438"}),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{

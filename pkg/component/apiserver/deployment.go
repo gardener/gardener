@@ -10,7 +10,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
@@ -121,7 +120,7 @@ func InjectDefaultSettings(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretETCDClient.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		},
@@ -130,7 +129,7 @@ func InjectDefaultSettings(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretServer.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		},

@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -553,7 +552,7 @@ var _ = Describe("VPNShoot", func() {
 						Name: name,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](0400),
+								DefaultMode: new(int32(0400)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -593,7 +592,7 @@ var _ = Describe("VPNShoot", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretNameTLSAuth,
-							DefaultMode: ptr.To[int32](0400),
+							DefaultMode: new(int32(0400)),
 						},
 					},
 				})
@@ -797,8 +796,8 @@ var _ = Describe("VPNShoot", func() {
 					},
 					ObjectMeta: *objectMetaFor(secretNameCA, secretNameClient, secretNameTLSAuth),
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: ptr.To[int32](2),
-						Replicas:             ptr.To[int32](1),
+						RevisionHistoryLimit: new(int32(2)),
+						Replicas:             new(int32(1)),
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RollingUpdateDeploymentStrategyType,
 							RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -821,7 +820,7 @@ var _ = Describe("VPNShoot", func() {
 					ObjectMeta: *objectMetaForEx(secretNameClients, secretNameCA, secretNameTLSAuth),
 					Spec: appsv1.StatefulSetSpec{
 						PodManagementPolicy:  appsv1.ParallelPodManagement,
-						RevisionHistoryLimit: ptr.To[int32](2),
+						RevisionHistoryLimit: new(int32(2)),
 						Replicas:             new(int32(replicas)),
 						UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 							Type: appsv1.RollingUpdateStatefulSetStrategyType,

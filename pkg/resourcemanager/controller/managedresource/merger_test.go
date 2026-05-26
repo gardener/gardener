@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
@@ -45,7 +44,7 @@ var _ = Describe("merger", func() {
 					DeletionTimestamp:          &metav1.Time{Time: time.Now().Add(1 * time.Hour)},
 					UID:                        "8c3d49f6-e177-4938-8547-c61283a84876",
 					GenerateName:               "foo",
-					DeletionGracePeriodSeconds: ptr.To[int64](30),
+					DeletionGracePeriodSeconds: new(int64(30)),
 				},
 			}
 
@@ -321,7 +320,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -348,7 +347,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			newDeployment.Spec.Replicas = ptr.To[int32](2)
+			newDeployment.Spec.Replicas = new(int32(2))
 
 			expected := old.DeepCopy()
 
@@ -357,7 +356,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			newDeployment.Spec.Replicas = ptr.To[int32](2)
+			newDeployment.Spec.Replicas = new(int32(2))
 
 			expected := newDeployment.DeepCopy()
 
@@ -405,7 +404,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -415,7 +414,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserve-replicas is unset", func() {
-			newDeployment.Spec.Replicas = ptr.To[int32](2)
+			newDeployment.Spec.Replicas = new(int32(2))
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
 			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
@@ -427,7 +426,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserve-replicas is true", func() {
-			newDeployment.Spec.Replicas = ptr.To[int32](2)
+			newDeployment.Spec.Replicas = new(int32(2))
 			newDeployment.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
@@ -501,7 +500,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -528,7 +527,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			newStatefulSet.Spec.Replicas = ptr.To[int32](2)
+			newStatefulSet.Spec.Replicas = new(int32(2))
 
 			expected := old.DeepCopy()
 
@@ -537,7 +536,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			newStatefulSet.Spec.Replicas = ptr.To[int32](2)
+			newStatefulSet.Spec.Replicas = new(int32(2))
 
 			expected := newStatefulSet.DeepCopy()
 

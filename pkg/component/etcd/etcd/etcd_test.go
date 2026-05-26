@@ -69,7 +69,7 @@ var _ = Describe("Etcd", func() {
 		ctx                     = context.Background()
 		fakeErr                 = errors.New("fake err")
 		class                   = ClassNormal
-		replicas                = ptr.To[int32](1)
+		replicas                = new(int32(1))
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		storageClassName        = "my-storage-class"
@@ -240,9 +240,9 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						ServerPort:              ptr.To[int32](2380),
-						ClientPort:              ptr.To[int32](2379),
-						WrapperPort:             ptr.To[int32](9095),
+						ServerPort:              new(int32(2380)),
+						ClientPort:              new(int32(2379)),
+						WrapperPort:             new(int32(9095)),
 						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
@@ -270,7 +270,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						Port:                    ptr.To[int32](8080),
+						Port:                    new(int32(8080)),
 						Resources:               resourcesContainerBackupRestore,
 						SnapshotCompaction:      &snapshotCompactionSpec,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
@@ -372,10 +372,10 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.RunAsRoot = new(true)
 
 				if role == "events" {
-					obj.Spec.Backup.Port = ptr.To[int32](8081)
-					obj.Spec.Etcd.ClientPort = ptr.To[int32](2382)
-					obj.Spec.Etcd.ServerPort = ptr.To[int32](2383)
-					obj.Spec.Etcd.WrapperPort = ptr.To[int32](9096)
+					obj.Spec.Backup.Port = new(int32(8081))
+					obj.Spec.Etcd.ClientPort = new(int32(2382))
+					obj.Spec.Etcd.ServerPort = new(int32(2383))
+					obj.Spec.Etcd.WrapperPort = new(int32(9096))
 				}
 			}
 
@@ -734,7 +734,7 @@ var _ = Describe("Etcd", func() {
 		sm = fakesecretsmanager.New(c, testNamespace)
 		autoscalingConfig = AutoscalingConfig{}
 		backupConfig = nil
-		replicas = ptr.To[int32](1)
+		replicas = new(int32(1))
 		highAvailabilityEnabled = false
 		staticPodConfig = nil
 		role = testRole
@@ -1166,7 +1166,7 @@ var _ = Describe("Etcd", func() {
 
 			BeforeEach(func() {
 				highAvailabilityEnabled = true
-				replicas = ptr.To[int32](3)
+				replicas = new(int32(3))
 				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 			})
 
@@ -1303,7 +1303,7 @@ var _ = Describe("Etcd", func() {
 		When("etcd cluster is hibernated", func() {
 			BeforeEach(func() {
 				secretNamesToTimes := map[string]time.Time{}
-				replicas = ptr.To[int32](0)
+				replicas = new(int32(0))
 				caRotationPhase = gardencorev1beta1.RotationCompleted
 
 				var err error
@@ -1406,7 +1406,7 @@ var _ = Describe("Etcd", func() {
 
 					class := ClassImportant
 
-					replicas = ptr.To[int32](1)
+					replicas = new(int32(1))
 
 					etcd = New(log, c, testNamespace, sm, Values{
 						Role:                        testRole,
@@ -1440,7 +1440,7 @@ var _ = Describe("Etcd", func() {
 			It("should successfully deploy the service monitor", func() {
 				var (
 					class    = ClassImportant
-					replicas = ptr.To[int32](1)
+					replicas = new(int32(1))
 				)
 
 				etcd = New(log, c, testNamespace, sm, Values{
@@ -1529,7 +1529,7 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				Replicas:                ptr.To[int32](1),
+				Replicas:                new(int32(1)),
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
@@ -1580,7 +1580,7 @@ var _ = Describe("Etcd", func() {
 			}).Build()
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 			etcd = New(log, c, testNamespace, sm, Values{
-				Role: testRole, Class: class, Replicas: ptr.To[int32](1),
+				Role: testRole, Class: class, Replicas: new(int32(1)),
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule, PriorityClassName: priorityClassName,
 			})
@@ -1708,7 +1708,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA control-plane is not requested", func() {
 			BeforeEach(func() {
-				replicas = ptr.To[int32](1)
+				replicas = new(int32(1))
 			})
 
 			It("should do nothing and succeed without expectations", func() {
@@ -1742,7 +1742,7 @@ var _ = Describe("Etcd", func() {
 						},
 					},
 					Status: druidcorev1alpha1.EtcdStatus{
-						ObservedGeneration: ptr.To[int64](1),
+						ObservedGeneration: new(int64(1)),
 						Ready:              new(true),
 						Conditions: []druidcorev1alpha1.Condition{
 							{
@@ -1755,7 +1755,7 @@ var _ = Describe("Etcd", func() {
 			}
 
 			BeforeEach(func() {
-				replicas = ptr.To[int32](3)
+				replicas = new(int32(3))
 			})
 
 			It("should patch the etcd resource with the new peer CA secret name", func() {

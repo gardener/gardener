@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -70,7 +69,7 @@ func (b *GardenadmBotanist) deployETCD(role string) func(context.Context) error 
 
 func (b *GardenadmBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(new(int32(0)))
 
 	// kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the
 	// node-agent-authorizer webhook. Thus, we fetch the service IP. It is used to create a host alias in the

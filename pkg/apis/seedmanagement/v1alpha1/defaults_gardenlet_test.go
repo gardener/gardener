@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -169,20 +168,20 @@ var _ = Describe("Defaults", func() {
 		It("should default GardenletDeployment field", func() {
 			SetObjectDefaults_Gardenlet(obj)
 
-			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(ptr.To[int32](2)))
-			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](2)))
+			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(new(int32(2))))
+			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(new(int32(2))))
 			Expect(obj.Spec.Deployment.Image).NotTo(BeNil())
 		})
 
 		It("should not overwrite the already set values for GardenletDeployment field", func() {
 			obj.Spec.Deployment = GardenletSelfDeployment{GardenletDeployment: GardenletDeployment{
-				ReplicaCount:         ptr.To[int32](3),
-				RevisionHistoryLimit: ptr.To[int32](3),
+				ReplicaCount:         new(int32(3)),
+				RevisionHistoryLimit: new(int32(3)),
 			}}
 			SetObjectDefaults_Gardenlet(obj)
 
-			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(ptr.To[int32](3)))
-			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](3)))
+			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(new(int32(3))))
+			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(new(int32(3))))
 			Expect(obj.Spec.Deployment.Image).NotTo(BeNil())
 		})
 	})

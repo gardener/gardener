@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -176,7 +175,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						v1beta1constants.LabelApp: labelValue,
 					}),
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{

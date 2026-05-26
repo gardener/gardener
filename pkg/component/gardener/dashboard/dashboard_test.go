@@ -337,8 +337,8 @@ frontend:
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "gardener",
@@ -361,9 +361,9 @@ frontend:
 							AutomountServiceAccountToken: new(false),
 							SecurityContext: &corev1.PodSecurityContext{
 								RunAsNonRoot: new(true),
-								RunAsUser:    ptr.To[int64](65532),
-								RunAsGroup:   ptr.To[int64](65532),
-								FSGroup:      ptr.To[int64](65532),
+								RunAsUser:    new(int64(65532)),
+								RunAsGroup:   new(int64(65532)),
+								FSGroup:      new(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -477,7 +477,7 @@ frontend:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  sessionSecret.Name,
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 											Items: []corev1.KeyToPath{{
 												Key:  "password",
 												Path: "sessionSecret",
@@ -521,7 +521,7 @@ frontend:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  sessionSecretPrevious.Name,
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 							Items: []corev1.KeyToPath{{
 								Key:  "password",
 								Path: "sessionSecretPrevious",
@@ -542,7 +542,7 @@ frontend:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  oidc.SecretRef.Name,
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 						},
 					},
 				})
@@ -558,7 +558,7 @@ frontend:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  gitHub.SecretRef.Name,
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 						},
 					},
 				})

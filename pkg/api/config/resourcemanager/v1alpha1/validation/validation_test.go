@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/config/resourcemanager/v1alpha1/validation"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
@@ -463,7 +462,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when expiration seconds is lower than 600", func() {
 					conf.Webhooks.ProjectedTokenMount.Enabled = true
-					conf.Webhooks.ProjectedTokenMount.ExpirationSeconds = ptr.To[int64](123)
+					conf.Webhooks.ProjectedTokenMount.ExpirationSeconds = new(int64(123))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -476,8 +475,8 @@ var _ = Describe("Validation", func() {
 
 			Context("high availability config", func() {
 				It("should succeed with valid toleration options", func() {
-					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = ptr.To[int64](60)
-					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = ptr.To[int64](120)
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = new(int64(60))
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = new(int64(120))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})

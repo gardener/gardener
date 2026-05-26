@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -204,7 +203,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &k.replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)
+		deployment.Spec.RevisionHistoryLimit = new(int32(1))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -221,9 +220,9 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 					RunAsNonRoot: new(true),
-					RunAsUser:    ptr.To[int64](65532),
-					RunAsGroup:   ptr.To[int64](65532),
-					FSGroup:      ptr.To[int64](65532),
+					RunAsUser:    new(int64(65532)),
+					RunAsGroup:   new(int64(65532)),
+					FSGroup:      new(int64(65532)),
 				},
 				Containers: []corev1.Container{
 					{
@@ -283,7 +282,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Name: volumeNameClientCA,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](420),
+								DefaultMode: new(int32(420)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -305,7 +304,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serverSecret.Name,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: new(int32(0640)),
 							},
 						},
 					},

@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -382,8 +381,8 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 			}, b.getLabels()),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector:             &metav1.LabelSelector{MatchLabels: b.getLabels()},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -392,7 +391,7 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 				Spec: corev1.PodSpec{
 					PriorityClassName:             v1beta1constants.PriorityClassNameSeedSystem800,
 					ServiceAccountName:            serviceAccountName,
-					TerminationGracePeriodSeconds: ptr.To[int64](5),
+					TerminationGracePeriodSeconds: new(int64(5)),
 					Containers: []corev1.Container{{
 						Name:            prefixDependencyWatchdog,
 						Image:           b.values.Image,

@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -117,7 +116,7 @@ var _ = Describe("Registration", func() {
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
 					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "baz"}},
-					TimeoutSeconds:    ptr.To[int32](1337),
+					TimeoutSeconds:    new(int32(1337)),
 				},
 				{
 					Name:          "webhook4",
@@ -153,7 +152,7 @@ var _ = Describe("Registration", func() {
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
 					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "baz"}},
-					TimeoutSeconds:    ptr.To[int32](1337),
+					TimeoutSeconds:    new(int32(1337)),
 				},
 				{
 					Action:        "validating",

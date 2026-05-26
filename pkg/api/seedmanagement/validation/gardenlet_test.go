@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	. "github.com/gardener/gardener/pkg/api/seedmanagement/validation"
@@ -227,7 +226,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 					Image: &seedmanagement.Image{
 						Repository: new(""),
 						Tag:        new(""),
-						PullPolicy: ptr.To[corev1.PullPolicy]("foo"),
+						PullPolicy: new(corev1.PullPolicy("foo")),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
 					PodAnnotations: map[string]string{"bar@": "baz"},

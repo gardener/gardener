@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/seedmanagement/managedseedset"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -62,7 +61,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when watchCacheSizes.default is set",
-				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: ptr.To[int32](50)}},
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: new(int32(50))}},
 				ContainElement(Equal("you are setting the spec.shootTemplate.spec.kubernetes.kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
 			),
 		)

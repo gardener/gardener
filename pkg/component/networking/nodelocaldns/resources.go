@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -182,7 +181,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						MaxUnavailable: &maxUnavailable,
 					},
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getPoolLabels(worker.Name),
 				},
@@ -346,7 +345,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: coredns.CustomConfigMapName,
 										},
-										DefaultMode: ptr.To[int32](420),
+										DefaultMode: new(int32(420)),
 										Optional:    new(true),
 									},
 								},
@@ -370,8 +369,8 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: new(false),
 					RunAsNonRoot:             new(true),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65532),
+					RunAsUser:                new(int64(65532)),
+					RunAsGroup:               new(int64(65532)),
 				},
 				Args: []string{
 					"-inputDir=" + volumeMountPathCustomConfig,

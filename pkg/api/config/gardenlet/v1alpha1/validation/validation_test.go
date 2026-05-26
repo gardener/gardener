@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -45,7 +44,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
 					SyncPeriod:           &metav1.Duration{Duration: time.Hour},
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
-					DNSEntryTTLSeconds:   ptr.To[int64](120),
+					DNSEntryTTLSeconds:   new(int64(120)),
 				},
 				ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 					ConcurrentSyncs:                     &concurrentSyncs,
@@ -169,8 +168,8 @@ var _ = Describe("GardenletConfiguration", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 								Validity:                        &metav1.Duration{Duration: time.Hour},
-								AutoRotationJitterPercentageMin: ptr.To[int32](13),
-								AutoRotationJitterPercentageMax: ptr.To[int32](37),
+								AutoRotationJitterPercentageMin: new(int32(13)),
+								AutoRotationJitterPercentageMax: new(int32(37)),
 							},
 						}
 
@@ -194,7 +193,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage min less than 1", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMin: ptr.To[int32](0),
+								AutoRotationJitterPercentageMin: new(int32(0)),
 							},
 						}
 
@@ -208,7 +207,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage max more than 100", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMax: ptr.To[int32](101),
+								AutoRotationJitterPercentageMax: new(int32(101)),
 							},
 						}
 
@@ -222,8 +221,8 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage min equal max", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMin: ptr.To[int32](13),
-								AutoRotationJitterPercentageMax: ptr.To[int32](13),
+								AutoRotationJitterPercentageMin: new(int32(13)),
+								AutoRotationJitterPercentageMax: new(int32(13)),
 							},
 						}
 
@@ -237,8 +236,8 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage min higher than max", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMin: ptr.To[int32](14),
-								AutoRotationJitterPercentageMax: ptr.To[int32](13),
+								AutoRotationJitterPercentageMin: new(int32(14)),
+								AutoRotationJitterPercentageMax: new(int32(13)),
 							},
 						}
 
@@ -346,7 +345,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid too high values for the DNS TTL", func() {
-				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To[int64](601)
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = new(int64(601))
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 
@@ -773,8 +772,8 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			It("should pass with valid toleration options", func() {
 				cfg.NodeToleration = &gardenletconfigv1alpha1.NodeToleration{
-					DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
-					DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
+					DefaultNotReadyTolerationSeconds:    new(int64(60)),
+					DefaultUnreachableTolerationSeconds: new(int64(120)),
 				}
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())

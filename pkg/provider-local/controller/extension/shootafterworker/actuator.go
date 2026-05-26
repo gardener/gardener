@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -130,11 +129,11 @@ func getShootResources() (map[string][]byte, error) {
 				Labels:    labels,
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels,
 				},
-				Replicas: ptr.To[int32](1),
+				Replicas: new(int32(1)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: labels,
@@ -149,7 +148,7 @@ func getShootResources() (map[string][]byte, error) {
 								"sleep 3600",
 							},
 						}},
-						TerminationGracePeriodSeconds: ptr.To[int64](0),
+						TerminationGracePeriodSeconds: new(int64(0)),
 					},
 				},
 			},

@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -304,8 +303,8 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: new(int32(2)),
+			Replicas:             new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -321,9 +320,9 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 					PriorityClassName:  o.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Containers: []corev1.Container{
 						{

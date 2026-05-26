@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -41,12 +40,12 @@ var _ = Describe("Handler", func() {
 			defaultKubeAPIServerConfig = &operatorv1alpha1.KubeAPIServerConfig{
 				KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 					Requests: &gardencorev1beta1.APIServerRequests{
-						MaxNonMutatingInflight: ptr.To[int32](400),
-						MaxMutatingInflight:    ptr.To[int32](200),
+						MaxNonMutatingInflight: new(int32(400)),
+						MaxMutatingInflight:    new(int32(200)),
 					},
 					EventTTL: &metav1.Duration{Duration: time.Hour},
 					Logging: &gardencorev1beta1.APIServerLogging{
-						Verbosity: ptr.To[int32](2),
+						Verbosity: new(int32(2)),
 					},
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
@@ -90,8 +89,8 @@ var _ = Describe("Handler", func() {
 
 		It("should not overwrite configured set fields in Kube API server config", func() {
 			customRequests := &gardencorev1beta1.APIServerRequests{
-				MaxNonMutatingInflight: ptr.To[int32](800),
-				MaxMutatingInflight:    ptr.To[int32](400),
+				MaxNonMutatingInflight: new(int32(800)),
+				MaxMutatingInflight:    new(int32(400)),
 			}
 
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
@@ -110,7 +109,7 @@ var _ = Describe("Handler", func() {
 					Requests: customRequests,
 					EventTTL: &metav1.Duration{Duration: time.Hour},
 					Logging: &gardencorev1beta1.APIServerLogging{
-						Verbosity: ptr.To[int32](2),
+						Verbosity: new(int32(2)),
 					},
 					EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 						Provider: gardencorev1beta1.EncryptionProvider{
@@ -125,7 +124,7 @@ var _ = Describe("Handler", func() {
 			customKubeControllerManagerConfig := &operatorv1alpha1.KubeControllerManagerConfig{
 				CertificateSigningDuration: &metav1.Duration{Duration: 123 * time.Second},
 				KubeControllerManagerConfig: &gardencorev1beta1.KubeControllerManagerConfig{
-					NodeCIDRMaskSize: ptr.To[int32](10),
+					NodeCIDRMaskSize: new(int32(10)),
 				},
 			}
 

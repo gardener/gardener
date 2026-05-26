@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -101,7 +100,7 @@ var _ = Describe("CopyBackupsTask", func() {
 		It("should return error if observed generation is not updated", func() {
 			obj := expected.DeepCopy()
 			obj.Generation = 1
-			obj.Status.ObservedGeneration = ptr.To[int64](0)
+			obj.Status.ObservedGeneration = new(int64(0))
 			Expect(fakeClient.Create(ctx, obj)).To(Succeed())
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring("observed generation outdated (0/1)")))
 		})

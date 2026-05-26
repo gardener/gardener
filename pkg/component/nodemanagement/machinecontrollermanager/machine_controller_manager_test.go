@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -222,7 +221,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &replicas,
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "kubernetes",
 					"role": "machine-controller-manager",
@@ -291,7 +290,7 @@ var _ = Describe("MachineControllerManager", func() {
 						}},
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",
-						TerminationGracePeriodSeconds: ptr.To[int64](5),
+						TerminationGracePeriodSeconds: new(int64(5)),
 						Tolerations:                   []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
 					},
 				},
@@ -751,7 +750,7 @@ subjects:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To[int32](1)
+				deploy.Spec.Replicas = new(int32(1))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

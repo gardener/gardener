@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -77,7 +76,7 @@ var _ = Describe("utils", func() {
 						Namespace: namespace,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: ptr.To[int32](1),
+						Replicas: new(int32(1)),
 					},
 				}
 

@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -279,7 +278,7 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 			},
 			Spec: extensionsv1alpha1.BackupBucketSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+					Class: new(extensionsv1alpha1.ExtensionClass("garden")),
 					Type:  backupBucketProvider,
 				},
 				Region: "region",
@@ -295,7 +294,7 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 			},
 			Spec: extensionsv1alpha1.BackupEntrySpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+					Class: new(extensionsv1alpha1.ExtensionClass("garden")),
 					Type:  backupBucketProvider,
 				},
 				Region:     "region",

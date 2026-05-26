@@ -7,7 +7,6 @@ package utils_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
 )
@@ -44,7 +43,7 @@ var _ = Describe("Values", func() {
 					Object: &object{
 						String: new("foo"),
 					},
-					Int: ptr.To[int32](42),
+					Int: new(int32(42)),
 				},
 			},
 			Bool: new(true),
@@ -56,7 +55,7 @@ var _ = Describe("Values", func() {
 					Object: &objectUpperCase{
 						String: new("foo"),
 					},
-					Int: ptr.To[int32](42),
+					Int: new(int32(42)),
 				},
 			},
 			Bool: new(true),
@@ -129,13 +128,13 @@ var _ = Describe("Values", func() {
 						},
 						Objects: []objectUpperCase{
 							{
-								Int: ptr.To[int32](50),
+								Int: new(int32(50)),
 								Object: &objectUpperCase{
 									String: new("bar"),
 								},
 							},
 						},
-						Int: ptr.To[int32](42),
+						Int: new(int32(42)),
 					},
 				},
 				Bool: new(true),
@@ -196,7 +195,7 @@ var _ = Describe("Values", func() {
 									Objects: []object{
 										{
 											String: new(""),
-											Int:    ptr.To[int32](3),
+											Int:    new(int32(3)),
 										},
 									},
 								},
@@ -204,13 +203,13 @@ var _ = Describe("Values", func() {
 									String: new("two-l2"),
 									Objects: []object{
 										{
-											Int: ptr.To[int32](4),
+											Int: new(int32(4)),
 										},
 									},
 								},
 							},
 						},
-						Int: ptr.To[int32](42),
+						Int: new(int32(42)),
 					},
 				},
 				Bool: new(true),

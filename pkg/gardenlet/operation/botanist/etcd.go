@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -232,7 +231,7 @@ func (b *Botanist) restoreMultiNodeEtcd(ctx context.Context) error {
 			// is added to the reconciliation flow that depends on the etcd's replica count.
 			component.SetReplicas(originalReplicas)
 		}()
-		component.SetReplicas(ptr.To[int32](1))
+		component.SetReplicas(new(int32(1)))
 	}
 
 	return flow.Parallel(

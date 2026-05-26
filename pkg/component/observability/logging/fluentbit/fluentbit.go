@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -527,19 +526,19 @@ func (f *fluentBit) getClusterFluentBitConfig() *fluentbitv1alpha2.ClusterFluent
 		},
 		Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 			Service: &fluentbitv1alpha2.Service{
-				FlushSeconds: ptr.To[float64](30),
+				FlushSeconds: new(float64(30)),
 				Daemon:       new(false),
 				LogLevel:     "error",
 				ParsersFile:  "parsers.conf",
 				HttpServer:   new(true),
 				HttpListen:   "::",
-				HttpPort:     ptr.To[int32](2020),
+				HttpPort:     new(int32(2020)),
 				Storage: &fluentbitv1alpha2.Storage{
 					Path:                      "/var/fluentbit/chunks",
 					Sync:                      "normal",
 					Metrics:                   "on",
 					Checksum:                  "off",
-					MaxChunksUp:               ptr.To[int64](200),
+					MaxChunksUp:               new(int64(200)),
 					BacklogMemLimit:           "50M",
 					DeleteIrrecoverableChunks: "on",
 				},

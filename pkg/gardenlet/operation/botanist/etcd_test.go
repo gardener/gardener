@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -406,10 +405,10 @@ var _ = Describe("Etcd", func() {
 
 					for _, etcd := range []*mocketcd.MockInterface{etcdMain, etcdEvents} {
 						gomock.InOrder(
-							etcd.EXPECT().GetReplicas().Return(ptr.To[int32](3)),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](1)),
+							etcd.EXPECT().GetReplicas().Return(new(int32(3))),
+							etcd.EXPECT().SetReplicas(new(int32(1))),
 							etcd.EXPECT().Deploy(ctx),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](3)),
+							etcd.EXPECT().SetReplicas(new(int32(3))),
 						)
 					}
 
@@ -427,10 +426,10 @@ var _ = Describe("Etcd", func() {
 
 					for _, etcd := range []*mocketcd.MockInterface{etcdMain, etcdEvents} {
 						gomock.InOrder(
-							etcd.EXPECT().GetReplicas().Return(ptr.To[int32](3)),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](1)),
+							etcd.EXPECT().GetReplicas().Return(new(int32(3))),
+							etcd.EXPECT().SetReplicas(new(int32(1))),
 							etcd.EXPECT().Deploy(ctx),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](3)),
+							etcd.EXPECT().SetReplicas(new(int32(3))),
 						)
 					}
 

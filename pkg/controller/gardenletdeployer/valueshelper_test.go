@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -106,8 +105,8 @@ var _ = Describe("ValuesHelper", func() {
 		vh = NewValuesHelper(parentConfig)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			ReplicaCount:         new(int32(1)),
+			RevisionHistoryLimit: new(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
 				PullPolicy: new(corev1.PullIfNotPresent),
 			},
@@ -126,8 +125,8 @@ var _ = Describe("ValuesHelper", func() {
 		}
 
 		mergedDeployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			ReplicaCount:         new(int32(1)),
+			RevisionHistoryLimit: new(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
 				Repository: new("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
 				Tag:        new("v0.0.0-master+$Format:%H$"),

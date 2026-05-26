@@ -430,7 +430,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 	_, err := controllerutil.CreateOrUpdate(ctx, shootClient, cleanupDaemonSet, func() error {
 		metav1.SetMetaDataLabel(&cleanupDaemonSet.ObjectMeta, v1beta1constants.LabelApp, labelValueAndCleanupName)
 		cleanupDaemonSet.Spec = appsv1.DaemonSetSpec{
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					v1beta1constants.LabelApp: labelValueAndCleanupName,
@@ -510,7 +510,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: cleanupConfigMapName,
 									},
-									DefaultMode: ptr.To[int32](0775),
+									DefaultMode: new(int32(0775)),
 								},
 							},
 						},

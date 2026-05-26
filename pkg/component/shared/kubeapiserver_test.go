@@ -29,7 +29,6 @@ import (
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -974,8 +973,8 @@ authorizers:
 
 			It("should set the fields to the configured values", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-					DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
-					DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
+					DefaultNotReadyTolerationSeconds:    new(int64(120)),
+					DefaultUnreachableTolerationSeconds: new(int64(130)),
 				}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
@@ -1036,8 +1035,8 @@ authorizers:
 
 			It("should set the field to the configured values", func() {
 				requests := &gardencorev1beta1.APIServerRequests{
-					MaxMutatingInflight:    ptr.To[int32](1),
-					MaxNonMutatingInflight: ptr.To[int32](2),
+					MaxMutatingInflight:    new(int32(1)),
+					MaxNonMutatingInflight: new(int32(2)),
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
@@ -1083,7 +1082,7 @@ authorizers:
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   ptr.To[int32](1),
+					Default:   new(int32(1)),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
@@ -1283,7 +1282,7 @@ authorizers:
 
 			Entry("no change due to already set",
 				nil,
-				kubeapiserver.AutoscalingConfig{Replicas: ptr.To[int32](1)},
+				kubeapiserver.AutoscalingConfig{Replicas: new(int32(1))},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
@@ -1306,7 +1305,7 @@ authorizers:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To[int32](3),
+							Replicas: new(int32(3)),
 						},
 					})).To(Succeed())
 				},
@@ -1322,7 +1321,7 @@ authorizers:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To[int32](0),
+							Replicas: new(int32(0)),
 						},
 					})).To(Succeed())
 				},
