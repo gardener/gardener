@@ -22,7 +22,8 @@ The following tables are a summary of the feature gates that you can set on diff
 |--------------------------------|---------|---------|---------|---------|
 | DefaultSeccompProfile          | `false` | `Alpha` | `1.54`  |         |
 | InPlaceNodeUpdates             | `false` | `Alpha` | `1.113` |         |
-| IstioTLSTermination            | `false` | `Alpha` | `1.114` |         |
+| IstioTLSTermination            | `false` | `Alpha` | `1.114` | `1.143` |
+| IstioTLSTermination            | `true`  | `Beta`  | `1.144` |         |
 | CloudProfileCapabilities       | `false` | `Alpha` | `1.117` |         |
 | OpenTelemetryCollector         | `false` | `Alpha` | `1.124` | `1.135` |
 | OpenTelemetryCollector         | `true`  | `Beta`  | `1.136` |         |
