@@ -29,7 +29,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
@@ -141,9 +140,12 @@ func (r *Reconciler) DetermineSeed(
 	if err != nil {
 		return nil, err
 	}
-	regionConfig, err := r.getRegionConfigMap(ctx, log, cloudProfile)
+	regionConfig, err := gardenerutils.GetRegionConfigMap(ctx, r.Client, r.GardenNamespace, cloudProfile.Name)
 	if err != nil {
 		return nil, err
+	}
+	if regionConfig == nil {
+		log.Info("No region config found", "cloudProfileName", cloudProfile.Name)
 	}
 	project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, shoot.Namespace)
 	if err != nil {
@@ -195,34 +197,6 @@ func (r *Reconciler) DetermineSeed(
 		return nil, err
 	}
 	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList)
-}
-
-func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (*corev1.ConfigMap, error) {
-	regionConfigList := &corev1.ConfigMapList{}
-	if err := r.Client.List(ctx, regionConfigList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig}); err != nil {
-		return nil, err
-	}
-
-	var regionConfig *corev1.ConfigMap
-	for _, regionConf := range regionConfigList.Items {
-		profileNames := strings.SplitSeq(regionConf.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",")
-		for name := range profileNames {
-			if name != cloudProfile.Name {
-				continue
-			}
-			if regionConfig == nil {
-				regionConfig = regionConf.DeepCopy()
-			} else {
-				log.Info("Duplicate scheduler region config found", "configMap", client.ObjectKeyFromObject(&regionConf), "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(regionConfig))
-			}
-			break
-		}
-	}
-
-	if regionConfig == nil {
-		log.Info("No region config found", "cloudProfileName", cloudProfile.Name)
-	}
-	return regionConfig, nil
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
