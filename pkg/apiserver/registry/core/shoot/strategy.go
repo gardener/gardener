@@ -70,8 +70,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
 
-	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
-	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
+	newShoot.Status = oldShoot.Status // can only be changed by shoots/status subresource
 
 	if op, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
 		newShoot.Annotations[v1beta1constants.GardenerOperation] = cleanUpOperation(op)
