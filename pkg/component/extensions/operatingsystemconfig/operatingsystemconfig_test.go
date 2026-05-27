@@ -592,7 +592,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			calculateStableKeyForVersionFn := func(
 				oscVersion int,
-				kubernetesVersion *semver.Version,
+				_ *semver.Version,
 				_ *Values,
 				worker *gardencorev1beta1.Worker,
 				_ *gardencorev1beta1.KubeletConfig,

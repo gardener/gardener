@@ -224,11 +224,11 @@ var _ = Describe("operatingsystemconfig", func() {
 			namespace = "shoot--foo--bar"
 
 			worker1Name = "worker1"
-			worker1Key  = operatingsystemconfig.KeyV1(worker1Name, semver.MustParse(kubernetesVersion), nil)
+			worker1Key  = operatingsystemconfig.KeyV2(semver.MustParse(kubernetesVersion), nil, &gardencorev1beta1.Worker{Name: worker1Name}, false, nil, nil)
 
 			worker2Name                  = "worker2"
 			worker2KubernetesVersion     = "4.5.6"
-			worker2Key                   = operatingsystemconfig.KeyV1(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
+			worker2Key                   = operatingsystemconfig.KeyV2(semver.MustParse(worker2KubernetesVersion), nil, &gardencorev1beta1.Worker{Name: worker2Name}, false, nil, nil)
 			worker2KubeletDataVolumeName = "vol"
 
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
