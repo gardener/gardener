@@ -28,6 +28,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
+	utils "github.com/gardener/gardener/pkg/utils"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -203,6 +204,19 @@ func (r *Reconciler) prepareGardenletChartValues(
 		// Similar to the <imageVectorOverwrite> (see above), we have to also get rid of the
 		// <chartsImageVectorOverwrite> in case it is no longer specified in the `Gardenlet` resource.
 		delete(values, "chartsImageVectorOverwrite")
+	}
+
+	if strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: strings.TrimPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot), Namespace: gardenlet.Namespace}, shoot); err != nil {
+			return nil, fmt.Errorf("failed fetching shoot: %w", err)
+		}
+
+		if !v1beta1helper.HasManagedInfrastructure(shoot) {
+			if values, err = utils.SetToValuesMap(values, true, "unmanagedInfrastructure"); err != nil {
+				return nil, fmt.Errorf("failed setting unmanagedInfrastructure value: %w", err)
+			}
+		}
 	}
 
 	return values, nil
