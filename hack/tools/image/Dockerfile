@@ -16,8 +16,7 @@ FROM base AS builder
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 RUN make create-tools-bin TOOLS_BIN_DIR=hack/tools/bin && \
-    rm -rf /go/src/github.com/gardener/gardener/hack/tools/bin/work && \
-    find hack/tools/bin -type l -exec sh -c 'mv -f $(realpath $0) $0' {} \;
+    rm -rf /go/src/github.com/gardener/gardener/hack/tools/bin/work
 
 # golang-test
 FROM base AS golang-test
