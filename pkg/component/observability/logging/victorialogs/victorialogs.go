@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -125,13 +124,10 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *victoriametricsv1.V
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VLSingleResourceName,
 			Namespace: v.namespace,
-			Labels:    getLabels(),
 		},
 		Spec: victoriametricsv1.VLSingleSpec{
 			PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
-				Labels: map[string]string{
-					v1beta1constants.LabelObservabilityApplication: constants.VLSingleResourceName,
-				},
+				Labels: getLabels(),
 			},
 			CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
 				DisableSelfServiceScrape: ptr.To(true),
@@ -196,13 +192,10 @@ func (v *victoriaLogs) vlSingle(imageRepo, imageTag string) *victoriametricsv1.V
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:   constants.VLSingleResourceName,
-		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel(constants.ServiceName, constants.VictoriaLogsPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                      constants.VLSingleResourceName,
+		v1beta1constants.LabelApp:                      constants.VLSingleResourceName,
+		v1beta1constants.LabelRole:                     v1beta1constants.LabelObservability,
+		v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleObservability,
+		v1beta1constants.LabelObservabilityApplication: constants.VLSingleResourceName,
 	}
 }
 

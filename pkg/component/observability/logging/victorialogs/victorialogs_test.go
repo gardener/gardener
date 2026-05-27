@@ -38,7 +38,6 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -98,13 +97,10 @@ var _ = Describe("VictoriaLogs", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      victorialogsconstants.VLSingleResourceName,
 				Namespace: namespace,
-				Labels:    getLabels(),
 			},
 			Spec: victoriametricsv1.VLSingleSpec{
 				PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
-					Labels: map[string]string{
-						v1beta1constants.LabelObservabilityApplication: "victoria-logs",
-					},
+					Labels: getLabels(),
 				},
 				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
 					DisableSelfServiceScrape: ptr.To(true),
@@ -498,13 +494,10 @@ var _ = Describe("VictoriaLogs", func() {
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                             "victoria-logs",
-		v1beta1constants.LabelRole:                            "observability",
-		v1beta1constants.GardenRole:                           "observability",
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):  "allowed",
-		v1beta1constants.LabelNetworkPolicyToDNS:              "allowed",
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: "allowed",
-		v1beta1constants.LabelObservabilityApplication:        "victoria-logs",
+		v1beta1constants.LabelApp:                      "victoria-logs",
+		v1beta1constants.LabelRole:                     "observability",
+		v1beta1constants.GardenRole:                    "observability",
+		v1beta1constants.LabelObservabilityApplication: "victoria-logs",
 	}
 }
 
