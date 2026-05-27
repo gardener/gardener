@@ -1044,33 +1044,11 @@ func calculateKeyForVersion(
 	error,
 ) {
 	switch version {
-	case 1:
-		// TODO(MichaelEischer): Remove KeyV1 after the feature gate WorkerPoolHashVersioning has been locked to true.
-		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
 		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration, kubeProxyConfig), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key hash version %v", version)
 	}
-}
-
-// KeyV1 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
-// configuration.
-func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
-	if kubernetesVersion == nil {
-		return ""
-	}
-
-	var (
-		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
-		criName                     gardencorev1beta1.CRIName
-	)
-
-	if criConfig != nil {
-		criName = criConfig.Name
-	}
-
-	return fmt.Sprintf("gardener-node-agent-%s-%s", workerPoolName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
 // KeyV2 returns the key that can be used as secret name based on the provided worker name,

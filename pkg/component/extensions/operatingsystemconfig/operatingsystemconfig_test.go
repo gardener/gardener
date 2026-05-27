@@ -599,8 +599,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 				_ *gardencorev1beta1.KubeProxyConfig,
 			) (string, error) {
 				switch oscVersion {
-				case 1:
-					return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 				case 2:
 					return worker.Name + "-version2", nil
 				default:
@@ -1348,49 +1346,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/new-name is still present")))
 			})
-		})
-	})
-
-	Describe("#KeyV1", func() {
-		var (
-			workerName        = "foo"
-			kubernetesVersion = "1.2.3"
-		)
-
-		It("should return an empty string", func() {
-			Expect(KeyV1(workerName, nil, nil)).To(BeEmpty())
-		})
-
-		It("should return the expected key", func() {
-			Expect(KeyV1(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
-		})
-
-		It("is different for different worker.cri configurations", func() {
-			containerDKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			otherKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
-			Expect(containerDKey).NotTo(Equal(otherKey))
-		})
-
-		It("should return the expected key for version 1", func() {
-			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), nil,
-				&gardencorev1beta1.Worker{
-					Name: workerName,
-					Machine: gardencorev1beta1.Machine{
-						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:    "type1",
-							Version: new("12.34"),
-						},
-					},
-				}, nil, nil)
-			Expect(err).To(Succeed())
-			Expect(key).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
-		})
-
-		It("should return an error for unknown versions", func() {
-			for _, version := range []int{0, 3} {
-				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, nil, nil)
-				Expect(err).NotTo(Succeed())
-			}
 		})
 	})
 
