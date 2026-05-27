@@ -59,7 +59,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 8,
         "x": 0,
         "y": 1
       },
@@ -70,7 +70,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
@@ -81,7 +83,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcdbr_cluster_size{job=\"kube-etcd3-backup-restore-$role\",pod=~\".*$role-$member\"}",
+          "expr": "min(etcdbr_cluster_size{job=\"kube-etcd3-backup-restore-$role\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -118,8 +120,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 4,
+        "w": 8,
+        "x": 8,
         "y": 1
       },
       "id": 49,
@@ -129,7 +131,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
@@ -176,8 +180,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
+        "w": 8,
+        "x": 16,
         "y": 1
       },
       "id": 51,
@@ -187,7 +191,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
@@ -208,176 +214,196 @@
       "type": "stat"
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "prometheus",
-      "description": "Shows whether the selected etcd member is a \"Leader\", \"Follower\" or a \"Learner\"",
+      "description": "Shows whether all etcd members are healthy (0=Unhealthy, 1=Healthy) over time",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "from": "",
-              "id": 1,
-              "text": "Follower",
-              "to": "",
-              "type": 1,
-              "value": "0"
-            },
-            {
-              "from": "",
-              "id": 2,
-              "text": "Learner",
-              "to": "",
-              "type": 1,
-              "value": "1"
-            },
-            {
-              "from": "",
-              "id": 3,
-              "text": "Leader",
-              "to": "",
-              "type": 1,
-              "value": "2"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "green",
-                "value": 2
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 4,
+        "h": 8,
+        "w": 12,
         "x": 12,
-        "y": 1
+        "y": 6
       },
-      "id": 63,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["last"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "7.5.32",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}*2 + etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "\"etcd-$role-$member\" Membership Status",
-      "type": "stat"
-    },
-    {
-      "datasource": "prometheus",
-      "description": "Shows whether the selected etcd member is healthy or not",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "from": "",
-              "id": 1,
-              "text": "Unhealthy",
-              "to": "",
-              "type": 1,
-              "value": "0"
-            },
-            {
-              "from": "",
-              "id": 2,
-              "text": "Healthy",
-              "to": "",
-              "type": 1,
-              "value": "1"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
+      "hiddenSeries": false,
       "id": 67,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["last"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
       },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
       "pluginVersion": "7.5.32",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_has_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}",
+          "expr": "etcd_server_has_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}",
           "instant": false,
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "\"etcd-$role-$member\" Member Health Status",
-      "type": "stat"
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Member Health Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": "0=Unhealthy  1=Healthy",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "description": "Shows the membership state (0=Follower, 1=Learner, 2=Leader) for all etcd members over time",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "hiddenSeries": false,
+      "id": 63,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.32",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}*2 + etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Membership Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": "0=Follower  1=Learner  2=Leader",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "datasource": "prometheus",
@@ -385,7 +411,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 14
       },
       "id": 57,
       "title": "Cluster Operations",
@@ -410,7 +436,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 7
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 69,
@@ -441,7 +467,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "increase(etcd_server_leader_changes_seen_total{job=\"kube-etcd3-$role\"}[1d])",
+          "expr": "increase(etcd_server_leader_changes_seen_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[1d])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -507,7 +533,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 7
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 77,
@@ -538,7 +564,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_heartbeat_send_failures_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
+          "expr": "rate(etcd_server_heartbeat_send_failures_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])",
           "instant": false,
           "interval": "",
           "legendFormat": "{{pod}}",
@@ -607,7 +633,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 7
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 22,
@@ -740,7 +766,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 73,
@@ -771,7 +797,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_add_learner_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_add_learner_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])) by (le))",
           "interval": "",
           "legendFormat": "etcd-$role",
           "refId": "A"
@@ -837,7 +863,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 14
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 71,
@@ -868,7 +894,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_learner_promote_successes{job=\"kube-etcd3-$role\"}",
+          "expr": "etcd_server_learner_promote_successes{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -934,7 +960,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 75,
@@ -965,7 +991,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_member_remove_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_member_remove_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])) by (le))",
           "instant": false,
           "interval": "",
           "legendFormat": "etcd-$role",
@@ -1022,7 +1048,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 29
       },
       "id": 55,
       "panels": [],
@@ -1030,71 +1056,100 @@
       "type": "row"
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "prometheus",
-      "description": "Total number of active peers in the cluster for the selected member",
+      "description": "Total number of active peers in the cluster per member",
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
-              },
-              {
-                "color": "#EAB839",
-                "value": 1
-              },
-              {
-                "color": "green",
-                "value": 2
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 22
+        "y": 30
       },
+      "hiddenSeries": false,
       "id": 79,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["last"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
       },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
       "pluginVersion": "7.5.32",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(etcd_network_active_peers{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"})",
+          "expr": "sum(etcd_network_active_peers{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}) by (pod)",
           "instant": false,
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "\"etcd-$role-$member\" Active Peers",
-      "type": "stat"
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Active Peers (All Members)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -1113,7 +1168,7 @@
         "h": 5,
         "w": 6,
         "x": 4,
-        "y": 22
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 81,
@@ -1144,9 +1199,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3-$role\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])) by (pod, le))",
           "interval": "",
-          "legendFormat": "etcd-$role",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
@@ -1199,7 +1254,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Network rate for data sent from selected member to other members in the cluster",
+      "description": "Network rate for data sent from each member to other members in the cluster",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1210,7 +1265,7 @@
         "h": 5,
         "w": 7,
         "x": 10,
-        "y": 22
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 82,
@@ -1241,9 +1296,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}[5m])",
+          "expr": "rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m])",
           "interval": "",
-          "legendFormat": "{{To}}",
+          "legendFormat": "{{pod}} -> {{To}}",
           "refId": "A"
         }
       ],
@@ -1296,7 +1351,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Network rate for data received by selected member from other members in the cluster",
+      "description": "Network rate for data received by each member from other members in the cluster",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1307,7 +1362,7 @@
         "h": 5,
         "w": 7,
         "x": 17,
-        "y": 22
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 83,
@@ -1338,9 +1393,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}[5m])",
+          "expr": "rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m])",
           "interval": "",
-          "legendFormat": "{{From}}",
+          "legendFormat": "{{pod}} <- {{From}}",
           "refId": "A"
         }
       ],
@@ -1394,7 +1449,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "id": 53,
       "panels": [],
@@ -1418,7 +1473,7 @@
         "h": 5,
         "w": 7,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "hiddenSeries": false,
       "id": 84,
@@ -1449,7 +1504,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_slow_apply_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
+          "expr": "rate(etcd_server_slow_apply_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1515,7 +1570,7 @@
         "h": 5,
         "w": 7,
         "x": 7,
-        "y": 28
+        "y": 36
       },
       "hiddenSeries": false,
       "id": 85,
@@ -1546,7 +1601,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_slow_read_indexes_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
+          "expr": "rate(etcd_server_slow_read_indexes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1598,7 +1653,10 @@
   ],
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["controlplane", "seed"],
+  "tags": [
+    "controlplane",
+    "seed"
+  ],
   "templating": {
     "list": [
       {
@@ -1636,37 +1694,32 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": "0",
-          "value": "0"
+          "text": "All",
+          "value": "$__all"
         },
+        "datasource": "prometheus",
+        "definition": "label_values(etcd_server_has_leader{job=\"kube-etcd3-$role\"}, pod)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
-        "multi": false,
+        "multi": true,
         "name": "member",
-        "options": [
-          {
-            "selected": true,
-            "text": "0",
-            "value": "0"
-          },
-          {
-            "selected": false,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "2",
-            "value": "2"
-          }
-        ],
-        "query": "0, 1, 2",
-        "queryValue": "",
+        "options": [],
+        "query": {
+          "query": "label_values(etcd_server_has_leader{job=\"kube-etcd3-$role\"}, pod)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": ".*-(\\d+)$",
         "skipUrlSync": false,
-        "type": "custom"
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -1675,7 +1728,16 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ],
     "time_options": [
       "5m",
       "15m",
