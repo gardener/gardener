@@ -201,6 +201,12 @@ var _ = Describe("containerd configuration file tests", func() {
 			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
 			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
 		),
+		Entry("for containerd config file v4", "testfiles/containerd-config.toml-v4",
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.images", "pinned_images", "sandbox"},
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.images", "registry", "config_path"},
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
+		),
 	)
 
 	It("should configure CNI plugin dirs as array at corresponding path for containerd >= 2.2", func() {
@@ -212,6 +218,29 @@ var _ = Describe("containerd configuration file tests", func() {
 		containerdClient.SetFakeContainerdVersion("2.2.1")
 
 		Expect(loadContainerdConfig("testfiles/containerd-config.toml-v3", r.FS)).To(Succeed())
+		Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
+
+		pluginDirValue, err := getContainerdConfigValue(r.FS, cniPluginDirPath)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(pluginDirValue).To(BeNil())
+
+		configValue, err := getContainerdConfigValue(r.FS, cniPluginDirsPath)
+		Expect(err).ToNot(HaveOccurred())
+		pluginDirsValue, ok := configValue.([]any)
+		Expect(ok).To(BeTrue())
+		Expect(pluginDirsValue).To(HaveLen(1))
+		Expect(pluginDirsValue).To(ContainElements("/opt/cni/bin"))
+	})
+
+	It("should configure CNI plugin dirs as array at corresponding path for containerd >= 2.2 with config v4", func() {
+		var (
+			cniPluginDirPath  = structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"}
+			cniPluginDirsPath = structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dirs"}
+		)
+
+		containerdClient.SetFakeContainerdVersion("2.3.0")
+
+		Expect(loadContainerdConfig("testfiles/containerd-config.toml-v4", r.FS)).To(Succeed())
 		Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
 
 		pluginDirValue, err := getContainerdConfigValue(r.FS, cniPluginDirPath)
@@ -309,6 +338,38 @@ var _ = Describe("containerd configuration file tests", func() {
 				Expect(err).To(HaveOccurred())
 
 				goodPath := structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "foobar", "foo", "runtime_type"}
+				configValue, err := getContainerdConfigValue(r.FS, goodPath)
+				Expect(err).ToNot(HaveOccurred())
+
+				v, ok := configValue.(string)
+				Expect(ok).To(BeTrue())
+				Expect(v).To(Equal("bar.123"))
+			})
+		})
+
+		When("containerd configuration file version is v4", func() {
+			BeforeEach(func() {
+				Expect(loadContainerdConfig("testfiles/containerd-config.toml-v4", r.FS)).To(Succeed())
+			})
+
+			It("should translate a v2 compliant runtime path to its v4 equivalent", func() {
+				osc.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+					{
+						Op:   ptr.To(extensionsv1alpha1.AddPluginPathOperation),
+						Path: []string{"io.containerd.grpc.v1.cri", "containerd", "runtimes", "foo"},
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte("{\"runtime_type\": \"bar.123\"}"),
+						},
+					},
+				}
+
+				Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
+
+				wrongPath := structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "foo", "runtime_type"}
+				_, err := getContainerdConfigValue(r.FS, wrongPath)
+				Expect(err).To(HaveOccurred())
+
+				goodPath := structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "foo", "runtime_type"}
 				configValue, err := getContainerdConfigValue(r.FS, goodPath)
 				Expect(err).ToNot(HaveOccurred())
 
