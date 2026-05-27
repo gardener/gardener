@@ -738,6 +738,12 @@ func PrepareGardenletChartValues(
 	if err != nil {
 		return nil, fmt.Errorf("failed setting self-upgrade values for self-hosted shoot: %w", err)
 	}
+
+	values, err = utils.SetToValuesMap(values, true, "selfHostedShoot")
+	if err != nil {
+		return nil, fmt.Errorf("failed setting selfHostedShoot value for self-hosted shoot: %w", err)
+	}
+
 	return utils.SetToValuesMap(values, map[string]any{
 		"key":      "node-role.kubernetes.io/control-plane",
 		"operator": "Exists",
