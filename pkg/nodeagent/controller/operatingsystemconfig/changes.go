@@ -223,6 +223,10 @@ func IsOsVersionUpToDate(currentOSVersion *string, newOSC *extensionsv1alpha1.Op
 		return false, fmt.Errorf("current OS version is nil")
 	}
 
+	if newOSC.Spec.InPlaceUpdates.OperatingSystemVersion == "" {
+		return true, nil
+	}
+
 	osVersionUpToDate, err := versionutils.CompareVersions(*currentOSVersion, "=", newOSC.Spec.InPlaceUpdates.OperatingSystemVersion)
 	if err != nil {
 		return false, fmt.Errorf("failed comparing current OS version %q with OS version in the new OSC %q: %w", *currentOSVersion, newOSC.Spec.InPlaceUpdates.OperatingSystemVersion, err)
