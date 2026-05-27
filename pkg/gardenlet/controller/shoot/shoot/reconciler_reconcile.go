@@ -116,7 +116,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeAPIServerTaskTimeout = defaultTimeout
 		shootSSHAccessEnabled          = v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
 		isRestoringHAControlPlane      = botanist.IsRestorePhase() && v1beta1helper.IsHAControlPlaneConfigured(o.Shoot.GetInfo())
-		isHibernating                  = o.Shoot.HibernationEnabled && !o.Shoot.GetInfo().Status.IsHibernated && !o.Shoot.IsWorkerless
+		isHibernatingShootWithWorkers  = o.Shoot.HibernationEnabled && !o.Shoot.GetInfo().Status.IsHibernated && !o.Shoot.IsWorkerless
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -182,7 +182,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		initialValiDeployment = g.Add(flow.Task{
 			Name:         "Deploying initial shoot logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       isHibernating,
+			SkipIf:       isHibernatingShootWithWorkers,
 			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
 		})
 		deployReferencedResources = g.Add(flow.Task{
@@ -877,7 +877,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initialValiDeployment, waitUntilGardenerResourceManagerReady).InsertIf(isHibernating, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(initialValiDeployment, waitUntilGardenerResourceManagerReady).InsertIf(isHibernatingShootWithWorkers, waitUntilWorkerReady),
 		})
 		deployPlutonoForLogging = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
