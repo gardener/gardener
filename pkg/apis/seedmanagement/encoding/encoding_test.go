@@ -7,7 +7,6 @@ package encoding_test
 import (
 	"encoding/json"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -60,53 +59,6 @@ var _ = Describe("Encoding", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(config))
-		})
-
-		// TODO(oliver-goetz): Remove this test when Gardener v1.142 has been released.
-		It("should decode config with numeric tokenExpirationDuration format (migration from time.Duration)", func() {
-			// This simulates a ConfigMap created before PR #14333 which changed TokenExpirationDuration
-			// from time.Duration (serialized as nanoseconds) to metav1.Duration (serialized as string).
-			// 6 hours in nanoseconds = 6 * 60 * 60 * 1e9 = 21600000000000
-			configBytes := []byte(`{
-				"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
-				"kind": "GardenletConfiguration",
-				"controllers": {
-					"tokenRequestorWorkloadIdentity": {
-						"concurrentSyncs": 5,
-						"tokenExpirationDuration": 21600000000000
-					}
-				}
-			}`)
-
-			result, err := DecodeGardenletConfigurationFromBytes(configBytes, false)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Controllers).NotTo(BeNil())
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity).NotTo(BeNil())
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(Equal(new(5)))
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(Equal(&metav1.Duration{Duration: 6 * time.Hour}))
-		})
-
-		// TODO(oliver-goetz): Remove this test when Gardener v1.142 has been released.
-		It("should decode config with string tokenExpirationDuration format", func() {
-			configBytes := []byte(`{
-				"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
-				"kind": "GardenletConfiguration",
-				"controllers": {
-					"tokenRequestorWorkloadIdentity": {
-						"concurrentSyncs": 5,
-						"tokenExpirationDuration": "6h"
-					}
-				}
-			}`)
-
-			result, err := DecodeGardenletConfigurationFromBytes(configBytes, false)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Controllers).NotTo(BeNil())
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity).NotTo(BeNil())
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(Equal(new(5)))
-			Expect(result.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(Equal(&metav1.Duration{Duration: 6 * time.Hour}))
 		})
 	})
 
