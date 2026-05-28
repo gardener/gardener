@@ -22,6 +22,14 @@ func (b *GardenadmBotanist) NewRuntimeGardenerResourceManager() (resourcemanager
 		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SystemComponentTolerations:           gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
-		VPAInPlaceUpdatesEnabled:             features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
+		PodKubeAPIServerLoadBalancingWebhook: resourcemanager.PodKubeAPIServerLoadBalancingWebhook{
+			Enabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
+				{
+					NamespaceSelector: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
+				},
+			},
+		},
+		VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
 	})
 }
