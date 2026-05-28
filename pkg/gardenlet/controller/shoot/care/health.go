@@ -898,7 +898,7 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		}
 	}
 
-	if registeredNodes < desiredMachines {
+	if readyAndSchedulableNodes < desiredMachines {
 		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
 			return "NodesScalingUp", err
 		}
@@ -948,10 +948,6 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 }
 
 func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []*corev1.Node, registeredNodes, desiredMachines int) error {
-	if registeredNodes <= desiredMachines {
-		return nil
-	}
-
 	// Check if all nodes that are cordoned map to machines with a deletion timestamp. This might be the case during
 	// a rolling update.
 	nodeNameToMachine := map[string]machinev1alpha1.Machine{}
