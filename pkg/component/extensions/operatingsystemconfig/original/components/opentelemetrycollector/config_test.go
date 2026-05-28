@@ -291,9 +291,9 @@ users:
 
 			otelHealthCheckUnit := extensionsv1alpha1.Unit{
 				Name:    UnitNameHealthCheck,
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
+				Content: new(`[Unit]
 Description=opentelemetry-collector health check
 OnFailure=opentelemetry-collector-restart.service
 [Install]
@@ -308,9 +308,9 @@ ExecStart=/bin/sh -c "curl -fsSm 15 http://127.0.0.1:18888/metrics; rc=$?; [ $rc
 
 			otelRestartUnit := extensionsv1alpha1.Unit{
 				Name:    UnitNameRestart,
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
+				Content: new(`[Unit]
 Description=Restart opentelemetry-collector.service when opentelemetry-collector-healthcheck.service fails
 [Service]
 Type=oneshot
@@ -319,9 +319,9 @@ ExecStart=/bin/sh -c "systemctl restart opentelemetry-collector.service"`),
 
 			otelTimerUnit := extensionsv1alpha1.Unit{
 				Name:    UnitNameTimer,
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
+				Content: new(`[Unit]
 Description=Run opentelemetry-collector-healthcheck.service every 5 minutes to validate that opentelemetry-collector.service is working as expected
 [Install]
 WantedBy=multi-user.target
