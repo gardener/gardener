@@ -136,9 +136,7 @@ WantedBy=multi-user.target
 [Service]
 Type=oneshot
 ExecCondition=/bin/sh -c "systemctl is-active --quiet ` + UnitName + `"
-# Error code 28 is for timeout
-# https://curl.se/libcurl/c/libcurl-errors.html
-ExecStart=/bin/sh -c "curl -fsSm 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics; rc=$?; [ $rc -eq 28 ] && exit 1 || exit 0"; echo $?`),
+ExecStart=/bin/sh -c "curl -fsSm 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics"`),
 	}
 }
 
