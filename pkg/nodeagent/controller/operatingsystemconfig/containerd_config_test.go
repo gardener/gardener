@@ -354,7 +354,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			It("should translate a v2 compliant runtime path to its v4 equivalent", func() {
 				osc.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 					{
-						Op:   ptr.To(extensionsv1alpha1.AddPluginPathOperation),
+						Op:   new(extensionsv1alpha1.AddPluginPathOperation),
 						Path: []string{"io.containerd.grpc.v1.cri", "containerd", "runtimes", "foo"},
 						Values: &apiextensionsv1.JSON{
 							Raw: []byte("{\"runtime_type\": \"bar.123\"}"),
