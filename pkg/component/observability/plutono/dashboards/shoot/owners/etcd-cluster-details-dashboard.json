@@ -291,9 +291,10 @@
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "max": 1,
+          "min": 0,
+          "show": true,
+          "decimals": 0
         },
         {
           "format": "short",
@@ -301,13 +302,15 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": true,
+          "decimals": 0
         }
       ],
       "yaxis": {
         "align": false,
         "alignLevel": null
-      }
+      },
+      "decimals": 0
     },
     {
       "aliasColors": {},
@@ -315,7 +318,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Shows the membership state (0=Follower, 1=Learner, 2=Leader) for all etcd members over time",
+      "description": "Shows the membership state for all etcd members over time (0=Learner, 1=Follower, 2=Leader)",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -357,7 +360,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}*2 + etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}",
+          "expr": "2 * etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"} + (1 - etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}) * (1 - etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "{{pod}}",
@@ -387,23 +390,26 @@
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "max": 2,
+          "min": 0,
+          "show": true,
+          "decimals": 0
         },
         {
           "format": "short",
-          "label": "0=Follower  1=Learner  2=Leader",
+          "label": "0=Learner  1=Follower  2=Leader",
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": true,
+          "decimals": 0
         }
       ],
       "yaxis": {
         "align": false,
         "alignLevel": null
-      }
+      },
+      "decimals": 0
     },
     {
       "datasource": "prometheus",
@@ -1114,7 +1120,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Active Peers (All Members)",
+      "title": "Active Peers",
       "tooltip": {
         "shared": true,
         "sort": 0,
