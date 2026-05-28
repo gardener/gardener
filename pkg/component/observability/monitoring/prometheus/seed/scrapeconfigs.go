@@ -8,7 +8,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -25,7 +24,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("prometheus-" + Label),
+					Replacement: new("prometheus-" + Label),
 					TargetLabel: "job",
 				}},
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -38,9 +37,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				Name: "cadvisor",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels:     ptr.To(true),
-				HonorTimestamps: ptr.To(false),
-				MetricsPath:     ptr.To("/federate"),
+				HonorLabels:     new(true),
+				HonorTimestamps: new(false),
+				MetricsPath:     new("/federate"),
 				Params: map[string][]string{
 					"match[]": {
 						`{__name__=~"container_.+",job="cadvisor",namespace=~"extension-(.+)"}`,
@@ -64,7 +63,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("cadvisor"),
+						Replacement: new("cadvisor"),
 						TargetLabel: "job",
 					},
 				},

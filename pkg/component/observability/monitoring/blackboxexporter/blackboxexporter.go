@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -194,7 +193,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: b.runtimeNamespace(),
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		configMap = &corev1.ConfigMap{
@@ -221,7 +220,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &b.values.Replicas,
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector:             &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: labelValue}},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -232,9 +231,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  b.values.PriorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To[int64](65534),
-							FSGroup:            ptr.To[int64](65534),
+							RunAsNonRoot:       new(true),
+							RunAsUser:          new(int64(65534)),
+							FSGroup:            new(int64(65534)),
 							SupplementalGroups: []int64{1},
 							SeccompProfile:     &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 						},
@@ -253,7 +252,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								Ports: []corev1.ContainerPort{
 									{
@@ -274,7 +273,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 							Options: []corev1.PodDNSConfigOption{
 								{
 									Name:  "ndots",
-									Value: ptr.To("3"),
+									Value: new("3"),
 								},
 							},
 						},
@@ -328,9 +327,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   deployment.Spec.Selector,
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -341,8 +340,8 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 	if b.values.ClusterType == component.ClusterTypeSeed {
 		networkPolicyPort := networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Port:     new(intstr.FromInt32(port)),
+			Protocol: new(corev1.ProtocolTCP),
 		}
 
 		if b.values.IsGardenCluster {
@@ -365,18 +364,18 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 					Name:       deployment.Name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:       containerName,
-							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues:    new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -413,7 +412,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			Name: volumeNameClusterAccess,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To(int32(420)),
+					DefaultMode: new(int32(420)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -422,7 +421,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 									Key:  secrets.DataKeyCertificateBundle,
 									Path: secrets.DataKeyCertificateBundle,
 								}},
-								Optional: ptr.To(false),
+								Optional: new(false),
 							},
 						},
 						{
@@ -432,7 +431,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 									Key:  resourcesv1alpha1.DataKeyToken,
 									Path: resourcesv1alpha1.DataKeyToken,
 								}},
-								Optional: ptr.To(false),
+								Optional: new(false),
 							},
 						},
 					},

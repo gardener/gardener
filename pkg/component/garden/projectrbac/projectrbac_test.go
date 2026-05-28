@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -120,8 +119,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -146,8 +145,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -164,8 +163,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -184,8 +183,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -203,8 +202,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -221,8 +220,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -247,8 +246,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -265,8 +264,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -283,8 +282,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -309,8 +308,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -327,8 +326,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -345,8 +344,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 				Labels: map[string]string{
 					"gardener.cloud/role":         "extension-project-role",
@@ -367,8 +366,8 @@ var _ = Describe("ProjectRBAC", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Project",
 					Name:               projectName,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(false),
+					Controller:         new(true),
+					BlockOwnerDeletion: new(false),
 				}},
 				Labels: map[string]string{
 					"gardener.cloud/role":         "extension-project-role",

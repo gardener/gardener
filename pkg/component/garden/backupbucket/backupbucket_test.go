@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -152,7 +151,7 @@ var _ = Describe("BackupBucket", func() {
 
 		When("seed is present and region is overridden", func() {
 			BeforeEach(func() {
-				backupConfig.Region = ptr.To("overridden-region")
+				backupConfig.Region = new("overridden-region")
 				values.Seed = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed"}}
 			})
 
@@ -166,11 +165,11 @@ var _ = Describe("BackupBucket", func() {
 					APIVersion:         "core.gardener.cloud/v1beta1",
 					Kind:               "Seed",
 					Name:               "seed",
-					BlockOwnerDeletion: ptr.To(true),
-					Controller:         ptr.To(true),
+					BlockOwnerDeletion: new(true),
+					Controller:         new(true),
 				}}
 				expectedBackupBucket.Spec.Provider.Region = "overridden-region"
-				expectedBackupBucket.Spec.SeedName = ptr.To("seed")
+				expectedBackupBucket.Spec.SeedName = new("seed")
 				metav1.SetMetaDataAnnotation(&expectedBackupBucket.ObjectMeta, "gardener.cloud/operation", "reconcile")
 				metav1.SetMetaDataAnnotation(&expectedBackupBucket.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
 				Expect(actual).To(DeepEqual(expectedBackupBucket))

@@ -15,7 +15,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -82,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentityNamespace).CreateToken(ctx, workloadIdentityName, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
-			ExpirationSeconds: ptr.To((int64(r.Config.TokenExpirationDuration.Seconds()))),
+			ExpirationSeconds: new((int64(r.Config.TokenExpirationDuration.Seconds()))),
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {

@@ -10,7 +10,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot/controlplane"
 )
@@ -32,14 +31,14 @@ var _ = Describe("ScrapeConfig", func() {
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						Params:      map[string][]string{"module": {"http_apiserver"}},
-						MetricsPath: ptr.To("/probe"),
+						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{kubeAPIServerTarget},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								TargetLabel: "type",
-								Replacement: ptr.To("seed"),
+								Replacement: new("seed"),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__address__"},
@@ -53,12 +52,12 @@ var _ = Describe("ScrapeConfig", func() {
 							},
 							{
 								TargetLabel: "__address__",
-								Replacement: ptr.To("blackbox-exporter:9115"),
+								Replacement: new("blackbox-exporter:9115"),
 								Action:      "replace",
 							},
 							{
 								Action:      "replace",
-								Replacement: ptr.To("blackbox-apiserver"),
+								Replacement: new("blackbox-apiserver"),
 								TargetLabel: "job",
 							},
 						},

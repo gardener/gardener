@@ -93,7 +93,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  operatorclient.RuntimeScheme,
-		GracefulShutdownTimeout: ptr.To(5 * time.Second),
+		GracefulShutdownTimeout: new(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		Metrics: metricsserver.Options{

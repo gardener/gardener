@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -148,7 +147,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -162,14 +161,14 @@ var _ = BeforeSuite(func() {
 		testCancel,
 		mgr,
 		gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration{
-			ConcurrentSyncs:              ptr.To(5),
+			ConcurrentSyncs:              new(5),
 			AdditionalNamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{"custom": "namespace"}}},
 		},
 		gardencorev1beta1.SeedNetworks{
 			IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			Pods:       "10.0.0.0/16",
 			Services:   "10.1.0.0/16",
-			Nodes:      ptr.To("10.2.0.0/16"),
+			Nodes:      new("10.2.0.0/16"),
 			BlockCIDRs: []string{blockedCIDR},
 		},
 		hostnameresolver.NewNoOpProvider(),

@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -136,7 +135,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 			BeforeEach(func() {
 				b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
-						CredentialsBindingName: ptr.To("some-binding"),
+						CredentialsBindingName: new("some-binding"),
 					},
 				})
 			})

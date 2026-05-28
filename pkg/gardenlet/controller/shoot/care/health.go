@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -460,9 +459,9 @@ func (h *Health) checkControlPlane(
 
 	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.ControlPlaneNamespace); err != nil {
-			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
 		} else if len(scaledDownDeploymentNames) > 0 {
-			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas by dependency-watchdog-prober: %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas by dependency-watchdog-prober: %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
 		}
 	}
 
@@ -752,7 +751,7 @@ func (h *Health) CheckClusterNodes(
 			if msg == "" {
 				return nil, err
 			}
-			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, msg, err.Error())), nil
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, msg, err.Error())), nil
 		}
 	}
 
@@ -763,7 +762,7 @@ func (h *Health) CheckClusterNodes(
 		}
 
 		if err := CheckForExpiredNodeLeases(nodeList, leaseList, h.clock); err != nil {
-			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "TooManyExpiredNodeLeases", err.Error())), nil
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "TooManyExpiredNodeLeases", err.Error())), nil
 		}
 	}
 

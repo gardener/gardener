@@ -169,7 +169,7 @@ func (r *Reconciler) instantiateComponents(
 ) {
 	var wildcardCertSecretName *string
 	if wildcardCertSecret != nil {
-		wildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
+		wildcardCertSecretName = new(wildcardCertSecret.GetName())
 	}
 
 	// crds
@@ -521,7 +521,7 @@ func (r *Reconciler) newEtcd(
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
-		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementNever)
+		evictionRequirement = new(v1beta1constants.EvictionRequirementNever)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
@@ -535,7 +535,7 @@ func (r *Reconciler) newEtcd(
 		}
 
 	case v1beta1constants.ETCDRoleEvents:
-		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+		evictionRequirement = new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
@@ -563,9 +563,9 @@ func (r *Reconciler) newEtcd(
 
 	highAvailabilityEnabled := helper.HighAvailabilityEnabled(garden)
 
-	replicas := ptr.To[int32](1)
+	replicas := new(int32(1))
 	if highAvailabilityEnabled {
-		replicas = ptr.To[int32](3)
+		replicas = new(int32(3))
 	}
 
 	return etcd.New(
@@ -775,7 +775,7 @@ func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardene
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
-		Replicas: ptr.To(replicas),
+		Replicas: new(replicas),
 	}
 }
 
@@ -864,7 +864,7 @@ func (r *Reconciler) newKubeControllerManager(
 
 	if controllerManager := garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager; controllerManager != nil {
 		config = controllerManager.KubeControllerManagerConfig
-		certificateSigningDuration = ptr.To(controllerManager.CertificateSigningDuration.Duration)
+		certificateSigningDuration = new(controllerManager.CertificateSigningDuration.Duration)
 	}
 
 	return sharedcomponent.NewKubeControllerManager(
@@ -881,13 +881,13 @@ func (r *Reconciler) newKubeControllerManager(
 		false,
 		certificateSigningDuration,
 		kubecontrollermanager.ControllerWorkers{
-			GarbageCollector:    ptr.To(250),
-			Namespace:           ptr.To(100),
-			ResourceQuota:       ptr.To(100),
-			ServiceAccountToken: ptr.To(0),
+			GarbageCollector:    new(250),
+			Namespace:           new(100),
+			ResourceQuota:       new(100),
+			ServiceAccountToken: new(0),
 		},
 		kubecontrollermanager.ControllerSyncPeriods{
-			ResourceQuota: ptr.To(time.Minute),
+			ResourceQuota: new(time.Minute),
 		},
 		map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 	)
@@ -1530,7 +1530,7 @@ func (r *Reconciler) newPrometheusGarden(
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "200Gi")),
 		Replicas:          2,
-		Retention:         ptr.To(monitoringv1.Duration("30d")),
+		Retention:         new(monitoringv1.Duration("30d")),
 		RetentionSize:     "190GB",
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
@@ -1750,9 +1750,9 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 	}
 
 	values := &extension.Values{
-		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+		Class:      new(extensionsv1alpha1.ExtensionClassGarden),
 		Namespace:  r.GardenNamespace,
-		NamePrefix: ptr.To("garden-"),
+		NamePrefix: new("garden-"),
 		Extensions: make(map[string]extension.Extension),
 	}
 
@@ -1814,7 +1814,7 @@ func (r *Reconciler) newEtcdMainBackupEntry(log logr.Logger, garden *operatorv1a
 		Name:           r.GardenNamespace + "--" + string(garden.UID),
 		Type:           backup.Provider,
 		ProviderConfig: backup.ProviderConfig,
-		Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+		Class:          new(extensionsv1alpha1.ExtensionClassGarden),
 		Region:         region,
 		SecretRef: corev1.SecretReference{
 			Name:      backup.SecretRef.Name,

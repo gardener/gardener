@@ -6,7 +6,6 @@ package providersecretlabels
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -31,7 +30,7 @@ func (h *Handler) AddToManager(mgr manager.Manager) error {
 
 	webhook := &admission.Webhook{
 		Handler:      h,
-		RecoverPanic: ptr.To(true),
+		RecoverPanic: new(true),
 	}
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)

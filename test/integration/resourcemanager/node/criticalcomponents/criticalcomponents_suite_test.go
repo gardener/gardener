@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -96,7 +95,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -108,7 +107,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&criticalcomponents.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.NodeCriticalComponentsControllerConfig{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())

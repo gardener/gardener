@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -80,7 +79,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	units = append(units, getOpenTelemetryCollectorUnit())
 	files = append(files, collectorConfigFile, getOpenTelemetryCollectorCAFile(ctx), extensionsv1alpha1.File{
 		Path:        openTelemetryCollectorBinaryPath,
-		Permissions: ptr.To[uint32](0700),
+		Permissions: new(uint32(0700)),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{
 				Image:           ctx.Images[imagevector.ContainerImageNameOpentelemetryCollector].String(),
@@ -89,7 +88,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 	}, extensionsv1alpha1.File{
 		Path:        openTelemetryCollectorKubeconfigPath,
-		Permissions: ptr.To[uint32](0600),
+		Permissions: new(uint32(0600)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				// Plain text

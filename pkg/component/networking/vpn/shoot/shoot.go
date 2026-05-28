@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,7 +50,6 @@ const (
 	labelValue = "vpn-shoot"
 
 	managedResourceName = "shoot-core-vpn-shoot"
-	name                = "vpn-shoot"
 	deploymentName      = "vpn-shoot"
 	containerName       = "vpn-shoot"
 	initContainerName   = "vpn-shoot-init"
@@ -155,24 +153,24 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, scrapeConfig, func() error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
 		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
-			HonorLabels: ptr.To(false),
-			MetricsPath: ptr.To("/probe"),
+			HonorLabels: new(false),
+			MetricsPath: new("/probe"),
 			Params:      map[string][]string{"module": {"http_apiserver"}},
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 				Role:       monitoringv1alpha1.KubernetesRolePod,
-				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+				APIServer:  new("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: shoot.AccessSecretName},
 					Key:                  resourcesv1alpha1.DataKeyToken,
 				}},
 				// This is needed because we do not fetch the correct cluster CA bundle right now
-				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 			}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					TargetLabel: "type",
-					Replacement: ptr.To("seed"),
+					Replacement: new("seed"),
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
@@ -183,7 +181,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
 					TargetLabel:  "__param_target",
 					Regex:        `(.+);(.+)`,
-					Replacement:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port) + `/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1`),
+					Replacement:  new("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port) + `/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1`),
 					Action:       "replace",
 				},
 				{
@@ -193,12 +191,12 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 				},
 				{
 					TargetLabel: "__address__",
-					Replacement: ptr.To("blackbox-exporter:9115"),
+					Replacement: new("blackbox-exporter:9115"),
 					Action:      "replace",
 				},
 				{
 					Action:      "replace",
-					Replacement: ptr.To("tunnel-probe-apiserver-proxy"),
+					Replacement: new("tunnel-probe-apiserver-proxy"),
 					TargetLabel: "job",
 				},
 			},
@@ -222,7 +220,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					{
 						Alert: "VPNShootNoPods",
 						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + deploymentName + `"} == 0`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
 							"severity":   "critical",
@@ -237,7 +235,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					{
 						Alert: "VPNHAShootNoPods",
 						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + deploymentName + `"} == 0`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
 							"severity":   "critical",
@@ -252,7 +250,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					{
 						Alert: "VPNProbeAPIServerProxyFailed",
 						Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn-test",
 							"severity":   "critical",
@@ -433,7 +431,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		networkPolicy = &networkingv1.NetworkPolicy{
@@ -518,12 +516,12 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			})
 		}
 		containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+			Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 		})
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -578,9 +576,9 @@ func (v *vpnShoot) podDisruptionBudget() client.Object {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 
@@ -598,7 +596,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 			},
 		},
 		Spec: corev1.PodSpec{
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 			ServiceAccountName:           serviceAccount.Name,
 			PriorityClassName:            "system-cluster-critical",
 			DNSPolicy:                    corev1.DNSDefault,
@@ -641,8 +639,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               ptr.To(false),
-			AllowPrivilegeEscalation: ptr.To(false),
+			Privileged:               new(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -664,8 +662,8 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               ptr.To(false),
-			AllowPrivilegeEscalation: ptr.To(false),
+			Privileged:               new(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -700,8 +698,8 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To(int32(replicas)),
+			RevisionHistoryLimit: new(int32(2)),
+			Replicas:             new(int32(replicas)),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -727,8 +725,8 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 		},
 		Spec: appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To(int32(replicas)), // #nosec: G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
+			RevisionHistoryLimit: new(int32(2)),
+			Replicas:             new(int32(replicas)), // #nosec: G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
@@ -862,7 +860,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 			Name: item.volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](0400),
+					DefaultMode: new(int32(0400)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -902,7 +900,7 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretTLSAuth.Name,
-				DefaultMode: ptr.To[int32](0400),
+				DefaultMode: new(int32(0400)),
 			},
 		},
 	})
@@ -949,7 +947,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: ptr.To(true),
+			Privileged: new(true),
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{

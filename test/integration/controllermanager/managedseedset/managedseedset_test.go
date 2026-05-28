@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -139,10 +138,10 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     ptr.To("100.128.0.0/11"),
-						Services: ptr.To("100.72.0.0/13"),
+						Pods:     new("100.128.0.0/11"),
+						Services: new("100.72.0.0/13"),
 					},
 				},
 			},
@@ -187,15 +186,15 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: ptr.To("foo"),
+				CloudProfileName: new("foo"),
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo"),
+					Type: new("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("replica-name.example.com"),
+					Domain: new("replica-name.example.com"),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo",
@@ -206,18 +205,18 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 								Type: "some-machine-type",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 							Maximum:        2,
 							Minimum:        1,
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+							MaxUnavailable: new(intstr.FromInt32(1)),
 						},
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: ptr.To("shoot-operator-foo"),
+				SecretBindingName: new("shoot-operator-foo"),
 			},
 		}
 
@@ -240,9 +239,9 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					Spec:       shoot.Spec,
 				},
 				UpdateStrategy: &seedmanagementv1alpha1.UpdateStrategy{
-					Type: ptr.To(seedmanagementv1alpha1.RollingUpdateStrategyType),
+					Type: new(seedmanagementv1alpha1.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagementv1alpha1.RollingUpdateStrategy{
-						Partition: ptr.To[int32](0),
+						Partition: new(int32(0)),
 					},
 				},
 			},
@@ -324,7 +323,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Update the Replicas to 2")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = ptr.To[int32](2)
+			managedSeedSet.Spec.Replicas = new(int32(2))
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			By("Make one replica ready, to enable controller to pick the next replica")
@@ -348,7 +347,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Scale-up the Replicas to 2")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = ptr.To[int32](2)
+			managedSeedSet.Spec.Replicas = new(int32(2))
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			By("Make one replica ready, to enable controller to pick the next replica")
@@ -363,7 +362,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Scale-down the Replicas to 1")
 			patch = client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = ptr.To[int32](1)
+			managedSeedSet.Spec.Replicas = new(int32(1))
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			Eventually(func(g Gomega) {

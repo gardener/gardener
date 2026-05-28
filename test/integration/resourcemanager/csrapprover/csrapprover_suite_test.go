@@ -19,7 +19,6 @@ import (
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -141,7 +140,7 @@ var _ = BeforeSuite(func() {
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -154,7 +153,7 @@ var _ = BeforeSuite(func() {
 	Expect((&csrapprover.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
-			ConcurrentSyncs:  ptr.To(5),
+			ConcurrentSyncs:  new(5),
 			MachineNamespace: &testNamespace.Name,
 		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

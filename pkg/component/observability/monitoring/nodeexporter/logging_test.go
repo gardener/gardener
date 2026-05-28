@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
@@ -39,7 +38,7 @@ var _ = Describe("Logging", func() {
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
 										Parser:      "node-exporter" + "-parser",
-										ReserveData: ptr.To(true),
+										ReserveData: new(true),
 									},
 								},
 							},

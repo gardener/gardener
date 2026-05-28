@@ -67,7 +67,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	kernelSettingsFile := extensionsv1alpha1.File{
 		Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: new(uint32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Data: fileContent.String(),
@@ -78,8 +78,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	systemdSysctlUnit := extensionsv1alpha1.Unit{
 		// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
 		Name:      "systemd-sysctl.service",
-		Command:   ptr.To(extensionsv1alpha1.CommandRestart),
-		Enable:    ptr.To(true),
+		Command:   new(extensionsv1alpha1.CommandRestart),
+		Enable:    new(true),
 		FilePaths: []string{kernelSettingsFile.Path},
 	}
 

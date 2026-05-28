@@ -13,7 +13,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -252,7 +251,7 @@ var _ = Describe("Warnings", func() {
 		It("should warn when maxEmptyBulkDelete is set for shoots using kubernetes < v1.33", func() {
 			shoot.Spec.Kubernetes.Version = "1.32.4"
 			shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
-				MaxEmptyBulkDelete: ptr.To(int32(5)),
+				MaxEmptyBulkDelete: new(int32(5)),
 			}
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
 		})
@@ -277,7 +276,7 @@ var _ = Describe("Warnings", func() {
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
 			},
 
-			Entry("should return a warning when secretBindingName is set", ptr.To("my-secret-binding"),
+			Entry("should return a warning when secretBindingName is set", new("my-secret-binding"),
 				ContainElement(Equal("spec.secretBindingName is deprecated and will be disallowed starting with Kubernetes 1.34. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"))),
 			Entry("should not return a warning when secretBindingName is not set", nil, BeEmpty()),
 		)
@@ -285,13 +284,13 @@ var _ = Describe("Warnings", func() {
 		Context("spec.cloudProfileName", func() {
 			It("should not return a warning when cloudProfileName is set and the Kubernetes version is < v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.32.3"
-				shoot.Spec.CloudProfileName = ptr.To("local-profile")
+				shoot.Spec.CloudProfileName = new("local-profile")
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
 			})
 
 			It("should return a warning when cloudProfileName is set and the Kubernetes version is >= v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.33.1"
-				shoot.Spec.CloudProfileName = ptr.To("local-profile")
+				shoot.Spec.CloudProfileName = new("local-profile")
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.cloudProfileName field. The field is deprecated")))
 			})
 
@@ -313,8 +312,8 @@ var _ = Describe("Warnings", func() {
 			It("should print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is >= v1.35", func() {
 				shoot.Spec.Kubernetes.Version = "1.35.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-					Enabled: ptr.To(true),
-					Mode:    ptr.To(core.ProxyModeIPVS),
+					Enabled: new(true),
+					Mode:    new(core.ProxyModeIPVS),
 				}
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are using IPVS mode for kube-proxy")))
 			})
@@ -322,8 +321,8 @@ var _ = Describe("Warnings", func() {
 			It("should not print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is < v1.35", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-					Enabled: ptr.To(true),
-					Mode:    ptr.To(core.ProxyModeIPVS),
+					Enabled: new(true),
+					Mode:    new(core.ProxyModeIPVS),
 				}
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
 			})
@@ -331,13 +330,13 @@ var _ = Describe("Warnings", func() {
 			It("should print a warning when kube-proxy mode is switched to 'IPVS' for Kubernetes versions < 1.35", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-					Enabled: ptr.To(true),
-					Mode:    ptr.To(core.ProxyModeIPVS),
+					Enabled: new(true),
+					Mode:    new(core.ProxyModeIPVS),
 				}
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-					Enabled: ptr.To(true),
-					Mode:    ptr.To(core.ProxyModeIPTables),
+					Enabled: new(true),
+					Mode:    new(core.ProxyModeIPTables),
 				}
 
 				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))
@@ -347,7 +346,7 @@ var _ = Describe("Warnings", func() {
 		Describe("spec.kubernetes.kubeScheduler.kubeMaxPDVols", func() {
 			It("should print a warning when kubeMaxPDVols is set", func() {
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
-					KubeMaxPDVols: ptr.To("20"),
+					KubeMaxPDVols: new("20"),
 				}
 
 				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field")))
@@ -369,7 +368,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when enableAnonymousAuthentication is set",
-				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)},
+				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)},
 				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")),
 			),
 		)
@@ -393,7 +392,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when watchCacheSizes.default is set",
-				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: ptr.To[int32](50)}},
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: new(int32(50))}},
 				ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
 			),
 		)
@@ -416,7 +415,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when secretName is set",
-				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
 		)
@@ -437,7 +436,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when enableAnonymousAuthentication is set",
-				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)},
+				&core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)},
 				ContainElement(Equal("you are setting the kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")),
 			),
 		)
@@ -460,7 +459,7 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when watchCacheSizes.default is set",
-				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: ptr.To[int32](50)}},
+				&core.KubeAPIServerConfig{WatchCacheSizes: &core.WatchCacheSizes{Default: new(int32(50))}},
 				ContainElement(Equal("you are setting the kubeAPIServer.watchCacheSizes.default field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.")),
 			),
 		)
@@ -488,14 +487,14 @@ var _ = Describe("Warnings", func() {
 				BeEmpty(),
 			),
 			Entry("should return a warning when secretName is set for a single provider",
-				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				field.NewPath("spec", "dns"),
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
 			Entry("should return warnings when secretName is set for multiple providers",
 				&core.DNS{Providers: []core.DNSProvider{
-					{SecretName: ptr.To("secret1")},
-					{SecretName: ptr.To("secret2")},
+					{SecretName: new("secret1")},
+					{SecretName: new("secret2")},
 				}},
 				field.NewPath("spec", "dns"),
 				And(
@@ -506,7 +505,7 @@ var _ = Describe("Warnings", func() {
 			Entry("should return warning only for provider with secretName set",
 				&core.DNS{Providers: []core.DNSProvider{
 					{SecretName: nil},
-					{SecretName: ptr.To("secret")},
+					{SecretName: new("secret")},
 				}},
 				field.NewPath("spec", "dns"),
 				And(
@@ -515,7 +514,7 @@ var _ = Describe("Warnings", func() {
 				),
 			),
 			Entry("should use custom field path in warning message",
-				&core.DNS{Providers: []core.DNSProvider{{SecretName: ptr.To("secret")}}},
+				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				field.NewPath("custom", "path"),
 				ContainElement(Equal("you are setting the custom.path.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use custom.path.providers[0].credentialsRef instead.")),
 			),

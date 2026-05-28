@@ -7,7 +7,6 @@ package matchers_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -34,6 +33,6 @@ var _ = Describe("Reference Matcher", func() {
 	})
 
 	Context("when values are pointers", func() {
-		test(ptr.To("foo"), ptr.To("foo"))
+		test(new("foo"), new("foo"))
 	})
 })

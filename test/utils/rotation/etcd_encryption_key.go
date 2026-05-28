@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -96,7 +95,7 @@ func (v *ETCDEncryptionKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(etcdEncryptionKeyRotation.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 	g.Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	g.Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
-	g.Expect(etcdEncryptionKeyRotation.AutoCompleteAfterPrepared).To(Equal(ptr.To(true)))
+	g.Expect(etcdEncryptionKeyRotation.AutoCompleteAfterPrepared).To(Equal(new(true)))
 }
 
 // ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.

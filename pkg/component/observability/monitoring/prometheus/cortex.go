@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -40,8 +39,8 @@ func (p *prometheus) cortexContainer() corev1.Container {
 			Protocol:      corev1.ProtocolTCP,
 		}},
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			ReadOnlyRootFilesystem:   ptr.To(true),
+			AllowPrivilegeEscalation: new(false),
+			ReadOnlyRootFilesystem:   new(true),
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{

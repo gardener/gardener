@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,7 +34,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should increase the generation if the spec has changed", func() {
-			newManagedSeedSet.Spec.Replicas = ptr.To[int32](1)
+			newManagedSeedSet.Spec.Replicas = new(int32(1))
 
 			strategy.PrepareForUpdate(ctx, newManagedSeedSet, oldManagedSeedSet)
 			Expect(newManagedSeedSet.Generation).To(Equal(oldManagedSeedSet.Generation + 1))

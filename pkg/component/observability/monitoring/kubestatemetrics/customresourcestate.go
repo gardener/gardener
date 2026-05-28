@@ -10,7 +10,6 @@ import (
 
 	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
 	"k8s.io/kube-state-metrics/v2/pkg/metric"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -193,7 +192,7 @@ func newOperatorExtensionCustomResourceStateMetrics() customresourcestate.Resour
 			Kind:    "Extension",
 			Version: "v1alpha1",
 		},
-		MetricNamePrefix: ptr.To("garden"),
+		MetricNamePrefix: new("garden"),
 		Labels: customresourcestate.Labels{
 			LabelsFromPath: map[string][]string{
 				"name": {"metadata", "name"},

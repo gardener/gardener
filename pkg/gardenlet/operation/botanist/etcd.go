@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -50,7 +49,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	values.DefragmentationSchedule = &defragmentationSchedule
 
 	if !b.Shoot.HibernationEnabled {
-		values.Replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
+		values.Replicas = new(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
 	switch role {
@@ -75,12 +74,12 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 func getEvictionRequirement(c etcd.Class, s *shoot.Shoot) *string {
 	if c == etcd.ClassImportant && (s.Purpose == gardencorev1beta1.ShootPurposeProduction || s.Purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
-		return ptr.To(v1beta1constants.EvictionRequirementNever)
+		return new(v1beta1constants.EvictionRequirementNever)
 	}
 	if metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		return ptr.To(v1beta1constants.EvictionRequirementNever)
+		return new(v1beta1constants.EvictionRequirementNever)
 	}
-	return ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
+	return new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 }
 
 // DeployEtcd deploys the etcd main and events.
@@ -232,7 +231,7 @@ func (b *Botanist) restoreMultiNodeEtcd(ctx context.Context) error {
 			// is added to the reconciliation flow that depends on the etcd's replica count.
 			component.SetReplicas(originalReplicas)
 		}()
-		component.SetReplicas(ptr.To[int32](1))
+		component.SetReplicas(new(int32(1)))
 	}
 
 	return flow.Parallel(

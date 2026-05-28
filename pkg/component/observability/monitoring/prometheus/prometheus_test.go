@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -175,7 +174,7 @@ honor_labels: true`
 					"name": name,
 				},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -333,7 +332,7 @@ honor_labels: true`
 					EvaluationInterval: "1m",
 					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 						ScrapeInterval: "1m",
-						ReloadStrategy: ptr.To(monitoringv1.HTTPReloadStrategyType),
+						ReloadStrategy: new(monitoringv1.HTTPReloadStrategyType),
 						ExternalLabels: externalLabels,
 						AdditionalScrapeConfigs: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "prometheus-" + name + "-additional-scrape-configs"},
@@ -349,8 +348,8 @@ honor_labels: true`
 							},
 						},
 						PriorityClassName: priorityClassName,
-						Replicas:          ptr.To[int32](1),
-						Shards:            ptr.To[int32](1),
+						Replicas:          new(int32(1)),
+						Shards:            new(int32(1)),
 						Image:             &image,
 						ImagePullPolicy:   corev1.PullIfNotPresent,
 						Version:           version,
@@ -361,7 +360,7 @@ honor_labels: true`
 							},
 						},
 						ServiceAccountName: "prometheus-" + name,
-						SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
+						SecurityContext:    &corev1.PodSecurityContext{RunAsUser: new(int64(0))},
 						Storage: &monitoringv1.StorageSpec{
 							VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 								EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
@@ -382,7 +381,7 @@ honor_labels: true`
 						ProbeNamespaceSelector:          &metav1.LabelSelector{},
 						ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
 						Web: &monitoringv1.PrometheusWebSpec{
-							MaxConnections: ptr.To[int32](1024),
+							MaxConnections: new(int32(1024)),
 						},
 					},
 					RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
@@ -436,7 +435,7 @@ honor_labels: true`
 					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -445,11 +444,11 @@ honor_labels: true`
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("100M"),
 							},
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -591,7 +590,7 @@ honor_labels: true`
 				Labels:    map[string]string{"foo": "bar"},
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme: new(monitoringv1.SchemeHTTPS),
 			},
 		}
 		additionalConfigMap = &corev1.ConfigMap{
@@ -653,13 +652,13 @@ honor_labels: true`
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "prometheus",
 					"role": "monitoring",
 					"name": name,
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -735,9 +734,9 @@ honor_labels: true`
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -748,7 +747,7 @@ honor_labels: true`
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
@@ -776,7 +775,7 @@ honor_labels: true`
 
 			When("namespace UID is set", func() {
 				BeforeEach(func() {
-					values.NamespaceUID = ptr.To(apitypes.UID("foo"))
+					values.NamespaceUID = new(apitypes.UID("foo"))
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -786,8 +785,8 @@ honor_labels: true`
 						Kind:               "Namespace",
 						Name:               namespace,
 						UID:                "foo",
-						Controller:         ptr.To(true),
-						BlockOwnerDeletion: ptr.To(true),
+						Controller:         new(true),
+						BlockOwnerDeletion: new(true),
 					}}
 
 					prometheusRule.Namespace = namespace
@@ -994,7 +993,7 @@ honor_labels: true`
 
 				When("an additional alertmanager is configured via the Alertmananagers slice", func() {
 					BeforeEach(func() {
-						values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &Alertmanager{Name: alertmanagerName2, Namespace: ptr.To(alertmanagerNamespace2)})
+						values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &Alertmanager{Name: alertmanagerName2, Namespace: new(alertmanagerNamespace2)})
 					})
 
 					It("should successfully deploy all resources", func() {
@@ -1132,7 +1131,7 @@ tls_config:
 							SourceLabels: []monitoringv1.LabelName{"project", "name"},
 							Regex:        "(.+);(.+)",
 							Action:       "replace",
-							Replacement:  ptr.To("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
+							Replacement:  new("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
 							TargetLabel:  "shoot_dashboard_url",
 						}}
 					})
@@ -1147,7 +1146,7 @@ tls_config:
 
 				It("should successfully deploy all resources", func() {
 					prometheusObj := prometheusFor(nil, false)
-					prometheusObj.Spec.Replicas = ptr.To(int32(2))
+					prometheusObj.Spec.Replicas = new(int32(2))
 
 					prometheusRule.Namespace = namespace
 					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
@@ -1263,8 +1262,8 @@ query_range:
 							Protocol:      corev1.ProtocolTCP,
 						}},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
-							ReadOnlyRootFilesystem:   ptr.To(true),
+							AllowPrivilegeEscalation: new(false),
+							ReadOnlyRootFilesystem:   new(true),
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -1461,7 +1460,7 @@ query_range:
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceTarget.Spec.SecretRefs[0].Name}},
-							KeepObjects:  ptr.To(false),
+							KeepObjects:  new(false),
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						},
 						Status: healthyManagedResourceStatus,
@@ -1473,7 +1472,7 @@ query_range:
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 
 					Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecretTarget.Immutable).To(Equal(new(true)))
 					Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 

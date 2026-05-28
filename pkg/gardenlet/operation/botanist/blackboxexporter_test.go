@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -119,7 +118,7 @@ var _ = Describe("BlackboxExporter", func() {
 				botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 					Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
 						Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
-							Enabled: ptr.To(false),
+							Enabled: new(false),
 						},
 					},
 				}

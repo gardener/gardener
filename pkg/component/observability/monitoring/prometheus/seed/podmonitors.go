@@ -7,7 +7,6 @@ package seed
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 // CentralPodMonitors returns the central PodMonitor resources for the seed prometheus.
@@ -46,14 +45,14 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 							Regex:        `([^:]+)`,
 							Action:       "replace",
-							Replacement:  ptr.To(`$1`),
+							Replacement:  new(`$1`),
 							TargetLabel:  "__tmp_kubernetes_pod_ip_ipv4",
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 							Regex:        `(.+:.+)`,
 							Action:       "replace",
-							Replacement:  ptr.To(`[$1]`),
+							Replacement:  new(`[$1]`),
 							TargetLabel:  "__tmp_kubernetes_pod_ip_ipv6_with_brackets",
 						},
 						{
@@ -64,7 +63,7 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 							},
 							Regex:       `(.*);(.*);(.+)`,
 							Action:      "replace",
-							Replacement: ptr.To(`$1$2:$3`),
+							Replacement: new(`$1$2:$3`),
 							TargetLabel: "__address__",
 						},
 						{
@@ -85,9 +84,9 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 				// 	{Key: "prometheus.io/port", Operator: metav1.LabelSelectorOpExists},
 				// }},
 				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxy: monitoringv1.HTTPConfigWithProxy{
-						HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						HTTPConfig: monitoringv1.HTTPConfig{TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 					},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						// TODO: These annotations should actually be labels so that PodMonitorSpec.Selector can be used
@@ -116,21 +115,21 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 							Regex:        `(.+:.+:.+)`,
 							Action:       "replace",
-							Replacement:  ptr.To(`[$1]`),
+							Replacement:  new(`[$1]`),
 							TargetLabel:  "__tmp_kubernetes_pod_ip",
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 							Regex:        `([^:]+)`,
 							Action:       "replace",
-							Replacement:  ptr.To(`$1`),
+							Replacement:  new(`$1`),
 							TargetLabel:  "__tmp_kubernetes_pod_ip",
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__tmp_kubernetes_pod_ip", "__meta_kubernetes_pod_annotation_prometheus_io_port"},
 							Regex:        `(.+);(.+)`,
 							Action:       "replace",
-							Replacement:  ptr.To(`$1:$2`),
+							Replacement:  new(`$1:$2`),
 							TargetLabel:  "__address__",
 						},
 						{

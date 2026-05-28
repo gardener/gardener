@@ -23,7 +23,6 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -137,8 +136,8 @@ var _ = Describe("validator", func() {
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Architecture: ptr.To("amd64"),
-							Usable:       ptr.To(true),
+							Architecture: new("amd64"),
+							Usable:       new(true),
 							Capabilities: gardencorev1beta1.Capabilities{
 								"architecture":   []string{v1beta1constants.ArchitectureAMD64},
 								"someCapability": []string{"value2"},
@@ -149,8 +148,8 @@ var _ = Describe("validator", func() {
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Usable:       ptr.To(false),
-							Architecture: ptr.To("amd64"),
+							Usable:       new(false),
+							Architecture: new("amd64"),
 							Capabilities: gardencorev1beta1.Capabilities{
 								"architecture": []string{v1beta1constants.ArchitectureAMD64},
 							},
@@ -164,8 +163,8 @@ var _ = Describe("validator", func() {
 								Type:    volumeType,
 								MinSize: &minVolSizeMachine,
 							},
-							Architecture: ptr.To("amd64"),
-							Usable:       ptr.To(true),
+							Architecture: new("amd64"),
+							Usable:       new(true),
 							Capabilities: gardencorev1beta1.Capabilities{
 								"architecture": []string{v1beta1constants.ArchitectureAMD64},
 							},
@@ -175,8 +174,8 @@ var _ = Describe("validator", func() {
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Architecture: ptr.To("arm64"),
-							Usable:       ptr.To(true),
+							Architecture: new("arm64"),
+							Usable:       new(true),
 							Capabilities: gardencorev1beta1.Capabilities{
 								"architecture": []string{v1beta1constants.ArchitectureARM64},
 							},
@@ -186,13 +185,13 @@ var _ = Describe("validator", func() {
 						{
 							Name:   volumeType,
 							Class:  "super-premium",
-							Usable: ptr.To(true),
+							Usable: new(true),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
-							Usable:  ptr.To(true),
+							Usable:  new(true),
 						},
 					},
 					Regions: []gardencorev1beta1.Region{
@@ -258,13 +257,13 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName:       ptr.To("profile"),
+					CloudProfileName:       new("profile"),
 					Region:                 "europe",
-					SecretBindingName:      ptr.To("my-secret"),
-					CredentialsBindingName: ptr.To("my-secret"),
+					SecretBindingName:      new("my-secret"),
+					CredentialsBindingName: new("my-secret"),
 					SeedName:               &seedName,
 					DNS: &core.DNS{
-						Domain: ptr.To("shoot." + baseDomain),
+						Domain: new("shoot." + baseDomain),
 						Providers: []core.DNSProvider{
 							{
 								Type: &unmanagedDNSProvider,
@@ -296,7 +295,7 @@ var _ = Describe("validator", func() {
 										Name:    validMachineImageName,
 										Version: "0.0.1",
 									},
-									Architecture: ptr.To("amd64"),
+									Architecture: new("amd64"),
 								},
 								Minimum: 1,
 								Maximum: 1,
@@ -501,9 +500,9 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				shoot = *shootBase.DeepCopy()
 				oldShoot = shoot.DeepCopy()
-				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(false)}
 
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 			})
 
 			DescribeTable("should allow/deny hibernating the Shoot according to HibernationPossible constraint",
@@ -855,7 +854,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should pass on update for a unchanged CloudProfile reference with CloudProfileName set accordingly", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfileName = new("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "CloudProfile",
 						Name: "profile",
@@ -868,7 +867,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should pass for a given CloudProfile by CloudProfileName", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfileName = new("profile")
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Validate(ctx, attrs, nil)
 
@@ -915,7 +914,7 @@ var _ = Describe("validator", func() {
 
 				It("should pass validation on a change from a CloudProfileName to a NamespacedCloudProfile", func() {
 					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.CloudProfileName = ptr.To("profile")
+					oldShoot.Spec.CloudProfileName = new("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
 						Name: profileName,
@@ -962,7 +961,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&anotherNamespacedCloudProfile)).To(Succeed())
 
 					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.CloudProfileName = ptr.To("profile")
+					oldShoot.Spec.CloudProfileName = new("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
 						Name: "another-namespaced-profile",
@@ -1069,7 +1068,7 @@ var _ = Describe("validator", func() {
 							Name:    "testing",
 							Machine: core.Machine{Type: "a-special-machine-type"},
 							Volume: &core.Volume{
-								Type: ptr.To("a-special-volume-type"),
+								Type: new("a-special-volume-type"),
 							},
 						},
 					}
@@ -1334,7 +1333,7 @@ var _ = Describe("validator", func() {
 
 				shoot.Spec.SecretBindingName = nil
 				oldShoot = shoot.DeepCopy()
-				shoot.Spec.CredentialsBindingName = ptr.To("new-credentialsbinding")
+				shoot.Spec.CredentialsBindingName = new("new-credentialsbinding")
 
 				credentialsBinding.CredentialsRef = corev1.ObjectReference{
 					Namespace:  shoot.Namespace,
@@ -1774,7 +1773,7 @@ var _ = Describe("validator", func() {
 
 					otherShoot := versionedShoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
-					otherShoot.Spec.SeedName = ptr.To("other-seed")
+					otherShoot.Spec.SeedName = new("other-seed")
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					otherShoot = versionedShoot.DeepCopy()
@@ -2131,7 +2130,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
 							Name:                 "plugin-1",
-							KubeconfigSecretName: ptr.To("secret-1"),
+							KubeconfigSecretName: new("secret-1"),
 						},
 					}
 
@@ -2151,7 +2150,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
 							Name:                 "plugin-1",
-							KubeconfigSecretName: ptr.To("secret-1"),
+							KubeconfigSecretName: new("secret-1"),
 						},
 					}
 					shoot.Spec.Resources = []core.NamedResourceReference{
@@ -2181,7 +2180,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
 							Name:                 "plugin-1",
-							KubeconfigSecretName: ptr.To("secret-1"),
+							KubeconfigSecretName: new("secret-1"),
 						},
 					}
 					shoot.Spec.Resources = []core.NamedResourceReference{
@@ -2212,7 +2211,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
 						{
 							Name:                 "plugin-1",
-							KubeconfigSecretName: ptr.To("secret-1"),
+							KubeconfigSecretName: new("secret-1"),
 						},
 					}
 					shoot.Spec.Resources = []core.NamedResourceReference{
@@ -2256,7 +2255,7 @@ var _ = Describe("validator", func() {
 
 			It("update should pass because validation of network disjointedness should not be executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
+				shoot.Spec.Networking.Pods = new(v1beta1constants.DefaultVPNRangeV6)
 				oldShoot.Spec.SeedName = shoot.Spec.SeedName
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2271,7 +2270,7 @@ var _ = Describe("validator", func() {
 
 			It("update should fail because validation of network disjointedness is executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
+				shoot.Spec.Networking.Pods = new(v1beta1constants.DefaultVPNRangeV6)
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2285,7 +2284,7 @@ var _ = Describe("validator", func() {
 
 			It("delete should pass because validation of network disjointedness should not be executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
+				shoot.Spec.Networking.Pods = new(v1beta1constants.DefaultVPNRangeV6)
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2825,26 +2824,26 @@ var _ = Describe("validator", func() {
 
 			It("should work to create a cluster with a worker group kubernetes version set smaller than control plane version", func() {
 				shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.26.6")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.26.6")}
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
-				Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(ptr.To("1.26.6")))
+				Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(new("1.26.6")))
 			})
 
 			It("should work to create a cluster with a worker group kubernetes version set equal to control plane version", func() {
 				shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To(highestSupportedVersion.Version)}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new(highestSupportedVersion.Version)}
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
-				Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(ptr.To(highestSupportedVersion.Version)))
+				Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(new(highestSupportedVersion.Version)))
 			})
 
 			It("should reject to create a cluster with an expired worker group kubernetes version", func() {
@@ -2882,7 +2881,7 @@ var _ = Describe("validator", func() {
 						Image: &core.ShootMachineImage{
 							Name: validMachineImageName,
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					Minimum: 1,
 					Maximum: 1,
@@ -2927,7 +2926,7 @@ var _ = Describe("validator", func() {
 					Name: namespacedCloudProfile.Name,
 				}
 
-				expiredVersion = gardencorev1beta1.ExpirableVersion{Version: "1.26.8", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}
+				expiredVersion = gardencorev1beta1.ExpirableVersion{Version: "1.26.8", Classification: new(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}
 
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 					expiredVersion,
@@ -2952,7 +2951,7 @@ var _ = Describe("validator", func() {
 
 			It("should allow to create a cluster with an extended Kubernetes version", func() {
 				namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes = (cloudProfile.DeepCopy()).Spec.Kubernetes
-				namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})
+				namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = new(metav1.Time{Time: time.Now().Add(48 * time.Hour)})
 				Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
 
 				shoot.Spec.Kubernetes.Version = expiredVersion.Version
@@ -2981,7 +2980,7 @@ var _ = Describe("validator", func() {
 							Name:    validMachineImageName,
 							Version: "0.0.1",
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					Minimum: 1,
 					Maximum: 1,
@@ -3005,8 +3004,8 @@ var _ = Describe("validator", func() {
 					CPU:          resource.MustParse("5"),
 					GPU:          resource.MustParse("0"),
 					Memory:       resource.MustParse("5Gi"),
-					Architecture: ptr.To("amd64"),
-					Usable:       ptr.To(true),
+					Architecture: new("amd64"),
+					Usable:       new(true),
 				}
 
 				kubeletConfig = &core.KubeletConfig{
@@ -3217,7 +3216,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to invalid architecture", func() {
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("foo")
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new("foo")
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 				err := admissionHandler.Validate(ctx, attrs, nil)
@@ -3229,7 +3228,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the machine in the cloud provider doesn't support the architecture in the Shoot", func() {
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("arm64")
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new("arm64")
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
@@ -3514,7 +3513,7 @@ var _ = Describe("validator", func() {
 							Image: &core.ShootMachineImage{
 								Name: validMachineImageName,
 							},
-							Architecture: ptr.To("arm64"),
+							Architecture: new("arm64"),
 						},
 						Minimum: 1,
 						Maximum: 1,
@@ -3550,7 +3549,7 @@ var _ = Describe("validator", func() {
 						Name:    validMachineImageName,
 						Version: nonExpiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -3608,7 +3607,7 @@ var _ = Describe("validator", func() {
 						Name:    validMachineImageName,
 						Version: expiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -3664,7 +3663,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to a machine image version with no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 						Name:    validMachineImageName,
 						Version: latestNonExpiredVersion,
@@ -3752,12 +3751,12 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to a machine image version with non-supported architecture, expired version and no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
-					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 						Name:    validMachineImageName,
 						Version: expiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -3852,7 +3851,7 @@ var _ = Describe("validator", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: "1.2.3",
 									},
-									KubeletVersionConstraint: ptr.To("< 1.26"),
+									KubeletVersionConstraint: new("< 1.26"),
 									CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 										{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									}},
@@ -3868,7 +3867,7 @@ var _ = Describe("validator", func() {
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version: "1.2.3",
 										},
-										KubeletVersionConstraint: ptr.To("< 1.26"),
+										KubeletVersionConstraint: new("< 1.26"),
 										Architectures:            []string{"amd64"},
 									},
 								},
@@ -3885,7 +3884,7 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -3907,7 +3906,7 @@ var _ = Describe("validator", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: "1.2.3",
 									},
-									KubeletVersionConstraint: ptr.To(">= 1.26"),
+									KubeletVersionConstraint: new(">= 1.26"),
 									CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
 										{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
 									},
@@ -3925,7 +3924,7 @@ var _ = Describe("validator", func() {
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version: "1.2.3",
 										},
-										KubeletVersionConstraint: ptr.To(">= 1.26"),
+										KubeletVersionConstraint: new(">= 1.26"),
 										Architectures:            []string{"amd64"},
 									},
 								},
@@ -3942,10 +3941,10 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 							Kubernetes: &core.WorkerKubernetes{
-								Version: ptr.To("1.25.0"),
+								Version: new("1.25.0"),
 							},
 						},
 					}
@@ -3997,7 +3996,7 @@ var _ = Describe("validator", func() {
 									Name:    "cr-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4052,7 +4051,7 @@ var _ = Describe("validator", func() {
 									Name:    "cr-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						})
 
@@ -4108,7 +4107,7 @@ var _ = Describe("validator", func() {
 									Name:    "cr-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						})
 
@@ -4149,7 +4148,7 @@ var _ = Describe("validator", func() {
 						Name:    imageName1,
 						Version: nonExpiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("amd64")
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new("amd64")
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -4248,7 +4247,7 @@ var _ = Describe("validator", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: "1.2.3",
 									},
-									KubeletVersionConstraint: ptr.To("< 1.26"),
+									KubeletVersionConstraint: new("< 1.26"),
 									Architectures:            []string{"amd64"},
 								},
 							},
@@ -4264,7 +4263,7 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4288,7 +4287,7 @@ var _ = Describe("validator", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: "1.2.3",
 									},
-									KubeletVersionConstraint: ptr.To(">= 1.26"),
+									KubeletVersionConstraint: new(">= 1.26"),
 									Architectures:            []string{"amd64"},
 								},
 							},
@@ -4304,15 +4303,15 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 							Kubernetes: &core.WorkerKubernetes{
-								Version: ptr.To("1.24.0"),
+								Version: new("1.24.0"),
 							},
 						},
 					}
 					newShoot := shoot.DeepCopy()
-					newShoot.Spec.Provider.Workers[0].Kubernetes.Version = ptr.To("1.25.0")
+					newShoot.Spec.Provider.Workers[0].Kubernetes.Version = new("1.25.0")
 
 					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Validate(ctx, attrs, nil)
@@ -4345,7 +4344,7 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.4",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4361,7 +4360,7 @@ var _ = Describe("validator", func() {
 								// expired version
 								Version: "1.2.4",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 					}
 
@@ -4405,7 +4404,7 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.4",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4421,7 +4420,7 @@ var _ = Describe("validator", func() {
 									// updated to lower expired version
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4463,7 +4462,7 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4479,7 +4478,7 @@ var _ = Describe("validator", func() {
 									// updated to higher expired version
 									Version: "1.2.4",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -4516,7 +4515,7 @@ var _ = Describe("validator", func() {
 								},
 								InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 									Supported:           true,
-									MinVersionForUpdate: ptr.To("1.2.3"),
+									MinVersionForUpdate: new("1.2.3"),
 								},
 							},
 							{
@@ -4554,7 +4553,7 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To("1.2.3"),
+										MinVersionForUpdate: new("1.2.3"),
 									},
 								},
 								{
@@ -4579,9 +4578,9 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4596,9 +4595,9 @@ var _ = Describe("validator", func() {
 									// updated to higher non-expired version
 									Version: "1.2.5",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4624,7 +4623,7 @@ var _ = Describe("validator", func() {
 								},
 								InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 									Supported:           true,
-									MinVersionForUpdate: ptr.To("1.2.4"),
+									MinVersionForUpdate: new("1.2.4"),
 								},
 							},
 							{
@@ -4637,7 +4636,7 @@ var _ = Describe("validator", func() {
 								},
 								InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 									Supported:           true,
-									MinVersionForUpdate: ptr.To("1.2.2"),
+									MinVersionForUpdate: new("1.2.2"),
 								},
 							},
 							{
@@ -4649,7 +4648,7 @@ var _ = Describe("validator", func() {
 								},
 								InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 									Supported:           true,
-									MinVersionForUpdate: ptr.To("1.2.2"),
+									MinVersionForUpdate: new("1.2.2"),
 								},
 							},
 						},
@@ -4668,7 +4667,7 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To("1.2.4"),
+										MinVersionForUpdate: new("1.2.4"),
 									},
 								},
 								{
@@ -4679,7 +4678,7 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To("1.2.2"),
+										MinVersionForUpdate: new("1.2.2"),
 									},
 								},
 								{
@@ -4689,7 +4688,7 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To("1.2.2"),
+										MinVersionForUpdate: new("1.2.2"),
 									},
 								},
 							},
@@ -4706,9 +4705,9 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.2",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4723,9 +4722,9 @@ var _ = Describe("validator", func() {
 									// updated to higher expired version
 									Version: "1.2.5",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4750,7 +4749,7 @@ var _ = Describe("validator", func() {
 								},
 								InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 									Supported:           true,
-									MinVersionForUpdate: ptr.To("1.2.3"),
+									MinVersionForUpdate: new("1.2.3"),
 								},
 							},
 							{
@@ -4762,7 +4761,7 @@ var _ = Describe("validator", func() {
 								},
 								InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 									Supported:           true,
-									MinVersionForUpdate: ptr.To("1.2.3"),
+									MinVersionForUpdate: new("1.2.3"),
 								},
 							},
 						},
@@ -4780,7 +4779,7 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To("1.2.3"),
+										MinVersionForUpdate: new("1.2.3"),
 									},
 								},
 								{
@@ -4790,7 +4789,7 @@ var _ = Describe("validator", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To("1.2.3"),
+										MinVersionForUpdate: new("1.2.3"),
 									},
 								},
 							},
@@ -4806,9 +4805,9 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.3",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4822,9 +4821,9 @@ var _ = Describe("validator", func() {
 									Name:    "constraint-image-name",
 									Version: "1.2.4",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
-							UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							UpdateStrategy: new(core.AutoInPlaceUpdate),
 						},
 					}
 
@@ -4877,7 +4876,7 @@ var _ = Describe("validator", func() {
 					Name:    validMachineImageName,
 					Version: nonExpiredVersion,
 				}
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{
@@ -4927,7 +4926,7 @@ var _ = Describe("validator", func() {
 					Name:    validMachineImageName,
 					Version: nonExpiredVersion,
 				}
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 
 				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{
@@ -4979,7 +4978,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 					},
 				}
@@ -5031,8 +5030,8 @@ var _ = Describe("validator", func() {
 				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes,
 					gardencorev1beta1.MachineType{
 						Name:         unavailableMachine,
-						Architecture: ptr.To("amd64"),
-						Usable:       ptr.To(true),
+						Architecture: new("amd64"),
+						Usable:       new(true),
 					},
 				)
 				cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
@@ -5068,14 +5067,14 @@ var _ = Describe("validator", func() {
 				cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
 					{
 						Name:   "machine-type-1",
-						Usable: ptr.To(false),
+						Usable: new(false),
 						Capabilities: gardencorev1beta1.Capabilities{
 							"architecture": []string{v1beta1constants.ArchitectureARM64},
 						},
 					},
 					{
 						Name:   "machine-type-2",
-						Usable: ptr.To(true),
+						Usable: new(true),
 						Capabilities: gardencorev1beta1.Capabilities{
 							"architecture": []string{v1beta1constants.ArchitectureAMD64},
 						},
@@ -5087,13 +5086,13 @@ var _ = Describe("validator", func() {
 					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
 						{
 							Name:         "machine-type-1",
-							Usable:       ptr.To(false),
-							Architecture: ptr.To("arm64"),
+							Usable:       new(false),
+							Architecture: new("arm64"),
 						},
 						{
 							Name:         "machine-type-2",
-							Usable:       ptr.To(true),
-							Architecture: ptr.To("amd64"),
+							Usable:       new(true),
+							Architecture: new("amd64"),
 						},
 					}
 				}
@@ -5142,7 +5141,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type: &notAllowed,
@@ -5165,13 +5164,13 @@ var _ = Describe("validator", func() {
 					{
 						Name:   unavailableVolume,
 						Class:  "super-premium",
-						Usable: ptr.To(true),
+						Usable: new(true),
 					},
 					{
 						Name:    volumeType2,
 						Class:   "super-premium",
 						MinSize: &minVolSize,
-						Usable:  ptr.To(true),
+						Usable:  new(true),
 					},
 				}
 
@@ -5193,7 +5192,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type: &unavailableVolume,
@@ -5217,13 +5216,13 @@ var _ = Describe("validator", func() {
 					{
 						Name:   unavailableVolume,
 						Class:  "super-premium",
-						Usable: ptr.To(false),
+						Usable: new(false),
 					},
 					{
 						Name:    volumeType2,
 						Class:   "super-premium",
 						MinSize: &minVolSize,
-						Usable:  ptr.To(true),
+						Usable:  new(true),
 					},
 				}
 
@@ -5245,7 +5244,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type: &unavailableVolume,
@@ -5266,13 +5265,13 @@ var _ = Describe("validator", func() {
 					{
 						Name:   volumeType,
 						Class:  "super-premium",
-						Usable: ptr.To(false),
+						Usable: new(false),
 					},
 					{
 						Name:    volumeType2,
 						Class:   "super-premium",
 						MinSize: &minVolSize,
-						Usable:  ptr.To(true),
+						Usable:  new(true),
 					},
 				}
 
@@ -5284,7 +5283,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type: &volumeType,
@@ -5325,7 +5324,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type:       &volumeType2,
@@ -5339,7 +5338,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type:       &volumeType,
@@ -5353,7 +5352,7 @@ var _ = Describe("validator", func() {
 								Name:    validMachineImageName,
 								Version: "0.0.1",
 							},
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 						Volume: &core.Volume{
 							Type:       &volumeType,
@@ -5410,7 +5409,7 @@ var _ = Describe("validator", func() {
 									"key": "value"
 									}`)},
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 					CRI: &core.CRI{
 						Name: core.CRINameContainerD,
@@ -5743,7 +5742,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should allow update of binding when shoot.spec.seedName is not nil", func() {
-					shoot.Spec.SeedName = ptr.To(newSeed.Name)
+					shoot.Spec.SeedName = new(newSeed.Name)
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -5752,7 +5751,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding if target seed does not exist", func() {
-					shoot.Spec.SeedName = ptr.To(newSeed.Name + " other")
+					shoot.Spec.SeedName = new(newSeed.Name + " other")
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -5762,8 +5761,8 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding if spec other than .spec.seedName is changed", func() {
-					shoot.Spec.SeedName = ptr.To(newSeed.Name)
-					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+					shoot.Spec.SeedName = new(newSeed.Name)
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -5789,7 +5788,7 @@ var _ = Describe("validator", func() {
 
 			Context("shootIsBeingRescheduled a.k.a Control-Plane migration", func() {
 				BeforeEach(func() {
-					shoot.Spec.SeedName = ptr.To(newSeedName)
+					shoot.Spec.SeedName = new(newSeedName)
 				})
 
 				It("should reject update of binding if target seed is marked for deletion", func() {
@@ -5836,10 +5835,10 @@ var _ = Describe("validator", func() {
 				Context("default domain validation", func() {
 					It("should allow rescheduling when shoot doesn't use a default domain", func() {
 						oldShoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To("custom.example.org"),
+							Domain: new("custom.example.org"),
 						}
 						shoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To("custom.example.org"),
+							Domain: new("custom.example.org"),
 						}
 
 						attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -5854,10 +5853,10 @@ var _ = Describe("validator", func() {
 							shootDomain   = "shoot.project." + defaultDomain
 						)
 						oldShoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 						shoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 
 						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
@@ -5893,10 +5892,10 @@ var _ = Describe("validator", func() {
 							shootDomain   = "shoot.project." + defaultDomain
 						)
 						oldShoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 						shoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 
 						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
@@ -5934,10 +5933,10 @@ var _ = Describe("validator", func() {
 							shootDomain   = "shoot.project." + defaultDomain
 						)
 						oldShoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 						shoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 
 						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
@@ -5966,10 +5965,10 @@ var _ = Describe("validator", func() {
 							shootDomain   = "shoot.project." + defaultDomain
 						)
 						oldShoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 						shoot.Spec.DNS = &core.DNS{
-							Domain: ptr.To(shootDomain),
+							Domain: new(shootDomain),
 						}
 
 						seed.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{
@@ -6012,7 +6011,7 @@ var _ = Describe("validator", func() {
 
 			Context("taints and tolerations", func() {
 				BeforeEach(func() {
-					shoot.Spec.SeedName = ptr.To(newSeedName)
+					shoot.Spec.SeedName = new(newSeedName)
 					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 				})
@@ -6035,7 +6034,7 @@ var _ = Describe("validator", func() {
 				})
 
 				It("update of binding should fail because the new Seed specified in the binding has non-tolerated taints", func() {
-					shoot.Spec.SeedName = ptr.To(newSeedName)
+					shoot.Spec.SeedName = new(newSeedName)
 					newSeed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: gardencorev1beta1.SeedTaintProtected}}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -6047,8 +6046,8 @@ var _ = Describe("validator", func() {
 
 				It("update of binding should pass because shoot tolerates all taints of the seed", func() {
 					newSeed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: "foo"}}
-					shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: ptr.To("bar")}}
-					oldShoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: ptr.To("bar")}}
+					shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: new("bar")}}
+					oldShoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: new("bar")}}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -6063,7 +6062,7 @@ var _ = Describe("validator", func() {
 				BeforeEach(func() {
 					shoot.Spec.DNS = nil
 					oldShoot = *shoot.DeepCopy()
-					shoot.Spec.SeedName = ptr.To(newSeedName)
+					shoot.Spec.SeedName = new(newSeedName)
 					allocatableShoots = *resource.NewQuantity(1, resource.DecimalSI)
 					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
@@ -6081,7 +6080,7 @@ var _ = Describe("validator", func() {
 
 					otherShoot := versionedShoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
-					otherShoot.Spec.SeedName = ptr.To("other-seed")
+					otherShoot.Spec.SeedName = new("other-seed")
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					otherShoot = versionedShoot.DeepCopy()
@@ -6100,7 +6099,7 @@ var _ = Describe("validator", func() {
 
 					otherShoot := versionedShoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
-					otherShoot.Spec.SeedName = ptr.To(newSeedName)
+					otherShoot.Spec.SeedName = new(newSeedName)
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					otherShoot = versionedShoot.DeepCopy()
@@ -6119,12 +6118,12 @@ var _ = Describe("validator", func() {
 
 					otherShoot := versionedShoot.DeepCopy()
 					otherShoot.Name = "other-shoot-1"
-					otherShoot.Spec.SeedName = ptr.To(newSeedName)
+					otherShoot.Spec.SeedName = new(newSeedName)
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					otherShoot = versionedShoot.DeepCopy()
 					otherShoot.Name = "other-shoot-2"
-					otherShoot.Spec.SeedName = ptr.To(newSeedName)
+					otherShoot.Spec.SeedName = new(newSeedName)
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -6236,7 +6235,7 @@ var _ = Describe("validator", func() {
 			It("should reject shoots with conflicting configuration managed service account issuer", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					ServiceAccountConfig: &core.ServiceAccountConfig{
-						Issuer: ptr.To("foo"),
+						Issuer: new("foo"),
 					},
 				}
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
@@ -6294,7 +6293,7 @@ var _ = Describe("validator", func() {
 				const limit int32 = 3
 
 				BeforeEach(func() {
-					cloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(limit)
+					cloudProfile.Spec.Limits.MaxNodesTotal = new(limit)
 				})
 
 				It("should allow shoots within the limit", func() {

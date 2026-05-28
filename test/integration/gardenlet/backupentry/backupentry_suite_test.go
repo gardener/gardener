@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -205,7 +204,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
+				Nodes:    new("10.2.0.0/16"),
 			},
 		},
 	}
@@ -235,7 +234,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -250,8 +249,8 @@ var _ = BeforeSuite(func() {
 	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
 		Config: gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
-			ConcurrentSyncs:                  ptr.To(5),
-			DeletionGracePeriodHours:         ptr.To(deletionGracePeriodHours),
+			ConcurrentSyncs:                  new(5),
+			DeletionGracePeriodHours:         new(deletionGracePeriodHours),
 			DeletionGracePeriodShootPurposes: []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeProduction},
 		},
 		SeedName:        seed.Name,

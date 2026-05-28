@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -20,7 +19,7 @@ import (
 // DefaultCoreBackupEntry creates the default deployer for the core.gardener.cloud/v1beta1.BackupEntry resource.
 func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 	ownerRef := metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	ownerRef.BlockOwnerDeletion = ptr.To(false)
+	ownerRef.BlockOwnerDeletion = new(false)
 
 	values := &corebackupentry.Values{
 		Namespace:      b.Shoot.GetInfo().Namespace,
@@ -62,7 +61,7 @@ func (b *Botanist) DeployBackupEntry(ctx context.Context) error {
 // as source when copying etcd backups.
 func (b *Botanist) SourceBackupEntry() corebackupentry.Interface {
 	ownerRef := metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	ownerRef.BlockOwnerDeletion = ptr.To(false)
+	ownerRef.BlockOwnerDeletion = new(false)
 
 	return corebackupentry.New(
 		b.Logger,

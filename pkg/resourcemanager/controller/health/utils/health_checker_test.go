@@ -16,7 +16,6 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -356,11 +355,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("ReplicaSet", func() {
 		BeforeEach(func() {
 			healthy = &appsv1.ReplicaSet{
-				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &appsv1.ReplicaSet{
-				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &appsv1.ReplicaSet{
@@ -369,7 +368,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
 		})
@@ -380,11 +379,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("ReplicationController", func() {
 		BeforeEach(func() {
 			healthy = &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To[int32](2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: new(int32(2))},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To[int32](2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: new(int32(2))},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &corev1.ReplicationController{
@@ -393,7 +392,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To[int32](2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: new(int32(2))},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
 		})
@@ -434,11 +433,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("StatefulSet", func() {
 		BeforeEach(func() {
 			healthy = &appsv1.StatefulSet{
-				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](1)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: new(int32(1))},
 				Status: appsv1.StatefulSetStatus{CurrentReplicas: 1, ReadyReplicas: 1},
 			}
 			unhealthy = &appsv1.StatefulSet{
-				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &appsv1.StatefulSet{
@@ -447,7 +446,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 			}
 		})
@@ -458,11 +457,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("Prometheus", func() {
 		BeforeEach(func() {
 			healthy = &monitoringv1.Prometheus{
-				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](1)}},
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: new(int32(1))}},
 				Status: monitoringv1.PrometheusStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
 			}
 			unhealthy = &monitoringv1.Prometheus{
-				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](2)}},
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: new(int32(2))}},
 				Status: monitoringv1.PrometheusStatus{AvailableReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &monitoringv1.Prometheus{
@@ -471,7 +470,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](2)}},
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: new(int32(2))}},
 				Status: monitoringv1.PrometheusStatus{AvailableReplicas: 1},
 			}
 		})
@@ -482,11 +481,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("Alertmanager", func() {
 		BeforeEach(func() {
 			healthy = &monitoringv1.Alertmanager{
-				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](1)},
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: new(int32(1))},
 				Status: monitoringv1.AlertmanagerStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
 			}
 			unhealthy = &monitoringv1.Alertmanager{
-				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](2)},
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: new(int32(2))},
 				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &monitoringv1.Alertmanager{
@@ -495,7 +494,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](2)},
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: new(int32(2))},
 				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
 			}
 		})

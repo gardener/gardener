@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot/cluster"
 )
@@ -29,15 +28,15 @@ var _ = Describe("ScrapeConfig", func() {
 						Labels:    map[string]string{"prometheus": "shoot"},
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorLabels: ptr.To(false),
-						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+						HonorLabels: new(false),
+						Scheme:      new(monitoringv1.SchemeHTTPS),
 						Params: map[string][]string{
 							"module": {"http_kubernetes_service"},
 							"target": {"https://kubernetes.default.svc.cluster.local/healthz"},
 						},
-						MetricsPath: ptr.To("/probe"),
+						MetricsPath: new("/probe"),
 						// This is needed because we do not fetch the correct cluster CA bundle right now
-						TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+						TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -45,8 +44,8 @@ var _ = Describe("ScrapeConfig", func() {
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:       "Service",
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
-							APIServer:  ptr.To("https://kube-apiserver:443"),
-							TLSConfig:  &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+							APIServer:  new("https://kube-apiserver:443"),
+							TLSConfig:  &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 								Key:                  "token",
@@ -55,7 +54,7 @@ var _ = Describe("ScrapeConfig", func() {
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								TargetLabel: "type",
-								Replacement: ptr.To("shoot"),
+								Replacement: new("shoot"),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
@@ -64,14 +63,14 @@ var _ = Describe("ScrapeConfig", func() {
 							},
 							{
 								TargetLabel: "__address__",
-								Replacement: ptr.To("kube-apiserver:443"),
+								Replacement: new("kube-apiserver:443"),
 								Action:      "replace",
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
 								Regex:        `(.+)`,
 								TargetLabel:  "__metrics_path__",
-								Replacement:  ptr.To(`/api/v1/namespaces/kube-system/services/${1}:probe/proxy/probe`),
+								Replacement:  new(`/api/v1/namespaces/kube-system/services/${1}:probe/proxy/probe`),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__param_target"},
@@ -80,7 +79,7 @@ var _ = Describe("ScrapeConfig", func() {
 							},
 							{
 								Action:      "replace",
-								Replacement: ptr.To("blackbox-exporter-k8s-service-check"),
+								Replacement: new("blackbox-exporter-k8s-service-check"),
 								TargetLabel: "job",
 							},
 						},

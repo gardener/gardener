@@ -21,7 +21,6 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -228,7 +227,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 	// Get a token for this service account
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			ExpirationSeconds: ptr.To[int64](600),
+			ExpirationSeconds: new(int64(600)),
 		},
 	}
 	if err := gardenClient.SubResource("token").Create(ctx, serviceAccount, tokenRequest); err != nil {

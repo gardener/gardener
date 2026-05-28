@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -162,7 +161,7 @@ var _ = BeforeSuite(func() {
 		Clock:      fakeClock,
 		JitterFunc: func(_ time.Duration, _ float64) time.Duration { return time.Second },
 		Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
-			ConcurrentSyncs:         ptr.To(5),
+			ConcurrentSyncs:         new(5),
 			TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

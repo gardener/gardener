@@ -11,7 +11,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -74,7 +73,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	sshdEnsurerFile := extensionsv1alpha1.File{
 		Path:        pathScript,
-		Permissions: ptr.To[uint32](0755),
+		Permissions: new(uint32(0755)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -85,8 +84,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	sshdEnsurerUnit := extensionsv1alpha1.Unit{
 		Name:    "sshd-ensurer.service",
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Content: ptr.To(`[Unit]
+		Command: new(extensionsv1alpha1.CommandStart),
+		Content: new(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]

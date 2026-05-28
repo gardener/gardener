@@ -7,7 +7,6 @@ package gardener
 import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -24,8 +23,8 @@ func ReconcileTopologyAwareRoutingSettings(service *corev1.Service, topologyAwar
 	if versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) {
 		// For Kubernetes >= 1.34, only use the PreferSameZone strategy of the ServiceTrafficDistribution feature.
 		// PreferClose is deprecated. PreferSameZone is a new alias for PreferClose (https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/#preferclose-traffic-distribution-is-deprecated).
-		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+		service.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferSameZone)
 	} else {
-		service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+		service.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferClose)
 	}
 }

@@ -155,9 +155,9 @@ func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec, c
 	for i, machineType := range cloudProfile.MachineTypes {
 		effectiveArchitecture := machineType.GetArchitecture(capabilitiesDefinitions)
 		if effectiveArchitecture == "" {
-			cloudProfile.MachineTypes[i].Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+			cloudProfile.MachineTypes[i].Architecture = new(v1beta1constants.ArchitectureAMD64)
 		} else if cloudProfile.MachineTypes[i].Architecture == nil {
-			cloudProfile.MachineTypes[i].Architecture = ptr.To(effectiveArchitecture)
+			cloudProfile.MachineTypes[i].Architecture = new(effectiveArchitecture)
 		}
 	}
 }

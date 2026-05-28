@@ -484,7 +484,7 @@ func GenerateGenericKubeconfigVolume(genericKubeconfigName, accessSecretName, vo
 		Name: volumeName,
 		VolumeSource: corev1.VolumeSource{
 			Projected: &corev1.ProjectedVolumeSource{
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: new(int32(420)),
 				Sources: []corev1.VolumeProjection{
 					{
 						Secret: &corev1.SecretProjection{
@@ -495,7 +495,7 @@ func GenerateGenericKubeconfigVolume(genericKubeconfigName, accessSecretName, vo
 								Key:  secrets.DataKeyKubeconfig,
 								Path: secrets.DataKeyKubeconfig,
 							}},
-							Optional: ptr.To(false),
+							Optional: new(false),
 						},
 					},
 					{
@@ -507,7 +507,7 @@ func GenerateGenericKubeconfigVolume(genericKubeconfigName, accessSecretName, vo
 								Key:  resourcesv1alpha1.DataKeyToken,
 								Path: resourcesv1alpha1.DataKeyToken,
 							}},
-							Optional: ptr.To(false),
+							Optional: new(false),
 						},
 					},
 				},
@@ -606,9 +606,9 @@ func ConstructInternalClusterDomain(shootName, shootProject string, internalDoma
 		return nil
 	}
 	if strings.Contains(internalDomain.Domain, InternalDomainKey) {
-		return ptr.To(fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain))
+		return new(fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain))
 	}
-	return ptr.To(fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, InternalDomainKey, internalDomain.Domain))
+	return new(fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, InternalDomainKey, internalDomain.Domain))
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put

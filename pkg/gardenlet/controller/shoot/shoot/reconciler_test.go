@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -49,11 +48,11 @@ var _ = Describe("Reconciler", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{
-						{Name: "worker1", UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate)},
-						{Name: "worker2", UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate)},
-						{Name: "worker3", UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate)},
-						{Name: "worker4", UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate)},
-						{Name: "worker5", UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate)},
+						{Name: "worker1", UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate)},
+						{Name: "worker2", UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate)},
+						{Name: "worker3", UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate)},
+						{Name: "worker4", UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate)},
+						{Name: "worker5", UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate)},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -98,9 +97,9 @@ var _ = Describe("Reconciler", func() {
 	Describe("#removeNonExistentPoolsFromPendingWorkersRollouts", func() {
 		It("should remove non-existent pools from pending workers rollouts", func() {
 			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
-				{Name: "worker3", UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate)},
-				{Name: "worker4", UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate)},
-				{Name: "worker5", UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate)},
+				{Name: "worker3", UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate)},
+				{Name: "worker4", UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate)},
+				{Name: "worker5", UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate)},
 			}
 
 			removeNonExistentPoolsFromPendingWorkersRollouts(shoot, false)

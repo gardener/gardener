@@ -20,7 +20,6 @@ import (
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -144,7 +143,7 @@ var _ = Describe("ShootSystem", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -153,7 +152,7 @@ var _ = Describe("ShootSystem", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
@@ -284,8 +283,8 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
-										Port:     ptr.To(intstr.FromInt32(443)),
+										Protocol: new(corev1.ProtocolTCP),
+										Port:     new(intstr.FromInt32(443)),
 									},
 								},
 							},
@@ -314,12 +313,12 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolUDP),
-										Port:     ptr.To(intstr.FromInt32(8053)),
+										Protocol: new(corev1.ProtocolUDP),
+										Port:     new(intstr.FromInt32(8053)),
 									},
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
-										Port:     ptr.To(intstr.FromInt32(8053)),
+										Protocol: new(corev1.ProtocolTCP),
+										Port:     new(intstr.FromInt32(8053)),
 									},
 								},
 								To: []networkingv1.NetworkPolicyPeer{
@@ -339,12 +338,12 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolUDP),
-										Port:     ptr.To(intstr.FromInt32(53)),
+										Protocol: new(corev1.ProtocolUDP),
+										Port:     new(intstr.FromInt32(53)),
 									},
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
-										Port:     ptr.To(intstr.FromInt32(53)),
+										Protocol: new(corev1.ProtocolTCP),
+										Port:     new(intstr.FromInt32(53)),
 									},
 								},
 								To: []networkingv1.NetworkPolicyPeer{
@@ -396,8 +395,8 @@ var _ = Describe("ShootSystem", func() {
 							{
 								Ports: []networkingv1.NetworkPolicyPort{
 									{
-										Protocol: ptr.To(corev1.ProtocolTCP),
-										Port:     ptr.To(intstr.FromInt32(10250)),
+										Protocol: new(corev1.ProtocolTCP),
+										Port:     new(intstr.FromInt32(10250)),
 									},
 								},
 							},

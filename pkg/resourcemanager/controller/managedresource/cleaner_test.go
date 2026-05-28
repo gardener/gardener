@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -47,13 +46,13 @@ var _ = Describe("cleaner", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"foo": "bar"},
 					},
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 						{
 							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 								VolumeName:       "foo-pvc",
-								StorageClassName: ptr.To("ultra-fast"),
+								StorageClassName: new("ultra-fast"),
 							},
 						},
 					},
@@ -114,7 +113,7 @@ var _ = Describe("cleaner", func() {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					VolumeName:       "foo-pvc-foo-0",
-					StorageClassName: ptr.To("ultra-fast"),
+					StorageClassName: new("ultra-fast"),
 				},
 			}
 			Expect(c.Create(ctx, pvc)).To(Succeed())
@@ -133,7 +132,7 @@ var _ = Describe("cleaner", func() {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					VolumeName:       "foo-pvc-foo-0",
-					StorageClassName: ptr.To("ultra-fast"),
+					StorageClassName: new("ultra-fast"),
 				},
 			}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())

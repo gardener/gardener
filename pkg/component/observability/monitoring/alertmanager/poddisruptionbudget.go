@@ -8,7 +8,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
 func (a *alertManager) podDisruptionBudget() *policyv1.PodDisruptionBudget {
@@ -23,9 +22,9 @@ func (a *alertManager) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 			Labels:    a.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: a.getLabels()},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 

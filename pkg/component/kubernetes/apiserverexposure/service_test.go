@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -99,7 +98,7 @@ var _ = Describe("#Service", func() {
 				},
 				ClusterIP:      "1.1.1.1",
 				ClusterIPs:     []string{"1.1.1.1"},
-				IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyPreferDualStack),
+				IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
 			},
 		}
 

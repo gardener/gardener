@@ -148,7 +148,7 @@ var _ = Describe("Garden controller tests", func() {
 				},
 			},
 			Controller: controllerconfig.Controller{
-				SkipNameValidation: ptr.To(true),
+				SkipNameValidation: new(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -203,7 +203,7 @@ var _ = Describe("Garden controller tests", func() {
 							Annotations: loadBalancerServiceAnnotations,
 						},
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: ptr.To(true),
+							Enabled: new(true),
 						},
 					},
 				},
@@ -246,15 +246,15 @@ var _ = Describe("Garden controller tests", func() {
 			Config: operatorconfigv1alpha1.OperatorConfiguration{
 				Controllers: operatorconfigv1alpha1.ControllerConfiguration{
 					Garden: operatorconfigv1alpha1.GardenControllerConfig{
-						ConcurrentSyncs: ptr.To(5),
+						ConcurrentSyncs: new(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
-							ETCDController:      &gardenletconfigv1alpha1.ETCDController{Workers: ptr.To[int64](5)},
-							CustodianController: &gardenletconfigv1alpha1.CustodianController{Workers: ptr.To[int64](5)},
+							ETCDController:      &gardenletconfigv1alpha1.ETCDController{Workers: new(int64(5))},
+							CustodianController: &gardenletconfigv1alpha1.CustodianController{Workers: new(int64(5))},
 							BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
-								EnableBackupCompaction: ptr.To(false),
-								Workers:                ptr.To[int64](5),
-								EventsThreshold:        ptr.To[int64](100),
+								EnableBackupCompaction: new(false),
+								Workers:                new(int64(5)),
+								EventsThreshold:        new(int64(100)),
 							},
 						},
 					},
@@ -305,8 +305,8 @@ var _ = Describe("Garden controller tests", func() {
 				Spec: operatorv1alpha1.ExtensionSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{Kind: "Extension", Type: extensionType},
-						{Kind: "Extension", Type: extensionTypeBeforeKAS, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: ptr.To[gardencorev1beta1.ControllerResourceLifecycleStrategy]("BeforeKubeAPIServer")}},
-						{Kind: "Extension", Type: extensionTypeAfterWorker, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: ptr.To[gardencorev1beta1.ControllerResourceLifecycleStrategy]("AfterWorker")}},
+						{Kind: "Extension", Type: extensionTypeBeforeKAS, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: new(gardencorev1beta1.ControllerResourceLifecycleStrategy("BeforeKubeAPIServer"))}},
+						{Kind: "Extension", Type: extensionTypeAfterWorker, Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{Reconcile: new(gardencorev1beta1.ControllerResourceLifecycleStrategy("AfterWorker"))}},
 					},
 				},
 			}
@@ -626,7 +626,7 @@ spec:
 				patch := client.MergeFrom(etcd.DeepCopy())
 				etcd.Status.ObservedGeneration = &etcd.Generation
 				etcd.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue, LastUpdateTime: metav1.Now(), LastTransitionTime: metav1.Now()}}
-				etcd.Status.Ready = ptr.To(true)
+				etcd.Status.Ready = new(true)
 				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
 			}
 		}).Should(Succeed())
@@ -895,7 +895,7 @@ spec:
 			gardenlet := &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: gardenletNameWithAutoUpdate, Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
 			return gardenlet.Spec.Deployment.Helm.OCIRepository
-		}).Should(Equal(gardencorev1.OCIRepository{Ref: ptr.To("europe-docker.pkg.dev/gardener-project/releases/charts/gardener/gardenlet:v0.0.0-master+$Format:%H$")}))
+		}).Should(Equal(gardencorev1.OCIRepository{Ref: new("europe-docker.pkg.dev/gardener-project/releases/charts/gardener/gardenlet:v0.0.0-master+$Format:%H$")}))
 
 		Consistently(func(g Gomega) gardencorev1.OCIRepository {
 			gardenlet := &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: gardenletNameWithoutAutoUpdate, Namespace: testNamespace.Name}}
@@ -989,7 +989,7 @@ func newDeployment(name, namespace string) *appsv1.Deployment {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-			Replicas: ptr.To[int32](1),
+			Replicas: new(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 				Spec: corev1.PodSpec{

@@ -6,7 +6,6 @@ package gardenerupgrade
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -49,8 +48,8 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 
 			// add two more worker pools with in-place update strategies
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers,
-				DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate)),
-				DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate)),
+				DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate)),
+				DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate)),
 			)
 
 			test(NewTestContext().ForShoot(shoot))

@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -143,7 +142,7 @@ var _ = Describe("Webhook", func() {
 						"gardener.cloud/role":                      "shoot",
 						"networking.shoot.gardener.cloud/provider": extensionType,
 					},
-					DeletionTimestamp: ptr.To(metav1.Now()),
+					DeletionTimestamp: new(metav1.Now()),
 				},
 				Status: corev1.NamespaceStatus{
 					Phase: corev1.NamespaceTerminating,

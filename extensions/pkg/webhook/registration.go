@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -187,7 +186,7 @@ func ReconcileSeedWebhookConfig(ctx context.Context, c client.Client, webhookCon
 			return err
 		}
 		ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-		ownerReference.BlockOwnerDeletion = ptr.To(false)
+		ownerReference.BlockOwnerDeletion = new(false)
 	}
 
 	desiredWebhookConfig := webhookConfig.DeepCopyObject().(client.Object)
@@ -365,15 +364,15 @@ func BuildClientConfigFor(webhookPath string, namespace, componentName string, d
 
 	switch mode {
 	case ModeURL:
-		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s%s", url, path))
+		clientConfig.URL = new(fmt.Sprintf("https://%s%s", url, path))
 	case ModeURLWithServiceName:
-		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName, doNotPrefixComponentName), namespace, servicePort, path))
+		clientConfig.URL = new(fmt.Sprintf("https://%s.%s:%d%s", PrefixedName(componentName, doNotPrefixComponentName), namespace, servicePort, path))
 	case ModeService:
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Namespace: namespace,
 			Name:      PrefixedName(componentName, doNotPrefixComponentName),
 			Path:      &path,
-			Port:      ptr.To(int32(servicePort)), // #nosec: G115 - Port is validated on Kubernetes level
+			Port:      new(int32(servicePort)), // #nosec: G115 - Port is validated on Kubernetes level
 		}
 	}
 
@@ -407,7 +406,7 @@ func createAndAddToWebhookConfig(
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 		}
 
 		if webhook.TimeoutSeconds != nil {
@@ -432,7 +431,7 @@ func createAndAddToWebhookConfig(
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 		}
 
 		if webhook.TimeoutSeconds != nil {

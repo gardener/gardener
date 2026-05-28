@@ -5,8 +5,6 @@
 package logrotate
 
 import (
-	"k8s.io/utils/ptr"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -19,7 +17,7 @@ import (
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: new(uint32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Data: pathLogFiles + ` {
@@ -40,8 +38,8 @@ func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit,
 
 	serviceUnit := extensionsv1alpha1.Unit{
 		Name:   prefix + "-logrotate.service",
-		Enable: ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Enable: new(true),
+		Content: new(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
@@ -52,9 +50,9 @@ WantedBy=multi-user.target`),
 
 	timerUnit := extensionsv1alpha1.Unit{
 		Name:    prefix + "-logrotate.timer",
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10

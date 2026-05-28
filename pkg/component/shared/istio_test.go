@@ -15,7 +15,6 @@ import (
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -91,8 +90,8 @@ func createIstio(testValues istioTestValues) istio.Interface {
 
 func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 	zoneSize := len(testValues.zones)
-	minReplicas := ptr.To(max(1, zoneSize) * 2)
-	maxReplicas := ptr.To(max(1, zoneSize) * 16)
+	minReplicas := new(max(1, zoneSize) * 2)
+	maxReplicas := new(max(1, zoneSize) * 16)
 
 	networkPolicyLabels := map[string]string{
 		"networking.gardener.cloud/to-dns":                                     "allowed",
@@ -170,8 +169,8 @@ func checkAdditionalIstioGateway(cl client.Client,
 	if zone != nil {
 		zones = []string{*zone}
 
-		minReplicas = ptr.To(2)
-		maxReplicas = ptr.To(16)
+		minReplicas = new(2)
+		maxReplicas = new(16)
 
 		enforceSpreadAcrossHosts, err = ShouldEnforceSpreadAcrossHosts(context.Background(), cl, zones)
 		Expect(err).ToNot(HaveOccurred())
@@ -231,9 +230,9 @@ var _ = Describe("Istio", func() {
 			podLabels:                          map[string]string{"pod": "labels"},
 			kubeAPIServerPolicyLabel:           "to-all-test-kube-apiserver",
 			lbAnnotations:                      map[string]string{"some": "annotationValue"},
-			loadBalancerClass:                  ptr.To("non-default-load-balancer-class"),
+			loadBalancerClass:                  new("non-default-load-balancer-class"),
 			externalTrafficPolicy:              &trafficPolicy,
-			serviceExternalIP:                  ptr.To("1.2.3.4"),
+			serviceExternalIP:                  new("1.2.3.4"),
 			servicePorts:                       []corev1.ServicePort{{Port: 443}},
 			terminateLoadBalancerProxyProtocol: proxyProtocolLB,
 			vpnEnabled:                         vpnEnabled,
@@ -354,9 +353,9 @@ var _ = Describe("Istio", func() {
 			labels = map[string]string{
 				"additional": "istio-ingress-label",
 			}
-			loadBalancerClass = ptr.To("non-default-load-balancer-class")
+			loadBalancerClass = new("non-default-load-balancer-class")
 			externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
-			serviceExternalIP = ptr.To("1.1.1.1")
+			serviceExternalIP = new("1.1.1.1")
 		})
 
 		It("should fail because initial ingress gateway is missing", func() {
@@ -416,7 +415,7 @@ var _ = Describe("Istio", func() {
 
 		Context("with zone", func() {
 			BeforeEach(func() {
-				zone = ptr.To("1")
+				zone = new("1")
 			})
 
 			It("should successfully add an additional ingress gateway", func() {
@@ -548,9 +547,9 @@ var _ = Describe("Istio", func() {
 		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{istio.DefaultZoneKey: "istio-value", istio.RoleKey: istio.RoleSeed})),
 		Entry("no zone, but gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, nil, Equal(map[string]string{"gardener.cloud/role": "gardener-role", istio.RoleKey: istio.RoleSeed})),
 		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway", istio.RoleKey: istio.RoleSeed})),
-		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, ptr.To("my-zone"), Equal(map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
-		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, ptr.To("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
-		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, ptr.To("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
+		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, new("my-zone"), Equal(map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
+		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, new("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
+		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, new("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway--zone--my-zone", istio.RoleKey: istio.RoleSeed})),
 	)
 
 	DescribeTable("#IsZonalIstioExtension",

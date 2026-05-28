@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -78,7 +77,7 @@ var _ = Describe("KubeControllerManager", func() {
 			DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 			InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 			SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
-			Tolerance:               ptr.To(float64(0.1)),
+			Tolerance:               new(float64(0.1)),
 		}
 
 		nodeCIDRMask           int32 = 24
@@ -91,31 +90,31 @@ var _ = Describe("KubeControllerManager", func() {
 			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
-		clusterSigningDuration = ptr.To(time.Hour)
+		clusterSigningDuration = new(time.Hour)
 		controllerWorkers      = ControllerWorkers{
-			StatefulSet:         ptr.To(1),
-			Deployment:          ptr.To(2),
-			ReplicaSet:          ptr.To(3),
-			Endpoint:            ptr.To(4),
-			GarbageCollector:    ptr.To(5),
-			Namespace:           ptr.To(6),
-			ResourceQuota:       ptr.To(7),
-			ServiceEndpoint:     ptr.To(8),
-			ServiceAccountToken: ptr.To(9),
+			StatefulSet:         new(1),
+			Deployment:          new(2),
+			ReplicaSet:          new(3),
+			Endpoint:            new(4),
+			GarbageCollector:    new(5),
+			Namespace:           new(6),
+			ResourceQuota:       new(7),
+			ServiceEndpoint:     new(8),
+			ServiceAccountToken: new(9),
 		}
 		controllerWorkersWithDisabledControllers = ControllerWorkers{
-			StatefulSet:         ptr.To(1),
-			Deployment:          ptr.To(2),
-			ReplicaSet:          ptr.To(3),
-			Endpoint:            ptr.To(4),
-			GarbageCollector:    ptr.To(5),
-			Namespace:           ptr.To(0),
-			ResourceQuota:       ptr.To(0),
-			ServiceEndpoint:     ptr.To(8),
-			ServiceAccountToken: ptr.To(0),
+			StatefulSet:         new(1),
+			Deployment:          new(2),
+			ReplicaSet:          new(3),
+			Endpoint:            new(4),
+			GarbageCollector:    new(5),
+			Namespace:           new(0),
+			ResourceQuota:       new(0),
+			ServiceEndpoint:     new(8),
+			ServiceAccountToken: new(0),
 		}
 		controllerSyncPeriods = ControllerSyncPeriods{
-			ResourceQuota: ptr.To(time.Minute),
+			ResourceQuota: new(time.Minute),
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -154,14 +153,14 @@ var _ = Describe("KubeControllerManager", func() {
 				ResourceVersion: "1",
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "controller-manager",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -175,17 +174,17 @@ var _ = Describe("KubeControllerManager", func() {
 						Name:       "kube-controller-manager",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "kube-controller-manager",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -242,10 +241,10 @@ var _ = Describe("KubeControllerManager", func() {
 					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "kubernetes", "role": "controller-manager"}},
 					Endpoints: []monitoringv1.Endpoint{{
 						Port:   "metrics",
-						Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+						Scheme: new(monitoringv1.SchemeHTTPS),
 						HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 							HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 								HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 									Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
@@ -293,7 +292,7 @@ var _ = Describe("KubeControllerManager", func() {
 						Rules: []monitoringv1.Rule{{
 							Alert:  "KubeControllerManagerDown",
 							Expr:   intstr.FromString(`absent(up{job="` + namePrefix + `kube-controller-manager"} == 1)`),
-							For:    ptr.To(monitoringv1.Duration("15m")),
+							For:    new(monitoringv1.Duration("15m")),
 							Labels: labels,
 							Annotations: map[string]string{
 								"summary":     "Kube Controller Manager is down.",
@@ -321,7 +320,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: ptr.To[int32](1),
+					RevisionHistoryLimit: new(int32(1)),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -341,13 +340,13 @@ var _ = Describe("KubeControllerManager", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: ptr.To(false),
+							AutomountServiceAccountToken: new(false),
 							PriorityClassName:            priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    ptr.To[int64](65532),
-								RunAsGroup:   ptr.To[int64](65532),
-								FSGroup:      ptr.To[int64](65532),
+								RunAsNonRoot: new(true),
+								RunAsUser:    new(int64(65532)),
+								RunAsGroup:   new(int64(65532)),
+								FSGroup:      new(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -398,7 +397,7 @@ var _ = Describe("KubeControllerManager", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -434,7 +433,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "ca-client-current",
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},
@@ -443,7 +442,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "service-account-key-current",
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},
@@ -452,7 +451,7 @@ var _ = Describe("KubeControllerManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "kube-controller-manager-server",
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},
@@ -473,7 +472,7 @@ var _ = Describe("KubeControllerManager", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  "ca-kubelet-current",
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 						},
 					},
 				})
@@ -508,13 +507,13 @@ namespace: kube-system
 				DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
 				InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
 				SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
-				Tolerance:               ptr.To(float64(0.3)),
+				Tolerance:               new(float64(0.3)),
 			},
 			NodeCIDRMaskSize: nil,
 		}
 		configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
-		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: ptr.To[int32](26)}
-		configWithNodeCIDRMaskSizeIPv6   = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSizeIPv6: ptr.To[int32](80)}
+		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: new(int32(26))}
+		configWithNodeCIDRMaskSizeIPv6   = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSizeIPv6: new(int32(80))}
 		configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 		configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 	)
@@ -569,7 +568,7 @@ namespace: kube-system
 					{Name: managedResourceSecretName},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(true),
+				KeepObjects:  new(true),
 			},
 		}
 
@@ -596,7 +595,7 @@ namespace: kube-system
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(true),
+					KeepObjects: new(true),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -605,7 +604,7 @@ namespace: kube-system
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
@@ -755,7 +754,7 @@ namespace: kube-system
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(true),
+						KeepObjects: new(true),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -764,7 +763,7 @@ namespace: kube-system
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
@@ -929,7 +928,7 @@ namespace: kube-system
 					Namespace: namespace,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: ptr.To[int32](1),
+					Replicas: new(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
 				},
 			}
@@ -960,7 +959,7 @@ namespace: kube-system
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To[int32](1)
+				deploy.Spec.Replicas = new(int32(1))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

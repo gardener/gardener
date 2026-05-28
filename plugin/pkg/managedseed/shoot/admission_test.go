@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -54,7 +53,7 @@ var _ = Describe("Shoot", func() {
 					Namespace: namespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: ptr.To(name),
+					SeedName: new(name),
 				},
 			}
 

@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -173,7 +172,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should create an EnvoyFilter with explicit HTTP/2 when appProtocol is kubernetes.io/h2c", func() {
-			service.Spec.Ports[0].AppProtocol = ptr.To("kubernetes.io/h2c")
+			service.Spec.Ports[0].AppProtocol = new("kubernetes.io/h2c")
 			Expect(fakeClient.Update(ctx, service)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
@@ -750,7 +749,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("appProtocol handling", func() {
 			It("should detect grpc appProtocol as HTTP/2", func() {
-				service.Spec.Ports[0].AppProtocol = ptr.To("grpc")
+				service.Spec.Ports[0].AppProtocol = new("grpc")
 				Expect(fakeClient.Update(ctx, service)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
@@ -763,7 +762,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should not detect http appProtocol as HTTP/2", func() {
-				service.Spec.Ports[0].AppProtocol = ptr.To("http")
+				service.Spec.Ports[0].AppProtocol = new("http")
 				Expect(fakeClient.Update(ctx, service)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
@@ -777,7 +776,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should prioritize appProtocol over port name", func() {
 				service.Spec.Ports[0].Name = "grpc-main"
-				service.Spec.Ports[0].AppProtocol = ptr.To("http")
+				service.Spec.Ports[0].AppProtocol = new("http")
 				Expect(fakeClient.Update(ctx, service)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})

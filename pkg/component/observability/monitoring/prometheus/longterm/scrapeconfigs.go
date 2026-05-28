@@ -8,7 +8,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -26,7 +25,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("prometheus-" + Label),
+					Replacement: new("prometheus-" + Label),
 					TargetLabel: "job",
 				}},
 			},
@@ -39,7 +38,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: ptr.To("cortex-frontend"),
+					Replacement: new("cortex-frontend"),
 					TargetLabel: "job",
 				}},
 			},
@@ -47,9 +46,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + garden.Label},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels:     ptr.To(false),
-				HonorTimestamps: ptr.To(true),
-				MetricsPath:     ptr.To("/federate"),
+				HonorLabels:     new(false),
+				HonorTimestamps: new(true),
+				MetricsPath:     new("/federate"),
 				Params: map[string][]string{
 					"match[]": {
 						`{__name__="garden_shoot_info"}`,
@@ -81,7 +80,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("prometheus-" + garden.Label),
+						Replacement: new("prometheus-" + garden.Label),
 						TargetLabel: "job",
 					}},
 			},

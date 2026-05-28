@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -143,7 +142,7 @@ var _ = Describe("cleaner", func() {
 				Namespace: namespace,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				KeepObjects: ptr.To(true),
+				KeepObjects: new(true),
 			},
 		}
 		managedresourceSeed = &resourcesv1alpha1.ManagedResource{
@@ -152,8 +151,8 @@ var _ = Describe("cleaner", func() {
 				Namespace: namespace,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:       ptr.To("seed"),
-				KeepObjects: ptr.To(true),
+				Class:       new("seed"),
+				KeepObjects: new(true),
 			},
 		}
 	})

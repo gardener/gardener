@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -175,8 +174,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Port:     new(intstr.FromInt32(port)),
+			Protocol: new(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()
@@ -204,7 +203,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &k.replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)
+		deployment.Spec.RevisionHistoryLimit = new(int32(1))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -216,14 +215,14 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				SecurityContext: &corev1.PodSecurityContext{
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-					RunAsNonRoot: ptr.To(true),
-					RunAsUser:    ptr.To[int64](65532),
-					RunAsGroup:   ptr.To[int64](65532),
-					FSGroup:      ptr.To[int64](65532),
+					RunAsNonRoot: new(true),
+					RunAsUser:    new(int64(65532)),
+					RunAsGroup:   new(int64(65532)),
+					FSGroup:      new(int64(65532)),
 				},
 				Containers: []corev1.Container{
 					{
@@ -259,7 +258,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
@@ -283,7 +282,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Name: volumeNameClientCA,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](420),
+								DefaultMode: new(int32(420)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -305,7 +304,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serverSecret.Name,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: new(int32(0640)),
 							},
 						},
 					},
@@ -333,9 +332,9 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -350,17 +349,17 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Name:       v1beta1constants.DeploymentNameKubeScheduler,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    containerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff)},
 			},
 		}
 		return nil
@@ -377,7 +376,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					{
 						Alert: "KubeSchedulerDown",
 						Expr:  intstr.FromString(`absent(up{job="kube-scheduler"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeScheduler,
 							"severity":   "critical",
@@ -450,10 +449,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port:   portNameMetrics,
-				Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+				Scheme: new(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: shoot.AccessSecretName},

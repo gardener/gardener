@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -118,13 +117,13 @@ var _ = Describe("NginxIngress", func() {
 				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 					Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
 						Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
-							DNSEntryTTLSeconds: ptr.To(ttl),
+							DNSEntryTTLSeconds: new(ttl),
 						},
 					},
 				},
 				Shoot: &shootpkg.Shoot{
 					ControlPlaneNamespace: controlPlaneNamespace,
-					ExternalClusterDomain: ptr.To(externalDomain),
+					ExternalClusterDomain: new(externalDomain),
 					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
 						Provider: externalProvider,
@@ -152,7 +151,7 @@ var _ = Describe("NginxIngress", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To(externalDomain),
+					Domain: new(externalDomain),
 				},
 				Addons: &gardencorev1beta1.Addons{
 					NginxIngress: &gardencorev1beta1.NginxIngress{
@@ -163,7 +162,7 @@ var _ = Describe("NginxIngress", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				ClusterIdentity: ptr.To("shoot-cluster-identity"),
+				ClusterIdentity: new("shoot-cluster-identity"),
 			},
 		})
 
@@ -209,9 +208,9 @@ var _ = Describe("NginxIngress", func() {
 				Name:              b.Shoot.GetInfo().Name + "-ingress",
 				SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:         controlPlaneNamespace,
-				TTL:               ptr.To(ttl),
+				TTL:               new(ttl),
 				Type:              externalProvider,
-				Zone:              ptr.To(externalZone),
+				Zone:              new(externalZone),
 				DNSName:           "*.ingress." + externalDomain,
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
@@ -257,9 +256,9 @@ var _ = Describe("NginxIngress", func() {
 				Name:              b.Shoot.GetInfo().Name + "-ingress",
 				SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:         controlPlaneNamespace,
-				TTL:               ptr.To(ttl),
+				TTL:               new(ttl),
 				Type:              externalProvider,
-				Zone:              ptr.To(externalZone),
+				Zone:              new(externalZone),
 				DNSName:           "*.ingress." + externalDomain,
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
@@ -308,11 +307,11 @@ var _ = Describe("NginxIngress", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: controlPlaneNamespace,
 					},
-					Zone:       ptr.To(externalZone),
+					Zone:       new(externalZone),
 					Name:       "*.ingress." + externalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},
-					TTL:        ptr.To(ttl),
+					TTL:        new(ttl),
 				},
 			}))
 

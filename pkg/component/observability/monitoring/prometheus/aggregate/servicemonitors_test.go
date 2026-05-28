@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 )
@@ -27,7 +26,7 @@ var _ = Describe("ServiceMonitors", func() {
 					NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
 					Endpoints: []monitoringv1.Endpoint{{
 						Path:            "/federate",
-						HonorTimestamps: ptr.To(false),
+						HonorTimestamps: new(false),
 						HonorLabels:     true,
 						Params: map[string][]string{
 							"match[]": {
@@ -46,7 +45,7 @@ var _ = Describe("ServiceMonitors", func() {
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: ptr.To("shoot-prometheus"),
+								Replacement: new("shoot-prometheus"),
 								TargetLabel: "job",
 							},
 							{

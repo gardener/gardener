@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -70,9 +69,9 @@ var _ = Describe("Shoot Care controller tests", func() {
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To(secretBinding.Name),
-				CloudProfileName:  ptr.To("cloudprofile1"),
-				SeedName:          ptr.To(seedName),
+				SecretBindingName: new(secretBinding.Name),
+				CloudProfileName:  new("cloudprofile1"),
+				SeedName:          new(seedName),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -85,7 +84,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
@@ -95,9 +94,9 @@ var _ = Describe("Shoot Care controller tests", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type:     ptr.To("foo-networking"),
-					Services: ptr.To("10.0.0.0/16"),
-					Pods:     ptr.To("10.1.0.0/16"),
+					Type:     new("foo-networking"),
+					Services: new("10.0.0.0/16"),
+					Pods:     new("10.1.0.0/16"),
 				},
 			},
 		}
@@ -129,7 +128,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		By("Patch shoot status")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.SeedName = ptr.To(seedName)
+		shoot.Status.SeedName = new(seedName)
 		shoot.Status.Gardener.Version = "1.2.3"
 		shoot.Status.TechnicalID = testNamespace.Name
 		shoot.Status.UID = "some-uid"
@@ -279,7 +278,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: ptr.To("10.0.0.0/16"),
+						Services: new("10.0.0.0/16"),
 					}
 				})
 
@@ -331,7 +330,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: ptr.To("10.0.0.0/16"),
+						Services: new("10.0.0.0/16"),
 					}
 				})
 
@@ -415,7 +414,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: ptr.To("test"),
+						Class: new("test"),
 						SecretRefs: []corev1.LocalObjectReference{
 							{Name: "test-2"},
 						},
@@ -462,7 +461,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: ptr.To("10.0.0.0/16"),
+						Services: new("10.0.0.0/16"),
 					}
 				})
 
@@ -563,7 +562,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: ptr.To("10.0.0.0/16"),
+						Services: new("10.0.0.0/16"),
 					}
 				})
 
@@ -597,7 +596,7 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: ptr.To("cloudprofile1"),
+				CloudProfileName: new("cloudprofile1"),
 				Region:           "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -610,7 +609,7 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
@@ -621,9 +620,9 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type:     ptr.To("foo-networking"),
-					Services: ptr.To("10.0.0.0/16"),
-					Pods:     ptr.To("10.1.0.0/16"),
+					Type:     new("foo-networking"),
+					Services: new("10.0.0.0/16"),
+					Pods:     new("10.1.0.0/16"),
 				},
 			},
 		}
@@ -736,7 +735,7 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 							Type:   "foo",
 							Region: "europe",
 						},
-						SeedName: ptr.To("some-seed"),
+						SeedName: new("some-seed"),
 						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -757,7 +756,7 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 					},
 					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: backupBucket.Name,
-						SeedName:   ptr.To("some-seed"),
+						SeedName:   new("some-seed"),
 					},
 				}
 
@@ -806,7 +805,7 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 							Type:   "foo",
 							Region: "europe",
 						},
-						SeedName: ptr.To("some-seed"),
+						SeedName: new("some-seed"),
 						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -837,7 +836,7 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 					},
 					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: backupBucket.Name,
-						SeedName:   ptr.To("some-seed"),
+						SeedName:   new("some-seed"),
 					},
 				}
 
@@ -886,7 +885,7 @@ func createDeployment(names []string) {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-				Replicas: ptr.To[int32](1),
+				Replicas: new(int32(1)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 					Spec: corev1.PodSpec{
@@ -988,6 +987,6 @@ func updateETCDStatusToHealthy(name string) {
 		{Type: druidcorev1alpha1.ConditionTypeBackupReady, Status: druidcorev1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 		{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 	}
-	etcd.Status.Ready = ptr.To(true)
+	etcd.Status.Ready = new(true)
 	ExpectWithOffset(1, testClient.Status().Update(ctx, etcd)).To(Succeed())
 }

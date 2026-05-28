@@ -128,7 +128,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		return nil
 	}); err != nil {
 		return err
@@ -140,8 +140,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Kind:               "Namespace",
 			Name:               c.namespace,
 			UID:                c.namespaceUID,
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(true),
+			Controller:         new(true),
+			BlockOwnerDeletion: new(true),
 		}}
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -162,8 +162,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(portMetrics)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Port:     new(intstr.FromInt32(portMetrics)),
+			Protocol: new(corev1.ProtocolTCP),
 		}))
 
 		service.Spec.Selector = getLabels()
@@ -193,7 +193,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &c.replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)
+		deployment.Spec.RevisionHistoryLimit = new(int32(1))
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -236,13 +236,13 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					},
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 				ServiceAccountName:            serviceAccount.Name,
-				TerminationGracePeriodSeconds: ptr.To[int64](5),
+				TerminationGracePeriodSeconds: new(int64(5)),
 			},
 		}
 
@@ -255,9 +255,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -272,17 +272,17 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Name:       v1beta1constants.DeploymentNameClusterAutoscaler,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    containerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		}
@@ -299,7 +299,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 				Rules: []monitoringv1.Rule{{
 					Alert: "ClusterAutoscalerDown",
 					Expr:  intstr.FromString(`absent(up{job="cluster-autoscaler"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("15m")),
+					For:   new(monitoringv1.Duration("15m")),
 					Labels: map[string]string{
 						"service":  v1beta1constants.DeploymentNameClusterAutoscaler,
 						"severity": "critical",

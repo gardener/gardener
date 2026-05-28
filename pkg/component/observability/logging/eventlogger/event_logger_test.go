@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -303,7 +302,7 @@ var _ = Describe("EventLogger", func() {
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -313,7 +312,7 @@ var _ = Describe("EventLogger", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerServiceAccount), eventLoggerServiceAccount)).To(Succeed())
@@ -328,7 +327,7 @@ var _ = Describe("EventLogger", func() {
 					},
 					ResourceVersion: "1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 			}))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(seedEventLoggerRole), seedEventLoggerRole)).To(Succeed())
@@ -375,8 +374,8 @@ var _ = Describe("EventLogger", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: ptr.To[int32](1),
-					Replicas:             ptr.To[int32](1),
+					RevisionHistoryLimit: new(int32(1)),
+					Replicas:             new(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":                 name,
@@ -416,7 +415,7 @@ var _ = Describe("EventLogger", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -432,7 +431,7 @@ var _ = Describe("EventLogger", func() {
 									Name: "kubeconfig",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 											Sources: []corev1.VolumeProjection{
 												{
 													Secret: &corev1.SecretProjection{
@@ -445,7 +444,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "generic-token-kubeconfig",
 														},
-														Optional: ptr.To(false),
+														Optional: new(false),
 													},
 												},
 												{
@@ -459,7 +458,7 @@ var _ = Describe("EventLogger", func() {
 														LocalObjectReference: corev1.LocalObjectReference{
 															Name: "shoot-access-" + name,
 														},
-														Optional: ptr.To(false),
+														Optional: new(false),
 													},
 												},
 											},
@@ -499,7 +498,7 @@ var _ = Describe("EventLogger", func() {
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},

@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -254,7 +253,7 @@ var _ = Describe("#TokenRequest", func() {
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Project"},
 				ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: projectUID},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: ptr.To(namespaceName),
+					Namespace: new(namespaceName),
 				},
 			}
 			backupBucket = &gardencorev1beta1.BackupBucket{
@@ -306,7 +305,7 @@ var _ = Describe("#TokenRequest", func() {
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
 				Name:       shootName,
-				Namespace:  ptr.To(namespaceName),
+				Namespace:  new(namespaceName),
 				UID:        shootUID,
 			}
 
@@ -320,7 +319,7 @@ var _ = Describe("#TokenRequest", func() {
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
 				Name:       shootName,
-				Namespace:  ptr.To(namespaceName),
+				Namespace:  new(namespaceName),
 				UID:        shootUID,
 			}
 
@@ -344,7 +343,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("Schedule the shoot to a seed")
 			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec = gardencorev1beta1.ShootSpec{SeedName: ptr.To(seedName)}
+			shootCopy.Spec = gardencorev1beta1.ShootSpec{SeedName: new(seedName)}
 			Expect(shootInformer.Informer().GetStore().Update(shootCopy)).To(Succeed())
 
 			By("Resolve context object after the shoot is scheduled to a seed")
@@ -374,7 +373,7 @@ var _ = Describe("#TokenRequest", func() {
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
 				Name:       shootName,
-				Namespace:  ptr.To(namespaceName),
+				Namespace:  new(namespaceName),
 				UID:        shootUID,
 			}
 
@@ -401,7 +400,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("seed does not exist")
 			shoot.Spec = gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To(seedName),
+				SeedName: new(seedName),
 			}
 			Expect(shootInformer.Informer().GetStore().Update(shoot)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
@@ -498,7 +497,7 @@ var _ = Describe("#TokenRequest", func() {
 			By("bind the backupBucket to the seed")
 			backupBucketCopy := backupBucket.DeepCopy()
 			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
-				SeedName: ptr.To(seedName),
+				SeedName: new(seedName),
 			}
 			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
 
@@ -551,7 +550,7 @@ var _ = Describe("#TokenRequest", func() {
 			By("bind the backupBucket to the seed")
 			backupBucketCopy := backupBucket.DeepCopy()
 			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
-				SeedName: ptr.To(seedName),
+				SeedName: new(seedName),
 			}
 			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
@@ -567,7 +566,7 @@ var _ = Describe("#TokenRequest", func() {
 			contextObject := &securityapi.ContextObject{
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "BackupEntry",
-				Namespace:  ptr.To(namespaceName),
+				Namespace:  new(namespaceName),
 				Name:       backupEntryName,
 				UID:        backupEntryUID,
 			}
@@ -624,7 +623,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("bind the backupEntry to the seed")
 			backupEntryCopy := backupEntry.DeepCopy()
-			backupEntryCopy.Spec.SeedName = ptr.To(seedName)
+			backupEntryCopy.Spec.SeedName = new(seedName)
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
@@ -681,7 +680,7 @@ var _ = Describe("#TokenRequest", func() {
 			contextObject := &securityapi.ContextObject{
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "BackupEntry",
-				Namespace:  ptr.To(namespaceName),
+				Namespace:  new(namespaceName),
 				Name:       backupEntryName,
 				UID:        backupEntryUID,
 			}
@@ -718,7 +717,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("bind the backupEntry to the seed")
 			backupEntryCopy := backupEntry.DeepCopy()
-			backupEntryCopy.Spec.SeedName = ptr.To(seedName)
+			backupEntryCopy.Spec.SeedName = new(seedName)
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
 			Expect(backupBucketInformer.Informer().GetStore().Add(backupBucket)).To(Succeed())
 			Expect(seedInformer.Informer().GetStore().Delete(seed)).To(Succeed())
@@ -829,7 +828,7 @@ var _ = Describe("#TokenRequest", func() {
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Project"},
 				ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: projectUID},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: ptr.To(namespaceName),
+					Namespace: new(namespaceName),
 				},
 			}
 
@@ -864,7 +863,7 @@ var _ = Describe("#TokenRequest", func() {
 							APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 							Kind:       "Shoot",
 							Name:       shootName,
-							Namespace:  ptr.To(namespaceName),
+							Namespace:  new(namespaceName),
 							UID:        shootUID,
 						},
 						ExpirationSeconds: int64(3600),

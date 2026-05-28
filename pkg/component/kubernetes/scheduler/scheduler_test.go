@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -128,7 +127,7 @@ var _ = Describe("KubeScheduler", func() {
 						"role": "scheduler",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -141,17 +140,17 @@ var _ = Describe("KubeScheduler", func() {
 					Name:       deploymentName,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    containerName,
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff)},
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff)},
 					},
 				},
 			},
@@ -201,7 +200,7 @@ var _ = Describe("KubeScheduler", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: ptr.To[int32](1),
+					RevisionHistoryLimit: new(int32(1)),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -221,12 +220,12 @@ var _ = Describe("KubeScheduler", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: ptr.To(false),
+							AutomountServiceAccountToken: new(false),
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    ptr.To[int64](65532),
-								RunAsGroup:   ptr.To[int64](65532),
-								FSGroup:      ptr.To[int64](65532),
+								RunAsNonRoot: new(true),
+								RunAsUser:    new(int64(65532)),
+								RunAsGroup:   new(int64(65532)),
+								FSGroup:      new(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -262,7 +261,7 @@ var _ = Describe("KubeScheduler", func() {
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -286,7 +285,7 @@ var _ = Describe("KubeScheduler", func() {
 									Name: "client-ca",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 											Sources: []corev1.VolumeProjection{
 												{
 													Secret: &corev1.SecretProjection{
@@ -308,7 +307,7 @@ var _ = Describe("KubeScheduler", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},
@@ -347,7 +346,7 @@ var _ = Describe("KubeScheduler", func() {
 						{
 							Alert: "KubeSchedulerDown",
 							Expr:  intstr.FromString(`absent(up{job="kube-scheduler"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("15m")),
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "kube-scheduler",
 								"severity":   "critical",
@@ -422,10 +421,10 @@ var _ = Describe("KubeScheduler", func() {
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port:   "metrics",
-					Scheme: ptr.To(monitoringv1.SchemeHTTPS),
+					Scheme: new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -509,7 +508,7 @@ var _ = Describe("KubeScheduler", func() {
 						{Name: managedResourceSecretName},
 					},
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 		})
@@ -534,7 +533,7 @@ var _ = Describe("KubeScheduler", func() {
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))

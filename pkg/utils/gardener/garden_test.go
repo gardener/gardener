@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -143,7 +142,7 @@ var _ = Describe("Garden", func() {
 				Name: "garden-kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](420),
+						DefaultMode: new(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -154,7 +153,7 @@ var _ = Describe("Garden", func() {
 										Key:  "kubeconfig",
 										Path: "kubeconfig",
 									}},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 							{
@@ -166,7 +165,7 @@ var _ = Describe("Garden", func() {
 										Key:  "token",
 										Path: "token",
 									}},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 						},
@@ -209,7 +208,7 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should use the overwrites but copy overthing else", func() {
-			config := PrepareGardenClientRestConfig(baseConfig, ptr.To("other"))
+			config := PrepareGardenClientRestConfig(baseConfig, new("other"))
 			Expect(config).NotTo(BeIdenticalTo(baseConfig))
 			Expect(config.Host).To(Equal("other"))
 
@@ -352,7 +351,7 @@ var _ = Describe("Garden", func() {
 			seedDNSProvider = &gardencorev1beta1.SeedDNSProviderConfig{
 				Type:   providerType,
 				Domain: domain,
-				Zone:   ptr.To(zone),
+				Zone:   new(zone),
 				CredentialsRef: corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -469,7 +468,7 @@ var _ = Describe("Garden", func() {
 			seedDNSProvider = &gardencorev1beta1.SeedDNSProviderConfig{
 				Type:   providerType,
 				Domain: domain,
-				Zone:   ptr.To(zone),
+				Zone:   new(zone),
 				CredentialsRef: corev1.ObjectReference{
 					APIVersion: "security.gardener.cloud/v1alpha1",
 					Kind:       "WorkloadIdentity",
@@ -614,7 +613,7 @@ var _ = Describe("Garden", func() {
 				{
 					Type:   providerType1,
 					Domain: domain1,
-					Zone:   ptr.To(zone1),
+					Zone:   new(zone1),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -625,7 +624,7 @@ var _ = Describe("Garden", func() {
 				{
 					Type:   providerType2,
 					Domain: domain2,
-					Zone:   ptr.To(zone2),
+					Zone:   new(zone2),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -636,7 +635,7 @@ var _ = Describe("Garden", func() {
 				{
 					Type:   providerType3,
 					Domain: domain3,
-					Zone:   ptr.To(zone3),
+					Zone:   new(zone3),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "security.gardener.cloud/v1alpha1",
 						Kind:       "WorkloadIdentity",
@@ -741,7 +740,7 @@ var _ = Describe("Garden", func() {
 				{
 					Type:   providerType1,
 					Domain: domain1,
-					Zone:   ptr.To(zone1),
+					Zone:   new(zone1),
 					CredentialsRef: corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",

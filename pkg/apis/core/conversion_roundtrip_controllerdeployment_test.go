@@ -12,7 +12,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
@@ -88,7 +87,7 @@ var _ = Describe("ControllerDeployment roundtrip conversion", func() {
 				Helm: &gardencorev1.HelmControllerDeployment{
 					Values: valuesJSON.DeepCopy(),
 					OCIRepository: &gardencorev1.OCIRepository{
-						Ref: ptr.To("foo:1.0.0"),
+						Ref: new("foo:1.0.0"),
 					},
 				},
 			}

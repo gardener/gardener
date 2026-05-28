@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -189,7 +188,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Namespace: n.values.TargetNamespace,
 				Labels:    map[string]string{v1beta1constants.LabelApp: LabelAppValue},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		serviceAnnotations                      = n.values.LoadBalancerAnnotations
@@ -420,8 +419,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(labelValueBackend, true),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             new(int32(1)),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: utils.MergeStringMaps(n.getLabels(labelValueBackend, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
@@ -437,9 +436,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						PriorityClassName: n.values.PriorityClassName,
 						NodeSelector:      nodeSelector,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To[int64](65534),
-							FSGroup:      ptr.To[int64](65534),
+							RunAsNonRoot: new(true),
+							RunAsUser:    new(int64(65534)),
+							FSGroup:      new(int64(65534)),
 						},
 						Containers: []corev1.Container{{
 							Name:            n.getName("Container", true),
@@ -470,10 +469,10 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						}},
-						TerminationGracePeriodSeconds: ptr.To[int64](60),
+						TerminationGracePeriodSeconds: new(int64(60)),
 					},
 				},
 			},
@@ -486,8 +485,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, true),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](2),
-				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             new(int32(2)),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: utils.MergeStringMaps(n.getLabels(LabelValueController, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
@@ -513,9 +512,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									Drop: []corev1.Capability{"ALL"},
 									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
-								RunAsNonRoot:             ptr.To(true),
-								RunAsUser:                ptr.To[int64](101),
-								AllowPrivilegeEscalation: ptr.To(true),
+								RunAsNonRoot:             new(true),
+								RunAsUser:                new(int64(101)),
+								AllowPrivilegeEscalation: new(true),
 								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},
 							},
 							Env: []corev1.EnvVar{
@@ -579,7 +578,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							Resources: resourceRequirements,
 						}},
 						ServiceAccountName:            serviceAccount.Name,
-						TerminationGracePeriodSeconds: ptr.To[int64](60),
+						TerminationGracePeriodSeconds: new(int64(60)),
 					},
 				},
 			},
@@ -640,11 +639,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, false),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.FromInt32(1)),
+				MinAvailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -683,7 +682,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 
-		deploymentController.Spec.Replicas = ptr.To[int32](1)
+		deploymentController.Spec.Replicas = new(int32(1))
 		deploymentController.Spec.Template.Annotations = map[string]string{"checksum/config": utils.ComputeChecksum(configMap.Data)}
 		deploymentController.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirst
 		deploymentController.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyAlways
@@ -723,7 +722,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Name:       deploymentController.Name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -735,7 +734,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

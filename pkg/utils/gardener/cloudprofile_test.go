@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -95,7 +94,7 @@ var _ = Describe("CloudProfile", func() {
 			It("returns the CloudProfile from the cloudProfile reference if present despite cloudProfileName", func() {
 				Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
 
-				shoot.Spec.CloudProfileName = ptr.To("profile-1")
+				shoot.Spec.CloudProfileName = new("profile-1")
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: cloudProfileName,
@@ -490,7 +489,7 @@ var _ = Describe("CloudProfile", func() {
 
 			It("should build and return cloud profile reference from an existing cloudProfileName", func() {
 				Expect(gardenerutils.BuildCoreCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
-					CloudProfileName: ptr.To("profile-name"),
+					CloudProfileName: new("profile-name"),
 				}})).To(Equal(&gardencorev1beta1.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "profile-name",
@@ -499,7 +498,7 @@ var _ = Describe("CloudProfile", func() {
 
 			It("should return an existing cloud profile reference", func() {
 				Expect(gardenerutils.BuildCoreCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
-					CloudProfileName: ptr.To("ignore-me"),
+					CloudProfileName: new("ignore-me"),
 					CloudProfile: &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
 						Name: "profile-1",
@@ -512,7 +511,7 @@ var _ = Describe("CloudProfile", func() {
 
 			It("should return an existing cloud profile reference and default the kind to CloudProfile", func() {
 				Expect(gardenerutils.BuildCoreCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
-					CloudProfileName: ptr.To("ignore-me"),
+					CloudProfileName: new("ignore-me"),
 					CloudProfile: &core.CloudProfileReference{
 						Name: "profile-1",
 					},
@@ -529,7 +528,7 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should remove the cloudProfileName and leave the cloudProfile untouched for an invalid kind (failure is evaluated at another point in the validation chain, fields are only synced here)", func() {
-				shoot.Spec.CloudProfileName = ptr.To("profile")
+				shoot.Spec.CloudProfileName = new("profile")
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}
 				gardenerutils.SyncCloudProfileFields(nil, shoot)
 				Expect(shoot.Spec.CloudProfileName).To(BeNil())
@@ -538,7 +537,7 @@ var _ = Describe("CloudProfile", func() {
 			})
 
 			It("should remove the cloudProfileName if a NamespacedCloudProfile is provided", func() {
-				shoot.Spec.CloudProfileName = ptr.To("profile")
+				shoot.Spec.CloudProfileName = new("profile")
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 				gardenerutils.SyncCloudProfileFields(nil, shoot)
 				Expect(shoot.Spec.CloudProfileName).To(BeNil())
@@ -561,7 +560,7 @@ var _ = Describe("CloudProfile", func() {
 				})
 
 				It("should default the cloudProfile to the cloudProfileName value", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfileName = new("profile")
 					gardenerutils.SyncCloudProfileFields(nil, shoot)
 					Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 					Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -569,7 +568,7 @@ var _ = Describe("CloudProfile", func() {
 				})
 
 				It("should override the cloudProfileName from the cloudProfile", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile-name")
+					shoot.Spec.CloudProfileName = new("profile-name")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 					gardenerutils.SyncCloudProfileFields(nil, shoot)
 					Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
@@ -627,14 +626,14 @@ var _ = Describe("CloudProfile", func() {
 
 				Describe("create", func() {
 					It("should keep cloudProfileName as the only value", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						gardenerutils.SyncCloudProfileFields(nil, shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 						Expect(shoot.Spec.CloudProfile).To(BeNil())
 					})
 
 					It("should keep cloudProfileName besides different cloudProfile", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile-name")
+						shoot.Spec.CloudProfileName = new("profile-name")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 						gardenerutils.SyncCloudProfileFields(nil, shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile-name"))
@@ -643,7 +642,7 @@ var _ = Describe("CloudProfile", func() {
 					})
 
 					It("should keep cloudProfileName besides equal cloudProfile", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 						gardenerutils.SyncCloudProfileFields(nil, shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
@@ -652,7 +651,7 @@ var _ = Describe("CloudProfile", func() {
 					})
 
 					It("should not sync back cloudProfileName (will fail in a later stage in the validation chain)", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 						gardenerutils.SyncCloudProfileFields(nil, shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
@@ -680,14 +679,14 @@ var _ = Describe("CloudProfile", func() {
 
 				Describe("update", func() {
 					It("should keep cloudProfileName as the only value", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						gardenerutils.SyncCloudProfileFields(shoot.DeepCopy(), shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 						Expect(shoot.Spec.CloudProfile).To(BeNil())
 					})
 
 					It("should keep cloudProfileName besides different cloudProfile", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile-name")
+						shoot.Spec.CloudProfileName = new("profile-name")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 						gardenerutils.SyncCloudProfileFields(shoot.DeepCopy(), shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile-name"))
@@ -696,10 +695,10 @@ var _ = Describe("CloudProfile", func() {
 					})
 
 					It("should keep cloudProfileName besides equal cloudProfile if modified", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 						oldShoot := shoot.DeepCopy()
-						oldShoot.Spec.CloudProfileName = ptr.To("my-profile")
+						oldShoot.Spec.CloudProfileName = new("my-profile")
 						gardenerutils.SyncCloudProfileFields(oldShoot, shoot)
 						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 						Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -707,7 +706,7 @@ var _ = Describe("CloudProfile", func() {
 					})
 
 					It("should keep cloudProfileName besides equal cloudProfile if added", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 						oldShoot := shoot.DeepCopy()
 						oldShoot.Spec.CloudProfileName = nil
@@ -718,7 +717,7 @@ var _ = Describe("CloudProfile", func() {
 					})
 
 					It("should drop cloudProfileName besides equal cloudProfile if unchanged", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 						gardenerutils.SyncCloudProfileFields(shoot.DeepCopy(), shoot)
 						Expect(shoot.Spec.CloudProfileName).To(BeNil())
@@ -727,7 +726,7 @@ var _ = Describe("CloudProfile", func() {
 					})
 
 					It("should keep cloudProfileName besides equally named NamespacedCloudProfile, even if unchanged", func() {
-						shoot.Spec.CloudProfileName = ptr.To("profile")
+						shoot.Spec.CloudProfileName = new("profile")
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile", Kind: "NamespacedCloudProfile"}
 						oldShoot := shoot.DeepCopy()
 						oldShoot.Spec.CloudProfile.Kind = "NamespacedCloudProfile"
@@ -769,7 +768,7 @@ var _ = Describe("CloudProfile", func() {
 				}
 
 				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
-				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
+				cloudProfileSpecNew.MachineTypes[0].Architecture = new("amd64")
 				initialNewSpec := *cloudProfileSpecNew.DeepCopy()
 
 				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
@@ -781,7 +780,7 @@ var _ = Describe("CloudProfile", func() {
 					{Name: "architecture", Values: []string{"amd64"}},
 				}
 				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
-				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
+				cloudProfileSpecNew.MachineTypes[0].Architecture = new("amd64")
 
 				initialNewSpec := *cloudProfileSpecNew.DeepCopy()
 
@@ -791,14 +790,14 @@ var _ = Describe("CloudProfile", func() {
 
 			It("should create capabilities and capabilityFlavors from architecture fields if they are empty", func() {
 				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
-				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("arm64")
+				cloudProfileSpecNew.MachineTypes[0].Architecture = new("arm64")
 
 				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("arm64")))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(new("arm64")))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
 			})
 
@@ -807,12 +806,12 @@ var _ = Describe("CloudProfile", func() {
 				cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
 					{Capabilities: core.Capabilities{"architecture": []string{"custom"}}},
 				}
-				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
+				cloudProfileSpecNew.MachineTypes[0].Architecture = new("amd64")
 				cloudProfileSpecNew.MachineTypes[0].Capabilities = core.Capabilities{
 					"architecture": []string{"custom"},
 				}
 				cloudProfileSpecNew.MachineTypes = append(cloudProfileSpecNew.MachineTypes, core.MachineType{
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				})
 
 				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
@@ -820,9 +819,9 @@ var _ = Describe("CloudProfile", func() {
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors).To(HaveLen(1))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"custom"}))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(new("amd64")))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"custom"}))
-				Expect(cloudProfileSpecNew.MachineTypes[1].Architecture).To(Equal(ptr.To("amd64")))
+				Expect(cloudProfileSpecNew.MachineTypes[1].Architecture).To(Equal(new("amd64")))
 				Expect(cloudProfileSpecNew.MachineTypes[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 			})
 
@@ -830,7 +829,7 @@ var _ = Describe("CloudProfile", func() {
 				gardenerutils.SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(new("amd64")))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 			})
 
@@ -926,7 +925,7 @@ var _ = Describe("CloudProfile", func() {
 			It("returns the CloudProfile from the cloudProfile reference if present despite cloudProfileName", func() {
 				Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
 
-				shoot.Spec.CloudProfileName = ptr.To("profile-1")
+				shoot.Spec.CloudProfileName = new("profile-1")
 				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: cloudProfileName,

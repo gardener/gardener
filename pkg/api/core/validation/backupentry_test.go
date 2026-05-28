@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -31,7 +30,7 @@ var _ = Describe("validation", func() {
 			},
 			Spec: core.BackupEntrySpec{
 				BucketName: "some-bucket",
-				SeedName:   ptr.To("some-seed"),
+				SeedName:   new("some-seed"),
 			},
 		}
 	})
@@ -116,7 +115,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid specifying an empty seed name", func() {
-			backupEntry.Spec.SeedName = ptr.To("")
+			backupEntry.Spec.SeedName = new("")
 
 			Expect(ValidateBackupEntry(backupEntry)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),

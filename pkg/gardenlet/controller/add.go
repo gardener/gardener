@@ -122,7 +122,7 @@ func AddToManager(
 		//     runs the controller, see (a)).
 		if err := (&tokenrequestor.Reconciler{
 			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
-			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
+			Class:           new(resourcesv1alpha1.ResourceManagerClassGarden),
 			TargetNamespace: targetNamespaceForTokenRequestorController(cfg),
 		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)

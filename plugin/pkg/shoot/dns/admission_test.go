@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -153,7 +152,7 @@ var _ = Describe("dns", func() {
 					Name: projectName,
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: ptr.To(namespace),
+					Namespace: new(namespace),
 				},
 			}
 			seed = &gardencorev1beta1.Seed{
@@ -174,7 +173,7 @@ var _ = Describe("dns", func() {
 							},
 						},
 					},
-					SeedName: ptr.To(seedName),
+					SeedName: new(seedName),
 				},
 			}
 
@@ -227,7 +226,7 @@ var _ = Describe("dns", func() {
 
 		It("should set the 'unmanaged' dns provider as the primary one", func() {
 			shootBefore := shoot.DeepCopy()
-			shootBefore.Spec.DNS.Providers[0].Primary = ptr.To(true)
+			shootBefore.Spec.DNS.Providers[0].Primary = new(true)
 
 			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -252,7 +251,7 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 					},
 				}
 
@@ -261,8 +260,8 @@ var _ = Describe("dns", func() {
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal(ptr.To(providerType)),
-					"Primary": Equal(ptr.To(true)),
+					"Type":    Equal(new(providerType)),
+					"Primary": Equal(new(true)),
 				})))
 			})
 
@@ -276,10 +275,10 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 					},
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -294,11 +293,11 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(ptr.To(providerType)),
-						"Primary": Equal(ptr.To(true)),
+						"Type":    Equal(new(providerType)),
+						"Primary": Equal(new(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":           Equal(ptr.To(providerType)),
+						"Type":           Equal(new(providerType)),
 						"Primary":        BeNil(),
 						"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 					}),
@@ -316,7 +315,7 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -324,7 +323,7 @@ var _ = Describe("dns", func() {
 						},
 					},
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -334,7 +333,7 @@ var _ = Describe("dns", func() {
 				}
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.DNS.Providers[1].Primary = ptr.To(true)
+				oldShoot.Spec.DNS.Providers[1].Primary = new(true)
 
 				attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
@@ -342,11 +341,11 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(ptr.To(providerType)),
+						"Type": Equal(new(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":           Equal(ptr.To(providerType)),
-						"Primary":        Equal(ptr.To(true)),
+						"Type":           Equal(new(providerType)),
+						"Primary":        Equal(new(true)),
 						"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 					}),
 				))
@@ -431,7 +430,7 @@ var _ = Describe("dns", func() {
 
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
@@ -445,7 +444,7 @@ var _ = Describe("dns", func() {
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":           Equal(ptr.To(providerType)),
+					"Type":           Equal(new(providerType)),
 					"Primary":        BeNil(),
 					"CredentialsRef": Equal(&autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName}),
 				})))
@@ -609,7 +608,7 @@ var _ = Describe("dns", func() {
 					Name: projectName,
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: ptr.To(namespace),
+					Namespace: new(namespace),
 				},
 			}
 			seed = &gardencorev1beta1.Seed{
@@ -624,7 +623,7 @@ var _ = Describe("dns", func() {
 				},
 				Spec: core.ShootSpec{
 					DNS:      &core.DNS{},
-					SeedName: ptr.To(seedName),
+					SeedName: new(seedName),
 				},
 			}
 
@@ -673,13 +672,13 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: ptr.To(providerType),
+						Type: new(providerType),
 						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "v1",
 							Kind:       "Secret",
 							Name:       secretName,
 						},
-						Primary: ptr.To(true),
+						Primary: new(true),
 					},
 				}
 

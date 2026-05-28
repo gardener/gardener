@@ -11,7 +11,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
@@ -47,7 +46,7 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"PersistentVolumeLabel\" is not supported in Kubernetes version 1.31.1"),
 			})))),
-			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "PersistentVolumeLabel", Disabled: ptr.To(true)}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "PersistentVolumeLabel", Disabled: new(true)}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"PersistentVolumeLabel\" is not supported in Kubernetes version 1.31.1"),
@@ -63,18 +62,18 @@ var _ = Describe("admissionplugins", func() {
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown admission plugin \"Foo\""),
 			})))),
-			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: ptr.To(true)}}, "1.30.8", BeEmpty()),
-			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: ptr.To(true)}}, "1.30.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: new(true)}}, "1.30.8", BeEmpty()),
+			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: new(true)}}, "1.30.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0]").String()),
 				"Detail": Equal("admission plugin \"MutatingAdmissionWebhook\" cannot be disabled"),
 			})))),
-			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: new("test-secret")}}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].kubeconfigSecretName").String()),
 				"Detail": Equal("admission plugin \"TaintNodesByCondition\" does not allow specifying external kubeconfig"),
 			})))),
-			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: ptr.To("test-secret")}}, "1.27.5", BeEmpty()),
+			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: new("test-secret")}}, "1.27.5", BeEmpty()),
 			Entry("admission plugin configuration for plugin that does not take configuration", []core.AdmissionPlugin{{Name: "ExtendedResourceToleration", Config: &runtime.RawExtension{Raw: []byte("foo: bar")}}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].config").String()),

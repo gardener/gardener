@@ -7,7 +7,6 @@ package node
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -37,7 +36,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	var (
 		provider = local.Type
-		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: ptr.To("*")}}
+		types    = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: new("*")}}
 	)
 
 	logger = logger.WithValues("provider", provider)
@@ -54,9 +53,9 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Types:          types,
 		Target:         extensionswebhook.TargetShoot,
 		Path:           WebhookName,
-		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
-		FailurePolicy:  ptr.To(admissionregistrationv1.Ignore),
-		TimeoutSeconds: ptr.To[int32](5),
+		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: new(true)},
+		FailurePolicy:  new(admissionregistrationv1.Ignore),
+		TimeoutSeconds: new(int32(5)),
 	}, nil
 }
 

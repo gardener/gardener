@@ -58,8 +58,8 @@ func AddTasks(annotations map[string]string, tasksToAdd ...string) {
 func RemoveTasks(annotations map[string]string, tasksToRemove ...string) {
 	tasks := GetTasks(annotations)
 
-	for i := len(tasks) - 1; i >= 0; i-- {
-		if slices.Contains(tasksToRemove, tasks[i]) {
+	for i, task := range slices.Backward(tasks) {
+		if slices.Contains(tasksToRemove, task) {
 			tasks = append((tasks)[:i], (tasks)[i+1:]...)
 		}
 	}

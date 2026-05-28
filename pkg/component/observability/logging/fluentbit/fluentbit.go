@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -105,7 +104,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							TargetLabel: "__metrics_path__",
-							Replacement: ptr.To("/api/v2/metrics/prometheus"),
+							Replacement: new("/api/v2/metrics/prometheus"),
 						},
 						{
 							Action: "labelmap",
@@ -141,7 +140,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 						// job label, prometheus-operator would choose job=fluent-bit (service name).
 						{
 							Action:      "replace",
-							Replacement: ptr.To("fluent-bit-output-plugin"),
+							Replacement: new("fluent-bit-output-plugin"),
 							TargetLabel: "job",
 						},
 						{
@@ -204,7 +203,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 						{
 							Alert: "FluentBitDown",
 							Expr:  intstr.FromString(`absent(up{job="fluent-bit"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("15m")),
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "logging",
 								"severity":   "warning",
@@ -219,7 +218,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 						{
 							Alert: "FluentBitIdleInputPlugins",
 							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m])) == 0`),
-							For:   ptr.To(monitoringv1.Duration("6h")),
+							For:   new(monitoringv1.Duration("6h")),
 							Labels: map[string]string{
 								"service":    "logging",
 								"severity":   "warning",
@@ -395,7 +394,7 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 				"/fluent-bit/config/fluent-bit.conf",
 			},
 			ContainerSecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 			},
 			PriorityClassName: f.values.PriorityClassName,
 			Ports: []corev1.ContainerPort{
@@ -491,7 +490,7 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 						"/plugins",
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -527,19 +526,19 @@ func (f *fluentBit) getClusterFluentBitConfig() *fluentbitv1alpha2.ClusterFluent
 		},
 		Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 			Service: &fluentbitv1alpha2.Service{
-				FlushSeconds: ptr.To[float64](30),
-				Daemon:       ptr.To(false),
+				FlushSeconds: new(float64(30)),
+				Daemon:       new(false),
 				LogLevel:     "error",
 				ParsersFile:  "parsers.conf",
-				HttpServer:   ptr.To(true),
+				HttpServer:   new(true),
 				HttpListen:   "::",
-				HttpPort:     ptr.To[int32](2020),
+				HttpPort:     new(int32(2020)),
 				Storage: &fluentbitv1alpha2.Storage{
 					Path:                      "/var/fluentbit/chunks",
 					Sync:                      "normal",
 					Metrics:                   "on",
 					Checksum:                  "off",
-					MaxChunksUp:               ptr.To[int64](200),
+					MaxChunksUp:               new(int64(200)),
 					BacklogMemLimit:           "50M",
 					DeleteIrrecoverableChunks: "on",
 				},

@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -155,7 +154,7 @@ var _ = Describe("Certificates tests", func() {
 		shootMutatingWebhook = admissionregistrationv1.MutatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootMutatingWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL: ptr.To("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
+				URL: new("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -175,7 +174,7 @@ var _ = Describe("Certificates tests", func() {
 		shootValidatingWebhook = admissionregistrationv1.ValidatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootValidatingWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL: ptr.To("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
+				URL: new("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootMutatingWebhookPath),
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -211,7 +210,7 @@ var _ = Describe("Certificates tests", func() {
 				Scheme:  kubernetes.SeedScheme,
 				Metrics: metricsserver.Options{BindAddress: "0"},
 				Controller: controllerconfig.Controller{
-					SkipNameValidation: ptr.To(true),
+					SkipNameValidation: new(true),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -371,8 +370,8 @@ var _ = Describe("Certificates tests", func() {
 					Service: &admissionregistrationv1.ServiceReference{
 						Name:      "gardener-extension-" + extensionName,
 						Namespace: extensionNamespace.Name,
-						Path:      ptr.To("/" + seedWebhookPath),
-						Port:      ptr.To[int32](12345),
+						Path:      new("/" + seedWebhookPath),
+						Port:      new(int32(12345)),
 					},
 				},
 				Rules: []admissionregistrationv1.RuleWithOperations{
@@ -384,7 +383,7 @@ var _ = Describe("Certificates tests", func() {
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				// here variable failurePolicyFail can't be used as it can be overwritten to
 				// `Ignore` by previous tests
-				FailurePolicy:      (*admissionregistrationv1.FailurePolicyType)(ptr.To("Fail")),
+				FailurePolicy:      new(admissionregistrationv1.FailurePolicyType("Fail")),
 				MatchPolicy:        &matchPolicyExact,
 				SideEffects:        &sideEffectsNone,
 				TimeoutSeconds:     &timeoutSeconds,
@@ -405,7 +404,7 @@ var _ = Describe("Certificates tests", func() {
 				Scheme:  kubernetes.SeedScheme,
 				Metrics: metricsserver.Options{BindAddress: "0"},
 				Controller: controllerconfig.Controller{
-					SkipNameValidation: ptr.To(true),
+					SkipNameValidation: new(true),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())

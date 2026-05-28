@@ -14,7 +14,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -172,7 +171,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 					Image:           image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -200,7 +199,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  userDataSecretName,
-							DefaultMode: ptr.To[int32](0777),
+							DefaultMode: new(int32(0777)),
 						},
 					},
 				},
@@ -226,7 +225,7 @@ func serviceForBastion(bastion *extensionsv1alpha1.Bastion) *corev1.Service {
 				Name:        "ssh",
 				Port:        SSHPort,
 				Protocol:    corev1.ProtocolTCP,
-				AppProtocol: ptr.To("ssh"),
+				AppProtocol: new("ssh"),
 			}},
 		},
 	}

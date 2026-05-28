@@ -13,7 +13,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -58,9 +57,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
 				// TODO(hown3d): Drop 8132 with RemoveHTTPProxyLegacyPort feature gate
-				{Port: ptr.To(intstr.FromInt32(8132)), Protocol: ptr.To(corev1.ProtocolTCP)},
-				{Port: ptr.To(intstr.FromInt32(8443)), Protocol: ptr.To(corev1.ProtocolTCP)},
-				{Port: ptr.To(intstr.FromInt32(9443)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				{Port: new(intstr.FromInt32(8132)), Protocol: new(corev1.ProtocolTCP)},
+				{Port: new(intstr.FromInt32(8443)), Protocol: new(corev1.ProtocolTCP)},
+				{Port: new(intstr.FromInt32(9443)), Protocol: new(corev1.ProtocolTCP)},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{

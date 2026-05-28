@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -46,7 +45,7 @@ var _ = Describe("Worker validation tests", func() {
 							Version: "version1",
 						},
 						Name:         "pool1",
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 				},
 			},
@@ -79,7 +78,7 @@ var _ = Describe("Worker validation tests", func() {
 			workerCopy := worker.DeepCopy()
 
 			workerCopy.Spec.Pools[0] = extensionsv1alpha1.WorkerPool{
-				Architecture: ptr.To("test"),
+				Architecture: new("test"),
 			}
 
 			workerCopy.Spec.Pools[0].NodeTemplate = &extensionsv1alpha1.NodeTemplate{
@@ -156,7 +155,7 @@ var _ = Describe("Worker validation tests", func() {
 
 		It("should prevent updating architecture to invalid architecture", func() {
 			newWorker := prepareWorkerForUpdate(worker)
-			newWorker.Spec.Pools[0].Architecture = ptr.To("foo")
+			newWorker.Spec.Pools[0].Architecture = new("foo")
 
 			errorList := ValidateWorkerUpdate(newWorker, worker)
 
@@ -168,7 +167,7 @@ var _ = Describe("Worker validation tests", func() {
 
 		It("should allow updating architecture to valid architecture", func() {
 			newWorker := prepareWorkerForUpdate(worker)
-			newWorker.Spec.Pools[0].Architecture = ptr.To("arm64")
+			newWorker.Spec.Pools[0].Architecture = new("arm64")
 
 			errorList := ValidateWorkerUpdate(newWorker, worker)
 
@@ -188,7 +187,7 @@ var _ = Describe("Worker validation tests", func() {
 						Version: "version2",
 					},
 					Name:              "pool2",
-					Architecture:      ptr.To("amd64"),
+					Architecture:      new("amd64"),
 					UserDataSecretRef: corev1.SecretKeySelector{Key: "new-bootstrap-data-key"},
 				},
 			}

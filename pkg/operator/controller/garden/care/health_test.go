@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -863,7 +862,7 @@ func managedResource(name string, relevantCareCondition string, conditions []gar
 
 	if relevantCareCondition != "" {
 		if relevantCareCondition == "RuntimeComponentsHealthy" {
-			class = ptr.To("seed")
+			class = new("seed")
 		} else {
 			labels = map[string]string{"care.gardener.cloud/condition-type": relevantCareCondition}
 		}
@@ -913,7 +912,7 @@ func newEtcd(namespace, name string, healthy bool) *druidcorev1alpha1.Etcd {
 			Labels:    roleLabels("controlplane"),
 		},
 		Status: druidcorev1alpha1.EtcdStatus{
-			Ready: ptr.To(healthy),
+			Ready: new(healthy),
 		},
 	}
 }

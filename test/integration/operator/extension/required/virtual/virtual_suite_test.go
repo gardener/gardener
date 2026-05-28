@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -115,7 +114,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register Controller")
 	Expect((&requiredvirtual.Reconciler{
-		Config:        operatorconfigv1alpha1.ExtensionRequiredVirtualControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
+		Config:        operatorconfigv1alpha1.ExtensionRequiredVirtualControllerConfiguration{ConcurrentSyncs: new(5)},
 		RuntimeClient: mgr.GetClient(),
 		VirtualClient: mgr.GetClient(),
 	}).AddToManager(mgr, mgr)).To(Succeed())

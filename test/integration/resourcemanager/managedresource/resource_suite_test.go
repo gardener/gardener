@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -107,7 +106,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -118,15 +117,15 @@ var _ = BeforeSuite(func() {
 
 	Expect((&managedresource.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
 			// resource, which won't be possible if the controller reconciles it back too quickly.
 			SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-			ManagedByLabelValue: ptr.To("gardener"),
+			ManagedByLabelValue: new("gardener"),
 		},
 		Clock:                         fakeClock,
 		ClassFilter:                   filter,
-		RequeueAfterOnDeletionPending: ptr.To(50 * time.Millisecond),
+		RequeueAfterOnDeletionPending: new(50 * time.Millisecond),
 		GarbageCollectorActivated:     true,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 

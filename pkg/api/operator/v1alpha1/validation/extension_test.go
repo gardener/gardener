@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -28,7 +27,7 @@ var _ = Describe("Validation Tests", func() {
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
 								OCIRepository: &gardencorev1.OCIRepository{
-									Ref: ptr.To("example.com/chart:v1.0.0"),
+									Ref: new("example.com/chart:v1.0.0"),
 								},
 							},
 						},
@@ -98,7 +97,7 @@ var _ = Describe("Validation Tests", func() {
 							DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 								Helm: &operatorv1alpha1.ExtensionHelm{
 									OCIRepository: &gardencorev1.OCIRepository{
-										Ref: ptr.To("example.com/chart:v1.0.0"),
+										Ref: new("example.com/chart:v1.0.0"),
 									},
 								},
 							},
@@ -111,29 +110,29 @@ var _ = Describe("Validation Tests", func() {
 			})
 
 			It("should return no errors when field is unchanged", func() {
-				test(ptr.To(true), ptr.To(true), BeEmpty())
+				test(new(true), new(true), BeEmpty())
 			})
 
 			It("should return no errors when field is set from nil to true", func() {
-				test(nil, ptr.To(true), BeEmpty())
+				test(nil, new(true), BeEmpty())
 			})
 
 			It("should return an error because the primary field is changed to false", func() {
-				test(ptr.To(true), ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				test(new(true), new(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.resources[0].primary"),
 				}))))
 			})
 
 			It("should return an error because the primary field is changed to nil", func() {
-				test(ptr.To(false), nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				test(new(false), nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.resources[0].primary"),
 				}))))
 			})
 
 			It("should return an error because the primary field is changed to true", func() {
-				test(ptr.To(false), ptr.To(true), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				test(new(false), new(true), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.resources[0].primary"),
 				}))))
@@ -173,7 +172,7 @@ func validateExtensionTests(test func() field.ErrorList, extension func() *opera
 				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
 					Helm: &operatorv1alpha1.ExtensionHelm{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Ref: ptr.To("example.com/admission:v1.0.0"),
+							Ref: new("example.com/admission:v1.0.0"),
 						},
 					},
 				},
@@ -233,7 +232,7 @@ func validateExtensionTests(test func() field.ErrorList, extension func() *opera
 				DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 					Helm: &operatorv1alpha1.ExtensionHelm{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Ref: ptr.To("example.com/chart:v1.0.0"),
+							Ref: new("example.com/chart:v1.0.0"),
 						},
 					},
 				},
@@ -247,8 +246,8 @@ func validateExtensionTests(test func() field.ErrorList, extension func() *opera
 				DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 					Helm: &operatorv1alpha1.ExtensionHelm{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Repository: ptr.To("example.com/chart"),
-							Tag:        ptr.To("v1.0.0"),
+							Repository: new("example.com/chart"),
+							Tag:        new("v1.0.0"),
 						},
 					},
 				},
@@ -294,7 +293,7 @@ func validateExtensionTests(test func() field.ErrorList, extension func() *opera
 				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
 					Helm: &operatorv1alpha1.ExtensionHelm{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Ref: ptr.To("example.com/admission:v1.0.0"),
+							Ref: new("example.com/admission:v1.0.0"),
 						},
 					},
 				},
@@ -323,8 +322,8 @@ func validateExtensionTests(test func() field.ErrorList, extension func() *opera
 				VirtualCluster: &operatorv1alpha1.DeploymentSpec{
 					Helm: &operatorv1alpha1.ExtensionHelm{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Repository: ptr.To("example.com/admission"),
-							Digest:     ptr.To("sha256:abc123"),
+							Repository: new("example.com/admission"),
+							Digest:     new("sha256:abc123"),
 						},
 					},
 				},

@@ -5,8 +5,6 @@
 package journald
 
 import (
-	"k8s.io/utils/ptr"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 )
@@ -26,7 +24,7 @@ func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []exte
 	return nil, []extensionsv1alpha1.File{
 		{
 			Path:        "/etc/systemd/journald.conf",
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: `[Journal]

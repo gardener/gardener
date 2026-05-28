@@ -25,7 +25,6 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -282,7 +281,7 @@ var _ = Describe("Shoot", func() {
 			workerPool = gardencorev1beta1.Worker{
 				Name: "worker",
 				Machine: gardencorev1beta1.Machine{
-					Architecture: ptr.To("arm64"),
+					Architecture: new("arm64"),
 				},
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{
 					Allow: true,
@@ -663,7 +662,7 @@ var _ = Describe("Shoot", func() {
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](420),
+						DefaultMode: new(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -674,7 +673,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "kubeconfig",
 										Path: "kubeconfig",
 									}},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 							{
@@ -686,7 +685,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "token",
 										Path: "token",
 									}},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 						},
@@ -714,7 +713,7 @@ var _ = Describe("Shoot", func() {
 				Name: volumeName,
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](420),
+						DefaultMode: new(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -725,7 +724,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "kubeconfig",
 										Path: "kubeconfig",
 									}},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 							{
@@ -737,7 +736,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "token",
 										Path: "token",
 									}},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 						},
@@ -778,14 +777,14 @@ var _ = Describe("Shoot", func() {
 		It("returns the correct seed names of a Shoot", func() {
 			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: ptr.To("spec"),
+					SeedName: new("spec"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: ptr.To("status"),
+					SeedName: new("status"),
 				},
 			})
-			Expect(specSeedName).To(Equal(ptr.To("spec")))
-			Expect(statusSeedName).To(Equal(ptr.To("status")))
+			Expect(specSeedName).To(Equal(new("spec")))
+			Expect(statusSeedName).To(Equal(new("status")))
 		})
 	})
 
@@ -799,14 +798,14 @@ var _ = Describe("Shoot", func() {
 		It("returns the correct seed names of a Shoot", func() {
 			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: ptr.To("spec"),
+					SeedName: new("spec"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: ptr.To("status"),
+					SeedName: new("status"),
 				},
 			})
-			Expect(specSeedName).To(Equal(ptr.To("spec")))
-			Expect(statusSeedName).To(Equal(ptr.To("status")))
+			Expect(specSeedName).To(Equal(new("spec")))
+			Expect(statusSeedName).To(Equal(new("status")))
 		})
 	})
 
@@ -1071,7 +1070,7 @@ var _ = Describe("Shoot", func() {
 										Kind:       "Secret",
 										Name:       dnsSecretName,
 									},
-									Primary: ptr.To(true),
+									Primary: new(true),
 								},
 							},
 						},
@@ -1156,7 +1155,7 @@ var _ = Describe("Shoot", func() {
 							Providers: []gardencorev1beta1.DNSProvider{
 								{
 									Type:    &provider,
-									Primary: ptr.To(true),
+									Primary: new(true),
 								},
 							},
 						},
@@ -1188,7 +1187,7 @@ var _ = Describe("Shoot", func() {
 							Domain: &domain,
 							Providers: []gardencorev1beta1.DNSProvider{{
 								Type:    &provider,
-								Primary: ptr.To(true),
+								Primary: new(true),
 								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 									APIVersion: "security.gardener.cloud/v1alpha1",
 									Kind:       "WorkloadIdentity",
@@ -1229,7 +1228,7 @@ var _ = Describe("Shoot", func() {
 							Domain: &domain,
 							Providers: []gardencorev1beta1.DNSProvider{{
 								Type:    &provider,
-								Primary: ptr.To(true),
+								Primary: new(true),
 								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 									APIVersion: "v1",
 									Kind:       "ConfigMap",
@@ -1266,7 +1265,7 @@ var _ = Describe("Shoot", func() {
 							Providers: []gardencorev1beta1.DNSProvider{
 								{
 									Type:    &provider,
-									Primary: ptr.To(true),
+									Primary: new(true),
 								},
 							},
 						},
@@ -1293,7 +1292,7 @@ var _ = Describe("Shoot", func() {
 							Providers: []gardencorev1beta1.DNSProvider{
 								{
 									Type:    &provider,
-									Primary: ptr.To(true),
+									Primary: new(true),
 								},
 							},
 						},
@@ -1385,7 +1384,7 @@ var _ = Describe("Shoot", func() {
 
 		It("should not return auto-enabled extensions that are explicitly disabled", func() {
 			shoot.Spec.Extensions = []gardencorev1beta1.Extension{
-				{Type: extensionType1, Disabled: ptr.To(true)},
+				{Type: extensionType1, Disabled: new(true)},
 			}
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
 				Items: []gardencorev1beta1.ControllerRegistration{
@@ -1468,7 +1467,7 @@ var _ = Describe("Shoot", func() {
 		It("should handle multiple controller registrations with mixed settings", func() {
 			shoot.Spec.Extensions = []gardencorev1beta1.Extension{
 				{Type: extensionType1},
-				{Type: extensionType4, Disabled: ptr.To(true)},
+				{Type: extensionType4, Disabled: new(true)},
 			}
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
 				Items: []gardencorev1beta1.ControllerRegistration{
@@ -1529,19 +1528,19 @@ var _ = Describe("Shoot", func() {
 										Kind:                extensionsv1alpha1.ExtensionResource,
 										Type:                extensionType1,
 										AutoEnable:          []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
-										WorkerlessSupported: ptr.To(true),
+										WorkerlessSupported: new(true),
 									},
 									{
 										Kind:                extensionsv1alpha1.ExtensionResource,
 										Type:                extensionType2,
 										AutoEnable:          []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
-										WorkerlessSupported: ptr.To(false),
+										WorkerlessSupported: new(false),
 									},
 									{
 										Kind:                extensionsv1alpha1.ExtensionResource,
 										Type:                extensionType3,
 										AutoEnable:          []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot},
-										WorkerlessSupported: ptr.To(true),
+										WorkerlessSupported: new(true),
 									},
 								},
 							},
@@ -1649,14 +1648,14 @@ var _ = Describe("Shoot", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To(networkingType),
+						Type: new(networkingType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: extensionType1},
 					},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
-							{Type: ptr.To(dnsProviderType3)},
+							{Type: new(dnsProviderType3)},
 						},
 					},
 				},
@@ -1702,7 +1701,7 @@ var _ = Describe("Shoot", func() {
 		It("should compute the correct list of required extensions (shoot explicitly disables automatically enabled extension)", func() {
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{
 				Type:     extensionType2,
-				Disabled: ptr.To(true),
+				Disabled: new(true),
 			})
 
 			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
@@ -1776,7 +1775,7 @@ var _ = Describe("Shoot", func() {
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType1,
 									AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
-									WorkerlessSupported: ptr.To(false),
+									WorkerlessSupported: new(false),
 								},
 							},
 						},
@@ -1788,7 +1787,7 @@ var _ = Describe("Shoot", func() {
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType2,
 									AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
-									WorkerlessSupported: ptr.To(true),
+									WorkerlessSupported: new(true),
 								},
 							},
 						},
@@ -1844,7 +1843,7 @@ var _ = Describe("Shoot", func() {
 				ControlPlane: &gardencorev1beta1.WorkerControlPlane{
 					Exposure: &gardencorev1beta1.Exposure{
 						Extension: &gardencorev1beta1.ExtensionExposure{
-							Type: ptr.To(exposureType),
+							Type: new(exposureType),
 						},
 					},
 				},
@@ -2030,19 +2029,19 @@ var _ = Describe("Shoot", func() {
 
 		It("should return the correct data string for the kubelet config", func() {
 			kubeletConfig = &gardencorev1beta1.KubeletConfig{
-				CPUManagerPolicy: ptr.To("static"),
+				CPUManagerPolicy: new("static"),
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-					ImageFSAvailable:  ptr.To("200Mi"),
-					ImageFSInodesFree: ptr.To("1k"),
-					MemoryAvailable:   ptr.To("200Mi"),
-					NodeFSAvailable:   ptr.To("200Mi"),
-					NodeFSInodesFree:  ptr.To("1k"),
+					ImageFSAvailable:  new("200Mi"),
+					ImageFSInodesFree: new("1k"),
+					MemoryAvailable:   new("200Mi"),
+					NodeFSAvailable:   new("200Mi"),
+					NodeFSInodesFree:  new("1k"),
 				},
 				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-					CPU:              ptr.To(resource.MustParse("100m")),
-					Memory:           ptr.To(resource.MustParse("2Gi")),
-					PID:              ptr.To(resource.MustParse("15k")),
-					EphemeralStorage: ptr.To(resource.MustParse("42Gi")),
+					CPU:              new(resource.MustParse("100m")),
+					Memory:           new(resource.MustParse("2Gi")),
+					PID:              new(resource.MustParse("15k")),
+					EphemeralStorage: new(resource.MustParse("42Gi")),
 				},
 			}
 
@@ -2163,18 +2162,18 @@ var _ = Describe("Shoot", func() {
 
 		BeforeEach(func() {
 			workerPoolName = "worker"
-			kubernetesVersion = ptr.To("1.2.3")
+			kubernetesVersion = new("1.2.3")
 			machineImageVersion = "1.1.1"
 
 			kubeletConfig = &gardencorev1beta1.KubeletConfig{
 				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-					CPU:              ptr.To(resource.MustParse("80m")),
-					Memory:           ptr.To(resource.MustParse("1Gi")),
-					PID:              ptr.To(resource.MustParse("10k")),
-					EphemeralStorage: ptr.To(resource.MustParse("20Gi")),
+					CPU:              new(resource.MustParse("80m")),
+					Memory:           new(resource.MustParse("1Gi")),
+					PID:              new(resource.MustParse("10k")),
+					EphemeralStorage: new(resource.MustParse("20Gi")),
 				},
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-					MemoryAvailable: ptr.To("100Mi"),
+					MemoryAvailable: new("100Mi"),
 				},
 				CPUManagerPolicy: nil,
 			}
@@ -2207,7 +2206,7 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
-				kubernetesVersion = ptr.To("1.3.2")
+				kubernetesVersion = new("1.3.2")
 			})
 
 			It("when a shoot CA rotation is triggered", func() {
@@ -2241,43 +2240,43 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("when changing kubeReserved CPU", func() {
-				kubeletConfig.KubeReserved.CPU = ptr.To(resource.MustParse("100m"))
+				kubeletConfig.KubeReserved.CPU = new(resource.MustParse("100m"))
 			})
 
 			It("when changing kubeReserved memory", func() {
-				kubeletConfig.KubeReserved.Memory = ptr.To(resource.MustParse("2Gi"))
+				kubeletConfig.KubeReserved.Memory = new(resource.MustParse("2Gi"))
 			})
 
 			It("when changing kubeReserved PID", func() {
-				kubeletConfig.KubeReserved.PID = ptr.To(resource.MustParse("15k"))
+				kubeletConfig.KubeReserved.PID = new(resource.MustParse("15k"))
 			})
 
 			It("when changing kubeReserved ephemeral storage", func() {
-				kubeletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("42Gi"))
+				kubeletConfig.KubeReserved.EphemeralStorage = new(resource.MustParse("42Gi"))
 			})
 
 			It("when changing evictionHard memory threshold", func() {
-				kubeletConfig.EvictionHard.MemoryAvailable = ptr.To("200Mi")
+				kubeletConfig.EvictionHard.MemoryAvailable = new("200Mi")
 			})
 
 			It("when changing evictionHard image fs threshold", func() {
-				kubeletConfig.EvictionHard.ImageFSAvailable = ptr.To("200Mi")
+				kubeletConfig.EvictionHard.ImageFSAvailable = new("200Mi")
 			})
 
 			It("when changing evictionHard image fs inodes threshold", func() {
-				kubeletConfig.EvictionHard.ImageFSInodesFree = ptr.To("1k")
+				kubeletConfig.EvictionHard.ImageFSInodesFree = new("1k")
 			})
 
 			It("when changing evictionHard node fs threshold", func() {
-				kubeletConfig.EvictionHard.NodeFSAvailable = ptr.To("200Mi")
+				kubeletConfig.EvictionHard.NodeFSAvailable = new("200Mi")
 			})
 
 			It("when changing evictionHard node fs inodes threshold", func() {
-				kubeletConfig.EvictionHard.NodeFSInodesFree = ptr.To("1k")
+				kubeletConfig.EvictionHard.NodeFSInodesFree = new("1k")
 			})
 
 			It("when changing CPUManagerPolicy", func() {
-				kubeletConfig.CPUManagerPolicy = ptr.To("test")
+				kubeletConfig.CPUManagerPolicy = new("test")
 			})
 		})
 
@@ -2314,7 +2313,7 @@ var _ = Describe("Shoot", func() {
 		})
 
 		It("should return an error if kubernetes version is invalid", func() {
-			kubernetesVersion = ptr.To("invalid")
+			kubernetesVersion = new("invalid")
 
 			_, err := CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
 			Expect(err).To(MatchError(ContainSubstring("failed to parse")))

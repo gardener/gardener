@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -280,7 +279,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			}),
 		},
 		Spec: corev1.PodSpec{
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 			PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
 			DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 			InitContainers: []corev1.Container{
@@ -293,7 +292,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						"setup",
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -372,7 +371,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{
 								"NET_ADMIN",
@@ -400,7 +399,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					},
 				},
 			},
-			TerminationGracePeriodSeconds: ptr.To[int64](30),
+			TerminationGracePeriodSeconds: new(int64(30)),
 			Volumes: []corev1.Volume{
 				{
 					Name: volumeNameDevNetTun,
@@ -415,7 +414,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Name: volumeNameCerts,
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -454,7 +453,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretTLSAuth.Name,
-							DefaultMode: ptr.To[int32](0400),
+							DefaultMode: new(int32(0400)),
 						},
 					},
 				},
@@ -543,7 +542,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 				Capabilities: &corev1.Capabilities{
 					Drop: []corev1.Capability{
 						"all",
@@ -580,8 +579,8 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		sts.Labels = labels
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			Replicas:             ptr.To(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			Replicas:             new(v.values.Replicas),
+			RevisionHistoryLimit: new(int32(1)),
 			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
@@ -603,9 +602,9 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pdb, func() error {
 		pdb.Labels = podLabels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: podLabels},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		}
 
 		return nil
@@ -623,8 +622,8 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             ptr.To(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(v.values.Replicas),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: deploymentName,
 			}},
@@ -653,7 +652,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(metricsPort)), Protocol: ptr.To(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(metricsPort)), Protocol: new(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
@@ -775,7 +774,7 @@ func (v *vpnSeedServer) deployScrapeConfig(ctx context.Context) error {
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(jobName),
+					Replacement: new(jobName),
 					TargetLabel: "job",
 				},
 				{
@@ -855,7 +854,7 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 	var (
 		vpa           = v.emptyVPA()
-		vpaUpdateMode = ptr.To(vpaautoscalingv1.UpdateModeRecreate)
+		vpaUpdateMode = new(vpaautoscalingv1.UpdateModeRecreate)
 	)
 
 	targetRefKind := "Deployment"
@@ -864,7 +863,7 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 	}
 
 	if v.values.VPAUpdateDisabled || v.values.HighAvailabilityEnabled {
-		vpaUpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+		vpaUpdateMode = new(vpaautoscalingv1.UpdateModeOff)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
@@ -883,12 +882,12 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 		if !v.values.HighAvailabilityEnabled {
 			vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName:    envoyProxyContainerName,
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			})
 		}
 		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+			Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 		})
 		return nil
 	})

@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,7 +32,7 @@ var _ = Describe("Reconciler", func() {
 		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
-		lifetime           = ptr.To[int32](1)
+		lifetime           = new(int32(1))
 		namespace          = "test-namespace"
 		quotaName          = "test-quota"
 		quota              *gardencorev1beta1.Quota
@@ -49,7 +48,7 @@ var _ = Describe("Reconciler", func() {
 			Client: fakeClient,
 			Clock:  clock.RealClock{},
 			Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
-				ConcurrentSyncs: ptr.To(1),
+				ConcurrentSyncs: new(1),
 				SyncPeriod:      &metav1.Duration{},
 			},
 		}
@@ -59,7 +58,7 @@ var _ = Describe("Reconciler", func() {
 				Namespace: namespace,
 			},
 			Spec: gardencorev1beta1.QuotaSpec{
-				ClusterLifetimeDays: ptr.To[int32](1),
+				ClusterLifetimeDays: new(int32(1)),
 			},
 		}
 
@@ -86,7 +85,7 @@ var _ = Describe("Reconciler", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: namespace, CreationTimestamp: metav1.Now()},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("test-secretbinding"),
+				SecretBindingName: new("test-secretbinding"),
 			},
 		}
 	})

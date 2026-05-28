@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -55,32 +54,32 @@ var _ = Describe("NodeExporter", func() {
 				ResourceVersion: "1",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
-				Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
-				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				HonorLabels: new(false),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 					Key:                  "token",
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					APIServer:  ptr.To("https://kube-apiserver"),
+					APIServer:  new("https://kube-apiserver"),
 					Role:       "Endpoints",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
-					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("node-exporter"),
+						Replacement: new("node-exporter"),
 						TargetLabel: "job",
 					},
 					{
 						TargetLabel: "type",
-						Replacement: ptr.To("shoot"),
+						Replacement: new("shoot"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
@@ -101,13 +100,13 @@ var _ = Describe("NodeExporter", func() {
 					},
 					{
 						TargetLabel: "__address__",
-						Replacement: ptr.To("kube-apiserver:443"),
+						Replacement: new("kube-apiserver:443"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
 						Regex:        `(.+);(.+)`,
 						TargetLabel:  "__metrics_path__",
-						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+						Replacement:  new("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
 					},
 				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -132,7 +131,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "NodeExporterDown",
 							Expr:  intstr.FromString(`absent(up{job="node-exporter"} == 1)`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "warning",
@@ -147,7 +146,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "K8SNodeOutOfDisk",
 							Expr:  intstr.FromString(`kube_node_status_condition{condition="OutOfDisk", status="true"} == 1`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "critical",
@@ -162,7 +161,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "K8SNodeMemoryPressure",
 							Expr:  intstr.FromString(`kube_node_status_condition{condition="MemoryPressure", status="true"} == 1`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "warning",
@@ -177,7 +176,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "K8SNodeDiskPressure",
 							Expr:  intstr.FromString(`kube_node_status_condition{condition="DiskPressure", status="true"} == 1`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "warning",
@@ -196,7 +195,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "VMRootfsFull",
 							Expr:  intstr.FromString(`node_filesystem_free{mountpoint="/"} < 1024`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "critical",
@@ -211,7 +210,7 @@ var _ = Describe("NodeExporter", func() {
 						{
 							Alert: "VMConntrackTableFull",
 							Expr:  intstr.FromString(`instance:conntrack_entries_usage:percent > 90`),
-							For:   ptr.To(monitoringv1.Duration("1h")),
+							For:   new(monitoringv1.Duration("1h")),
 							Labels: map[string]string{
 								"service":    "node-exporter",
 								"severity":   "critical",
@@ -449,7 +448,7 @@ status: {}
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -458,7 +457,7 @@ status: {}
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())

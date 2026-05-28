@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -83,7 +82,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	return append([]extensionsv1alpha1.File{{
 		Path:        filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name+".yaml"),
-		Permissions: ptr.To[uint32](0640),
+		Permissions: new(uint32(0640)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(staticPodYAML))}},
 	}}, filesFromVolumes...), hash, nil
 }
@@ -106,7 +105,7 @@ func translateSpec(spec *corev1.PodSpec) {
 	// here are supposed to run as non-root with 'nobody' user and group. In order to allow them reading and writing to
 	// their hostPath volumes, we have to change their user and group to 'root'.
 	if spec.SecurityContext != nil && spec.SecurityContext.FSGroup != nil {
-		spec.SecurityContext.FSGroup = ptr.To[int64](0)
+		spec.SecurityContext.FSGroup = new(int64(0))
 	}
 }
 
@@ -115,7 +114,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 		files               []extensionsv1alpha1.File
 		addFileWithHostPath = func(hostPath, fileName string, content []byte, desiredItems []corev1.KeyToPath) {
 			file := extensionsv1alpha1.File{
-				Permissions: ptr.To[uint32](0640),
+				Permissions: new(uint32(0640)),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(content)}},
 			}
 

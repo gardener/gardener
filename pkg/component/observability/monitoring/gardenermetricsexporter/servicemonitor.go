@@ -8,7 +8,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -20,7 +19,7 @@ func (g *gardenerMetricsExporter) serviceMonitor() *monitoringv1.ServiceMonitor 
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: GetLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
-				TargetPort: ptr.To(intstr.FromInt32(probePort)),
+				TargetPort: new(intstr.FromInt32(probePort)),
 				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 					"garden_projects_status",
 					"garden_users_total",

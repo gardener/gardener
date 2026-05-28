@@ -15,7 +15,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -281,7 +280,7 @@ func createBackupBucket(name, seedName string, lastErr *gardencorev1beta1.LastEr
 			Name: name,
 		},
 		Spec: gardencorev1beta1.BackupBucketSpec{
-			SeedName: ptr.To(seedName),
+			SeedName: new(seedName),
 		},
 		Status: gardencorev1beta1.BackupBucketStatus{
 			LastError: lastErr,

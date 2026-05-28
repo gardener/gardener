@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -218,7 +217,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Namespace: v1beta1constants.KubernetesDashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		secretCerts = &corev1.Secret{
@@ -266,8 +265,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(name),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To[int32](2),
-				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: new(int32(2)),
+				Replicas:             new(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{labelKey: name},
 				},
@@ -284,10 +283,10 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 					Spec: corev1.PodSpec{
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To[int64](1001),
-							RunAsGroup:         ptr.To[int64](2001),
-							FSGroup:            ptr.To[int64](1),
+							RunAsNonRoot:       new(true),
+							RunAsUser:          new(int64(1001)),
+							RunAsGroup:         new(int64(2001)),
+							FSGroup:            new(int64(1)),
 							SupplementalGroups: []int64{1},
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -330,8 +329,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									ReadOnlyRootFilesystem:   ptr.To(true),
+									AllowPrivilegeEscalation: new(false),
+									ReadOnlyRootFilesystem:   new(true),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -375,8 +374,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(scraperName),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To[int32](2),
-				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: new(int32(2)),
+				Replicas:             new(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{labelKey: scraperName},
 				},
@@ -386,7 +385,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 					Spec: corev1.PodSpec{
 						SecurityContext: &corev1.PodSecurityContext{
-							FSGroup:            ptr.To[int64](1),
+							FSGroup:            new(int64(1)),
 							SupplementalGroups: []int64{1},
 						},
 						Containers: []corev1.Container{
@@ -411,11 +410,11 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 									TimeoutSeconds:      int32(30),
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									ReadOnlyRootFilesystem:   ptr.To(true),
-									RunAsNonRoot:             ptr.To(true),
-									RunAsUser:                ptr.To[int64](1001),
-									RunAsGroup:               ptr.To[int64](2001),
+									AllowPrivilegeEscalation: new(false),
+									ReadOnlyRootFilesystem:   new(true),
+									RunAsNonRoot:             new(true),
+									RunAsUser:                new(int64(1001)),
+									RunAsGroup:               new(int64(2001)),
 									SeccompProfile: &corev1.SeccompProfile{
 										Type: corev1.SeccompProfileTypeRuntimeDefault,
 									},
@@ -502,7 +501,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

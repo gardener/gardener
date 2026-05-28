@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -139,7 +138,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "metrics-exporter"}},
 				Endpoints: []monitoringv1.Endpoint{{
-					TargetPort: ptr.To(intstr.FromInt32(2718)),
+					TargetPort: new(intstr.FromInt32(2718)),
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
@@ -254,9 +253,9 @@ var _ = Describe("GardenerMetricsExporter", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -286,7 +285,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -298,11 +297,11 @@ var _ = Describe("GardenerMetricsExporter", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 		})
@@ -629,8 +628,8 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -648,7 +647,7 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-100",
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					Containers: []corev1.Container{
 						{
 							Name:            "gardener-metrics-exporter",
@@ -661,8 +660,8 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 								"--port=2718",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
@@ -724,7 +723,7 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 							Name: "kubeconfig",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -735,7 +734,7 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 										{
@@ -747,7 +746,7 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 									},

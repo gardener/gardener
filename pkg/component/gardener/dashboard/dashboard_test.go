@@ -185,7 +185,7 @@ var _ = Describe("GardenerDashboard", func() {
 				},
 			},
 			Type:      corev1.SecretTypeOpaque,
-			Immutable: ptr.To(true),
+			Immutable: new(true),
 			Data: map[string][]byte{
 				"password": []byte("________________________________"),
 				"username": []byte("admin"),
@@ -337,8 +337,8 @@ frontend:
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](2),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "gardener",
@@ -358,12 +358,12 @@ frontend:
 						},
 						Spec: corev1.PodSpec{
 							PriorityClassName:            "gardener-garden-system-200",
-							AutomountServiceAccountToken: ptr.To(false),
+							AutomountServiceAccountToken: new(false),
 							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    ptr.To[int64](65532),
-								RunAsGroup:   ptr.To[int64](65532),
-								FSGroup:      ptr.To[int64](65532),
+								RunAsNonRoot: new(true),
+								RunAsUser:    new(int64(65532)),
+								RunAsGroup:   new(int64(65532)),
+								FSGroup:      new(int64(65532)),
 							},
 							Containers: []corev1.Container{
 								{
@@ -451,7 +451,7 @@ frontend:
 										PeriodSeconds:       10,
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -477,7 +477,7 @@ frontend:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  sessionSecret.Name,
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 											Items: []corev1.KeyToPath{{
 												Key:  "password",
 												Path: "sessionSecret",
@@ -521,7 +521,7 @@ frontend:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  sessionSecretPrevious.Name,
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 							Items: []corev1.KeyToPath{{
 								Key:  "password",
 								Path: "sessionSecretPrevious",
@@ -542,7 +542,7 @@ frontend:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  oidc.SecretRef.Name,
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 						},
 					},
 				})
@@ -558,7 +558,7 @@ frontend:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  gitHub.SecretRef.Name,
-							DefaultMode: ptr.To[int32](0640),
+							DefaultMode: new(int32(0640)),
 						},
 					},
 				})
@@ -627,12 +627,12 @@ frontend:
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "dashboard",
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -651,13 +651,13 @@ frontend:
 					Name:       "gardener-dashboard",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "gardener-dashboard",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -665,7 +665,7 @@ frontend:
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -1007,9 +1007,9 @@ frontend:
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -1034,7 +1034,7 @@ frontend:
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -1063,11 +1063,11 @@ frontend:
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
@@ -1092,7 +1092,7 @@ frontend:
 							},
 						},
 						Type:      corev1.SecretTypeOpaque,
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data: map[string][]byte{
 							"password": []byte("____________previous____________"),
 							"username": []byte("admin"),
@@ -1125,7 +1125,7 @@ frontend:
 						DashboardTerminal: operatorv1alpha1.DashboardTerminal{
 							Container: operatorv1alpha1.DashboardTerminalContainer{
 								Image:       "some-image:latest",
-								Description: ptr.To("cool image"),
+								Description: new("cool image"),
 							},
 							AllowedHosts: []string{"first", "second"},
 						},
@@ -1212,7 +1212,7 @@ frontend:
 
 			When("frontend is configured", func() {
 				BeforeEach(func() {
-					frontendConfigMapName = ptr.To("frontend")
+					frontendConfigMapName = new("frontend")
 
 					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: *frontendConfigMapName, Namespace: namespace},
@@ -1237,7 +1237,7 @@ themes:
 
 			When("assets are configured", func() {
 				BeforeEach(func() {
-					assetsConfigMapName = ptr.To("assets")
+					assetsConfigMapName = new("assets")
 
 					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: *assetsConfigMapName, Namespace: namespace},

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -108,7 +109,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// set the created namespace in spec.namespace
 	if project.Spec.Namespace == nil {
-		project.Spec.Namespace = ptr.To(namespace.Name)
+		project.Spec.Namespace = new(namespace.Name)
 		if err := r.Client.Update(ctx, project); err != nil {
 			r.Recorder.Eventf(project, nil, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, gardencorev1beta1.EventActionReconcile, err.Error())
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
@@ -384,8 +385,8 @@ func (r *Reconciler) releaseNamespace(ctx context.Context, log logr.Logger, proj
 		delete(namespace.Annotations, v1beta1constants.NamespaceCreatedByProjectController)
 		delete(namespace.Labels, v1beta1constants.ProjectName)
 		delete(namespace.Labels, v1beta1constants.GardenRole)
-		for i := len(namespace.OwnerReferences) - 1; i >= 0; i-- {
-			if ownerRef := namespace.OwnerReferences[i]; ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
+		for i, ownerRef := range slices.Backward(namespace.OwnerReferences) {
+			if ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
 				ownerRef.Kind == "Project" &&
 				ownerRef.Name == project.Name &&
 				ownerRef.UID == project.UID {

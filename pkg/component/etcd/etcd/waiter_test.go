@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -82,7 +81,7 @@ var _ = Describe("#Wait", func() {
 		)
 
 		etcd = New(log, c, testNamespace, sm, Values{
-			Replicas:        ptr.To[int32](3),
+			Replicas:        new(int32(3)),
 			Role:            testRole,
 			Class:           ClassNormal,
 			StorageCapacity: "20Gi",
@@ -90,7 +89,7 @@ var _ = Describe("#Wait", func() {
 				Begin: "1234",
 				End:   "5678",
 			},
-			EvictionRequirement: ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly),
+			EvictionRequirement: new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly),
 		})
 
 		expected = &druidcorev1alpha1.Etcd{
@@ -126,14 +125,14 @@ var _ = Describe("#Wait", func() {
 		)()
 		delete(expected.Annotations, v1beta1constants.GardenerOperation)
 		expected.Status.LastErrors = []druidapicommon.LastError{}
-		expected.Status.ObservedGeneration = ptr.To(expected.Generation)
+		expected.Status.ObservedGeneration = new(expected.Generation)
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
 				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(false)
+		expected.Status.Ready = new(false)
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
 		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("is not ready yet")))
@@ -161,7 +160,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -174,12 +173,12 @@ var _ = Describe("#Wait", func() {
 		)()
 
 		By("Deploy")
-		etcd.SetReplicas(ptr.To[int32](0))
+		etcd.SetReplicas(new(int32(0)))
 		Expect(etcd.Deploy(ctx)).To(Succeed())
 
 		By("Patch object")
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.ObservedGeneration = new(int64(0))
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.Annotations = map[string]string{
@@ -192,7 +191,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionUnknown,
 			},
 		}
-		expected.Status.Ready = ptr.To(false)
+		expected.Status.Ready = new(false)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -210,13 +209,13 @@ var _ = Describe("#Wait", func() {
 
 		By("Patch object")
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.ObservedGeneration = new(int64(0))
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -234,7 +233,7 @@ var _ = Describe("#Wait", func() {
 
 		By("Patch object")
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.ObservedGeneration = new(int64(0))
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.Annotations = map[string]string{
@@ -246,7 +245,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionFalse,
 			},
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -264,7 +263,7 @@ var _ = Describe("#Wait", func() {
 
 		By("Patch object")
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.ObservedGeneration = new(int64(0))
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.Annotations = map[string]string{
@@ -276,7 +275,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(false)
+		expected.Status.Ready = new(false)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -295,7 +294,7 @@ var _ = Describe("#Wait", func() {
 		By("Patch object")
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.ObservedGeneration = new(int64(0))
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.Annotations = map[string]string{
@@ -307,7 +306,7 @@ var _ = Describe("#Wait", func() {
 				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
-		expected.Status.Ready = ptr.To(true)
+		expected.Status.Ready = new(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
@@ -349,13 +348,13 @@ var _ = Describe("#CheckEtcdObject", func() {
 
 	It("should return error if observedGeneration is outdated", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](0)
+		obj.Status.ObservedGeneration = new(int64(0))
 		Expect(CheckEtcdObject(obj)).To(MatchError("observed generation outdated (0/1)"))
 	})
 
 	It("should return error if operation annotation is not removed yet", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, v1beta1constants.GardenerOperation, "reconcile")
 		Expect(CheckEtcdObject(obj)).To(MatchError("gardener operation \"reconcile\" is not yet picked up by etcd-druid"))
 	})
@@ -363,54 +362,54 @@ var _ = Describe("#CheckEtcdObject", func() {
 	It("should not return error if replicas is set to 0, even if AllMembersUpdated condition and readiness are not true", func() {
 		obj.SetGeneration(1)
 		obj.Spec.Replicas = 0
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
-		obj.Status.Ready = ptr.To(false)
+		obj.Status.Ready = new(false)
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 
 	It("should not return error if runtime component creation is disabled, even if AllMembersUpdated condition and readiness are not true", func() {
 		obj.SetGeneration(1)
 		obj.Annotations = map[string]string{"druid.gardener.cloud/disable-etcd-runtime-component-creation": ""}
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
-		obj.Status.Ready = ptr.To(false)
+		obj.Status.Ready = new(false)
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 
 	It("should return error if condition AllMembersUpdated is not present", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		Expect(CheckEtcdObject(obj)).To(MatchError("condition AllMembersUpdated is not present"))
 	})
 
 	It("should return error if condition AllMembersUpdated is not true", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
 		Expect(CheckEtcdObject(obj)).To(MatchError(ContainSubstring("condition AllMembersUpdated is False")))
 	})
 
 	It("should return error if status.ready==nil", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should return error if status.ready==false", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
-		obj.Status.Ready = ptr.To(false)
+		obj.Status.Ready = new(false)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
-		obj.Status.Ready = ptr.To(true)
+		obj.Status.Ready = new(true)
 		obj.Status.Replicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})

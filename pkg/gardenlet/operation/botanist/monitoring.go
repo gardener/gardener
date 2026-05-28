@@ -12,7 +12,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -117,7 +116,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		StorageCapacity:     resource.MustParse(b.Seed.GetValidVolumeSize("20Gi")),
 		ClusterType:         component.ClusterTypeShoot,
 		Replicas:            b.Shoot.GetReplicas(1),
-		Retention:           ptr.To(monitoringv1.Duration("30d")),
+		Retention:           new(monitoringv1.Duration("30d")),
 		RetentionSize:       "15GB",
 		RestrictToNamespace: true,
 		HealthCheckBy:       prometheus.Gardenlet,
@@ -138,7 +137,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		Alerting: &prometheus.AlertingValues{
 			Alertmanagers: []*prometheus.Alertmanager{{
 				Name:      "alertmanager-seed",
-				Namespace: ptr.To(v1beta1constants.GardenNamespace)}}},
+				Namespace: new(v1beta1constants.GardenNamespace)}}},
 		Ingress: &prometheus.IngressValues{
 			Host:                              b.ComputePrometheusHost(),
 			SecretsManager:                    b.SecretsManager,

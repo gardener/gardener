@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
@@ -84,17 +83,17 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 // SetDefaults_ResourceManagerControllerConfiguration sets defaults for the controller configuration.
 func SetDefaults_ResourceManagerControllerConfiguration(obj *ResourceManagerControllerConfiguration) {
 	if obj.ClusterID == nil {
-		obj.ClusterID = ptr.To("")
+		obj.ClusterID = new("")
 	}
 	if obj.ResourceClass == nil {
-		obj.ResourceClass = ptr.To(DefaultResourceClass)
+		obj.ResourceClass = new(DefaultResourceClass)
 	}
 }
 
 // SetDefaults_CSRApproverControllerConfig sets defaults for the CSRApproverControllerConfig object.
 func SetDefaults_CSRApproverControllerConfig(obj *CSRApproverControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(1)
+		obj.ConcurrentSyncs = new(1)
 	}
 }
 
@@ -108,21 +107,21 @@ func SetDefaults_GarbageCollectorControllerConfig(obj *GarbageCollectorControlle
 // SetDefaults_NetworkPolicyControllerConfig sets defaults for the NetworkPolicyControllerConfig object.
 func SetDefaults_NetworkPolicyControllerConfig(obj *NetworkPolicyControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 }
 
 // SetDefaults_IstioClusterConfigurationControllerConfig sets defaults for the IstioClusterConfigurationControllerConfig object.
 func SetDefaults_IstioClusterConfigurationControllerConfig(obj *IstioClusterConfigurationControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 }
 
 // SetDefaults_HealthControllerConfig sets defaults for the HealthControllerConfig object.
 func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
@@ -132,23 +131,23 @@ func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 // SetDefaults_ManagedResourceControllerConfig sets defaults for the ManagedResourceControllerConfig object.
 func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
 	}
 	if obj.AlwaysUpdate == nil {
-		obj.AlwaysUpdate = ptr.To(false)
+		obj.AlwaysUpdate = new(false)
 	}
 	if obj.ManagedByLabelValue == nil {
-		obj.ManagedByLabelValue = ptr.To(resourcesv1alpha1.GardenerManager)
+		obj.ManagedByLabelValue = new(resourcesv1alpha1.GardenerManager)
 	}
 }
 
 // SetDefaults_TokenRequestorControllerConfig sets defaults for the TokenRequestorControllerConfig object.
 func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
+		obj.ConcurrentSyncs = new(5)
 	}
 }
 
@@ -156,7 +155,7 @@ func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerCon
 func SetDefaults_NodeCriticalComponentsControllerConfig(obj *NodeCriticalComponentsControllerConfig) {
 	if obj.Enabled {
 		if obj.ConcurrentSyncs == nil {
-			obj.ConcurrentSyncs = ptr.To(5)
+			obj.ConcurrentSyncs = new(5)
 		}
 		if obj.Backoff == nil {
 			obj.Backoff = &metav1.Duration{Duration: 10 * time.Second}
@@ -179,13 +178,13 @@ func SetDefaults_NodeAgentReconciliationDelayControllerConfig(obj *NodeAgentReco
 // SetDefaults_PodSchedulerNameWebhookConfig sets defaults for the PodSchedulerNameWebhookConfig object.
 func SetDefaults_PodSchedulerNameWebhookConfig(obj *PodSchedulerNameWebhookConfig) {
 	if obj.Enabled && obj.SchedulerName == nil {
-		obj.SchedulerName = ptr.To(corev1.DefaultSchedulerName)
+		obj.SchedulerName = new(corev1.DefaultSchedulerName)
 	}
 }
 
 // SetDefaults_ProjectedTokenMountWebhookConfig sets defaults for the ProjectedTokenMountWebhookConfig object.
 func SetDefaults_ProjectedTokenMountWebhookConfig(obj *ProjectedTokenMountWebhookConfig) {
 	if obj.Enabled && obj.ExpirationSeconds == nil {
-		obj.ExpirationSeconds = ptr.To[int64](43200)
+		obj.ExpirationSeconds = new(int64(43200))
 	}
 }

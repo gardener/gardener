@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -190,7 +189,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             k.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
@@ -213,19 +212,19 @@ func (k *kubeAPIServer) reconcileDeployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken:  ptr.To(false),
+					AutomountServiceAccountToken:  new(false),
 					PriorityClassName:             k.values.PriorityClassName,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					TerminationGracePeriodSeconds: ptr.To[int64](30),
+					TerminationGracePeriodSeconds: new(int64(30)),
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
-						RunAsGroup:   ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
-						FSGroup:      ptr.To[int64](v1beta1constants.DistrolessNonRootUserId),
+						RunAsNonRoot: new(true),
+						RunAsUser:    new(int64(v1beta1constants.DistrolessNonRootUserId)),
+						RunAsGroup:   new(int64(v1beta1constants.DistrolessNonRootUserId)),
+						FSGroup:      new(int64(v1beta1constants.DistrolessNonRootUserId)),
 					},
 					Containers: []corev1.Container{{
 						Name:                     ContainerNameKubeAPIServer,
@@ -242,7 +241,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
@@ -341,7 +340,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKey.Name,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -350,7 +349,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKeyBundle.Name,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -367,7 +366,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretKubeAggregator.Name,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -524,7 +523,7 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  sni.secretName,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		})
@@ -597,7 +596,7 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretHTTPProxyClient.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		},
@@ -683,11 +682,11 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameAPIServerAccess,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 					Sources: []corev1.VolumeProjection{
 						{
 							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-								ExpirationSeconds: ptr.To(int64(60 * 60 * 12)),
+								ExpirationSeconds: new(int64(60 * 60 * 12)),
 								Path:              "token",
 							},
 						},
@@ -721,7 +720,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameVPNSeedClient,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -760,7 +759,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretHAVPNSeedClientSeedTLSAuth.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		},
@@ -782,7 +781,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  secretHTTPProxyClient.Name,
-						DefaultMode: ptr.To[int32](0640),
+						DefaultMode: new(int32(0640)),
 					},
 				},
 			},
@@ -818,7 +817,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 				Name: volumeNameCerts,
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](420),
+						DefaultMode: new(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -892,7 +891,7 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 		})
 	}
 	// may need to enable IPv6 in pod network (e.g. for GKE clusters)
-	container.SecurityContext.Privileged = ptr.To(true)
+	container.SecurityContext.Privileged = new(true)
 
 	container.LivenessProbe = nil
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -957,8 +956,8 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: ptr.To(false),
-			RunAsUser:    ptr.To[int64](0),
+			RunAsNonRoot: new(false),
+			RunAsUser:    new(int64(0)),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -1046,10 +1045,10 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: ptr.To(false),
-			RunAsUser:    ptr.To[int64](0),
+			RunAsNonRoot: new(false),
+			RunAsUser:    new(int64(0)),
 			// group needs to be set to a concrete value to allow unprivileged ping socket when configuring sysctl net.ipv4.ping_group_range
-			RunAsGroup: ptr.To[int64](0),
+			RunAsGroup: new(int64(0)),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -1109,7 +1108,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretKubeletClient.Name,
-					DefaultMode: ptr.To[int32](0640),
+					DefaultMode: new(int32(0640)),
 				},
 			},
 		},

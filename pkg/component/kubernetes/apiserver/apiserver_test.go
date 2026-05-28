@@ -38,7 +38,6 @@ import (
 	"k8s.io/client-go/testing"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -246,12 +245,12 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 
 				Entry("replicas is nil", AutoscalingConfig{Replicas: nil}),
-				Entry("replicas is 0", AutoscalingConfig{Replicas: ptr.To[int32](0)}),
+				Entry("replicas is 0", AutoscalingConfig{Replicas: new(int32(0))}),
 			)
 
 			It("should successfully deploy the HPA resource", func() {
 				autoscalingConfig := AutoscalingConfig{
-					Replicas:    ptr.To[int32](2),
+					Replicas:    new(int32(2)),
 					MinReplicas: 4,
 					MaxReplicas: 6,
 				}
@@ -262,7 +261,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Name: "cpu",
 							Target: autoscalingv2.MetricTarget{
 								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("6")),
+								AverageValue: new(resource.MustParse("6")),
 							},
 						},
 					},
@@ -272,14 +271,14 @@ var _ = Describe("KubeAPIServer", func() {
 							Name: "memory",
 							Target: autoscalingv2.MetricTarget{
 								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("24G")),
+								AverageValue: new(resource.MustParse("24G")),
 							},
 						},
 					},
 				}
 				hpaBehaviour := &autoscalingv2.HorizontalPodAutoscalerBehavior{
 					ScaleUp: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](60),
+						StabilizationWindowSeconds: new(int32(60)),
 						Policies: []autoscalingv2.HPAScalingPolicy{
 							{
 								Type:          autoscalingv2.PercentScalingPolicy,
@@ -289,7 +288,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 					ScaleDown: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](1800),
+						StabilizationWindowSeconds: new(int32(1800)),
 						Policies: []autoscalingv2.HPAScalingPolicy{
 							{
 								Type:          autoscalingv2.PodsScalingPolicy,
@@ -368,7 +367,7 @@ var _ = Describe("KubeAPIServer", func() {
 								Name:       "kube-apiserver",
 							},
 							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+								UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 							},
 							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 								ContainerPolicies: containerPolicies,
@@ -384,7 +383,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
@@ -392,7 +391,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -404,7 +403,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
@@ -412,7 +411,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -424,7 +423,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
@@ -432,7 +431,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -444,7 +443,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
@@ -452,7 +451,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -476,14 +475,14 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+						MaxUnavailable: new(intstr.FromInt32(1)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app":  "kubernetes",
 								"role": "apiserver",
 							},
 						},
-						UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+						UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 					},
 				}))
 			})
@@ -519,11 +518,11 @@ var _ = Describe("KubeAPIServer", func() {
 							"metrics-scrape-target": "true",
 						}},
 						Endpoints: []monitoringv1.Endpoint{{
-							TargetPort: ptr.To(intstr.FromInt32(443)),
-							Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
+							TargetPort: new(intstr.FromInt32(443)),
+							Scheme:     new(monitoringv1.SchemeHTTPS),
 							HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 								HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 									HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 										Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 											LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
@@ -604,7 +603,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "ApiServerNotReachable",
 									Expr:  intstr.FromString(`probe_success{job="blackbox-apiserver"} == 0`),
-									For:   ptr.To(monitoringv1.Duration("5m")),
+									For:   new(monitoringv1.Duration("5m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "blocker",
@@ -619,7 +618,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiserverDown",
 									Expr:  intstr.FromString(`absent(up{job="kube-apiserver"} == 1)`),
-									For:   ptr.To(monitoringv1.Duration("5m")),
+									For:   new(monitoringv1.Duration("5m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "blocker",
@@ -634,7 +633,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiServerTooManyOpenFileDescriptors",
 									Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50`),
-									For:   ptr.To(monitoringv1.Duration("30m")),
+									For:   new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "warning",
@@ -649,7 +648,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiServerTooManyOpenFileDescriptors",
 									Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80`),
-									For:   ptr.To(monitoringv1.Duration("30m")),
+									For:   new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "critical",
@@ -667,7 +666,7 @@ var _ = Describe("KubeAPIServer", func() {
 									// - WATCHLIST is long-poll
 									// - CONNECT is "kubectl exec"
 									Expr: intstr.FromString(`histogram_quantile(0.99, sum without (instance,resource,subresource) (rate(apiserver_request_duration_seconds_bucket{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3`),
-									For:  ptr.To(monitoringv1.Duration("30m")),
+									For:  new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "warning",
@@ -714,7 +713,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "KubeApiServerTooManyAuditlogFailures",
 									Expr:  intstr.FromString(`sum(rate (apiserver_audit_error_total{plugin!="log",job="kube-apiserver"}[5m])) / sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m])) > bool 0.02 == 1`),
-									For:   ptr.To(monitoringv1.Duration("15m")),
+									For:   new(monitoringv1.Duration("15m")),
 									Labels: map[string]string{
 										"service":    "auditlog",
 										"severity":   "warning",
@@ -767,7 +766,7 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									Alert: "ApiserverRequestsFailureRate",
 									Expr:  intstr.FromString(`max(sum by(instance,resource,verb) (rate(apiserver_request_total{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(apiserver_request_total[10m]))) * 100 > 10`),
-									For:   ptr.To(monitoringv1.Duration("30m")),
+									For:   new(monitoringv1.Duration("30m")),
 									Labels: map[string]string{
 										"service":    "kube-apiserver",
 										"severity":   "warning",
@@ -875,7 +874,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  ptr.To(false),
+						KeepObjects:  new(false),
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
 					},
 				}
@@ -904,7 +903,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      secretAdmissionKubeconfigs.Data,
 					}))
 				})
@@ -941,7 +940,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      secretAdmissionKubeconfigs.Data,
 					}))
 				})
@@ -984,7 +983,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
@@ -1077,7 +1076,7 @@ resources:
 							},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      expectedSecretETCDEncryptionConfiguration.Data,
 					}))
 
@@ -1102,9 +1101,9 @@ resources:
 						},
 						Version: version,
 						SNI: SNIConfig{TLS: []TLSSNIConfig{
-							{SecretName: ptr.To("foo")},
+							{SecretName: new("foo")},
 							{Certificate: []byte("foo"), PrivateKey: []byte("bar")},
-							{SecretName: ptr.To("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+							{SecretName: new("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
 						}},
 					})
 
@@ -1127,7 +1126,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      expectedSecret.Data,
 					}))
 				})
@@ -1178,7 +1177,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1216,7 +1215,7 @@ resources:
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecret.Data,
 				}))
 			})
@@ -1262,7 +1261,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      secretAuthorizationKubeconfigs.Data,
 					}))
 				})
@@ -1291,7 +1290,7 @@ plugins: null
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1386,7 +1385,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1472,7 +1471,7 @@ kubeConfigFile: ""
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1548,7 +1547,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAdmission.Data,
 					}))
 				})
@@ -1577,7 +1576,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
@@ -1612,7 +1611,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
@@ -1635,7 +1634,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1654,11 +1653,11 @@ rules:
 								"AnonymousAuthConfigurableEndpoints": true,
 							},
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: false,
 					}
@@ -1681,7 +1680,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1702,7 +1701,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1718,11 +1717,11 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: false,
 					}
@@ -1745,7 +1744,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1766,7 +1765,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1782,12 +1781,12 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(true),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{
 						Enabled: true,
 					}
@@ -1810,7 +1809,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1831,7 +1830,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1850,12 +1849,12 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AnonymousAuthenticationEnabled: ptr.To(false),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(false),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -1875,7 +1874,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1896,7 +1895,7 @@ rules:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1915,12 +1914,12 @@ rules:
 								"AnonymousAuthConfigurableEndpoints": false,
 							},
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(true),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -1940,7 +1939,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -1961,7 +1960,7 @@ rules:
 									ClaimMappings: apiserverv1alpha1.ClaimMappings{
 										Username: apiserverv1alpha1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -1977,12 +1976,12 @@ rules:
 									Issuer: apiserverv1beta1.Issuer{
 										URL:          "https://foo.com",
 										Audiences:    []string{"example-client-id"},
-										DiscoveryURL: ptr.To(""),
+										DiscoveryURL: new(""),
 									},
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -2001,8 +2000,8 @@ rules:
 								"AnonymousAuthConfigurableEndpoints": false,
 							},
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
-						AuthenticationConfiguration:    ptr.To(string(authenticationConfig)),
+						AnonymousAuthenticationEnabled: new(true),
+						AuthenticationConfiguration:    new(string(authenticationConfig)),
 						Version:                        version,
 					})
 
@@ -2025,7 +2024,7 @@ rules:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthentication.Data,
 					}))
 				})
@@ -2043,7 +2042,7 @@ rules:
 								"StructuredAuthenticationConfiguration": false,
 							},
 						},
-						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						AuthenticationConfiguration: new(authenticationConfig),
 						Version:                     version,
 					})
 
@@ -2114,7 +2113,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2182,7 +2181,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2219,7 +2218,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2286,7 +2285,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapAuthorization.Data,
 					}))
 				})
@@ -2318,7 +2317,7 @@ kind: AuthorizationConfiguration
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      configMapEgressSelector.Data,
 					}))
 				})
@@ -2776,7 +2775,7 @@ kind: AuthorizationConfiguration
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
-				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(ptr.To(true)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(new(true)))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsUser).To(PointTo(Equal(int64(65532))))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsGroup).To(PointTo(Equal(int64(65532))))
 				Expect(deployment.Spec.Template.Spec.SecurityContext.FSGroup).To(PointTo(Equal(int64(65532))))
@@ -2854,8 +2853,8 @@ kind: AuthorizationConfiguration
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsNonRoot: ptr.To(false),
-						RunAsUser:    ptr.To[int64](0),
+						RunAsNonRoot: new(false),
+						RunAsUser:    new(int64(0)),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -2915,7 +2914,7 @@ kind: AuthorizationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
-				initContainer.SecurityContext.Privileged = ptr.To(true)
+				initContainer.SecurityContext.Privileged = new(true)
 				return initContainer
 			}
 
@@ -3000,9 +2999,9 @@ kind: AuthorizationConfiguration
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsNonRoot: ptr.To(false),
-						RunAsGroup:   ptr.To[int64](0),
-						RunAsUser:    ptr.To[int64](0),
+						RunAsNonRoot: new(false),
+						RunAsGroup:   new(int64(0)),
+						RunAsUser:    new(int64(0)),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -3031,7 +3030,7 @@ kind: AuthorizationConfiguration
 						Name: "vpn-seed-client",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: new(int32(0640)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -3070,7 +3069,7 @@ kind: AuthorizationConfiguration
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretNameVPNSeedServerTLSAuth,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: new(int32(0640)),
 							},
 						},
 					},
@@ -3138,8 +3137,8 @@ kind: AuthorizationConfiguration
 						Values: apiserver.Values{
 							EnabledAdmissionPlugins: admissionPlugins,
 							Logging: &gardencorev1beta1.APIServerLogging{
-								Verbosity:           ptr.To[int32](3),
-								HTTPAccessVerbosity: ptr.To[int32](3),
+								Verbosity:           new(int32(3)),
+								HTTPAccessVerbosity: new(int32(3)),
 							},
 							RuntimeVersion: runtimeVersion,
 						},
@@ -3153,7 +3152,7 @@ kind: AuthorizationConfiguration
 							AcceptedIssuers:       acceptedIssuers,
 							MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
 							ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
-							JWKSURI:               ptr.To("https://foo.bar/jwks"),
+							JWKSURI:               new("https://foo.bar/jwks"),
 						},
 						ServiceNetworkCIDRs: serviceNetworkCIDRs,
 						Version:             version,
@@ -3233,7 +3232,7 @@ kind: AuthorizationConfiguration
 						Protocol:      corev1.ProtocolTCP,
 					}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
-					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext).To(Equal(&corev1.SecurityContext{AllowPrivilegeEscalation: ptr.To(false)}))
+					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext).To(Equal(&corev1.SecurityContext{AllowPrivilegeEscalation: new(false)}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ConsistOf(
 						corev1.VolumeMount{
 							Name:      "audit-policy-config",
@@ -3368,7 +3367,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameEtcd,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3377,7 +3376,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServiceAccountKey,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3386,7 +3385,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServiceAccountKeyBundle,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3403,7 +3402,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameKubeAggregator,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3412,7 +3411,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameETCDEncryptionConfig,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3421,7 +3420,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServer,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3488,7 +3487,7 @@ kind: AuthorizationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameKubeAPIServerToKubelet,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -3604,7 +3603,7 @@ kind: AuthorizationConfiguration
 								"StructuredAuthenticationConfiguration": false,
 							},
 						},
-						AnonymousAuthenticationEnabled: ptr.To(true),
+						AnonymousAuthenticationEnabled: new(true),
 						Images:                         images,
 						Version:                        version,
 					})
@@ -3629,7 +3628,7 @@ anonymous:
 						},
 						Images:                      images,
 						Version:                     semver.MustParse("1.32.0"),
-						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						AuthenticationConfiguration: new(authenticationConfig),
 					})
 					deployAndRead()
 
@@ -3780,8 +3779,8 @@ anonymous:
 
 				It("should configure the request settings if provided", func() {
 					requests := &gardencorev1beta1.APIServerRequests{
-						MaxNonMutatingInflight: ptr.To[int32](123),
-						MaxMutatingInflight:    ptr.To[int32](456),
+						MaxNonMutatingInflight: new(int32(123)),
+						MaxMutatingInflight:    new(int32(456)),
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -3816,7 +3815,7 @@ anonymous:
 									ClaimMappings: apiserverv1beta1.ClaimMappings{
 										Username: apiserverv1beta1.PrefixedClaimOrExpression{
 											Claim:  "username",
-											Prefix: ptr.To("foo:"),
+											Prefix: new("foo:"),
 										},
 									},
 								},
@@ -3833,11 +3832,11 @@ anonymous:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
-					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = ptr.To("")
+					authenticationConfigInput.JWT[0].Issuer.DiscoveryURL = new("")
 					authenticationConfigInput.Anonymous = &apiserverv1beta1.AnonymousAuthConfig{Enabled: false}
 					expectedAuthenticationConfig, err := runtime.Encode(ConfigCodec, authenticationConfigInput)
 					Expect(err).ToNot(HaveOccurred())
@@ -3852,7 +3851,7 @@ anonymous:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						AuthenticationConfiguration: ptr.To(string(authenticationConfig)),
+						AuthenticationConfiguration: new(string(authenticationConfig)),
 						Version:                     version,
 					})
 
@@ -3944,10 +3943,10 @@ anonymous:
 
 				It("should configure the watch cache settings if provided", func() {
 					watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-						Default: ptr.To[int32](123),
+						Default: new(int32(123)),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
 							{Resource: "foo", CacheSize: 456},
-							{Resource: "bar", CacheSize: 789, APIGroup: ptr.To("baz")},
+							{Resource: "bar", CacheSize: 789, APIGroup: new("baz")},
 						},
 					}
 
@@ -3979,8 +3978,8 @@ anonymous:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
-						DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
+						DefaultNotReadyTolerationSeconds:    new(int64(120)),
+						DefaultUnreachableTolerationSeconds: new(int64(130)),
 						Images:                              images,
 						Version:                             version,
 					})
@@ -3995,8 +3994,8 @@ anonymous:
 
 				It("should configure the KubeAPISeverLogging settings if provided", func() {
 					logging := &gardencorev1beta1.APIServerLogging{
-						Verbosity:           ptr.To[int32](3),
-						HTTPAccessVerbosity: ptr.To[int32](3),
+						Verbosity:           new(int32(3)),
+						HTTPAccessVerbosity: new(int32(3)),
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -4073,7 +4072,7 @@ anonymous:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameHTTPProxyClient,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -4141,7 +4140,7 @@ anonymous:
 
 				It("should properly set the TLS SNI flag if necessary", func() {
 					values.SNI.TLS = []TLSSNIConfig{
-						{SecretName: ptr.To("existing-secret")},
+						{SecretName: new("existing-secret")},
 						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatterns: []string{"foo1.com", "*.foo2.com"}},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -4169,7 +4168,7 @@ anonymous:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "existing-secret",
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -4178,7 +4177,7 @@ anonymous:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "kube-apiserver-tls-sni-1-ec321de5",
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -4189,8 +4188,8 @@ anonymous:
 					values.Audit = &apiserver.AuditConfig{
 						Webhook: &apiserver.AuditWebhook{
 							Kubeconfig:   []byte("foo"),
-							BatchMaxSize: ptr.To[int32](30),
-							Version:      ptr.To("audit.k8s.io/v1beta1"),
+							BatchMaxSize: new(int32(30)),
+							Version:      new("audit.k8s.io/v1beta1"),
 						},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -4223,8 +4222,8 @@ anonymous:
 				It("should properly configure the authentication settings with webhook", func() {
 					values.AuthenticationWebhook = &AuthenticationWebhook{
 						Kubeconfig: []byte("foo"),
-						CacheTTL:   ptr.To(30 * time.Second),
-						Version:    ptr.To("v1beta1"),
+						CacheTTL:   new(30 * time.Second),
+						Version:    new("v1beta1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
@@ -4479,7 +4478,7 @@ anonymous:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To[int32](0)
+				deploy.Spec.Replicas = new(int32(0))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -4551,7 +4550,7 @@ anonymous:
 
 	Describe("#GetAutoscalingReplicas", func() {
 		It("should properly get the field", func() {
-			v := ptr.To[int32](2)
+			v := new(int32(2))
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetAutoscalingReplicas()).To(Equal(v))
 		})
@@ -4559,7 +4558,7 @@ anonymous:
 
 	Describe("#SetAutoscalingReplicas", func() {
 		It("should properly set the field", func() {
-			v := ptr.To[int32](2)
+			v := new(int32(2))
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetValues().Autoscaling.Replicas).To(Equal(v))
 		})
@@ -4623,19 +4622,19 @@ anonymous:
 			),
 			Entry("ExtendTokenExpiration and MaxTokenExpiration are set",
 				&gardencorev1beta1.ServiceAccountConfig{
-					ExtendTokenExpiration: ptr.To(true),
+					ExtendTokenExpiration: new(true),
 					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				ServiceAccountConfig{
 					Issuer:                "https://" + externalHostname,
-					ExtendTokenExpiration: ptr.To(true),
+					ExtendTokenExpiration: new(true),
 					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
 				},
 			),
 			Entry("Issuer is set",
 				&gardencorev1beta1.ServiceAccountConfig{
-					Issuer: ptr.To("issuer"),
+					Issuer: new("issuer"),
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				ServiceAccountConfig{
@@ -4655,7 +4654,7 @@ anonymous:
 			),
 			Entry("AcceptedIssuers and Issuer are both set",
 				&gardencorev1beta1.ServiceAccountConfig{
-					Issuer:          ptr.To("issuer"),
+					Issuer:          new("issuer"),
 					AcceptedIssuers: []string{"issuer1", "issuer2"},
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),
@@ -4666,7 +4665,7 @@ anonymous:
 			),
 			Entry("Default Issuer is already part of AcceptedIssuers",
 				&gardencorev1beta1.ServiceAccountConfig{
-					Issuer:          ptr.To("issuer"),
+					Issuer:          new("issuer"),
 					AcceptedIssuers: []string{"https://" + externalHostname},
 				},
 				gardencorev1beta1.CredentialsRotationPhase(""),

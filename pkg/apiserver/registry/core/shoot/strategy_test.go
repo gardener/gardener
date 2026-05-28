@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,7 +43,7 @@ var _ = Describe("Strategy", func() {
 					Namespace: "my-namespace",
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName: ptr.To("aws-profile"),
+					CloudProfileName: new("aws-profile"),
 					Region:           "eu-west-1",
 					Kubernetes: core.Kubernetes{
 						Version: "1.31.2",
@@ -73,7 +72,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should fill cloudProfile field with fallback if empty", func() {
-				shoot.Spec.CloudProfileName = ptr.To("foo")
+				shoot.Spec.CloudProfileName = new("foo")
 				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(*shoot.Spec.CloudProfileName).To(Equal("foo"))
@@ -98,7 +97,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should override cloudProfileName field on conflicting entry with cloudProfile", func() {
-				shoot.Spec.CloudProfileName = ptr.To("foo")
+				shoot.Spec.CloudProfileName = new("foo")
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "bar",
@@ -117,7 +116,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "NamespacedCloudProfile",
 					Name: "bar",
 				}
-				shoot.Spec.CloudProfileName = ptr.To("foo")
+				shoot.Spec.CloudProfileName = new("foo")
 				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(shoot.Spec.CloudProfileName).To(BeNil())
@@ -146,7 +145,7 @@ var _ = Describe("Strategy", func() {
 				}
 
 				strategy.PrepareForCreate(ctx, shoot)
-				Expect(shoot.Spec.DNS.Providers[0].SecretName).To(Equal(ptr.To("secret-1")))
+				Expect(shoot.Spec.DNS.Providers[0].SecretName).To(Equal(new("secret-1")))
 			})
 
 			It("should not sync WorkloadIdentity credentialsRef to secretName", func() {
@@ -183,7 +182,7 @@ var _ = Describe("Strategy", func() {
 
 		Context("cloudProfile field removal", func() {
 			It("should fill cloudProfile field with fallback if empty", func() {
-				newShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfileName = new("foo")
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
@@ -208,7 +207,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should override cloudProfileName field on conflicting entry with cloudProfile", func() {
-				newShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfileName = new("foo")
 				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "bar",
@@ -227,7 +226,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "NamespacedCloudProfile",
 					Name: "bar",
 				}
-				newShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfileName = new("foo")
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CloudProfileName).To(BeNil())
@@ -238,8 +237,8 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should not mutate shoots being deleted (cloud profile sync)", func() {
-				oldShoot.Spec.CloudProfileName = ptr.To("profile")
-				oldShoot.DeletionTimestamp = ptr.To(metav1.Now())
+				oldShoot.Spec.CloudProfileName = new("profile")
+				oldShoot.DeletionTimestamp = new(metav1.Now())
 				newShoot = oldShoot.DeepCopy()
 
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
@@ -288,14 +287,14 @@ var _ = Describe("Strategy", func() {
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{
 					Spec: core.ShootSpec{
-						SeedName: ptr.To("seed"),
+						SeedName: new("seed"),
 					},
 				}
 				newShoot = oldShoot.DeepCopy()
 			})
 
 			It("should not allow change of seedName on shoot spec update", func() {
-				newShoot.Spec.SeedName = ptr.To("new-seed")
+				newShoot.Spec.SeedName = new("new-seed")
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
@@ -384,108 +383,108 @@ var _ = Describe("Strategy", func() {
 					},
 
 					Entry("confineSpecUpdateRollout true->false",
-						ptr.To(true), ptr.To(false),
+						new(true), new(false),
 						nil, nil,
 						true,
 					),
 					Entry("confineSpecUpdateRollout false->true",
-						ptr.To(false), ptr.To(true),
+						new(false), new(true),
 						nil, nil,
 						false,
 					),
 					Entry("confineSpecUpdateRollout nil->false w/ additional spec change",
-						nil, ptr.To(false),
+						nil, new(false),
 						nil, func(s *core.Shoot) { s.Spec.Region = "foo" },
 						true,
 					),
 					Entry("confineSpecUpdateRollout true->true w/ additional spec change",
-						ptr.To(true), ptr.To(true),
+						new(true), new(true),
 						nil, func(s *core.Shoot) { s.Spec.Region = "foo" },
 						false,
 					),
 
 					// exceptional cases: spec.hibernation.enabled changes even if confineSpecUpdateRollout is true
 					Entry("hibernation nil -> nil",
-						ptr.To(true), ptr.To(true),
+						new(true), new(true),
 						nil, nil,
 						false,
 					),
 					Entry("hibernation nil -> false",
-						ptr.To(true), ptr.To(true),
-						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						new(true), new(true),
+						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
 						false,
 					),
 					Entry("hibernation nil -> true",
-						ptr.To(true), ptr.To(true),
-						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						new(true), new(true),
+						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
 						true,
 					),
 
 					Entry("hibernation enabled nil -> false",
-						ptr.To(true), ptr.To(true),
+						new(true), new(true),
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
 						false,
 					),
 					Entry("hibernation enabled nil -> true",
-						ptr.To(true), ptr.To(true),
+						new(true), new(true),
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
 						true,
 					),
 					Entry("hibernation enabled nil -> hibernation nil",
-						ptr.To(true), ptr.To(true),
+						new(true), new(true),
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
 						nil,
 						false,
 					),
 
 					Entry("hibernation enabled true -> true",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
 						false,
 					),
 					Entry("hibernation enabled true -> false",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
 						true,
 					),
 					Entry("hibernation enabled true -> nil",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
 						true,
 					),
 					Entry("hibernation enabled true -> hibernation nil",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
 						nil,
 						true,
 					),
 
 					Entry("hibernation enabled false -> true",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(true)} },
 						true,
 					),
 					Entry("hibernation enabled false -> false",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
 						false,
 					),
 					Entry("hibernation enabled false -> nil",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
 						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
 						false,
 					),
 					Entry("hibernation enabled false -> hibernation nil",
-						ptr.To(true), ptr.To(true),
-						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)} },
+						new(true), new(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: new(false)} },
 						nil,
 						false,
 					),
@@ -739,7 +738,7 @@ var _ = Describe("Strategy", func() {
 				newShoot := oldShoot.DeepCopy()
 
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(Equal(ptr.To("secret-1")))
+				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(Equal(new("secret-1")))
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
 
@@ -781,8 +780,8 @@ var _ = Describe("Strategy", func() {
 			It("should correctly add the seed labels", func() {
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "foo", "bar")
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
-				shoot.Spec.SeedName = ptr.To("spec-seed")
-				shoot.Status.SeedName = ptr.To("status-seed")
+				shoot.Spec.SeedName = new("spec-seed")
+				shoot.Status.SeedName = new("status-seed")
 
 				strategy.Canonicalize(shoot)
 
@@ -796,7 +795,7 @@ var _ = Describe("Strategy", func() {
 
 		Context("maxEmptyBulkDelete", func() {
 			It("should set spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete to nil", func() {
-				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{MaxEmptyBulkDelete: ptr.To[int32](10)}
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{MaxEmptyBulkDelete: new(int32(10))}
 				strategy.Canonicalize(shoot)
 				Expect(shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(BeNil())
 			})
@@ -804,15 +803,15 @@ var _ = Describe("Strategy", func() {
 
 		Context("enableAnonymousAuthentication", func() {
 			It("should set spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication to nil when it is false", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(false)}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(false)}
 				strategy.Canonicalize(shoot)
 				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(BeNil())
 			})
 
 			It("should not set spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication to nil when it is true", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)}
 				strategy.Canonicalize(shoot)
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(Equal(ptr.To(true)))
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(Equal(new(true)))
 			})
 
 			It("should not panic when spec.kubernetes.kubeAPIServer is nil", func() {
@@ -834,7 +833,7 @@ var _ = Describe("Strategy", func() {
 						Addon: core.Addon{
 							Enabled: false,
 						},
-						AuthenticationMode: ptr.To("foo"),
+						AuthenticationMode: new("foo"),
 					},
 				}
 
@@ -848,7 +847,7 @@ var _ = Describe("Strategy", func() {
 						Addon: core.Addon{
 							Enabled: false,
 						},
-						AuthenticationMode: ptr.To("foo"),
+						AuthenticationMode: new("foo"),
 					},
 					NginxIngress: &core.NginxIngress{
 						Addon: core.Addon{
@@ -867,7 +866,7 @@ var _ = Describe("Strategy", func() {
 						Addon: core.Addon{
 							Enabled: true,
 						},
-						AuthenticationMode: ptr.To("foo"),
+						AuthenticationMode: new("foo"),
 					},
 				}
 
@@ -931,7 +930,7 @@ var _ = Describe("Strategy", func() {
 				})
 
 				It("should remove the last operation when seed was set", func() {
-					newShoot.Spec.SeedName = ptr.To("foo")
+					newShoot.Spec.SeedName = new("foo")
 
 					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
@@ -948,7 +947,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should increase the generation when spec was changed", func() {
-				newShoot.Spec.SeedName = ptr.To("foo")
+				newShoot.Spec.SeedName = new("foo")
 
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
@@ -976,7 +975,7 @@ var _ = Describe("Strategy", func() {
 				newShoot := oldShoot.DeepCopy()
 
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(Equal(ptr.To("secret-1")))
+				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(Equal(new("secret-1")))
 			})
 
 			It("should not sync WorkloadIdentity credentialsRef to secretName", func() {
@@ -1035,12 +1034,12 @@ var _ = Describe("Strategy", func() {
 
 				Entry("rotation status is nil", nil, nil, false),
 				Entry("rotation phase is empty", nil, &core.ETCDEncryptionKeyRotation{}, false),
-				Entry("rotation phase is prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(true)}, true),
-				Entry("rotation phase is prepared and is not single operation", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(false)}, false),
+				Entry("rotation phase is prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: new(true)}, true),
+				Entry("rotation phase is prepared and is not single operation", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: new(false)}, false),
 				Entry("rotation phase has not been updated",
-					&core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(true)},
-					&core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: ptr.To(true)}, false),
-				Entry("rotation phase is not prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting, AutoCompleteAfterPrepared: ptr.To(true)}, false),
+					&core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: new(true)},
+					&core.ETCDEncryptionKeyRotation{Phase: core.RotationPrepared, AutoCompleteAfterPrepared: new(true)}, false),
+				Entry("rotation phase is not prepared", nil, &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting, AutoCompleteAfterPrepared: new(true)}, false),
 			)
 		})
 
@@ -1064,7 +1063,7 @@ var _ = Describe("Strategy", func() {
 				newShoot := oldShoot.DeepCopy()
 
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(Equal(ptr.To("secret-1")))
+				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(Equal(new("secret-1")))
 			})
 
 			It("should not sync WorkloadIdentity credentialsRef to secretName", func() {
@@ -1195,11 +1194,11 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		},
 		Entry("single provider with secretName without credentialsRef",
 			[]core.DNSProvider{
-				{SecretName: ptr.To(secretName1)},
+				{SecretName: new(secretName1)},
 			},
 			[]core.DNSProvider{
 				{
-					SecretName: ptr.To(secretName1),
+					SecretName: new(secretName1),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1210,12 +1209,12 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		),
 		Entry("multiple providers with secretName and without credentialsRef",
 			[]core.DNSProvider{
-				{SecretName: ptr.To(secretName1)},
-				{SecretName: ptr.To(secretName2)},
+				{SecretName: new(secretName1)},
+				{SecretName: new(secretName2)},
 			},
 			[]core.DNSProvider{
 				{
-					SecretName: ptr.To(secretName1),
+					SecretName: new(secretName1),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1223,7 +1222,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 					},
 				},
 				{
-					SecretName: ptr.To(secretName2),
+					SecretName: new(secretName2),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1234,7 +1233,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		),
 		Entry("multiple providers, some with secretName and all without credentialsRef",
 			[]core.DNSProvider{
-				{SecretName: ptr.To(secretName1)},
+				{SecretName: new(secretName1)},
 				{
 					Domains: &core.DNSIncludeExclude{
 						Include: []string{"example.com"},
@@ -1243,7 +1242,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 			},
 			[]core.DNSProvider{
 				{
-					SecretName: ptr.To(secretName1),
+					SecretName: new(secretName1),
 					CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1259,7 +1258,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 		),
 		Entry("secretName and credentialsRef are already set",
 			[]core.DNSProvider{{
-				SecretName: ptr.To(secretName1),
+				SecretName: new(secretName1),
 				CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -1267,7 +1266,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 				},
 			}},
 			[]core.DNSProvider{{
-				SecretName: ptr.To(secretName1),
+				SecretName: new(secretName1),
 				CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -1284,7 +1283,7 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 				},
 			}},
 			[]core.DNSProvider{{
-				SecretName: ptr.To(secretName2),
+				SecretName: new(secretName2),
 				CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -1319,7 +1318,7 @@ func createNewShootObject(seedName string) *core.Shoot {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: core.ShootSpec{
-			CloudProfileName: ptr.To("baz"),
+			CloudProfileName: new("baz"),
 			SeedName:         &seedName,
 			CloudProfile: &core.CloudProfileReference{
 				Kind: "CloudProfile",

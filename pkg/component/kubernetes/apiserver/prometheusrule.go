@@ -9,7 +9,6 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -29,7 +28,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 					{
 						Alert: "ApiServerNotReachable",
 						Expr:  intstr.FromString(`probe_success{job="blackbox-apiserver"} == 0`),
-						For:   ptr.To(monitoringv1.Duration("5m")),
+						For:   new(monitoringv1.Duration("5m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
 							"severity":   "blocker",
@@ -44,7 +43,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 					{
 						Alert: "KubeApiserverDown",
 						Expr:  intstr.FromString(`absent(up{job="kube-apiserver"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("5m")),
+						For:   new(monitoringv1.Duration("5m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
 							"severity":   "blocker",
@@ -59,7 +58,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 					{
 						Alert: "KubeApiServerTooManyOpenFileDescriptors",
 						Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
 							"severity":   "warning",
@@ -74,7 +73,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 					{
 						Alert: "KubeApiServerTooManyOpenFileDescriptors",
 						Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
 							"severity":   "critical",
@@ -92,7 +91,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 						// - WATCHLIST is long-poll
 						// - CONNECT is "kubectl exec"
 						Expr: intstr.FromString(`histogram_quantile(0.99, sum without (instance,resource,subresource) (rate(apiserver_request_duration_seconds_bucket{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3`),
-						For:  ptr.To(monitoringv1.Duration("30m")),
+						For:  new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
 							"severity":   "warning",
@@ -139,7 +138,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 					{
 						Alert: "KubeApiServerTooManyAuditlogFailures",
 						Expr:  intstr.FromString(`sum(rate (apiserver_audit_error_total{plugin!="log",job="kube-apiserver"}[5m])) / sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m])) > bool 0.02 == 1`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "auditlog",
 							"severity":   "warning",
@@ -192,7 +191,7 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 					{
 						Alert: "ApiserverRequestsFailureRate",
 						Expr:  intstr.FromString(`max(sum by(instance,resource,verb) (rate(apiserver_request_total{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(apiserver_request_total[10m]))) * 100 > 10`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
 							"severity":   "warning",

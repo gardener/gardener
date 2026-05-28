@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -160,7 +159,7 @@ var _ = BeforeSuite(func() {
 		Scheme:  testScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -171,7 +170,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&state.Reconciler{
 		Config: gardenletconfigv1alpha1.ShootStateControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
 		},
 		Clock:    fakeClock,

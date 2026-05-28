@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,8 +23,8 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  ptr.To("cloudprofile1"),
+				SecretBindingName: new("my-provider-account"),
+				CloudProfileName:  new("cloudprofile1"),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -38,7 +37,7 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
@@ -48,7 +47,7 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}
@@ -74,8 +73,8 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Schedules: []gardencorev1beta1.HibernationSchedule{
 				{
-					Start: ptr.To("1 * * * *"),
-					End:   ptr.To("2 * * * *"),
+					Start: new("1 * * * *"),
+					End:   new("2 * * * *"),
 				},
 			},
 		}

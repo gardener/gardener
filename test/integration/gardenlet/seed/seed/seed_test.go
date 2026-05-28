@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -104,7 +103,7 @@ var _ = Describe("Seed controller tests", func() {
 				},
 			},
 			Controller: controllerconfig.Controller{
-				SkipNameValidation: ptr.To(true),
+				SkipNameValidation: new(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -139,29 +138,29 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				SNI: &gardenletconfigv1alpha1.SNI{
 					Ingress: &gardenletconfigv1alpha1.SNIIngress{
-						Namespace: ptr.To(testNamespace.Name + "-istio"),
+						Namespace: new(testNamespace.Name + "-istio"),
 					},
 				},
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 					Vali: &gardenletconfigv1alpha1.Vali{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 				},
 				ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 					BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
-						EnableBackupCompaction: ptr.To(false),
-						EventsThreshold:        ptr.To[int64](1),
-						Workers:                ptr.To[int64](1),
+						EnableBackupCompaction: new(false),
+						EventsThreshold:        new(int64(1)),
+						Workers:                new(int64(1)),
 					},
 					CustodianController: &gardenletconfigv1alpha1.CustodianController{
-						Workers: ptr.To[int64](1),
+						Workers: new(int64(1)),
 					},
 					ETCDController: &gardenletconfigv1alpha1.ETCDController{
-						Workers: ptr.To[int64](1),
+						Workers: new(int64(1)),
 					},
 				},
 				SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
@@ -228,7 +227,7 @@ var _ = Describe("Seed controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 				},
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "someingress.example.com",
@@ -971,7 +970,7 @@ var _ = Describe("Seed controller tests", func() {
 							Kind:       "Shoot",
 						},
 						Spec: gardencorev1beta1.ShootSpec{
-							CredentialsBindingName: ptr.To("my-credentials"),
+							CredentialsBindingName: new("my-credentials"),
 						},
 					}
 					shootRaw, err := json.Marshal(shoot)

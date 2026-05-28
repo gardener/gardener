@@ -277,7 +277,7 @@ func deployMachineDeployment(
 		// This is done to avoid overwriting the machineDeployment.Spec.Replicas value
 		// which is fetched from the client.Get() call in getAndCreateOrMergePatch()
 		// and hence causing unnecessary updates to the machineDeployment.Spec.Replicas
-		machineDeployment.Spec.RevisionHistoryLimit = ptr.To[int32](0)
+		machineDeployment.Spec.RevisionHistoryLimit = new(int32(0))
 		machineDeployment.Spec.MinReadySeconds = 500
 		machineDeployment.Spec.Strategy = deployment.Strategy
 		machineDeployment.Spec.Selector = &metav1.LabelSelector{

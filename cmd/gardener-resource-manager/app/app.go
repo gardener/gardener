@@ -115,7 +115,7 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 	mgr, err := manager.New(sourceRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  managerScheme,
-		GracefulShutdownTimeout: ptr.To(5 * time.Second),
+		GracefulShutdownTimeout: new(5 * time.Second),
 		Cache: cache.Options{
 			DefaultNamespaces: getCacheConfig(cfg.SourceClientConnection.Namespaces),
 			SyncPeriod:        &cfg.SourceClientConnection.CacheResyncPeriod.Duration,

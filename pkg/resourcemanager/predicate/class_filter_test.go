@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -53,7 +52,7 @@ var _ = Describe("ClassFilter", func() {
 		mrWithoutFinalizerSameClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: ptr.To(""),
+				Class: new(""),
 			},
 		}
 
@@ -62,7 +61,7 @@ var _ = Describe("ClassFilter", func() {
 				Finalizers: []string{differentFinalizer},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: ptr.To(""),
+				Class: new(""),
 			},
 		}
 
@@ -71,7 +70,7 @@ var _ = Describe("ClassFilter", func() {
 				Finalizers: []string{FinalizerName},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class: ptr.To(""),
+				Class: new(""),
 			},
 		}
 	)
@@ -189,9 +188,9 @@ var _ = Describe("ClassFilter", func() {
 		Describe("#Responsible", func() {
 			It("should be responsible for any class", func() {
 				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{})).To(BeTrue())
-				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("")}})).To(BeTrue())
-				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("foo")}})).To(BeTrue())
-				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("bar")}})).To(BeTrue())
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: new("")}})).To(BeTrue())
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: new("foo")}})).To(BeTrue())
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: new("bar")}})).To(BeTrue())
 			})
 		})
 	})

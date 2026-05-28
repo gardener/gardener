@@ -7,8 +7,6 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/ptr"
-
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -169,5 +167,5 @@ func (b *Botanist) dnsRecordTTLSeconds() *int64 {
 	if b.Config != nil && b.Config.Controllers != nil && b.Config.Controllers.Shoot != nil {
 		return b.Config.Controllers.Shoot.DNSEntryTTLSeconds
 	}
-	return ptr.To(int64(120))
+	return new(int64(120))
 }

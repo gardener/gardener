@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -80,11 +79,11 @@ var _ = Describe("DNSRecord", func() {
 			Namespace:         namespace,
 			SecretName:        secretName,
 			Type:              extensionType,
-			Zone:              ptr.To(zone),
+			Zone:              new(zone),
 			DNSName:           dnsName,
 			RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 			Values:            []string{address},
-			TTL:               ptr.To(ttl),
+			TTL:               new(ttl),
 			AnnotateOperation: true,
 		}
 
@@ -108,11 +107,11 @@ var _ = Describe("DNSRecord", func() {
 					Name:      secretName,
 					Namespace: namespace,
 				},
-				Zone:       ptr.To(zone),
+				Zone:       new(zone),
 				Name:       dnsName,
 				RecordType: extensionsv1alpha1.DNSRecordTypeA,
 				Values:     []string{address},
-				TTL:        ptr.To(ttl),
+				TTL:        new(ttl),
 			},
 		}
 		secret = &corev1.Secret{
@@ -537,11 +536,11 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should deploy the DNSRecord resource with extensionClassName and labels", func() {
-			values.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			values.Class = new(extensionsv1alpha1.ExtensionClassGarden)
 			values.Labels = map[string]string{"foo": "bar"}
 
 			expectedSpec := dns.Spec
-			expectedSpec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			expectedSpec.Class = new(extensionsv1alpha1.ExtensionClassGarden)
 
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
@@ -672,9 +671,9 @@ var _ = Describe("DNSRecord", func() {
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			},
 				Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
-				Entry("zone changes", func() { values.Zone = ptr.To("new-zone") }, func() { expectedDNSRecord.Spec.Zone = ptr.To("new-zone") }),
+				Entry("zone changes", func() { values.Zone = new("new-zone") }, func() { expectedDNSRecord.Spec.Zone = new("new-zone") }),
 				Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
-				Entry("TTL changes", func() { values.TTL = ptr.To[int64](1337) }, func() { expectedDNSRecord.Spec.TTL = ptr.To[int64](1337) }),
+				Entry("TTL changes", func() { values.TTL = new(int64(1337)) }, func() { expectedDNSRecord.Spec.TTL = new(int64(1337)) }),
 				Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
 			)
 		})
@@ -823,7 +822,7 @@ var _ = Describe("DNSRecord", func() {
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Kind:  extensionsv1alpha1.DNSRecordResource,
-							Name:  ptr.To(name),
+							Name:  new(name),
 							State: state,
 						},
 					},

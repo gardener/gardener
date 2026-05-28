@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
@@ -90,7 +89,7 @@ var _ = Describe("utils", func() {
 			Expect(IDForKeyWithOptionalValue(key, value)).To(Equal(expectation))
 		},
 		Entry("only key", "foo", nil, "foo"),
-		Entry("key and value", "foo", ptr.To("bar"), "foo=bar"),
+		Entry("key and value", "foo", new("bar"), "foo=bar"),
 	)
 
 	Describe("#Indent", func() {

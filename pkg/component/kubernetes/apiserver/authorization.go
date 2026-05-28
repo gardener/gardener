@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -70,7 +69,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Contex
 
 		config.Webhook.ConnectionInfo = apiserverv1beta1.WebhookConnectionInfo{
 			Type:           apiserverv1beta1.AuthorizationWebhookConnectionInfoTypeKubeConfigFile,
-			KubeConfigFile: ptr.To(volumeMountPathStructuredAuthorizationWebhookKubeconfigs + "/" + authorizationWebhookKubeconfigFilename(webhook.Name)),
+			KubeConfigFile: new(volumeMountPathStructuredAuthorizationWebhookKubeconfigs + "/" + authorizationWebhookKubeconfigFilename(webhook.Name)),
 		}
 
 		authorizationConfiguration.Authorizers = append(authorizationConfiguration.Authorizers, config)

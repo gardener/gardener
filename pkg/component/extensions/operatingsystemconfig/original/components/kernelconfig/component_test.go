@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/component-helpers/node/util/sysctl"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -79,14 +78,14 @@ var _ = Describe("Component", func() {
 
 		systemdSysctlUnit := extensionsv1alpha1.Unit{
 			Name:      "systemd-sysctl.service",
-			Command:   ptr.To(extensionsv1alpha1.CommandRestart),
-			Enable:    ptr.To(true),
+			Command:   new(extensionsv1alpha1.CommandRestart),
+			Enable:    new(true),
 			FilePaths: []string{"/etc/sysctl.d/99-k8s-general.conf"},
 		}
 
 		kernelSettingsFile := extensionsv1alpha1.File{
 			Path:        "/etc/sysctl.d/99-k8s-general.conf",
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: modifiedData.String(),
@@ -98,11 +97,11 @@ var _ = Describe("Component", func() {
 		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", kubeletSysctlConfig, nil, nil, true),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "", ptr.To(false), nil, true),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "", new(false), nil, true),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
 		Entry("should return the expected units and files if k8s version has not been upgraded", hardCodedKubeletSysctlConfig, nil, nil, true),
-		Entry("should return the expected units and files if configured to add kernel settings", dummySettingConfig, ptr.To(false), dummySettingMap, true),
-		Entry("should return the expected units and files if kube-proxy is disabled", nonKubeProxyData, ptr.To(false), nil, false),
+		Entry("should return the expected units and files if configured to add kernel settings", dummySettingConfig, new(false), dummySettingMap, true),
+		Entry("should return the expected units and files if kube-proxy is disabled", nonKubeProxyData, new(false), nil, false),
 	)
 })
 

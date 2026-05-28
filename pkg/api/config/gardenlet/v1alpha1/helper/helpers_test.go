@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -68,7 +67,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
 					Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
-						Enabled: ptr.To(false),
+						Enabled: new(false),
 					},
 				},
 			}
@@ -79,7 +78,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
 					Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 				},
 			}
@@ -120,7 +119,7 @@ var _ = Describe("helper", func() {
 		It("should return false when the logging is not enabled", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled: ptr.To(false),
+					Enabled: new(false),
 				},
 			}
 
@@ -130,7 +129,7 @@ var _ = Describe("helper", func() {
 		It("should return true when the logging is enabled", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				},
 			}
 
@@ -153,7 +152,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
 					Vali: &gardenletconfigv1alpha1.Vali{
-						Enabled: ptr.To(false),
+						Enabled: new(false),
 					},
 				},
 			}
@@ -165,7 +164,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
 					Vali: &gardenletconfigv1alpha1.Vali{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 				},
 			}
@@ -192,7 +191,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
 					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
-						Enabled: ptr.To(false),
+						Enabled: new(false),
 					},
 				},
 			}
@@ -205,7 +204,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
 					VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 				},
 			}
@@ -236,7 +235,7 @@ var _ = Describe("helper", func() {
 		It("should return false when ShootEventLogging is nil", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				},
 			}
 
@@ -246,7 +245,7 @@ var _ = Describe("helper", func() {
 		It("should return false when ShootEventLogging is empty", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled:          ptr.To(true),
+					Enabled:          new(true),
 					ShootNodeLogging: &gardenletconfigv1alpha1.ShootNodeLogging{},
 				},
 			}
@@ -258,7 +257,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
 					ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
-						Enabled: ptr.To(false),
+						Enabled: new(false),
 					},
 				},
 			}
@@ -270,7 +269,7 @@ var _ = Describe("helper", func() {
 			gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 				Logging: &gardenletconfigv1alpha1.Logging{
 					ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					},
 				},
 			}

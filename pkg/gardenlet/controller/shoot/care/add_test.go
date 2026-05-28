@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -162,21 +161,21 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false when the seed name is unchanged in the Shoot spec", func() {
-				shoot.Status.SeedName = ptr.To("test-seed")
+				shoot.Status.SeedName = new("test-seed")
 				oldShoot := shoot.DeepCopy()
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeFalse())
 			})
 
 			It("should return false when the seed name is changed in the Shoot spec", func() {
-				shoot.Status.SeedName = ptr.To("test-seed")
+				shoot.Status.SeedName = new("test-seed")
 				oldShoot := shoot.DeepCopy()
-				shoot.Status.SeedName = ptr.To("test-seed1")
+				shoot.Status.SeedName = new("test-seed1")
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeFalse())
 			})
 
 			It("should return true when seed gets assigned to shoot", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Status.SeedName = ptr.To("test-seed")
+				shoot.Status.SeedName = new("test-seed")
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeTrue())
 			})
 		})

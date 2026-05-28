@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -59,7 +58,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		BeforeEach(func() {
 			shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 				Name:    "CoreOs",
-				Version: ptr.To(shootCurrentImageVersion),
+				Version: new(shootCurrentImageVersion),
 			}
 
 			strategyMajor := gardencorev1beta1.UpdateStrategyMajor
@@ -108,7 +107,7 @@ var _ = Describe("Shoot Maintenance", func() {
 									Architectures: []string{"amd64"},
 									InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 										Supported:           true,
-										MinVersionForUpdate: ptr.To(shootCurrentImageVersion + "-inplace"),
+										MinVersionForUpdate: new(shootCurrentImageVersion + "-inplace"),
 									},
 								},
 							},
@@ -131,7 +130,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 					Maintenance: &gardencorev1beta1.Maintenance{
 						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
-							MachineImageVersion: ptr.To(true),
+							MachineImageVersion: new(true),
 						},
 					},
 					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
@@ -139,10 +138,10 @@ var _ = Describe("Shoot Maintenance", func() {
 							Name: "cpu-worker",
 							Machine: gardencorev1beta1.Machine{
 								Image:        shootCurrentImage,
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 								Type:         "someMachineType",
 							},
-							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
+							UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
 						},
 					},
 					},
@@ -164,8 +163,8 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 
 			It("should update machine image version to overall latest. Auto update: already on latest patch for minor, and there is an overall higher version available for in-place updates", func() {
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To(shootCurrentImageVersion + "-inplace")
-				shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(gardencorev1beta1.AutoInPlaceUpdate)
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new(shootCurrentImageVersion + "-inplace")
+				shoot.Spec.Provider.Workers[0].UpdateStrategy = new(gardencorev1beta1.AutoInPlaceUpdate)
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -200,7 +199,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					Architectures: []string{"amd64"},
 				})
 
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("arm64")
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new("arm64")
 
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 				Expect(err).NotTo(HaveOccurred())
@@ -238,9 +237,9 @@ var _ = Describe("Shoot Maintenance", func() {
 					Machine: gardencorev1beta1.Machine{
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "gardenlinux",
-							Version: ptr.To("1.0.0"),
+							Version: new("1.0.0"),
 						},
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 				}
 
@@ -272,7 +271,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 
 			It("should update machine image version to overall latest. ForceUpdate: expiration date in the past", func() {
-				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(false)
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(false)
 				cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDateInThePast
 
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
@@ -357,7 +356,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Architectures: []string{"amd64"},
 					},
 				)
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1")
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("1")
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -388,7 +387,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Architectures: []string{"amd64"},
 					},
 				)
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1")
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("1")
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -676,7 +675,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Architectures: []string{"amd64"},
 					},
 				)
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7")
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("1.7")
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -700,7 +699,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Architectures: []string{"amd64"},
 					},
 				)
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7.2")
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("1.7.2")
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -1113,7 +1112,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Architectures: []string{"amd64"},
 					},
 				)
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7.3")
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("1.7.3")
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -1137,7 +1136,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						Architectures: []string{"amd64"},
 					},
 				)
-				shoot.Spec.Provider.Workers[0].Machine.Image.Version = ptr.To("1.7")
+				shoot.Spec.Provider.Workers[0].Machine.Image.Version = new("1.7")
 				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -1155,7 +1154,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
-			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(false)
+			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(false)
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
@@ -1181,7 +1180,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")}
 
 			// add another pool without CRI constraints -> should be updated via auto-update
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: ptr.To("amd64")}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: new("amd64")}})
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -1197,7 +1196,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}
 
 			// add another pool without CRI constraints -> should be updated via auto-update to the highest patch version of the same minor
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-containerruntime", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: ptr.To("amd64")}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-containerruntime", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: new("amd64")}})
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -1211,8 +1210,8 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}}
 
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}, {Type: "some-other-cr"}}}
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor-and-kata", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: ptr.To("amd64")}})
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: ptr.To("amd64")}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor-and-kata", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: new("amd64")}})
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: new("amd64")}})
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
@@ -1223,8 +1222,8 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint (control plane K8s version)", func() {
-			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = ptr.To("< 1.26")
-			cloudProfile.Spec.MachineImages[0].Versions[3].KubeletVersionConstraint = ptr.To("< 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = new("< 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[3].KubeletVersionConstraint = new("< 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
@@ -1234,7 +1233,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint (control plane K8s version)", func() {
-			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = ptr.To("< 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = new("< 1.26")
 			shoot.Spec.Kubernetes.Version = "1.25.1"
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
@@ -1243,11 +1242,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint (worker K8s version)", func() {
-			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = ptr.To(">= 1.26")
-			cloudProfile.Spec.MachineImages[0].Versions[3].KubeletVersionConstraint = ptr.To(">= 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = new(">= 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[3].KubeletVersionConstraint = new(">= 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-				Version: ptr.To("1.25.0"),
+				Version: new("1.25.0"),
 			}
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
@@ -1258,10 +1257,10 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint (worker K8s version)", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
-			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = ptr.To(">= 1.26")
+			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = new(">= 1.26")
 			shoot.Spec.Kubernetes.Version = "1.27.0"
 			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-				Version: ptr.To("1.26.0"),
+				Version: new("1.26.0"),
 			}
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
@@ -1710,33 +1709,33 @@ var _ = Describe("Shoot Maintenance", func() {
 				Expect(resultOptions).To(ConsistOf(expectedResult))
 			},
 			Entry("should return reconcile operation when there is no maintenance operation", nil, nil, []string{"reconcile"}),
-			Entry("should return reconcile operation when maintenance operation is empty", ptr.To(""), nil, []string{"reconcile"}),
-			Entry("should return maintenance operation when it is not empty", ptr.To("foo"), nil, []string{"reconcile", "foo"}),
-			Entry("should return rotate-ssh-keypair operation when it is not part of the result updates", ptr.To("rotate-ssh-keypair"),
+			Entry("should return reconcile operation when maintenance operation is empty", new(""), nil, []string{"reconcile"}),
+			Entry("should return maintenance operation when it is not empty", new("foo"), nil, []string{"reconcile", "foo"}),
+			Entry("should return rotate-ssh-keypair operation when it is not part of the result updates", new("rotate-ssh-keypair"),
 				map[string]updateResult{
 					"rotate-observability-credentials": {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-ssh-keypair", "rotate-observability-credentials"}),
-			Entry("should return rotate-observability-credentials operation when it is not part of the result updates", ptr.To("rotate-observability-credentials"),
+			Entry("should return rotate-observability-credentials operation when it is not part of the result updates", new("rotate-observability-credentials"),
 				map[string]updateResult{
 					"rotate-etcd-encryption-key": {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-observability-credentials", "rotate-etcd-encryption-key"}),
-			Entry("should return appended options when maintenance operation is rotate-ssh-keypair", ptr.To("rotate-ssh-keypair"),
+			Entry("should return appended options when maintenance operation is rotate-ssh-keypair", new("rotate-ssh-keypair"),
 				map[string]updateResult{
 					"rotate-ssh-keypair": {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-ssh-keypair", "rotate-ssh-keypair"}),
-			Entry("should return appended options when maintenance operation is rotate-observability-credentials", ptr.To("rotate-credentials-start"),
+			Entry("should return appended options when maintenance operation is rotate-observability-credentials", new("rotate-credentials-start"),
 				map[string]updateResult{
 					"rotate-observability-credentials": {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-credentials-start", "rotate-observability-credentials"}),
-			Entry("should not append rotate-etcd-encryption-key when rotate-etcd-encryption-key-start is present in maintenance operations", ptr.To("rotate-etcd-encryption-key-start"),
+			Entry("should not append rotate-etcd-encryption-key when rotate-etcd-encryption-key-start is present in maintenance operations", new("rotate-etcd-encryption-key-start"),
 				map[string]updateResult{
 					"rotate-etcd-encryption-key": {
 						isSuccessful: true,
@@ -1766,7 +1765,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						isSuccessful: true,
 					},
 				}, []string{"reconcile", "rotate-observability-credentials", "rotate-etcd-encryption-key"}),
-			Entry("should return all operations", ptr.To("rotate-credentials-start"),
+			Entry("should return all operations", new("rotate-credentials-start"),
 				map[string]updateResult{
 					"rotate-ssh-keypair": {
 						isSuccessful: true,
@@ -2082,7 +2081,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					Namespace: namespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SecretBindingName: ptr.To(secretBindingName),
+					SecretBindingName: new(secretBindingName),
 				},
 			}
 

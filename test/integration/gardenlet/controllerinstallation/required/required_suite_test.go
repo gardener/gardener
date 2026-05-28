@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -140,7 +139,7 @@ var _ = BeforeSuite(func() {
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -153,7 +152,7 @@ var _ = BeforeSuite(func() {
 	seedName = testRunID
 	Expect((&required.Reconciler{
 		Config: gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 		SeedName: seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
@@ -183,7 +182,7 @@ var _ = BeforeSuite(func() {
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -196,7 +195,7 @@ var _ = BeforeSuite(func() {
 	By("Register self-hosted controller")
 	Expect((&required.Reconciler{
 		Config: gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 		SelfHostedShootMeta: &types.NamespacedName{Name: selfHostedShootName, Namespace: selfHostedShootNamespace},
 	}).AddToManager(selfHostedMgr, selfHostedMgr, selfHostedMgr)).To(Succeed())

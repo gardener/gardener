@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -183,7 +182,7 @@ func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
 			Name:      b.name(),
 			Namespace: b.namespace,
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -382,8 +381,8 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 			}, b.getLabels()),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector:             &metav1.LabelSelector{MatchLabels: b.getLabels()},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -392,7 +391,7 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 				Spec: corev1.PodSpec{
 					PriorityClassName:             v1beta1constants.PriorityClassNameSeedSystem800,
 					ServiceAccountName:            serviceAccountName,
-					TerminationGracePeriodSeconds: ptr.To[int64](5),
+					TerminationGracePeriodSeconds: new(int64(5)),
 					Containers: []corev1.Container{{
 						Name:            prefixDependencyWatchdog,
 						Image:           b.values.Image,
@@ -410,7 +409,7 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      volumeName,
@@ -446,9 +445,9 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 			Labels:    b.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 
@@ -489,7 +488,7 @@ func (b *bootstrapper) getVPA(deploymentName string) *vpaautoscalingv1.VerticalP
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

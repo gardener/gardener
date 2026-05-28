@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -140,7 +139,7 @@ func (c *controlPlaneBootstrap) Wait(ctx context.Context) error {
 				return fmt.Errorf("failed getting cloud config secret %q: %w", client.ObjectKeyFromObject(secret), err)
 			}
 
-			c.osc.SecretName = ptr.To(c.osc.Object.Status.CloudConfig.SecretRef.Name)
+			c.osc.SecretName = new(c.osc.Object.Status.CloudConfig.SecretRef.Name)
 			return nil
 		},
 	)

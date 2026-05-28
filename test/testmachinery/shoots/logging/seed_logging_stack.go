@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -603,13 +602,13 @@ func capValiContainerResources(valiSts *appsv1.StatefulSet) {
 func prepareClusterCRD(crd *apiextensionsv1.CustomResourceDefinition) *apiextensionsv1.CustomResourceDefinition {
 	crd.Spec.PreserveUnknownFields = false
 	for version := range crd.Spec.Versions {
-		crd.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = ptr.To(true)
+		crd.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = new(true)
 	}
 	return crd
 }
 
 func prepareFluentBitServiceAccount(serviceAccount *corev1.ServiceAccount) *corev1.ServiceAccount {
-	serviceAccount.AutomountServiceAccountToken = ptr.To(true)
+	serviceAccount.AutomountServiceAccountToken = new(true)
 	return serviceAccount
 }
 

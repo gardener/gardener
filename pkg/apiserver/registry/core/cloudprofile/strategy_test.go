@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apiserver/registry/core/cloudprofile"
@@ -256,7 +255,7 @@ var _ = Describe("Strategy", func() {
 					MachineTypes: []core.MachineType{
 						{
 							Name:         "machineType1",
-							Architecture: ptr.To("amd64"),
+							Architecture: new("amd64"),
 						},
 					},
 					MachineImages: []core.MachineImage{
@@ -280,7 +279,7 @@ var _ = Describe("Strategy", func() {
 
 			strategy.PrepareForUpdate(ctx, newCloudProfile, oldCloudProfile)
 
-			Expect(newCloudProfile.Spec.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+			Expect(newCloudProfile.Spec.MachineTypes[0].Architecture).To(Equal(new("amd64")))
 			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"]).To(ConsistOf("amd64"))
 
 			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))

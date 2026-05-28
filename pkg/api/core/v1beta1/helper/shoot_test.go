@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -642,8 +641,8 @@ var _ = Describe("Helper", func() {
 		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, false),
 		Entry("etcdEncryptionKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, false),
 		Entry("AutoCompleteAfterPrepared empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}, false),
-		Entry("AutoCompleteAfterPrepared true", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(true)}}}, true),
-		Entry("AutoCompleteAfterPrepared false", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: ptr.To(false)}}}, false),
+		Entry("AutoCompleteAfterPrepared true", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: new(true)}}}, true),
+		Entry("AutoCompleteAfterPrepared false", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{AutoCompleteAfterPrepared: new(false)}}}, false),
 	)
 
 	Describe("#MutateShootETCDEncryptionKeyRotation", func() {
@@ -1308,8 +1307,8 @@ var _ = Describe("Helper", func() {
 
 		Entry("kubeProxy nil", nil, BeFalse()),
 		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
-		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false)}, BeFalse()),
-		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true)}, BeTrue()),
+		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: new(false)}, BeFalse()),
+		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true)}, BeTrue()),
 	)
 
 	DescribeTable("#FindPrimaryDNSProvider",
@@ -1319,35 +1318,35 @@ var _ = Describe("Helper", func() {
 
 		Entry("no providers", nil, BeNil()),
 		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
-			{Type: ptr.To("provider")},
+			{Type: new("provider")},
 		}, BeNil()),
-		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: ptr.To("provider"),
-			Primary: ptr.To(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
+		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: new("provider"),
+			Primary: new(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: new("provider"), Primary: new(true)})),
 		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
 			{
-				Type: ptr.To("provider2"),
+				Type: new("provider2"),
 			},
 			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
+				Type:    new("provider1"),
+				Primary: new(true),
 			},
 			{
-				Type: ptr.To("provider3"),
+				Type: new("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: new("provider1"), Primary: new(true)})),
 		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
 			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
+				Type:    new("provider1"),
+				Primary: new(true),
 			},
 			{
-				Type:    ptr.To("provider2"),
-				Primary: ptr.To(true),
+				Type:    new("provider2"),
+				Primary: new(true),
 			},
 			{
-				Type: ptr.To("provider3"),
+				Type: new("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: new("provider1"), Primary: new(true)})),
 	)
 
 	DescribeTable("#ShootDNSProviderCredentialsRefsEqual",
@@ -1430,15 +1429,15 @@ var _ = Describe("Helper", func() {
 
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: new("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	var (
 		sampleShootKubelet = &gardencorev1beta1.KubeletConfig{
-			MaxPods: ptr.To(int32(50)),
+			MaxPods: new(int32(50)),
 		}
 		sampleWorkerKubelet = &gardencorev1beta1.KubeletConfig{
-			MaxPods: ptr.To(int32(100)),
+			MaxPods: new(int32(100)),
 		}
 	)
 
@@ -1501,7 +1500,7 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with nil", nil, nil),
 		Entry("with system components and nil", nil, nil),
-		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}),
+		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: new(true), ForceTCPToUpstreamDNS: new(true), DisableForwardToUpstreamDNS: new(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: new(true), ForceTCPToUpstreamDNS: new(true), DisableForwardToUpstreamDNS: new(true)}),
 	)
 
 	DescribeTable("#GetResourceByName",
@@ -1568,10 +1567,10 @@ var _ = Describe("Helper", func() {
 		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: ptr.To("seed"),
+					SeedName: new("seed"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: ptr.To("seed"),
+					SeedName: new("seed"),
 				},
 			}
 		})
@@ -1594,7 +1593,7 @@ var _ = Describe("Helper", func() {
 		})
 
 		It("should return true if spec.seedName and status.seedName differ", func() {
-			shoot.Spec.SeedName = ptr.To("other")
+			shoot.Spec.SeedName = new("other")
 			Expect(ShouldPrepareShootForMigration(shoot)).To(BeTrue())
 		})
 	})
@@ -1602,8 +1601,8 @@ var _ = Describe("Helper", func() {
 	Describe("#LastInitiationTimeForWorkerPool", func() {
 		var (
 			poolName                 = "pool"
-			globalLastInitiationTime = ptr.To(metav1.Now())
-			poolLastInitiationTime   = ptr.To(metav1.Time{Time: time.Now().Add(-time.Hour)})
+			globalLastInitiationTime = new(metav1.Now())
+			poolLastInitiationTime   = new(metav1.Time{Time: time.Now().Add(-time.Hour)})
 		)
 
 		It("should return the global last initiation time because list is empty", func() {
@@ -1658,12 +1657,12 @@ var _ = Describe("Helper", func() {
 		})
 
 		It("should return true when CredentialsBindingName is set", func() {
-			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{CredentialsBindingName: ptr.To("binding")}}
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{CredentialsBindingName: new("binding")}}
 			Expect(HasManagedInfrastructure(shoot)).To(BeTrue())
 		})
 
 		It("should return true when SecretBindingName is set", func() {
-			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SecretBindingName: ptr.To("binding")}}
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SecretBindingName: new("binding")}}
 			Expect(HasManagedInfrastructure(shoot)).To(BeTrue())
 		})
 	})
@@ -1690,7 +1689,7 @@ var _ = Describe("Helper", func() {
 
 		It("should return true when control plane worker pool has Exposure.Extension set", func() {
 			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{Exposure: &gardencorev1beta1.Exposure{Extension: &gardencorev1beta1.ExtensionExposure{Type: ptr.To("local")}}}},
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{Exposure: &gardencorev1beta1.Exposure{Extension: &gardencorev1beta1.ExtensionExposure{Type: new("local")}}}},
 			}}}}
 			Expect(HasExtensionExposure(shoot)).To(BeTrue())
 		})
@@ -1740,9 +1739,9 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("with nil", nil, false),
-		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
-		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), true),
-		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+		Entry("with AutoRollingUpdate update strategy", new(gardencorev1beta1.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", new(gardencorev1beta1.AutoInPlaceUpdate), true),
+		Entry("with ManualInPlaceUpdate  update strategy", new(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
 	DescribeTable("#IsUpdateStrategyManualInPlace",
@@ -1751,9 +1750,9 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("with nil", nil, false),
-		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
-		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), false),
-		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+		Entry("with AutoRollingUpdate update strategy", new(gardencorev1beta1.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", new(gardencorev1beta1.AutoInPlaceUpdate), false),
+		Entry("with ManualInPlaceUpdate  update strategy", new(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
 	DescribeTable("#IsShootIstioTLSTerminationEnabled",
@@ -1805,9 +1804,9 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with KubeProxy in IPVS mode", nil, false),
 		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{}, false),
-		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, false),
-		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPVS)}, true),
-		Entry("with KubeProxy in IPTables mode", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true), Mode: ptr.To(gardencorev1beta1.ProxyModeIPTables)}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(false), Mode: new(gardencorev1beta1.ProxyModeIPVS)}, false),
+		Entry("with KubeProxy in IPVS mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true), Mode: new(gardencorev1beta1.ProxyModeIPVS)}, true),
+		Entry("with KubeProxy in IPTables mode", &gardencorev1beta1.KubeProxyConfig{Enabled: new(true), Mode: new(gardencorev1beta1.ProxyModeIPTables)}, false),
 	)
 
 	DescribeTable("#IsOneWorkerPoolLowerKubernetes134",
@@ -1816,9 +1815,9 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("with control plane version lower than 1.34", semver.MustParse("1.31.0"), []gardencorev1beta1.Worker{{}}, true),
 		Entry("with control plane version 1.34", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{}}, false),
-		Entry("with control plane version 1.33 and one worker pool with lower version", semver.MustParse("1.33.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.31.0")}}}, true),
-		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.31.0")}}}, true),
-		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.34.0")}}}, false),
+		Entry("with control plane version 1.33 and one worker pool with lower version", semver.MustParse("1.33.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: new("1.31.0")}}}, true),
+		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: new("1.31.0")}}}, true),
+		Entry("with control plane version 1.34 and one worker pool with lower version", semver.MustParse("1.34.0"), []gardencorev1beta1.Worker{{Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: new("1.34.0")}}}, false),
 	)
 
 	DescribeTable("#GetShootEncryptedResourcesInStatus",
@@ -1851,7 +1850,7 @@ var _ = Describe("Helper", func() {
 			Entry("Type is set", &gardencorev1beta1.KubeAPIServerConfig{
 				EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 					Provider: gardencorev1beta1.EncryptionProvider{
-						Type: ptr.To(EncryptionProviderType),
+						Type: new(EncryptionProviderType),
 					},
 				},
 			}, "foo"),

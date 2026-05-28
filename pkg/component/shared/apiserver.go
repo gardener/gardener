@@ -94,7 +94,7 @@ func computeAPIServerAuthenticationConfig(
 		if !ok {
 			return nil, fmt.Errorf("missing '.data[%s]' in authentication configuration ConfigMap %s", kubeapiserver.DataKeyConfigMapAuthenticationConfig, client.ObjectKeyFromObject(configMap))
 		}
-		out = ptr.To(configRaw)
+		out = new(configRaw)
 	}
 
 	return out, nil

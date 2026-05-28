@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -104,7 +103,7 @@ var _ = Describe("PrometheusOperator", func() {
 				Namespace: namespace,
 				Labels:    map[string]string{"app": "prometheus-operator"},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -129,8 +128,8 @@ var _ = Describe("PrometheusOperator", func() {
 				Labels:    map[string]string{"app": "prometheus-operator"},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             new(int32(1)),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -144,8 +143,8 @@ var _ = Describe("PrometheusOperator", func() {
 						ServiceAccountName: "prometheus-operator",
 						PriorityClassName:  priorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:   ptr.To(true),
-							RunAsUser:      ptr.To[int64](65532),
+							RunAsNonRoot:   new(true),
+							RunAsUser:      new(int64(65532)),
 							SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 						},
 						Containers: []corev1.Container{
@@ -172,9 +171,9 @@ var _ = Describe("PrometheusOperator", func() {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-									ReadOnlyRootFilesystem:   ptr.To(true),
+									ReadOnlyRootFilesystem:   new(true),
 								},
 								Ports: []corev1.ContainerPort{{
 									Name:          "http",
@@ -212,7 +211,7 @@ var _ = Describe("PrometheusOperator", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -405,9 +404,9 @@ var _ = Describe("PrometheusOperator", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -418,7 +417,7 @@ var _ = Describe("PrometheusOperator", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			})

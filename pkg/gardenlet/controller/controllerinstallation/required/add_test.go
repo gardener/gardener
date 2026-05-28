@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -198,7 +197,7 @@ var _ = Describe("Add", func() {
 			By("Create infrastructure with class garden and expect no requests")
 			infrastructureGarden := infrastructure.DeepCopy()
 			infrastructureGarden.ResourceVersion = ""
-			infrastructureGarden.Spec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			infrastructureGarden.Spec.Class = new(extensionsv1alpha1.ExtensionClassGarden)
 			Expect(fakeSeedClient.Create(ctx, infrastructureGarden)).To(Succeed())
 			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
@@ -207,7 +206,7 @@ var _ = Describe("Add", func() {
 			infrastructureSeed := infrastructure.DeepCopy()
 			infrastructureSeed.ResourceVersion = ""
 			infrastructureSeed.Name = "infra-seed"
-			infrastructureSeed.Spec.Class = ptr.To(extensionsv1alpha1.ExtensionClassSeed)
+			infrastructureSeed.Spec.Class = new(extensionsv1alpha1.ExtensionClassSeed)
 			Expect(fakeSeedClient.Create(ctx, infrastructureSeed)).To(Succeed())
 			Expect(mapFn(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))

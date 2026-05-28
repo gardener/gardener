@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -391,7 +390,7 @@ const placeholder = "replica-name"
 
 func replacePlaceholdersInShootSpec(spec *gardencorev1beta1.ShootSpec, name string) {
 	if spec.DNS != nil && spec.DNS.Domain != nil {
-		spec.DNS.Domain = ptr.To(strings.ReplaceAll(*spec.DNS.Domain, placeholder, name))
+		spec.DNS.Domain = new(strings.ReplaceAll(*spec.DNS.Domain, placeholder, name))
 	}
 }
 

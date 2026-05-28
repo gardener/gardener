@@ -7,7 +7,6 @@ package state_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -56,7 +55,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because seed name changed", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = ptr.To("new-seed")
+				shoot.Spec.SeedName = new("new-seed")
 
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})

@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -47,7 +46,7 @@ func (k *kubeAPIServer) emptyRoleBindingHAVPN() *rbacv1.RoleBinding {
 
 func (k *kubeAPIServer) reconcileServiceAccount(ctx context.Context, serviceAccount *corev1.ServiceAccount) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		return nil
 	})
 	return err

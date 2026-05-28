@@ -10,7 +10,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
@@ -71,7 +70,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 			},
 			{
 				Name:                    "extension-validation.operator.gardener.cloud",
@@ -91,7 +90,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 			},
 			{
 				Name:                    "namespace-deletion-validation.operator.gardener.cloud",
@@ -111,7 +110,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 			},
 			{
 				Name:                    "audit-policies.operator.gardener.cloud",
@@ -144,7 +143,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 			},
 		},
 	}
@@ -182,7 +181,7 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 			},
 			{
 				Name:                    "extension-defaulting.operator.gardener.cloud",
@@ -202,7 +201,7 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To[int32](10),
+				TimeoutSeconds: new(int32(10)),
 			},
 		},
 	}

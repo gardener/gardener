@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -223,8 +222,8 @@ var _ = Describe("Discover", func() {
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
 							{
-								Type:    ptr.To(extensionTypeDNS),
-								Primary: ptr.To(true),
+								Type:    new(extensionTypeDNS),
+								Primary: new(true),
 								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 									APIVersion: "v1",
 									Kind:       "Secret",
@@ -232,7 +231,7 @@ var _ = Describe("Discover", func() {
 								},
 							},
 							{
-								Type: ptr.To("unused"),
+								Type: new("unused"),
 								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 									APIVersion: "v1",
 									Kind:       "Secret",

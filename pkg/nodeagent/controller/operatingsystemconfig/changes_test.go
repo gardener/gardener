@@ -12,7 +12,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -65,17 +64,17 @@ var _ = Describe("Changes", func() {
 		})
 
 		It("should return true if the OS version is up to date", func() {
-			currentOSVersion = ptr.To("1.2")
+			currentOSVersion = new("1.2")
 			changed, err := IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(changed).To(BeTrue())
 
-			currentOSVersion = ptr.To("1.2.0")
+			currentOSVersion = new("1.2.0")
 			changed, err = IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(changed).To(BeTrue())
 
-			currentOSVersion = ptr.To("1.2.0-foo.12")
+			currentOSVersion = new("1.2.0-foo.12")
 			newOSC.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.0"
 			changed, err = IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).NotTo(HaveOccurred())
@@ -83,12 +82,12 @@ var _ = Describe("Changes", func() {
 		})
 
 		It("should return false if the OS version is not up to date", func() {
-			currentOSVersion = ptr.To("1.1.0")
+			currentOSVersion = new("1.1.0")
 			changed, err := IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(changed).To(BeFalse())
 
-			currentOSVersion = ptr.To("1.2.0")
+			currentOSVersion = new("1.2.0")
 			newOSC.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.1"
 			changed, err = IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).NotTo(HaveOccurred())
@@ -97,7 +96,7 @@ var _ = Describe("Changes", func() {
 
 		It("should return an error if the OS version in the new OSC is invalid", func() {
 			newOSC.Spec.InPlaceUpdates.OperatingSystemVersion = "invalid"
-			currentOSVersion = ptr.To("1.2.0")
+			currentOSVersion = new("1.2.0")
 			changed, err := IsOsVersionUpToDate(currentOSVersion, newOSC)
 			Expect(err).To(MatchError(ContainSubstring("failed comparing current OS version")))
 			Expect(changed).To(BeFalse())
@@ -189,22 +188,22 @@ var _ = Describe("Changes", func() {
 			osc := &extensionsv1alpha1.OperatingSystemConfig{
 				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 					Files: []extensionsv1alpha1.File{
-						{Path: "/etc/foo", HostName: ptr.To("node-1")},
-						{Path: "/etc/bar", HostName: ptr.To("node-2")},
+						{Path: "/etc/foo", HostName: new("node-1")},
+						{Path: "/etc/bar", HostName: new("node-2")},
 						{Path: "/etc/all", HostName: nil},
 					},
 				},
 				Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 					ExtensionFiles: []extensionsv1alpha1.File{
-						{Path: "/etc/baz", HostName: ptr.To("node-1")},
-						{Path: "/etc/qux", HostName: ptr.To("node-3")},
+						{Path: "/etc/baz", HostName: new("node-1")},
+						{Path: "/etc/qux", HostName: new("node-3")},
 						{Path: "/etc/sts", HostName: nil},
 					},
 				},
 			}
 			Expect(CollectAllFiles(osc, "node-1")).To(ConsistOf(
-				extensionsv1alpha1.File{Path: "/etc/foo", HostName: ptr.To("node-1")},
-				extensionsv1alpha1.File{Path: "/etc/baz", HostName: ptr.To("node-1")},
+				extensionsv1alpha1.File{Path: "/etc/foo", HostName: new("node-1")},
+				extensionsv1alpha1.File{Path: "/etc/baz", HostName: new("node-1")},
 				extensionsv1alpha1.File{Path: "/etc/all", HostName: nil},
 				extensionsv1alpha1.File{Path: "/etc/sts", HostName: nil},
 			))

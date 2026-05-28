@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -55,7 +54,7 @@ var _ = Describe("Scheduler_Control", func() {
 				Name: "project-1",
 			},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: ptr.To("my-namespace"),
+				Namespace: new("my-namespace"),
 			},
 		}
 		seedBase = gardencorev1beta1.Seed{
@@ -68,7 +67,7 @@ var _ = Describe("Scheduler_Control", func() {
 					Region: region,
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
-					Nodes:    ptr.To("10.10.0.0/16"),
+					Nodes:    new("10.10.0.0/16"),
 					Pods:     "10.20.0.0/16",
 					Services: "10.30.0.0/16",
 				},
@@ -105,9 +104,9 @@ var _ = Describe("Scheduler_Control", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Nodes:    ptr.To("10.40.0.0/16"),
-					Pods:     ptr.To("10.50.0.0/16"),
-					Services: ptr.To("10.60.0.0/16"),
+					Nodes:    new("10.40.0.0/16"),
+					Pods:     new("10.50.0.0/16"),
+					Services: new("10.60.0.0/16"),
 				},
 			},
 		}
@@ -537,7 +536,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot
 			testShoot.Spec.Region = "eu-de-2"
-			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
+			testShoot.Spec.CloudProfileName = new("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 
 			Expect(fakeGardenClient.Create(ctx, newCloudProfile)).To(Succeed())
@@ -584,7 +583,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot.DeepCopy()
 			testShoot.Spec.Region = "eu-de-2"
-			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
+			testShoot.Spec.CloudProfileName = new("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 			testShoot.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"my-preferred": "seed"}},
@@ -658,8 +657,8 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability 4) using shoot default networks", func() {
 			seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
-				Pods:     ptr.To("10.50.0.0/16"),
-				Services: ptr.To("10.60.0.0/16"),
+				Pods:     new("10.50.0.0/16"),
+				Services: new("10.60.0.0/16"),
 			}
 			shoot.Spec.Networking.Pods = nil
 			shoot.Spec.Networking.Services = nil
@@ -727,7 +726,7 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
-				Domain: ptr.To(fmt.Sprintf("%s.%s.example.com", shoot.Name, project.Name)),
+				Domain: new(fmt.Sprintf("%s.%s.example.com", shoot.Name, project.Name)),
 			}
 
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
@@ -849,7 +848,7 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should fail because it cannot find a seed cluster due to invalid profile", func() {
-			shoot.Spec.CloudProfileName = ptr.To("another-profile")
+			shoot.Spec.CloudProfileName = new("another-profile")
 
 			Expect(fakeGardenClient.Create(ctx, project)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
@@ -943,7 +942,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot
 			testShoot.Spec.Region = "eu-de-2xzxzzx"
-			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
+			testShoot.Spec.CloudProfileName = new("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 
 			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
@@ -972,7 +971,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot
 			testShoot.Spec.Region = "eu-de-20"
-			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
+			testShoot.Spec.CloudProfileName = new("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 
 			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
@@ -1037,7 +1036,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should return all seeds when shoot uses a custom domain (not matching any seed default)", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("custom.domain.com")}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("custom.domain.com")}
 
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
@@ -1048,7 +1047,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should return only seeds with matching default domain when shoot uses Gardener-managed domain", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To(fmt.Sprintf("%s.%s.example.com", testShoot.Name, projectName))}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new(fmt.Sprintf("%s.%s.example.com", testShoot.Name, projectName))}
 
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
@@ -1060,7 +1059,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should return seeds with multiple default domains when one matches", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To(fmt.Sprintf("%s.%s.test.org", testShoot.Name, projectName))}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new(fmt.Sprintf("%s.%s.test.org", testShoot.Name, projectName))}
 
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain, *seedWithMultipleDefaultDomains}
 
@@ -1072,7 +1071,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail when shoot uses Gardener-managed domain but wrong format", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To("wrong-format.example.com")}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("wrong-format.example.com")}
 
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
@@ -1083,7 +1082,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail when shoot uses Gardener-managed domain with correct suffix but wrong shoot name", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To(fmt.Sprintf("wrong-name.%s.example.com", projectName))}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new(fmt.Sprintf("wrong-name.%s.example.com", projectName))}
 
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
@@ -1094,7 +1093,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail when shoot uses Gardener-managed domain with correct suffix but wrong project name", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To(fmt.Sprintf("%s.wrong-project.example.com", testShoot.Name))}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new(fmt.Sprintf("%s.wrong-project.example.com", testShoot.Name))}
 
 			seedList := []gardencorev1beta1.Seed{*seedWithDefaultDomain, *seedWithoutDefaultDomain}
 
@@ -1105,7 +1104,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should return multiple seeds when multiple seeds support the same domain", func() {
 			testShoot := shootBase.DeepCopy()
-			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: ptr.To(fmt.Sprintf("%s.%s.example.com", testShoot.Name, projectName))}
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new(fmt.Sprintf("%s.%s.example.com", testShoot.Name, projectName))}
 
 			seedWithSameDomain := seedBase.DeepCopy()
 			seedWithSameDomain.Name = "seed-with-same-domain"

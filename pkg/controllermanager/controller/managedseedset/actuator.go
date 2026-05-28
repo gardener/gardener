@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
@@ -205,7 +204,7 @@ func (a *actuator) reconcileReplica(
 			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
-			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, ptr.To(retries+1))
+			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, new(retries+1))
 		} else {
 			log.Info("Not retrying Shoot reconciliation since max retries have been reached", "maxRetries", *a.cfg.MaxShootRetries)
 			a.infoEventf(managedSeedSet, EventNotRetryingShootReconciliation, gardencorev1beta1.EventActionReconcile, "Not retrying Shoot %s reconciliation since max retries have been reached", r.GetFullName())
@@ -222,7 +221,7 @@ func (a *actuator) reconcileReplica(
 			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
-			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, ptr.To(retries+1))
+			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, new(retries+1))
 		} else {
 			log.Info("Not retrying Shoot deletion since max retries have been reached", "maxRetries", *a.cfg.MaxShootRetries)
 			a.infoEventf(managedSeedSet, EventNotRetryingShootDeletion, gardencorev1beta1.EventActionDelete, "Not retrying Shoot %s deletion since max retries have been reached", r.GetFullName())

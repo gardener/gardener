@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -95,7 +94,7 @@ var _ = Describe("Node HighAvailabilityConfig controller", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: labels},
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: labels},
 					Spec: corev1.PodSpec{
@@ -126,7 +125,7 @@ var _ = Describe("Node HighAvailabilityConfig controller", func() {
 			},
 			Spec: appsv1.StatefulSetSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: labels},
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: labels},
 					Spec: corev1.PodSpec{
@@ -163,7 +162,7 @@ var _ = Describe("Node HighAvailabilityConfig controller", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: noTSCLabels},
-				Replicas: ptr.To[int32](1),
+				Replicas: new(int32(1)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: noTSCLabels},
 					Spec: corev1.PodSpec{
@@ -192,7 +191,7 @@ var _ = Describe("Node HighAvailabilityConfig controller", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: multiReplicaLabels},
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: multiReplicaLabels},
 					Spec: corev1.PodSpec{

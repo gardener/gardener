@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -428,7 +427,7 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 func initializeSeedResource(resources gardenadm.Resources, runsControlPlane bool) {
 	seed := resources.Seed
 	seed.Name = resources.Shoot.Name
-	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(resources.Shoot.Name)}
+	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: new(resources.Shoot.Name)}
 
 	if runsControlPlane {
 		// When running the control plane (`gardenadm init`), mark the seed as a self-hosted shoot cluster.

@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -108,9 +107,9 @@ var _ = Describe("Bash", func() {
 							Encoding: "",
 							Data:     "transmit-unencoded",
 						},
-						TransmitUnencoded: ptr.To(true),
+						TransmitUnencoded: new(true),
 					},
-					Permissions: ptr.To(uint32(0777)),
+					Permissions: new(uint32(0777)),
 				},
 			}
 
@@ -185,7 +184,7 @@ chmod "0777" "` + file4 + `"`))
 					},
 					{
 						Name:    unit2,
-						Content: ptr.To("content2"),
+						Content: new("content2"),
 					},
 				}
 			)

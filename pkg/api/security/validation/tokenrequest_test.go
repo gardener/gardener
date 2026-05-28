@@ -13,7 +13,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/security/validation"
 	"github.com/gardener/gardener/pkg/apis/security"
@@ -87,7 +86,7 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 				BeEmpty(),
 			),
 			Entry("should allow namespaced context object",
-				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Namespace: ptr.To("default"), Name: "foo-bar"},
+				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Namespace: new("default"), Name: "foo-bar"},
 				BeEmpty(),
 			),
 			Entry("should allow non-namespaced (cluster scoped) context object",
@@ -140,7 +139,7 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 				)),
 			),
 			Entry("should forbid context object with Namespace that is not DNS1123 subdomain",
-				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: ptr.To("Default")},
+				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: new("Default")},
 				ConsistOf(PointTo(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -150,7 +149,7 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 				)),
 			),
 			Entry("should forbid context object with empty Namespace",
-				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: ptr.To("")},
+				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: new("")},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),

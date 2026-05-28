@@ -17,7 +17,6 @@ import (
 
 	"github.com/bramvdbogaerde/go-scp"
 	"golang.org/x/crypto/ssh"
-	"k8s.io/utils/ptr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/utils/signals"
@@ -68,7 +67,7 @@ func Dial(ctx context.Context, addr string, opts ...Option) (*Connection, error)
 	sshClient := ssh.NewClient(conn, chans, reqs)
 	return &Connection{
 		Client: sshClient,
-		SCP:    ptr.To(scp.NewConfigurer("", nil).SSHClient(sshClient).Create()),
+		SCP:    new(scp.NewConfigurer("", nil).SSHClient(sshClient).Create()),
 	}, nil
 }
 

@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -131,7 +130,7 @@ var _ = Describe("Namespaces", func() {
 						Type: shootProviderType,
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To(networkingProviderType),
+						Type: new(networkingProviderType),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -595,7 +594,7 @@ var _ = Describe("Namespaces", func() {
 		It("should successfully remove extension labels from the namespace when extensions are deleted from shoot spec or marked as disabled", func() {
 			defaultShootInfo.Spec.Extensions = []gardencorev1beta1.Extension{
 				{Type: extensionType1},
-				{Type: extensionType3, Disabled: ptr.To(true)},
+				{Type: extensionType3, Disabled: new(true)},
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 

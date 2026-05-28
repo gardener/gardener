@@ -22,7 +22,6 @@ import (
 	fakerestclient "k8s.io/client-go/rest/fake"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -76,8 +75,8 @@ var _ = Describe("LeaseReconciler", func() {
 				}},
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       ptr.To(seed.Name),
-				LeaseDurationSeconds: ptr.To[int32](2),
+				HolderIdentity:       new(seed.Name),
+				LeaseDurationSeconds: new(int32(2)),
 				RenewTime:            &renewTime,
 			},
 		}
@@ -151,7 +150,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 	It("should check if LeaseResyncSeconds matches the expectedLease value", func() {
 		expectedCondition = gardenletReadyCondition(clock)
-		expectedLease.Spec.LeaseDurationSeconds = ptr.To[int32](3)
+		expectedLease.Spec.LeaseDurationSeconds = new(int32(3))
 
 		reconciler.LeaseResyncSeconds = 3
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}

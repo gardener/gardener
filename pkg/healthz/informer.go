@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
@@ -47,7 +46,7 @@ func NewCacheSyncHealthzWithDeadline(log logr.Logger, clock clock.Clock, cacheSy
 	return func(_ *http.Request) error {
 		if err := cacheSyncCheckFunc(cacheSyncWaiter); err != nil {
 			if notSyncedSince == nil {
-				notSyncedSince = ptr.To(clock.Now())
+				notSyncedSince = new(clock.Now())
 			}
 
 			if clock.Now().Sub(*notSyncedSince) >= deadline {

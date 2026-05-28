@@ -18,7 +18,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -136,7 +135,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    ptr.To("10.2.0.0/16"),
+				Nodes:    new("10.2.0.0/16"),
 			},
 		},
 	}
@@ -171,7 +170,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -185,7 +184,7 @@ var _ = BeforeSuite(func() {
 	healthManager = healthz.NewDefaultHealthz()
 
 	Expect(lease.AddToManager(mgr, mgr, kubernetesClient.RESTClient(), gardenletconfigv1alpha1.SeedControllerConfiguration{
-		LeaseResyncSeconds: ptr.To[int32](1),
+		LeaseResyncSeconds: new(int32(1)),
 	}, healthManager, seed.Name, fakeClock, &testNamespace.Name)).To(Succeed())
 
 	By("Start manager")

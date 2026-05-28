@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -74,7 +73,7 @@ var _ = Describe("Etcd", func() {
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
 							Path: "/var/lib/etcd-main/data/new.etcd",
-							Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+							Type: new(corev1.HostPathDirectoryOrCreate),
 						},
 					},
 				},

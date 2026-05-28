@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -312,7 +311,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                extensionType5,
 							AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
-							WorkerlessSupported: ptr.To(true),
+							WorkerlessSupported: new(true),
 						},
 					},
 					Deployment: nil,
@@ -341,7 +340,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Namespace: "test-namespace",
 				},
 				Spec: core.ShootSpec{
-					Networking: &core.Networking{Type: ptr.To(networkingType)},
+					Networking: &core.Networking{Type: new(networkingType)},
 					DNS: &core.DNS{
 						Providers: []core.DNSProvider{
 							{Type: &dnsProviderType1},
@@ -386,7 +385,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Extensions: []core.Extension{
 						{
 							Type:     extensionType2,
-							Disabled: ptr.To(true),
+							Disabled: new(true),
 						},
 						{
 							Type: extensionType3,
@@ -441,7 +440,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			extension := []core.Extension{
 				{
 					Type:     extensionType2,
-					Disabled: ptr.To(false),
+					Disabled: new(false),
 				},
 				{
 					Type: extensionType4,
@@ -512,7 +511,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 						Extensions: []core.Extension{
 							{
 								Type:     extensionType2,
-								Disabled: ptr.To(true),
+								Disabled: new(true),
 							},
 							{
 								Type: extensionType3,

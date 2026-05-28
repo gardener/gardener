@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -98,19 +97,19 @@ var _ = Describe("Botanist", func() {
 					Pools: []extensionsv1alpha1.WorkerPool{
 						{
 							Name:           "pool-0",
-							UpdateStrategy: ptr.To(gardencorev1beta1.AutoRollingUpdate),
+							UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
 						},
 						{
 							Name:           "pool-1",
-							UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 						},
 						{
 							Name:           "pool-2",
-							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
 						{
 							Name:           "pool-3",
-							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
 					},
 				},
@@ -133,34 +132,34 @@ var _ = Describe("Botanist", func() {
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.32.0",
 						Kubelet: &gardencorev1beta1.KubeletConfig{
-							CPUManagerPolicy: ptr.To("static"),
+							CPUManagerPolicy: new("static"),
 						},
 					},
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
 							{
 								Name:           "pool-1",
-								UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+								UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 								Machine: gardencorev1beta1.Machine{
 									Image: &gardencorev1beta1.ShootMachineImage{
 										Name:    "image-1",
-										Version: ptr.To("1592.0"),
+										Version: new("1592.0"),
 									},
 								},
 							},
 							{
 								Name:           "pool-2",
-								UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+								UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-									Version: ptr.To("1.31.0"),
+									Version: new("1.31.0"),
 									Kubelet: &gardencorev1beta1.KubeletConfig{
-										CPUManagerPolicy: ptr.To("none"),
+										CPUManagerPolicy: new("none"),
 									},
 								},
 								Machine: gardencorev1beta1.Machine{
 									Image: &gardencorev1beta1.ShootMachineImage{
 										Name:    "image-2",
-										Version: ptr.To("1593.0"),
+										Version: new("1593.0"),
 									},
 								},
 							},
@@ -185,7 +184,7 @@ var _ = Describe("Botanist", func() {
 		It("should set the in-place update pending workers when worker does not contain this worker pool", func(ctx context.Context) {
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
 				Name:           "pool-4",
-				UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+				UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 			})
 			botanist.Shoot.SetInfo(shoot)
 
@@ -230,19 +229,19 @@ var _ = Describe("Botanist", func() {
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers,
 				gardencorev1beta1.Worker{
 					Name:           "pool-3",
-					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 				gardencorev1beta1.Worker{
 					Name:           "pool-4",
-					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 				gardencorev1beta1.Worker{
 					Name:           "pool-5",
-					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 				},
 				gardencorev1beta1.Worker{
 					Name:           "pool-6",
-					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 				},
 			)
 			botanist.Shoot.SetInfo(shoot)
@@ -257,27 +256,27 @@ var _ = Describe("Botanist", func() {
 				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 					{
 						Name:           "pool-1",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-2",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 					{
 						Name:           "pool-4",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-3",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-6",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 					{
 						Name:           "pool-5",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 				}
 				return nil
@@ -293,35 +292,35 @@ var _ = Describe("Botanist", func() {
 				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 					{
 						Name:           "pool-1",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-2",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 					{
 						Name:           "pool-4",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-3",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-6",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 					{
 						Name:           "pool-5",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 					{
 						Name:           "pool-7",
-						UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
 					{
 						Name:           "pool-8",
-						UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
 				}
 				return nil

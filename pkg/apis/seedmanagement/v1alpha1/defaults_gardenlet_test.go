@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -169,20 +168,20 @@ var _ = Describe("Defaults", func() {
 		It("should default GardenletDeployment field", func() {
 			SetObjectDefaults_Gardenlet(obj)
 
-			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(ptr.To[int32](2)))
-			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](2)))
+			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(new(int32(2))))
+			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(new(int32(2))))
 			Expect(obj.Spec.Deployment.Image).NotTo(BeNil())
 		})
 
 		It("should not overwrite the already set values for GardenletDeployment field", func() {
 			obj.Spec.Deployment = GardenletSelfDeployment{GardenletDeployment: GardenletDeployment{
-				ReplicaCount:         ptr.To[int32](3),
-				RevisionHistoryLimit: ptr.To[int32](3),
+				ReplicaCount:         new(int32(3)),
+				RevisionHistoryLimit: new(int32(3)),
 			}}
 			SetObjectDefaults_Gardenlet(obj)
 
-			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(ptr.To[int32](3)))
-			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](3)))
+			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(new(int32(3))))
+			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(new(int32(3))))
 			Expect(obj.Spec.Deployment.Image).NotTo(BeNil())
 		})
 	})
@@ -192,36 +191,36 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_Gardenlet(obj)
 
 			Expect(obj.Spec.Deployment.Image).To(Equal(&Image{
-				PullPolicy: ptr.To(corev1.PullIfNotPresent),
+				PullPolicy: new(corev1.PullIfNotPresent),
 			}))
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
 			obj.Spec.Deployment = GardenletSelfDeployment{GardenletDeployment: GardenletDeployment{
-				Image: &Image{Tag: ptr.To("latest")},
+				Image: &Image{Tag: new("latest")},
 			}}
 
 			SetObjectDefaults_Gardenlet(obj)
 
 			Expect(obj.Spec.Deployment.Image).To(Equal(&Image{
-				Tag:        ptr.To("latest"),
-				PullPolicy: ptr.To(corev1.PullAlways),
+				Tag:        new("latest"),
+				PullPolicy: new(corev1.PullAlways),
 			}))
 		})
 
 		It("should not overwrite pull policy if tag is not latest", func() {
 			obj.Spec.Deployment = GardenletSelfDeployment{GardenletDeployment: GardenletDeployment{
 				Image: &Image{
-					Tag:        ptr.To("foo"),
-					PullPolicy: ptr.To(corev1.PullNever),
+					Tag:        new("foo"),
+					PullPolicy: new(corev1.PullNever),
 				},
 			}}
 
 			SetObjectDefaults_Gardenlet(obj)
 
 			Expect(obj.Spec.Deployment.Image).To(Equal(&Image{
-				Tag:        ptr.To("foo"),
-				PullPolicy: ptr.To(corev1.PullNever),
+				Tag:        new("foo"),
+				PullPolicy: new(corev1.PullNever),
 			}))
 		})
 	})

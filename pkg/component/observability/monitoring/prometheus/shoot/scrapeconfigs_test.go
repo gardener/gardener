@@ -13,7 +13,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -35,8 +34,8 @@ var _ = Describe("ScrapeConfigs", func() {
 						Name: "kube-kubelet-seed",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorTimestamps: ptr.To(false),
-						MetricsPath:     ptr.To("/federate"),
+						HonorTimestamps: new(false),
+						MetricsPath:     new("/federate"),
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:       monitoringv1alpha1.KubernetesRoleService,
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v1beta1constants.GardenNamespace}},
@@ -60,12 +59,12 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 							{
 								Action:      "replace",
-								Replacement: ptr.To("kube-kubelet-seed"),
+								Replacement: new("kube-kubelet-seed"),
 								TargetLabel: "job",
 							},
 						},
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-							Replacement: ptr.To("shoot-control-plane"),
+							Replacement: new("shoot-control-plane"),
 							TargetLabel: "namespace",
 						}},
 					},
@@ -75,16 +74,16 @@ var _ = Describe("ScrapeConfigs", func() {
 						Name: "annotated-seed-service-endpoints",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorLabels: ptr.To(false),
+						HonorLabels: new(false),
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:       "Endpoints",
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 						}},
-						SampleLimit: ptr.To(uint64(500)),
+						SampleLimit: new(uint64(500)),
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: ptr.To("annotated-seed-service-endpoints"),
+								Replacement: new("annotated-seed-service-endpoints"),
 								TargetLabel: "job",
 							},
 							{
@@ -108,7 +107,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								SourceLabels: []monitoringv1.LabelName{"__address__", "__meta_kubernetes_service_annotation_prometheus_io_port"},
 								Action:       "replace",
 								Regex:        `([^:]+)(?::\d+)?;(\d+)`,
-								Replacement:  ptr.To("$1:$2"),
+								Replacement:  new("$1:$2"),
 								TargetLabel:  "__address__",
 							},
 							{
@@ -143,14 +142,14 @@ var _ = Describe("ScrapeConfigs", func() {
 						Name: "prometheus-shoot",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorLabels: ptr.To(false),
+						HonorLabels: new(false),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: ptr.To("prometheus-shoot"),
+								Replacement: new("prometheus-shoot"),
 								TargetLabel: "job",
 							},
 							{
@@ -173,9 +172,9 @@ var _ = Describe("ScrapeConfigs", func() {
 						Name: "cadvisor",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorLabels:     ptr.To(false),
-						HonorTimestamps: ptr.To(false),
-						Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
+						HonorLabels:     new(false),
+						HonorTimestamps: new(false),
+						Scheme:          new(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -186,9 +185,9 @@ var _ = Describe("ScrapeConfigs", func() {
 						}}},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:            "Node",
-							APIServer:       ptr.To("https://kube-apiserver:443"),
+							APIServer:       new("https://kube-apiserver:443"),
 							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
-							FollowRedirects: ptr.To(false),
+							FollowRedirects: new(false),
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 								Key:                  "token",
@@ -201,7 +200,7 @@ var _ = Describe("ScrapeConfigs", func() {
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: ptr.To("cadvisor"),
+								Replacement: new("cadvisor"),
 								TargetLabel: "job",
 							},
 							{
@@ -210,17 +209,17 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 							{
 								TargetLabel: "__address__",
-								Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+								Replacement: new(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 								Regex:        `(.+)`,
-								Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
+								Replacement:  new(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
 								TargetLabel:  "__metrics_path__",
 							},
 							{
 								TargetLabel: "type",
-								Replacement: ptr.To("shoot"),
+								Replacement: new("shoot"),
 							},
 						},
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -234,7 +233,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								SourceLabels: []monitoringv1.LabelName{"id"},
 								Action:       "replace",
 								Regex:        `^/system\.slice/(.+)\.service$`,
-								Replacement:  ptr.To(`$1`),
+								Replacement:  new(`$1`),
 								TargetLabel:  "container",
 							},
 							{
@@ -265,7 +264,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							{
 								SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
 								Regex:        `container_network.+;/`,
-								Replacement:  ptr.To("true"),
+								Replacement:  new("true"),
 								TargetLabel:  "host_network",
 							},
 							{
@@ -280,8 +279,8 @@ var _ = Describe("ScrapeConfigs", func() {
 						Name: "kube-kubelet",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorLabels: ptr.To(false),
-						Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+						HonorLabels: new(false),
+						Scheme:      new(monitoringv1.SchemeHTTPS),
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 							Key:                  "token",
@@ -292,8 +291,8 @@ var _ = Describe("ScrapeConfigs", func() {
 						}}},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 							Role:            "Node",
-							APIServer:       ptr.To("https://kube-apiserver"),
-							FollowRedirects: ptr.To(true),
+							APIServer:       new("https://kube-apiserver"),
+							FollowRedirects: new(true),
 							Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -307,7 +306,7 @@ var _ = Describe("ScrapeConfigs", func() {
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: ptr.To("kube-kubelet"),
+								Replacement: new("kube-kubelet"),
 								TargetLabel: "job",
 							},
 							{
@@ -320,17 +319,17 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 							{
 								TargetLabel: "__address__",
-								Replacement: ptr.To("kube-apiserver:443"),
+								Replacement: new("kube-apiserver:443"),
 							},
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 								Regex:        `(.+)`,
-								Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
+								Replacement:  new(`/api/v1/nodes/${1}/proxy/metrics`),
 								TargetLabel:  "__metrics_path__",
 							},
 							{
 								TargetLabel: "type",
-								Replacement: ptr.To("shoot"),
+								Replacement: new("shoot"),
 							},
 						},
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -377,8 +376,8 @@ var _ = Describe("ScrapeConfigs", func() {
 							Name: "opentelemetry-collector-nodes",
 						},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
-							HonorLabels: ptr.To(false),
-							Scheme:      ptr.To(monitoringv1.SchemeHTTPS),
+							HonorLabels: new(false),
+							Scheme:      new(monitoringv1.SchemeHTTPS),
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 								Key:                  "token",
@@ -389,8 +388,8 @@ var _ = Describe("ScrapeConfigs", func() {
 							}}},
 							KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 								Role:            "Node",
-								APIServer:       ptr.To("https://kube-apiserver"),
-								FollowRedirects: ptr.To(true),
+								APIServer:       new("https://kube-apiserver"),
+								FollowRedirects: new(true),
 								Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -404,7 +403,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									Action:      "replace",
-									Replacement: ptr.To("opentelemetry-collector-nodes"),
+									Replacement: new("opentelemetry-collector-nodes"),
 									TargetLabel: "job",
 								},
 								{
@@ -417,17 +416,17 @@ var _ = Describe("ScrapeConfigs", func() {
 								},
 								{
 									TargetLabel: "__address__",
-									Replacement: ptr.To("kube-apiserver:443"),
+									Replacement: new("kube-apiserver:443"),
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 									Regex:        `(.+)`,
-									Replacement:  ptr.To(`/api/v1/nodes/${1}:18888/proxy/metrics`),
+									Replacement:  new(`/api/v1/nodes/${1}:18888/proxy/metrics`),
 									TargetLabel:  "__metrics_path__",
 								},
 								{
 									TargetLabel: "type",
-									Replacement: ptr.To("shoot"),
+									Replacement: new("shoot"),
 								},
 							},
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{

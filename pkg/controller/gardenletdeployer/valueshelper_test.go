@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -92,7 +91,7 @@ var _ = Describe("ValuesHelper", func() {
 				string("BarFeature"): true,
 			},
 			Logging: &gardenletconfigv1alpha1.Logging{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 			},
 			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -106,10 +105,10 @@ var _ = Describe("ValuesHelper", func() {
 		vh = NewValuesHelper(parentConfig)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			ReplicaCount:         new(int32(1)),
+			RevisionHistoryLimit: new(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
-				PullPolicy: ptr.To(corev1.PullIfNotPresent),
+				PullPolicy: new(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",
@@ -126,12 +125,12 @@ var _ = Describe("ValuesHelper", func() {
 		}
 
 		mergedDeployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			ReplicaCount:         new(int32(1)),
+			RevisionHistoryLimit: new(int32(1)),
 			Image: &seedmanagementv1alpha1.Image{
-				Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
-				Tag:        ptr.To("v0.0.0-master+$Format:%H$"),
-				PullPolicy: ptr.To(corev1.PullIfNotPresent),
+				Repository: new("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
+				Tag:        new("v0.0.0-master+$Format:%H$"),
+				PullPolicy: new(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",
@@ -191,7 +190,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("BarFeature"): true,
 				},
 				Logging: &gardenletconfigv1alpha1.Logging{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				},
 			}
 		}

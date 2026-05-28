@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -90,7 +89,7 @@ var _ = Describe("Controller", func() {
 					Region: "some-region",
 				},
 				ProviderConfig: providerConfig,
-				SeedName:       ptr.To(seedName),
+				SeedName:       new(seedName),
 			},
 			Status: gardencorev1beta1.BackupBucketStatus{
 				ObservedGeneration: 1,
@@ -120,7 +119,7 @@ var _ = Describe("Controller", func() {
 			SeedClient:   seedClient,
 			Recorder:     &events.FakeRecorder{},
 			Config: gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
-				ConcurrentSyncs: ptr.To(5),
+				ConcurrentSyncs: new(5),
 			},
 			Clock:           fakeClock,
 			GardenNamespace: gardenNamespaceName,

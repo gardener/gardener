@@ -14,7 +14,6 @@ import (
 	authorizationv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -39,7 +38,7 @@ func NewWithSelectorsChecker(ctx context.Context, log logr.Logger, clientSet kub
 		clock:     clock,
 
 		isPossible:    false,
-		nextCheckTime: ptr.To(clock.Now()),
+		nextCheckTime: new(clock.Now()),
 	}
 }
 
@@ -62,7 +61,7 @@ func (w *withSelectorsChecker) IsPossible() (bool, error) {
 
 		w.isPossible = enabled
 		if mustCheckAgain {
-			w.nextCheckTime = ptr.To(w.clock.Now().UTC().Add(10 * time.Minute))
+			w.nextCheckTime = new(w.clock.Now().UTC().Add(10 * time.Minute))
 			w.log.Info("Must check again, caching result", "nextCheckTime", w.nextCheckTime.UTC().String())
 		} else {
 			w.nextCheckTime = nil

@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -40,8 +39,8 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  ptr.To("test-cloudprofile"),
+				SecretBindingName: new("my-provider-account"),
+				CloudProfileName:  new("test-cloudprofile"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: shootProviderType,
@@ -54,7 +53,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    shootProviderType,
-									Version: ptr.To("0.0.0"),
+									Version: new("0.0.0"),
 								},
 							},
 							CRI: &gardencorev1beta1.CRI{
@@ -70,7 +69,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To(shootProviderType),
+					Type: new(shootProviderType),
 				},
 				Extensions: []gardencorev1beta1.Extension{{
 					Type: shootProviderType,
@@ -574,7 +573,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    selfHostedProviderType,
-									Version: ptr.To("0.0.0"),
+									Version: new("0.0.0"),
 								},
 							},
 							CRI: &gardencorev1beta1.CRI{
@@ -589,7 +588,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						Version: "1.31.1",
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To(selfHostedProviderType),
+						Type: new(selfHostedProviderType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: selfHostedProviderType},
@@ -710,7 +709,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                handoffType,
-							WorkerlessSupported: ptr.To(true),
+							WorkerlessSupported: new(true),
 						},
 					},
 				},
@@ -819,7 +818,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{Kind: extensionsv1alpha1.ExtensionResource, Type: adoptionShootExtType},
-						{Kind: extensionsv1alpha1.ExtensionResource, Type: adoptionSeedExtType, WorkerlessSupported: ptr.To(true)},
+						{Kind: extensionsv1alpha1.ExtensionResource, Type: adoptionSeedExtType, WorkerlessSupported: new(true)},
 					},
 				},
 			}
@@ -915,7 +914,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                deleteType,
-							WorkerlessSupported: ptr.To(true),
+							WorkerlessSupported: new(true),
 						},
 					},
 				},
@@ -976,7 +975,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 				},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: extensionsv1alpha1.ExtensionResource, Type: sharedExtType, WorkerlessSupported: ptr.To(true)},
+						{Kind: extensionsv1alpha1.ExtensionResource, Type: sharedExtType, WorkerlessSupported: new(true)},
 					},
 				},
 			}
@@ -1029,7 +1028,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 					Labels:    map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SecretBindingName: ptr.To("my-provider-account"),
+					SecretBindingName: new("my-provider-account"),
 					CloudProfile: &gardencorev1beta1.CloudProfileReference{
 						Kind: "CloudProfile",
 						Name: "test-cloudprofile",
@@ -1045,7 +1044,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    selfHostedProviderType,
-									Version: ptr.To("0.0.0"),
+									Version: new("0.0.0"),
 								},
 							},
 							CRI: &gardencorev1beta1.CRI{
@@ -1060,7 +1059,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						Version: "1.31.1",
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To(selfHostedProviderType),
+						Type: new(selfHostedProviderType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: sharedExtType},
@@ -1119,7 +1118,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                clearType,
-							WorkerlessSupported: ptr.To(true),
+							WorkerlessSupported: new(true),
 						},
 					},
 				},
@@ -1219,7 +1218,7 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                clearFinalizerType,
-							WorkerlessSupported: ptr.To(true),
+							WorkerlessSupported: new(true),
 						},
 					},
 				},

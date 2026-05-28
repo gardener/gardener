@@ -8,7 +8,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -58,7 +57,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Types:             types,
 		Target:            extensionswebhook.TargetSeed,
 		Path:              name,
-		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
+		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: new(true)},
 		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelRole, Operator: metav1.LabelSelectorOpIn, Values: []string{v1beta1constants.LabelAPIServer}},

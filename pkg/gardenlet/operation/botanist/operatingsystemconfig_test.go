@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -89,7 +88,7 @@ var _ = Describe("operatingsystemconfig", func() {
 							OperatingSystemConfig: operatingSystemConfig,
 						},
 					},
-					InternalClusterDomain: ptr.To(shootDomain),
+					InternalClusterDomain: new(shootDomain),
 					Purpose:               "development",
 					Networks: &shootpkg.Networks{
 						CoreDNS: []net.IP{net.ParseIP(coreDNS[0]), net.ParseIP(coreDNS[1])},
@@ -147,7 +146,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.Shoot.Purpose = "development"
 				botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 					Logging: &gardenletconfigv1alpha1.Logging{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 						ShootNodeLogging: &gardenletconfigv1alpha1.ShootNodeLogging{
 							ShootPurposes: []gardencorev1beta1.ShootPurpose{"evaluation", "development"},
 						},
@@ -407,7 +406,7 @@ var _ = Describe("operatingsystemconfig", func() {
 								{Name: expectedMRSecretRBAC.Name},
 							},
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							KeepObjects:  ptr.To(false),
+							KeepObjects:  new(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedManagedResource))

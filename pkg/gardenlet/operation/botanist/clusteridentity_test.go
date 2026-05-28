@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -129,7 +128,7 @@ var _ = Describe("ClusterIdentity", func() {
 		})
 		Context("cluster identity already exists", func() {
 			BeforeEach(func() {
-				shoot.Status.ClusterIdentity = ptr.To(expectedShootClusterIdentity)
+				shoot.Status.ClusterIdentity = new(expectedShootClusterIdentity)
 			})
 			It("should not touch shoot.status.clusterIdentity", test)
 		})

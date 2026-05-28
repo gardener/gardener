@@ -353,7 +353,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			}
 			shoot.Status.LastMaintenance.Description = "Maintenance failed"
 			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateFailed
-			shoot.Status.LastMaintenance.FailureReason = ptr.To(fmt.Sprintf("Updates to the Shoot failed to be applied: %s", err.Error()))
+			shoot.Status.LastMaintenance.FailureReason = new(fmt.Sprintf("Updates to the Shoot failed to be applied: %s", err.Error()))
 			if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 				return err
 			}

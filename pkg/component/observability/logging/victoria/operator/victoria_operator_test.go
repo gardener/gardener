@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -106,7 +105,7 @@ var _ = Describe("VictoriaOperator", func() {
 					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		deployment = &appsv1.Deployment{
@@ -121,8 +120,8 @@ var _ = Describe("VictoriaOperator", func() {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(1)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             new(int32(1)),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":                 "victoria-operator",
@@ -222,9 +221,9 @@ var _ = Describe("VictoriaOperator", func() {
 									PeriodSeconds:       10,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-									RunAsNonRoot:             ptr.To(true),
+									RunAsNonRoot:             new(true),
 								},
 							},
 						},
@@ -251,7 +250,7 @@ var _ = Describe("VictoriaOperator", func() {
 					Name:       "victoria-operator",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -263,7 +262,7 @@ var _ = Describe("VictoriaOperator", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -364,7 +363,7 @@ var _ = Describe("VictoriaOperator", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":                 "victoria-operator",
@@ -373,7 +372,7 @@ var _ = Describe("VictoriaOperator", func() {
 						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 	})
@@ -411,9 +410,9 @@ var _ = Describe("VictoriaOperator", func() {
 						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component", "care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -424,7 +423,7 @@ var _ = Describe("VictoriaOperator", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			})

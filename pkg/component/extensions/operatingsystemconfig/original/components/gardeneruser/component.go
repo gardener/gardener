@@ -11,7 +11,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -72,8 +71,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:   "gardener-user.service",
-				Enable: ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Enable: new(true),
+				Content: new(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]
@@ -84,8 +83,8 @@ ExecStart=` + pathScript + `
 			},
 			{
 				Name:   "gardener-user.path",
-				Enable: ptr.To(true),
-				Content: ptr.To(`[Path]
+				Enable: new(true),
+				Content: new(`[Path]
 PathChanged=` + pathAuthorizedSSHKeys + `
 [Install]
 WantedBy=multi-user.target
@@ -95,7 +94,7 @@ WantedBy=multi-user.target
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathAuthorizedSSHKeys,
-				Permissions: ptr.To[uint32](0644),
+				Permissions: new(uint32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -105,7 +104,7 @@ WantedBy=multi-user.target
 			},
 			{
 				Path:        pathScript,
-				Permissions: ptr.To[uint32](0755),
+				Permissions: new(uint32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

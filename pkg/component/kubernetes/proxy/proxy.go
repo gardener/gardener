@@ -206,10 +206,10 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if err := k.reconcileManagedResource(ctx, data, &pool, ptr.To(false)); err != nil {
+		if err := k.reconcileManagedResource(ctx, data, &pool, new(false)); err != nil {
 			return err
 		}
-		return k.reconcileManagedResource(ctx, dataForMajorMinorVersionOnly, &pool, ptr.To(true))
+		return k.reconcileManagedResource(ctx, dataForMajorMinorVersionOnly, &pool, new(true))
 	})
 }
 
@@ -262,10 +262,10 @@ func (k *kubeProxy) Wait(ctx context.Context) error {
 	}
 
 	return k.forEachWorkerPool(ctx, true, func(ctx context.Context, pool WorkerPool) error {
-		if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, ptr.To(false))); err != nil {
+		if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, new(false))); err != nil {
 			return err
 		}
-		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, ptr.To(true)))
+		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, new(true)))
 	})
 }
 
@@ -339,7 +339,7 @@ func runParallelFunctions(ctx context.Context, withTimeout bool, fns []flow.Task
 func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]string) bool {
 	for _, pool := range k.values.WorkerPools {
 		if pool.Name == labels[labelKeyPoolName] &&
-			(pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] || version(pool, ptr.To(true)) == labels[labelKeyKubernetesVersion]) {
+			(pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] || version(pool, new(true)) == labels[labelKeyKubernetesVersion]) {
 			return true
 		}
 	}

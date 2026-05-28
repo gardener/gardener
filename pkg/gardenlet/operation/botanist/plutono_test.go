@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -90,7 +89,7 @@ var _ = Describe("Plutono", func() {
 
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Status: gardencorev1beta1.SeedStatus{
-				KubernetesVersion: ptr.To("1.2.3"),
+				KubernetesVersion: new("1.2.3"),
 			},
 		})
 

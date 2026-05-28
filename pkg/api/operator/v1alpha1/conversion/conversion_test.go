@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/conversion"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
@@ -34,13 +33,13 @@ var _ = Describe("conversion", func() {
 						APIVersions: []string{"v1beta1"},
 						APIGroups:   []string{"core.gardener.cloud"},
 						Resources:   []string{"shoots"},
-						Size:        ptr.To(resource.MustParse("1Ki")),
+						Size:        new(resource.MustParse("1Ki")),
 					},
 					{
 						APIVersions: []string{"v1"},
 						APIGroups:   []string{""},
 						Resources:   []string{"secrets", "configmaps"},
-						Size:        ptr.To(resource.MustParse("100Ki")),
+						Size:        new(resource.MustParse("100Ki")),
 					},
 				},
 				UnrestrictedSubjects: []rbacv1.Subject{},

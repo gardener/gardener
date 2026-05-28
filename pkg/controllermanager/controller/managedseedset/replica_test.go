@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -84,7 +83,7 @@ var _ = Describe("Replica", func() {
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						DNS: &gardencorev1beta1.DNS{
-							Domain: ptr.To("replica-name.example.com"),
+							Domain: new("replica-name.example.com"),
 						},
 					},
 				},
@@ -310,7 +309,7 @@ var _ = Describe("Replica", func() {
 				*metav1.NewControllerRef(managedSeedSet, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedSet")),
 			}))
 			Expect(createdShoot.Spec.DNS).ToNot(BeNil())
-			Expect(createdShoot.Spec.DNS.Domain).To(Equal(ptr.To(replicaName + ".example.com")))
+			Expect(createdShoot.Spec.DNS.Domain).To(Equal(new(replicaName + ".example.com")))
 		})
 	})
 

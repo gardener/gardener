@@ -58,13 +58,13 @@ func GetPersistedSecrets(ctx context.Context, seedClient client.Reader, namespac
 
 // ComparePersistedSecrets ensures that two secret maps are equal.
 func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secret) error {
-	var errorMsg string
+	var errorMsg strings.Builder
 	for name, secret := range secretsBefore {
 		if !reflect.DeepEqual(secret.Data, secretsAfter[name].Data) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have its data persisted.\n", secret.Namespace, secret.Name)
+			fmt.Fprintf(&errorMsg, "Secret %s/%s did not have its data persisted.\n", secret.Namespace, secret.Name)
 		}
 		if !maps.Equal(secret.Labels, secretsAfter[name].Labels) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have its labels persisted: labels before migration: %v, labels after migration: %v\n",
+			fmt.Fprintf(&errorMsg, "Secret %s/%s did not have its labels persisted: labels before migration: %v, labels after migration: %v\n",
 				secret.Namespace,
 				secret.Name,
 				secret.Labels,
@@ -72,7 +72,7 @@ func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secre
 			)
 		}
 		if secret.Type != secretsAfter[name].Type {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have its type persisted: type before migration: %s, type after migration: %s\n",
+			fmt.Fprintf(&errorMsg, "Secret %s/%s did not have its type persisted: type before migration: %s, type after migration: %s\n",
 				secret.Namespace,
 				secret.Name,
 				secret.Type,
@@ -80,7 +80,7 @@ func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secre
 			)
 		}
 		if !ptr.Equal(secret.Immutable, secretsAfter[name].Immutable) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have its immutability persisted: immutable before migration: %t, immutable after migration: %t\n",
+			fmt.Fprintf(&errorMsg, "Secret %s/%s did not have its immutability persisted: immutable before migration: %t, immutable after migration: %t\n",
 				secret.Namespace,
 				secret.Name,
 				ptr.Deref(secret.Immutable, false),
@@ -88,8 +88,8 @@ func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secre
 			)
 		}
 	}
-	if len(errorMsg) > 0 {
-		return fmt.Errorf("control plane secrets did not have their data or labels persisted during control plane migration:\n %s", errorMsg)
+	if errorMsg.Len() > 0 {
+		return fmt.Errorf("control plane secrets did not have their data or labels persisted during control plane migration:\n %s", errorMsg.String())
 	}
 	return nil
 }

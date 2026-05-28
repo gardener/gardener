@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -238,7 +237,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getDefaultLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -275,7 +274,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getSelector(),
 				},
@@ -299,7 +298,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 							{Effect: corev1.TaintEffectNoExecute, Operator: corev1.TolerationOpExists},
 						},
 						HostNetwork:                  true,
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -322,7 +321,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_ADMIN",
@@ -347,7 +346,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_ADMIN",
@@ -374,13 +373,13 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_BIND_SERVICE",
 										},
 									},
-									RunAsUser: ptr.To[int64](0),
+									RunAsUser: new(int64(0)),
 								},
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{

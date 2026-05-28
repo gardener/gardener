@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -174,7 +173,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				if effectiveZone != "" {
-					b.Zone = ptr.To(effectiveZone)
+					b.Zone = new(effectiveZone)
 				}
 				return nil
 			},

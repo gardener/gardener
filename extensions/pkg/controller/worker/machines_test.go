@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -147,7 +146,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing priority", func() {
-				p.Priority = ptr.To(int32(1337))
+				p.Priority = new(int32(1337))
 			})
 
 			It("when changing max surge", func() {
@@ -183,7 +182,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes patch version of the worker pool version", func() {
-				p.KubernetesVersion = ptr.To("1.2.4")
+				p.KubernetesVersion = new("1.2.4")
 			})
 
 			It("when changing the kubernetes patch version of the control plane version", func() {
@@ -258,7 +257,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
-				p.KubernetesVersion = ptr.To("1.3.3")
+				p.KubernetesVersion = new("1.3.3")
 			})
 
 			It("when changing the kubernetes major/minor version of the control plane version", func() {
@@ -337,7 +336,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing priority", func() {
-				p.Priority = ptr.To(int32(1337))
+				p.Priority = new(int32(1337))
 			})
 
 			It("when changing annotations", func() {
@@ -361,7 +360,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes patch version of the worker pool version", func() {
-				p.KubernetesVersion = ptr.To("1.2.4")
+				p.KubernetesVersion = new("1.2.4")
 			})
 
 			It("when changing additional data for V1", func() {
@@ -377,7 +376,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
-				p.KubernetesVersion = ptr.To("1.3.3")
+				p.KubernetesVersion = new("1.3.3")
 			})
 		})
 
@@ -393,7 +392,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing nodeAgentSecretName", func() {
-				p.NodeAgentSecretName = ptr.To("different")
+				p.NodeAgentSecretName = new("different")
 			})
 		})
 	})
@@ -445,10 +444,10 @@ var _ = Describe("Machines", func() {
 				ProviderConfig: &runtime.RawExtension{
 					Raw: []byte("foo"),
 				},
-				KubernetesVersion:   ptr.To("1.2.3"),
+				KubernetesVersion:   new("1.2.3"),
 				KubeletConfig:       &gardencorev1beta1.KubeletConfig{},
 				NodeAgentSecretName: &nodeAgentSecretName,
-				UpdateStrategy:      ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+				UpdateStrategy:      new(gardencorev1beta1.AutoInPlaceUpdate),
 			}
 			additionalDataV1 = []string{"sample"}
 			additionalDataV2 = []string{"sample"}
@@ -467,7 +466,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing priority", func() {
-				p.Priority = ptr.To(int32(1337))
+				p.Priority = new(int32(1337))
 			})
 
 			It("when changing annotations", func() {
@@ -491,7 +490,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes patch version of the worker pool version", func() {
-				p.KubernetesVersion = ptr.To("1.2.4")
+				p.KubernetesVersion = new("1.2.4")
 			})
 
 			It("when changing additional data for V1", func() {
@@ -519,7 +518,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing nodeAgentSecretName", func() {
-				p.NodeAgentSecretName = ptr.To("different")
+				p.NodeAgentSecretName = new("different")
 			})
 
 			It("when changing machine image version", func() {
@@ -527,7 +526,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
-				p.KubernetesVersion = ptr.To("1.3.3")
+				p.KubernetesVersion = new("1.3.3")
 			})
 
 			It("when a shoot CA rotation is triggered", func() {
@@ -562,7 +561,7 @@ var _ = Describe("Machines", func() {
 
 			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
 				c.Shoot.Spec.Kubernetes.Version = "1.34.0"
-				p.KubernetesVersion = ptr.To("1.34.0")
+				p.KubernetesVersion = new("1.34.0")
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
 					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
 				}
@@ -578,13 +577,13 @@ var _ = Describe("Machines", func() {
 
 			It("when node-local-dns gets disabled and kube-proxy runs in ipvs mode", func() {
 				c.Shoot.Spec.Kubernetes.Version = "1.34.0"
-				p.KubernetesVersion = ptr.To("1.34.0")
+				p.KubernetesVersion = new("1.34.0")
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
 					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true},
 				}
 				c.Shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
-					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPVS),
-					Enabled: ptr.To(true),
+					Mode:    new(gardencorev1beta1.ProxyModeIPVS),
+					Enabled: new(true),
 				}
 				hash1, err := WorkerPoolHashV1(p, c)
 				Expect(err).NotTo(HaveOccurred())
@@ -598,7 +597,7 @@ var _ = Describe("Machines", func() {
 
 			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
 				c.Shoot.Spec.Kubernetes.Version = "1.31.0"
-				p.KubernetesVersion = ptr.To("1.31.0")
+				p.KubernetesVersion = new("1.31.0")
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{
 					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false},
 				}

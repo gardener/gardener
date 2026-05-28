@@ -48,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		r.TargetRESTMapper = targetCluster.GetRESTMapper()
 	}
 	if r.RequeueAfterOnDeletionPending == nil {
-		r.RequeueAfterOnDeletionPending = ptr.To(5 * time.Second)
+		r.RequeueAfterOnDeletionPending = new(5 * time.Second)
 	}
 
 	return builder.

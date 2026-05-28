@@ -13,7 +13,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -87,7 +86,7 @@ var _ = Describe("Handler", func() {
 		It("should fail because some shoot references secret and kubeconfig is removed from secret", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
 				Name:                 "plugin-1",
-				KubeconfigSecretName: ptr.To(secret.Name),
+				KubeconfigSecretName: new(secret.Name),
 			}}
 			shoot1 := shoot.DeepCopy()
 			shoot1.Name = "test-shoot"
@@ -102,7 +101,7 @@ var _ = Describe("Handler", func() {
 		It("should fail because some shoot references secret and kubeconfig is set to empty", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
 				Name:                 "plugin-1",
-				KubeconfigSecretName: ptr.To(secret.Name),
+				KubeconfigSecretName: new(secret.Name),
 			}}
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
@@ -115,7 +114,7 @@ var _ = Describe("Handler", func() {
 		It("should pass because secret contain kubeconfig and it is not empty", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
 				Name:                 "plugin-1",
-				KubeconfigSecretName: ptr.To(secret.Name),
+				KubeconfigSecretName: new(secret.Name),
 			}}
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 

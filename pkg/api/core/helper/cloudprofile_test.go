@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -37,7 +36,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []core.LifecycleStage{
 					{
 						Classification: core.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
 					},
 				},
 			})
@@ -50,11 +49,11 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []core.LifecycleStage{
 					{
 						Classification: core.ClassificationPreview,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
 					},
 				},
 			})
@@ -67,19 +66,19 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []core.LifecycleStage{
 					{
 						Classification: core.ClassificationPreview,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationDeprecated,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationExpired,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(8 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(8 * time.Hour))),
 					},
 				},
 			})
@@ -92,15 +91,15 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []core.LifecycleStage{
 					{
 						Classification: core.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-4 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-4 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationDeprecated,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationExpired,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					},
 				},
 			})
@@ -116,15 +115,15 @@ var _ = Describe("CloudProfile Helper", func() {
 					},
 					{
 						Classification: core.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationDeprecated,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(4 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(4 * time.Hour))),
 					},
 					{
 						Classification: core.ClassificationExpired,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
 					},
 				},
 			})
@@ -133,7 +132,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining supported for deprecated classification field", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Classification: ptr.To(core.ClassificationSupported),
+				Classification: new(core.ClassificationSupported),
 				Version:        "1.28.0",
 			})
 			Expect(classification).To(Equal(core.ClassificationSupported))
@@ -141,7 +140,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining expired for deprecated expiration date field", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				ExpirationDate: ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+				ExpirationDate: new(metav1.NewTime(now.Add(-1 * time.Hour))),
 				Version:        "1.28.0",
 			})
 			Expect(classification).To(Equal(core.ClassificationExpired))
@@ -149,9 +148,9 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining preview for deprecated classification and expiration date field", func() {
 			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Classification: ptr.To(core.ClassificationPreview),
+				Classification: new(core.ClassificationPreview),
 				Version:        "1.28.0",
-				ExpirationDate: ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
 			})
 			Expect(classification).To(Equal(core.ClassificationPreview))
 		})

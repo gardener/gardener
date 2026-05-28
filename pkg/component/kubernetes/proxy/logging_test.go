@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 )
@@ -36,7 +35,7 @@ var _ = Describe("Logging", func() {
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
 										Parser:      "kube-proxy-parser",
-										ReserveData: ptr.To(true),
+										ReserveData: new(true),
 									},
 								},
 							},

@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	toolscache "k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache/informertest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -236,7 +235,7 @@ var _ = Describe("graph for seeds", func() {
 				},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: ptr.To("cloudprofile1"),
+				CloudProfileName: new("cloudprofile1"),
 				CloudProfile: &gardencorev1beta1.CloudProfileReference{
 					Name: "cloudprofile1",
 					Kind: "CloudProfile",
@@ -261,8 +260,8 @@ var _ = Describe("graph for seeds", func() {
 					},
 				},
 				Resources:              []gardencorev1beta1.NamedResourceReference{{ResourceRef: shoot1Resource1}, {ResourceRef: shoot1Resource2}, {ResourceRef: shoot1Resource3}, {ResourceRef: shoot1Resource4}},
-				SecretBindingName:      ptr.To("secretbinding1"),
-				CredentialsBindingName: ptr.To("credentialsbinding1"),
+				SecretBindingName:      new("secretbinding1"),
+				CredentialsBindingName: new("credentialsbinding1"),
 				SeedName:               &seed1.Name,
 			},
 		}
@@ -277,7 +276,7 @@ var _ = Describe("graph for seeds", func() {
 		project1 = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{Name: "project1"},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: ptr.To(namespace1.Name),
+				Namespace: new(namespace1.Name),
 			},
 		}
 
@@ -841,7 +840,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (secret binding name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.SecretBindingName = ptr.To("bar")
+		shoot1.Spec.SecretBindingName = new("bar")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(24))
 		Expect(graph.graph.Edges().Len()).To(Equal(23))
@@ -872,7 +871,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (credentials binding name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.CredentialsBindingName = ptr.To("bar")
+		shoot1.Spec.CredentialsBindingName = new("bar")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(24))
 		Expect(graph.graph.Edges().Len()).To(Equal(23))
@@ -1113,7 +1112,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (new seed name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.SeedName = ptr.To("newseed")
+		shoot1.Spec.SeedName = new("newseed")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(15))
 		Expect(graph.graph.Edges().Len()).To(Equal(14))
@@ -1144,7 +1143,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (new seed name in status)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Status.SeedName = ptr.To("seed-in-status")
+		shoot1.Status.SeedName = new("seed-in-status")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(16))
 		Expect(graph.graph.Edges().Len()).To(Equal(15))
@@ -1272,7 +1271,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (irrelevant change)")
 		project1Copy := project1.DeepCopy()
-		project1.Spec.Purpose = ptr.To("purpose")
+		project1.Spec.Purpose = new("purpose")
 		fakeInformerProject.Update(project1Copy, project1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -1280,7 +1279,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (namespace)")
 		project1Copy = project1.DeepCopy()
-		project1.Spec.Namespace = ptr.To("newnamespace")
+		project1.Spec.Namespace = new("newnamespace")
 		fakeInformerProject.Update(project1Copy, project1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -1318,7 +1317,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (seed name)")
 		backupBucket1Copy = backupBucket1.DeepCopy()
-		backupBucket1.Spec.SeedName = ptr.To("newbbseed")
+		backupBucket1.Spec.SeedName = new("newbbseed")
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
@@ -1395,7 +1394,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (seed name)")
 		backupEntry1Copy = backupEntry1.DeepCopy()
-		backupEntry1.Spec.SeedName = ptr.To("newbbseed")
+		backupEntry1.Spec.SeedName = new("newbbseed")
 		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
@@ -1406,7 +1405,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (new seed name in status)")
 		backupEntry1Copy = backupEntry1.DeepCopy()
-		backupEntry1.Status.SeedName = ptr.To("newbbseedinstatus")
+		backupEntry1.Status.SeedName = new("newbbseedinstatus")
 		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(5))
 		Expect(graph.graph.Edges().Len()).To(Equal(4))
@@ -1463,7 +1462,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (seed name)")
 		bastion1Copy = bastion1.DeepCopy()
-		bastion1.Spec.SeedName = ptr.To("newseed")
+		bastion1.Spec.SeedName = new("newseed")
 		fakeInformerBastion.Update(bastion1Copy, bastion1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -2216,7 +2215,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		})
 		wg.Go(func() {
 			project1Copy := project1.DeepCopy()
-			project1.Spec.Namespace = ptr.To("newnamespace")
+			project1.Spec.Namespace = new("newnamespace")
 			fakeInformerProject.Update(project1Copy, project1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -2237,7 +2236,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		})
 		wg.Go(func() {
 			backupEntry1Copy := backupEntry1.DeepCopy()
-			backupEntry1.Spec.SeedName = ptr.To("newbbseed")
+			backupEntry1.Spec.SeedName = new("newbbseed")
 			fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -2384,7 +2383,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		})
 		wg.Go(func() {
 			project1Copy := project1.DeepCopy()
-			project1.Spec.Purpose = ptr.To("purpose")
+			project1.Spec.Purpose = new("purpose")
 			fakeInformerProject.Update(project1Copy, project1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -2392,7 +2391,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		})
 		wg.Go(func() {
 			backupBucket1Copy := backupBucket1.DeepCopy()
-			backupBucket1.Spec.SeedName = ptr.To("newbbseed")
+			backupBucket1.Spec.SeedName = new("newbbseed")
 			fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -2748,7 +2747,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName},
 				Gardenlet: seedmanagementv1alpha1.GardenletConfig{
-					Bootstrap: ptr.To(seedmanagementv1alpha1.BootstrapToken),
+					Bootstrap: new(seedmanagementv1alpha1.BootstrapToken),
 				},
 			},
 		}
@@ -2780,7 +2779,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 				},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: ptr.To("cloudprofile1"),
+				CloudProfileName: new("cloudprofile1"),
 				CloudProfile: &gardencorev1beta1.CloudProfileReference{
 					Name: "cloudprofile1",
 					Kind: "CloudProfile",
@@ -2805,8 +2804,8 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 					},
 				},
 				Resources:              []gardencorev1beta1.NamedResourceReference{{ResourceRef: shoot1Resource1}, {ResourceRef: shoot1Resource2}, {ResourceRef: shoot1Resource3}, {ResourceRef: shoot1Resource4}},
-				SecretBindingName:      ptr.To("secretbinding1"),
-				CredentialsBindingName: ptr.To("credentialsbinding1"),
+				SecretBindingName:      new("secretbinding1"),
+				CredentialsBindingName: new("credentialsbinding1"),
 			},
 		}
 		shoot1SecretNameCACluster = shoot1.Name + ".ca-cluster"
@@ -2820,7 +2819,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 		project1 = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{Name: "project1"},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: ptr.To(namespace1.Name),
+				Namespace: new(namespace1.Name),
 			},
 		}
 
@@ -2991,7 +2990,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 
 		By("Update (seed name)")
 		bastion1Copy = bastion1.DeepCopy()
-		bastion1.Spec.SeedName = ptr.To("newseed")
+		bastion1.Spec.SeedName = new("newseed")
 		fakeInformerBastion.Update(bastion1Copy, bastion1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -3270,7 +3269,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 
 		By("Update (secret binding name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.SecretBindingName = ptr.To("bar")
+		shoot1.Spec.SecretBindingName = new("bar")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(25))
 		Expect(graph.graph.Edges().Len()).To(Equal(24))
@@ -3302,7 +3301,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 
 		By("Update (credentials binding name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.CredentialsBindingName = ptr.To("bar")
+		shoot1.Spec.CredentialsBindingName = new("bar")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(25))
 		Expect(graph.graph.Edges().Len()).To(Equal(24))

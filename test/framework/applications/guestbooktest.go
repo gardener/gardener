@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -150,12 +149,12 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 					"resources.gardener.cloud/delete-on-invalid-update": "true",
 				},
 			},
-			AllowVolumeExpansion: ptr.To(true),
+			AllowVolumeExpansion: new(true),
 			Provisioner:          "pd.csi.storage.gke.io",
 			Parameters: map[string]string{
 				"type": "hyperdisk-balanced",
 			},
-			VolumeBindingMode: ptr.To(storagev1.VolumeBindingWaitForFirstConsumer),
+			VolumeBindingMode: new(storagev1.VolumeBindingWaitForFirstConsumer),
 		})).To(Succeed())
 
 		masterValues["persistence"] = map[string]any{

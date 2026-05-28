@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -33,8 +32,8 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  ptr.To("cloudprofile1"),
+				SecretBindingName: new("my-provider-account"),
+				CloudProfileName:  new("cloudprofile1"),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -47,20 +46,20 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("some-domain.example.com"),
+					Domain: new("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}
@@ -128,10 +127,10 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     ptr.To("100.128.0.0/11"),
-						Services: ptr.To("100.72.0.0/13"),
+						Pods:     new("100.128.0.0/11"),
+						Services: new("100.72.0.0/13"),
 					},
 				},
 			},

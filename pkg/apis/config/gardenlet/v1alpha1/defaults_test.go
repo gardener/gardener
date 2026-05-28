@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/config"
 	. "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -98,8 +97,8 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.GardenClientConnection.KubeconfigValidity).To(Equal(&KubeconfigValidity{
-				AutoRotationJitterPercentageMin: ptr.To[int32](70),
-				AutoRotationJitterPercentageMax: ptr.To[int32](90),
+				AutoRotationJitterPercentageMin: new(int32(70)),
+				AutoRotationJitterPercentageMax: new(int32(90)),
 			}))
 		})
 
@@ -108,8 +107,8 @@ var _ = Describe("Defaults", func() {
 			obj.GardenClientConnection = &GardenClientConnection{
 				KubeconfigValidity: &KubeconfigValidity{
 					Validity:                        &v,
-					AutoRotationJitterPercentageMin: ptr.To[int32](10),
-					AutoRotationJitterPercentageMax: ptr.To[int32](50),
+					AutoRotationJitterPercentageMin: new(int32(10)),
+					AutoRotationJitterPercentageMax: new(int32(50)),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -183,7 +182,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the backup bucket controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				BackupBucket: &BackupBucketControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				BackupBucket: &BackupBucketControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -204,8 +203,8 @@ var _ = Describe("Defaults", func() {
 			deletionGracePeriodShootPurposes := []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation}
 			obj.Controllers = &GardenletControllerConfiguration{
 				BackupEntry: &BackupEntryControllerConfiguration{
-					ConcurrentSyncs:                  ptr.To(10),
-					DeletionGracePeriodHours:         ptr.To(1),
+					ConcurrentSyncs:                  new(10),
+					DeletionGracePeriodHours:         new(1),
 					DeletionGracePeriodShootPurposes: deletionGracePeriodShootPurposes,
 				},
 			}
@@ -226,7 +225,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the bastion controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				Bastion: &BastionControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				Bastion: &BastionControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -243,7 +242,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the controller installation controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				ControllerInstallation: &ControllerInstallationControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				ControllerInstallation: &ControllerInstallationControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -264,7 +263,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Minute}
 			obj.Controllers = &GardenletControllerConfiguration{
 				ControllerInstallationCare: &ControllerInstallationCareControllerConfiguration{
-					ConcurrentSyncs: ptr.To(10),
+					ConcurrentSyncs: new(10),
 					SyncPeriod:      &v,
 				},
 			}
@@ -284,7 +283,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the controller installation required controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				ControllerInstallationRequired: &ControllerInstallationRequiredControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				ControllerInstallationRequired: &ControllerInstallationRequiredControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -326,8 +325,8 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				Seed: &SeedControllerConfiguration{
 					SyncPeriod:               &syncPeriod,
-					LeaseResyncSeconds:       ptr.To[int32](1),
-					LeaseResyncMissThreshold: ptr.To[int32](5),
+					LeaseResyncSeconds:       new(int32(1)),
+					LeaseResyncMissThreshold: new(int32(5)),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -372,12 +371,12 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Hour}
 			obj.Controllers = &GardenletControllerConfiguration{
 				Shoot: &ShootControllerConfiguration{
-					ConcurrentSyncs:            ptr.To(10),
+					ConcurrentSyncs:            new(10),
 					SyncPeriod:                 &v,
-					RespectSyncPeriodOverwrite: ptr.To(true),
-					ReconcileInMaintenanceOnly: ptr.To(true),
+					RespectSyncPeriodOverwrite: new(true),
+					ReconcileInMaintenanceOnly: new(true),
 					RetryDuration:              &v,
-					DNSEntryTTLSeconds:         ptr.To[int64](60),
+					DNSEntryTTLSeconds:         new(int64(60)),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -406,7 +405,7 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				ShootCare: &ShootCareControllerConfiguration{
 					SyncPeriod:                 &syncPeriod,
-					ConcurrentSyncs:            ptr.To(10),
+					ConcurrentSyncs:            new(10),
 					StaleExtensionHealthChecks: &StaleExtensionHealthChecks{Enabled: false},
 				},
 			}
@@ -452,7 +451,7 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				ShootState: &ShootStateControllerConfiguration{
 					SyncPeriod:      &syncPeriod,
-					ConcurrentSyncs: ptr.To(10),
+					ConcurrentSyncs: new(10),
 				},
 			}
 
@@ -472,7 +471,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the network policy controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				NetworkPolicy: &NetworkPolicyControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				NetworkPolicy: &NetworkPolicyControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -495,11 +494,11 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Minute}
 			obj.Controllers = &GardenletControllerConfiguration{
 				ManagedSeed: &ManagedSeedControllerConfiguration{
-					ConcurrentSyncs:  ptr.To(10),
+					ConcurrentSyncs:  new(10),
 					SyncPeriod:       &v,
 					WaitSyncPeriod:   &v,
 					SyncJitterPeriod: &v,
-					JitterUpdates:    ptr.To(true),
+					JitterUpdates:    new(true),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -521,7 +520,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				TokenRequestorServiceAccount: &TokenRequestorServiceAccountControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				TokenRequestorServiceAccount: &TokenRequestorServiceAccountControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -540,7 +539,7 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				TokenRequestorWorkloadIdentity: &TokenRequestorWorkloadIdentityControllerConfiguration{
-					ConcurrentSyncs:         ptr.To(10),
+					ConcurrentSyncs:         new(10),
 					TokenExpirationDuration: &metav1.Duration{Duration: 12 * time.Hour},
 				},
 			}
@@ -560,7 +559,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the VPA eviction requirements controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				VPAEvictionRequirements: &VPAEvictionRequirementsControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				VPAEvictionRequirements: &VPAEvictionRequirementsControllerConfiguration{ConcurrentSyncs: new(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -584,7 +583,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the leader election configuration", func() {
 			expectedLeaderElection := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       ptr.To(true),
+				LeaderElect:       new(true),
 				ResourceLock:      "foo",
 				RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
 				RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
@@ -649,15 +648,15 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the logging configuration", func() {
 			gardenValiStorage := resource.MustParse("10Gi")
 			expectedLogging := &Logging{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 				Vali: &Vali{
-					Enabled: ptr.To(false),
+					Enabled: new(false),
 					Garden: &GardenVali{
 						Storage: &gardenValiStorage,
 					},
 				},
 				VictoriaLogs: &VictoriaLogs{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 					Garden: &GardenVictoriaLogs{
 						Storage: &DefaultCentralVictoriaLogsStorage,
 					},
@@ -669,7 +668,7 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 				ShootEventLogging: &ShootEventLogging{
-					Enabled: ptr.To(false),
+					Enabled: new(false),
 				},
 			}
 
@@ -703,8 +702,8 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the SNI ingressgateway", func() {
 			obj.SNI = &SNI{
 				Ingress: &SNIIngress{
-					Namespace:   ptr.To("namespace"),
-					ServiceName: ptr.To("svc"),
+					Namespace:   new("namespace"),
+					ServiceName: new("svc"),
 					Labels:      map[string]string{"label1": "value1"},
 				},
 			}
@@ -736,7 +735,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the ETCD controller", func() {
 			obj.ETCDConfig = &ETCDConfig{
-				ETCDController: &ETCDController{Workers: ptr.To[int64](5)},
+				ETCDController: &ETCDController{Workers: new(int64(5))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -753,7 +752,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the ETCD custodian controller", func() {
 			obj.ETCDConfig = &ETCDConfig{
-				CustodianController: &CustodianController{Workers: ptr.To[int64](5)},
+				CustodianController: &CustodianController{Workers: new(int64(5))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -775,9 +774,9 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 30 * time.Second}
 			obj.ETCDConfig = &ETCDConfig{
 				BackupCompactionController: &BackupCompactionController{
-					Workers:                   ptr.To[int64](4),
-					EnableBackupCompaction:    ptr.To(true),
-					EventsThreshold:           ptr.To[int64](900000),
+					Workers:                   new(int64(4)),
+					EnableBackupCompaction:    new(true),
+					EventsThreshold:           new(int64(900000)),
 					MetricsScrapeWaitDuration: &v,
 				}}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -823,8 +822,8 @@ var _ = Describe("Defaults", func() {
 				{Name: "test1"},
 				{Name: "test2", SNI: &SNI{
 					Ingress: &SNIIngress{
-						Namespace:   ptr.To("namespace"),
-						ServiceName: ptr.To("svc"),
+						Namespace:   new("namespace"),
+						ServiceName: new("svc"),
 						Labels:      map[string]string{"label1": "value1"},
 					},
 				}},
@@ -869,7 +868,7 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the shoot monitoring configuration", func() {
 			obj.Monitoring = &MonitoringConfig{
 				&ShootMonitoringConfig{
-					Enabled: ptr.To(false),
+					Enabled: new(false),
 				}}
 			SetObjectDefaults_GardenletConfiguration(obj)
 

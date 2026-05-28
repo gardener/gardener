@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +38,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "validate-namespace-deletion.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -63,7 +62,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "validate-kubeconfig-secrets.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 					Rule: admissionregistrationv1.Rule{
@@ -88,7 +87,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "internal-domain-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -112,7 +111,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "audit-policies.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -146,7 +145,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "authentication-configuration.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -180,7 +179,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "authorization-configuration.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -214,7 +213,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "shoot-kubeconfig-secret-ref.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
@@ -240,7 +239,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			{
 				Name:                    "update-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{
@@ -274,7 +273,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 		validatingWebhook.Webhooks = append(validatingWebhook.Webhooks, admissionregistrationv1.ValidatingWebhook{
 			Name:                    "validate-resource-size.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 			Rules:                   buildWebhookConfigRulesForResourceSize(a.values.ResourceAdmissionConfiguration),
 			FailurePolicy:           &failurePolicyFail,
 			NamespaceSelector: &metav1.LabelSelector{
@@ -296,7 +295,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			admissionregistrationv1.ValidatingWebhook{
 				Name:                    "seed-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
@@ -374,7 +373,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 			admissionregistrationv1.ValidatingWebhook{
 				Name:                    "shoot-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
@@ -423,7 +422,7 @@ func (a *gardenerAdmissionController) mutatingWebhookConfiguration(caSecret *cor
 			{
 				Name:                    "sync-provider-secret-labels.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -479,5 +478,5 @@ func buildWebhookConfigRulesForResourceSize(config *admissioncontrollerconfigv1a
 }
 
 func buildClientConfigURL(webhookPath, namespace string) *string {
-	return ptr.To(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
+	return new(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
 }

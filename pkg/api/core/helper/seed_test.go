@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -53,78 +52,78 @@ var _ = Describe("Helper", func() {
 			false,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-			[]core.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
-			[]core.Toleration{{Key: "foo", Value: ptr.To("bar")}},
+			[]core.SeedTaint{{Key: "foo", Value: new("bar")}},
+			[]core.Toleration{{Key: "foo", Value: new("bar")}},
 			true,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-			[]core.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
-			[]core.Toleration{{Key: "bar", Value: ptr.To("foo")}},
+			[]core.SeedTaint{{Key: "foo", Value: new("bar")}},
+			[]core.Toleration{{Key: "bar", Value: new("foo")}},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]core.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]core.Toleration{
 				{Key: "bar"},
-				{Key: "foo", Value: ptr.To("baz")},
+				{Key: "foo", Value: new("baz")},
 			},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: ptr.To("bar")},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "foo", Value: new("bar")},
+				{Key: "bar", Value: new("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (not tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: ptr.To("bar")},
-				{Key: "bar", Value: ptr.To("foo")},
+				{Key: "foo", Value: new("bar")},
+				{Key: "bar", Value: new("foo")},
 			},
 			false,
 		),
 		Entry("taints > tolerations",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]core.Toleration{
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			false,
 		),
 		Entry("tolerations > taints",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: ptr.To("bar")},
-				{Key: "bar", Value: ptr.To("baz")},
-				{Key: "baz", Value: ptr.To("foo")},
+				{Key: "foo", Value: new("bar")},
+				{Key: "bar", Value: new("baz")},
+				{Key: "baz", Value: new("foo")},
 			},
 			true,
 		),
@@ -164,10 +163,10 @@ var _ = Describe("Helper", func() {
 				s := &core.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
-					s.Spec.SeedName = ptr.To(shoot.specSeedName)
+					s.Spec.SeedName = new(shoot.specSeedName)
 				}
 				if shoot.statusSeedName != "" {
-					s.Status.SeedName = ptr.To(shoot.statusSeedName)
+					s.Status.SeedName = new(shoot.statusSeedName)
 				}
 				shootList = append(shootList, s)
 			}

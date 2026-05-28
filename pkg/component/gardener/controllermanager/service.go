@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -40,8 +39,8 @@ func (g *gardenerControllerManager) service() *corev1.Service {
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(metricsPort)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Port:     new(intstr.FromInt32(metricsPort)),
+		Protocol: new(corev1.ProtocolTCP),
 	}))
 
 	return service

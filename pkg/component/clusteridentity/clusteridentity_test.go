@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -48,7 +47,7 @@ var _ = Describe("ClusterIdentity", func() {
 				"cluster-identity": identity,
 				"origin":           origin,
 			},
-			Immutable: ptr.To(true),
+			Immutable: new(true),
 		}
 
 		managedResourceName       = "shoot-core-cluster-identity"
@@ -72,7 +71,7 @@ var _ = Describe("ClusterIdentity", func() {
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(false),
+				KeepObjects:  new(false),
 			},
 		}
 	})
@@ -215,7 +214,7 @@ var _ = Describe("ClusterIdentity", func() {
 					Name:      "cluster-identity",
 					Namespace: metav1.NamespaceSystem,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"cluster-identity": "foo",
 					"origin":           "seed",
@@ -226,7 +225,7 @@ var _ = Describe("ClusterIdentity", func() {
 					Name:      "cluster-identity",
 					Namespace: metav1.NamespaceSystem,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"cluster-identity": "foo",
 					"origin":           "bar",

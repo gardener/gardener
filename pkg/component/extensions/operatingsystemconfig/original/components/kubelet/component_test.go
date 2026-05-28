@@ -11,7 +11,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -157,13 +156,13 @@ volumeStatsAggPeriod: 1m0s
 			ctx.Images = map[string]*imagevector.Image{
 				"hyperkube": {
 					Name:       "pause-container",
-					Repository: ptr.To(hyperkubeImageRepo),
-					Tag:        ptr.To(hyperkubeImageTag),
+					Repository: new(hyperkubeImageRepo),
+					Tag:        new(hyperkubeImageTag),
 				},
 				"pause-container": {
 					Name:       "pause-container",
-					Repository: ptr.To(pauseContainerImageRepo),
-					Tag:        ptr.To(pauseContainerImageTag),
+					Repository: new(pauseContainerImageRepo),
+					Tag:        new(pauseContainerImageTag),
 				},
 			}
 			ctx.NodeLabels = map[string]string{
@@ -211,9 +210,9 @@ func kubeletUnit(cliFlags []string) extensionsv1alpha1.Unit {
 
 	unit := extensionsv1alpha1.Unit{
 		Name:    "kubelet.service",
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=containerd.service
@@ -237,7 +236,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 	files := []extensionsv1alpha1.File{
 		{
 			Path:        "/var/lib/kubelet/ca.crt",
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -247,7 +246,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 		},
 		{
 			Path:        "/var/lib/kubelet/config/kubelet",
-			Permissions: ptr.To[uint32](0600),
+			Permissions: new(uint32(0600)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -259,7 +258,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 
 	files = append(files, extensionsv1alpha1.File{
 		Path:        "/opt/bin/kubelet",
-		Permissions: ptr.To[uint32](0755),
+		Permissions: new(uint32(0755)),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{
 				Image:           ctx.Images["hyperkube"].String(),

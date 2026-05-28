@@ -111,7 +111,7 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 
 func (v *vpa) reconcileUpdaterServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 }
 
 func (v *vpa) reconcileUpdaterClusterRole(clusterRole *rbacv1.ClusterRole) {
@@ -207,8 +207,8 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(ptr.Deref(v.values.Updater.Replicas, 1)),
-		RevisionHistoryLimit: ptr.To[int32](2),
+		Replicas:             new(ptr.Deref(v.values.Updater.Replicas, 1)),
+		RevisionHistoryLimit: new(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -241,7 +241,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 				}},
 			},
@@ -270,16 +270,16 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate)},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    updaterContainerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
@@ -315,8 +315,8 @@ func (v *vpa) computeUpdaterArgs() []string {
 
 func (v *vpa) reconcileUpdaterService(service *corev1.Service) {
 	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(updaterPortMetrics)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Port:     new(intstr.FromInt32(updaterPortMetrics)),
+		Protocol: new(corev1.ProtocolTCP),
 	}
 
 	switch v.values.ClusterType {
@@ -349,7 +349,7 @@ func (v *vpa) reconcileUpdaterServiceMonitor(serviceMonitor *monitoringv1.Servic
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(updater),
+					Replacement: new(updater),
 					TargetLabel: "job",
 				},
 				{

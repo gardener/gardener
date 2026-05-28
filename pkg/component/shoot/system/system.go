@@ -408,7 +408,7 @@ func (s *shootSystem) readOnlyClusterRole() client.Object {
 
 	apiGroupToReadableResourcesNames := make(map[string][]string, len(s.values.APIResourceList))
 	for _, api := range s.values.APIResourceList {
-		apiGroup := strings.Split(api.GroupVersion, "/")[0]
+		apiGroup, _, _ := strings.Cut(api.GroupVersion, "/")
 		if apiGroup == corev1.SchemeGroupVersion.Version {
 			apiGroup = corev1.GroupName
 		}

@@ -4,15 +4,11 @@
 
 package v1alpha1
 
-import (
-	"k8s.io/utils/ptr"
-)
-
 // SetDefaults_ManagedSeedSet sets default values for ManagedSeed objects.
 func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
 	// Set default replicas
 	if obj.Spec.Replicas == nil {
-		obj.Spec.Replicas = ptr.To[int32](1)
+		obj.Spec.Replicas = new(int32(1))
 	}
 
 	// Set update strategy defaults
@@ -22,7 +18,7 @@ func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
 
 	// Set default revision history limit
 	if obj.Spec.RevisionHistoryLimit == nil {
-		obj.Spec.RevisionHistoryLimit = ptr.To[int32](10)
+		obj.Spec.RevisionHistoryLimit = new(int32(10))
 	}
 }
 
@@ -39,6 +35,6 @@ func SetDefaults_UpdateStrategy(obj *UpdateStrategy) {
 func SetDefaults_RollingUpdateStrategy(obj *RollingUpdateStrategy) {
 	// Set default partition
 	if obj.Partition == nil {
-		obj.Partition = ptr.To[int32](0)
+		obj.Partition = new(int32(0))
 	}
 }

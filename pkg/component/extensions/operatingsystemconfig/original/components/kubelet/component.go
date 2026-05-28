@@ -10,7 +10,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
@@ -62,7 +61,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	kubeletFiles := []extensionsv1alpha1.File{
 		{
 			Path:        PathKubeletCACert,
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -72,14 +71,14 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 		{
 			Path:        PathKubeletConfig,
-			Permissions: ptr.To[uint32](0600),
+			Permissions: new(uint32(0600)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: fileContentKubeletConfig,
 			},
 		},
 		{
 			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
-			Permissions: ptr.To[uint32](0755),
+			Permissions: new(uint32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ContainerImageNameHyperkube].String(),
@@ -95,9 +94,9 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	kubeletUnit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 After=` + containerd.UnitName + `

@@ -10,7 +10,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 )
@@ -26,7 +25,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: ptr.To("prometheus-cache"),
+							Replacement: new("prometheus-cache"),
 							TargetLabel: "job",
 						}},
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{

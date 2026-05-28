@@ -113,14 +113,14 @@ func (h *health) checkSystemComponents(ctx context.Context, condition gardencore
 		}
 	}
 
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 }
 
 func (h *health) checkEmergencyStopShootReconciliations(condition gardencorev1beta1.Condition) *gardencorev1beta1.Condition {
 	if !v1beta1helper.HasShootReconciliationsDisabledAnnotation(h.seed) {
 		return nil
 	}
-	return ptr.To(v1beta1helper.UpdatedConditionWithClock(
+	return new(v1beta1helper.UpdatedConditionWithClock(
 		h.clock,
 		condition,
 		gardencorev1beta1.ConditionTrue,

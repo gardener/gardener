@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -235,7 +234,7 @@ func setKubernetesVersionDependentSettings(shoot *gardencorev1beta1.Shoot) {
 				Addon: gardencorev1beta1.Addon{
 					Enabled: true,
 				},
-				AuthenticationMode: ptr.To(gardencorev1beta1.KubernetesDashboardAuthModeToken),
+				AuthenticationMode: new(gardencorev1beta1.KubernetesDashboardAuthModeToken),
 			}
 		}
 	}
@@ -262,11 +261,11 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 	}
 
 	if StringSet(cfg.secretBinding) {
-		shoot.Spec.SecretBindingName = ptr.To(cfg.secretBinding)
+		shoot.Spec.SecretBindingName = new(cfg.secretBinding)
 	}
 
 	if StringSet(cfg.credentialsBinding) {
-		shoot.Spec.CredentialsBindingName = ptr.To(cfg.credentialsBinding)
+		shoot.Spec.CredentialsBindingName = new(cfg.credentialsBinding)
 	}
 
 	if StringSet(cfg.shootProviderType) {
@@ -317,7 +316,7 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 	}
 
 	if StringSet(cfg.networkingType) {
-		shoot.Spec.Networking.Type = ptr.To(cfg.networkingType)
+		shoot.Spec.Networking.Type = new(cfg.networkingType)
 	}
 
 	if StringSet(cfg.networkingPods) {
@@ -338,7 +337,7 @@ func setShootTolerations(shoot *gardencorev1beta1.Shoot) {
 	shoot.Spec.Tolerations = []gardencorev1beta1.Toleration{
 		{
 			Key:   SeedTaintTestRun,
-			Value: ptr.To(GetTestRunID()),
+			Value: new(GetTestRunID()),
 		},
 	}
 }

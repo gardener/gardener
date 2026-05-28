@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/validation"
 )
@@ -66,7 +65,7 @@ var _ = Describe("componentbaseconfig validation helpers", func() {
 			fldPath = field.NewPath("leaderElection")
 
 			config = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect: ptr.To(true),
+				LeaderElect: new(true),
 			}
 		})
 
@@ -81,7 +80,7 @@ var _ = Describe("componentbaseconfig validation helpers", func() {
 		})
 
 		It("should allow disabling leader election", func() {
-			config.LeaderElect = ptr.To(false)
+			config.LeaderElect = new(false)
 
 			Expect(ValidateLeaderElectionConfiguration(config, fldPath)).To(BeEmpty())
 		})

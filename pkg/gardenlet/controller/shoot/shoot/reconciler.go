@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/tools/events"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -115,7 +114,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 		}
 	}
 
-	formerRetryCycleStartTime := ptr.To(metav1.NewTime(r.Clock.Now().UTC()))
+	formerRetryCycleStartTime := new(metav1.NewTime(r.Clock.Now().UTC()))
 	if shoot.Status.RetryCycleStartTime != nil {
 		formerRetryCycleStartTime = shoot.Status.RetryCycleStartTime.DeepCopy()
 	}
@@ -1143,7 +1142,7 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 
 	if errors.As(err, &incompleteDNSConfigError) {
 		return v1beta1helper.UpsertLastError(lastErrors, gardencorev1beta1.LastError{
-			TaskID:      ptr.To(taskID),
+			TaskID:      new(taskID),
 			Description: err.Error(),
 			Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem},
 		})
@@ -1311,7 +1310,7 @@ func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, autoComplete
 		rotation.LastInitiationTime = now
 		rotation.LastInitiationFinishedTime = nil
 		rotation.LastCompletionTriggeredTime = nil
-		rotation.AutoCompleteAfterPrepared = ptr.To(autoCompleteAfterPrepared)
+		rotation.AutoCompleteAfterPrepared = new(autoCompleteAfterPrepared)
 	})
 }
 

@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -92,23 +91,23 @@ var _ = Describe("VPNShoot", func() {
 				ResourceVersion: "1",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorLabels: ptr.To(false),
-				MetricsPath: ptr.To("/probe"),
+				HonorLabels: new(false),
+				MetricsPath: new("/probe"),
 				Params:      map[string][]string{"module": {"http_apiserver"}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					Role:       "Pod",
-					APIServer:  ptr.To("https://kube-apiserver"),
+					APIServer:  new("https://kube-apiserver"),
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
 						Key:                  "token",
 					}},
-					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						TargetLabel: "type",
-						Replacement: ptr.To("seed"),
+						Replacement: new("seed"),
 					},
 					{
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
@@ -119,7 +118,7 @@ var _ = Describe("VPNShoot", func() {
 						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
 						TargetLabel:  "__param_target",
 						Regex:        `(.+);(.+)`,
-						Replacement:  ptr.To("https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1"),
+						Replacement:  new("https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1"),
 						Action:       "replace",
 					},
 					{
@@ -129,12 +128,12 @@ var _ = Describe("VPNShoot", func() {
 					},
 					{
 						TargetLabel: "__address__",
-						Replacement: ptr.To("blackbox-exporter:9115"),
+						Replacement: new("blackbox-exporter:9115"),
 						Action:      "replace",
 					},
 					{
 						Action:      "replace",
-						Replacement: ptr.To("tunnel-probe-apiserver-proxy"),
+						Replacement: new("tunnel-probe-apiserver-proxy"),
 						TargetLabel: "job",
 					},
 				},
@@ -160,7 +159,7 @@ var _ = Describe("VPNShoot", func() {
 						{
 							Alert: "VPNShootNoPods",
 							Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="vpn-shoot"} == 0`),
-							For:   ptr.To(monitoringv1.Duration("30m")),
+							For:   new(monitoringv1.Duration("30m")),
 							Labels: map[string]string{
 								"service":    "vpn",
 								"severity":   "critical",
@@ -175,7 +174,7 @@ var _ = Describe("VPNShoot", func() {
 						{
 							Alert: "VPNHAShootNoPods",
 							Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="vpn-shoot"} == 0`),
-							For:   ptr.To(monitoringv1.Duration("30m")),
+							For:   new(monitoringv1.Duration("30m")),
 							Labels: map[string]string{
 								"service":    "vpn",
 								"severity":   "critical",
@@ -190,7 +189,7 @@ var _ = Describe("VPNShoot", func() {
 						{
 							Alert: "VPNProbeAPIServerProxyFailed",
 							Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
-							For:   ptr.To(monitoringv1.Duration("30m")),
+							For:   new(monitoringv1.Duration("30m")),
 							Labels: map[string]string{
 								"service":    "vpn-test",
 								"severity":   "critical",
@@ -301,7 +300,7 @@ var _ = Describe("VPNShoot", func() {
 						"app": "vpn-shoot",
 					},
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 			}
 
 			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -316,20 +315,20 @@ var _ = Describe("VPNShoot", func() {
 						Name:       "vpn-shoot",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "vpn-shoot",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -357,35 +356,35 @@ var _ = Describe("VPNShoot", func() {
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "vpn-shoot-s0",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName:    "vpn-shoot-s1",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName:    "vpn-shoot-s2",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName:    "tunnel-controller",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -407,7 +406,7 @@ var _ = Describe("VPNShoot", func() {
 							"app": "vpn-shoot",
 						},
 					},
-					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+					UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 				},
 			}
 
@@ -531,8 +530,8 @@ var _ = Describe("VPNShoot", func() {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged:               ptr.To(false),
-						AllowPrivilegeEscalation: ptr.To(false),
+						Privileged:               new(false),
+						AllowPrivilegeEscalation: new(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -553,7 +552,7 @@ var _ = Describe("VPNShoot", func() {
 						Name: name,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](0400),
+								DefaultMode: new(int32(0400)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -593,7 +592,7 @@ var _ = Describe("VPNShoot", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretNameTLSAuth,
-							DefaultMode: ptr.To[int32](0400),
+							DefaultMode: new(int32(0400)),
 						},
 					},
 				})
@@ -630,7 +629,7 @@ var _ = Describe("VPNShoot", func() {
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							Privileged: ptr.To(true),
+							Privileged: new(true),
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -673,7 +672,7 @@ var _ = Describe("VPNShoot", func() {
 						},
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						ServiceAccountName:           "vpn-shoot",
 						PriorityClassName:            "system-cluster-critical",
 						DNSPolicy:                    corev1.DNSDefault,
@@ -697,8 +696,8 @@ var _ = Describe("VPNShoot", func() {
 						Image:   image,
 						Command: []string{"/bin/tunnel-controller"},
 						SecurityContext: &corev1.SecurityContext{
-							Privileged:               ptr.To(false),
-							AllowPrivilegeEscalation: ptr.To(false),
+							Privileged:               new(false),
+							AllowPrivilegeEscalation: new(false),
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{"NET_ADMIN"},
 							},
@@ -797,8 +796,8 @@ var _ = Describe("VPNShoot", func() {
 					},
 					ObjectMeta: *objectMetaFor(secretNameCA, secretNameClient, secretNameTLSAuth),
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: ptr.To[int32](2),
-						Replicas:             ptr.To[int32](1),
+						RevisionHistoryLimit: new(int32(2)),
+						Replicas:             new(int32(1)),
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RollingUpdateDeploymentStrategyType,
 							RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -821,8 +820,8 @@ var _ = Describe("VPNShoot", func() {
 					ObjectMeta: *objectMetaForEx(secretNameClients, secretNameCA, secretNameTLSAuth),
 					Spec: appsv1.StatefulSetSpec{
 						PodManagementPolicy:  appsv1.ParallelPodManagement,
-						RevisionHistoryLimit: ptr.To[int32](2),
-						Replicas:             ptr.To(int32(replicas)),
+						RevisionHistoryLimit: new(int32(2)),
+						Replicas:             new(int32(replicas)),
 						UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 							Type: appsv1.RollingUpdateStatefulSetStrategyType,
 						},
@@ -854,7 +853,7 @@ var _ = Describe("VPNShoot", func() {
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-					KeepObjects:  ptr.To(false),
+					KeepObjects:  new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -863,7 +862,7 @@ var _ = Describe("VPNShoot", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
@@ -969,7 +968,7 @@ var _ = Describe("VPNShoot", func() {
 
 					vpaCopy := vpaHA.DeepCopy()
 					if values.VPAUpdateDisabled {
-						vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+						vpaCopy.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeOff)
 					}
 
 					Expect(managedResource).To(contain(
@@ -996,7 +995,7 @@ var _ = Describe("VPNShoot", func() {
 						)
 
 						vpaCopy := vpaHA.DeepCopy()
-						vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+						vpaCopy.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeOff)
 
 						Expect(managedResource).To(contain(
 							vpaCopy,

@@ -21,7 +21,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -264,14 +263,14 @@ func loadBalancerStatusWithIPs(service *corev1.Service, externalIPs ipPair, ipMo
 	if slices.Contains(service.Spec.IPFamilies, corev1.IPv4Protocol) {
 		ingresses = append(ingresses, corev1.LoadBalancerIngress{
 			IP:     externalIPs.ipv4.String(),
-			IPMode: ptr.To(ipMode),
+			IPMode: new(ipMode),
 		})
 	}
 
 	if slices.Contains(service.Spec.IPFamilies, corev1.IPv6Protocol) {
 		ingresses = append(ingresses, corev1.LoadBalancerIngress{
 			IP:     externalIPs.ipv6.String(),
-			IPMode: ptr.To(ipMode),
+			IPMode: new(ipMode),
 		})
 	}
 

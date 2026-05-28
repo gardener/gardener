@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -36,11 +35,11 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 				LabelMetricsScrapeTarget: "true",
 			})},
 			Endpoints: []monitoringv1.Endpoint{{
-				TargetPort: ptr.To(intstr.FromInt32(kubeapiserverconstants.Port)),
-				Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
+				TargetPort: new(intstr.FromInt32(kubeapiserverconstants.Port)),
+				Scheme:     new(monitoringv1.SchemeHTTPS),
 				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: k.prometheusAccessSecretName()},

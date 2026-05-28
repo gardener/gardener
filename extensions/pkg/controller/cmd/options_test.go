@@ -14,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/utils/ptr"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -597,7 +596,7 @@ var _ = Describe("Options", func() {
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
 					Controller: controllerconfig.Controller{
-						RecoverPanic: ptr.To(true),
+						RecoverPanic: new(true),
 					},
 					WebhookServer: &webhook.DefaultServer{},
 				}))

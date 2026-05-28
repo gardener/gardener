@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/extensions/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -39,7 +38,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 						Registries: []extensionsv1alpha1.RegistryConfig{
 							{
 								Upstream: "docker.io",
-								Server:   ptr.To("https://docker.io"),
+								Server:   new("https://docker.io"),
 								Hosts: []extensionsv1alpha1.RegistryHost{
 									{
 										URL:          "https://registry-1.docker.io",
@@ -225,17 +224,17 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path7",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("-&#39;invalid&#39;"),
+					HostName: new("-&#39;invalid&#39;"),
 				},
 				{
 					Path:     "path8",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 				{
 					Path:     "path8",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 				{
 					Path:    "path9",
@@ -244,7 +243,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path9",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 			}
 
@@ -318,12 +317,12 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path:     "path1",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node"),
+					HostName: new("my-node"),
 				},
 				{
 					Path:     "path1",
 					Content:  osc.Spec.Files[0].Content,
-					HostName: ptr.To("my-node-2"),
+					HostName: new("my-node-2"),
 				},
 			}
 
@@ -352,7 +351,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 
 		It("should forbid setting an unknown cgroup driver", func() {
 			oscCopy := osc.DeepCopy()
-			oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverName("unknown"))
+			oscCopy.Spec.CRIConfig.CgroupDriver = new(extensionsv1alpha1.CgroupDriverName("unknown"))
 
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
@@ -363,7 +362,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 		It("should allow setting a known cgroup driver", func() {
 			for _, driver := range []extensionsv1alpha1.CgroupDriverName{"cgroupfs", "systemd"} {
 				oscCopy := osc.DeepCopy()
-				oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(driver)
+				oscCopy.Spec.CRIConfig.CgroupDriver = new(driver)
 
 				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty(), driver+" should be configurable")
 			}
@@ -471,7 +470,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
 				{
 					Upstream: "foo.bar",
-					Server:   ptr.To("ftp://foo.bar"),
+					Server:   new("ftp://foo.bar"),
 				},
 			}
 
@@ -536,7 +535,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 				{
-					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("invalid-op"),
+					Op:   new(extensionsv1alpha1.PluginPathOperation("invalid-op")),
 					Path: []string{"foo"},
 				},
 			}
@@ -552,7 +551,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				oscCopy := osc.DeepCopy()
 				oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 					{
-						Op:   ptr.To(op),
+						Op:   new(op),
 						Path: []string{"foo"},
 					},
 				}
@@ -597,7 +596,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 				{
 					Path: []string{"foo"},
-					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("remove"),
+					Op:   new(extensionsv1alpha1.PluginPathOperation("remove")),
 					Values: &apiextensionsv1.JSON{
 						Raw: []byte(`[1]`),
 					},

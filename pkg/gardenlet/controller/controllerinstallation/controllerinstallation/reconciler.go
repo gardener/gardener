@@ -694,7 +694,7 @@ func (r *Reconciler) MutateSpecForSelfHostedShootExtensions(obj runtime.Object) 
 
 	if r.BootstrapControlPlaneNode {
 		if deployment, ok := obj.(*appsv1.Deployment); ok {
-			deployment.Spec.Replicas = ptr.To(int32(1))
+			deployment.Spec.Replicas = new(int32(1))
 			deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 			deployment.Spec.Strategy.RollingUpdate = nil
 		}

@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -371,7 +370,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				&OSUpdateRetryInterval, 100*time.Millisecond,
 				&OSUpdateRetryTimeout, 1*time.Second,
 				&GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) {
-					return ptr.To(osVersion), nil
+					return new(osVersion), nil
 				},
 			))
 		})
@@ -576,7 +575,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 		It("should not patch the node as update successful and delete the pods if the OS is not up-to-date", func() {
 			DeferCleanup(test.WithVars(
 				&GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) {
-					return ptr.To("1.1.0"), nil
+					return new("1.1.0"), nil
 				},
 				&ExecCommandCombinedOutput, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 					return []byte("OS update successful, not yet restarted"), nil
@@ -615,7 +614,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, ptr.To("1.1.0"))
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, new("1.1.0"))
 			Expect(err).To(MatchError(ContainSubstring("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: \"1.1.0\", Desired version: \"1.2.3\"")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 		})

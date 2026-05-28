@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -73,10 +72,10 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		worker = &gardencorev1beta1.Worker{
 			Name: "control-plane",
 			Machine: gardencorev1beta1.Machine{
-				Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+				Architecture: new(v1beta1constants.ArchitectureAMD64),
 				Image: &gardencorev1beta1.ShootMachineImage{
 					Name:    "type1",
-					Version: ptr.To("12.34"),
+					Version: new("12.34"),
 					ProviderConfig: &runtime.RawExtension{
 						Raw: []byte(`{"foo":"bar"}`),
 					},
@@ -120,7 +119,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 				),
 				And(
 					HaveField("Path", nodeinit.GardenadmPathDownloadScript),
-					HaveField("Permissions", ptr.To(uint32(0755))),
+					HaveField("Permissions", new(uint32(0755))),
 					HaveField("Content.Inline.Encoding", "b64"),
 					HaveField("Content.Inline.Data", Not(BeEmpty())),
 				),
@@ -178,7 +177,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 		It("should return the correct result from the Deploy and Wait operations", func() {
 			Expect(deployer.WorkerPoolNameToOperatingSystemConfigsMap()).To(
 				HaveKeyWithValue(worker.Name, HaveField("Init", And(
-					HaveField("SecretName", ptr.To(ccSecret.Name)),
+					HaveField("SecretName", new(ccSecret.Name)),
 					HaveField("IncludeSecretNameInWorkerPool", true),
 					HaveField("GardenerNodeAgentSecretName", "gardener-node-agent-control-plane-afd64c60da0e2d2d"),
 				))),

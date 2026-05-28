@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -101,7 +100,7 @@ var _ = Describe("Plutono", func() {
 					},
 				},
 				Type:      corev1.SecretTypeOpaque,
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string][]byte{
 					"plutono.ini": []byte(`[auth.basic]
 enabled = true
@@ -117,7 +116,7 @@ admin_password = ________________________________`),
 					Namespace: namespace,
 					Labels:    map[string]string{"component": "plutono"},
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 			}
 
 			role = &rbacv1.Role{
@@ -278,8 +277,8 @@ metadata:
 						Labels:    getLabels(),
 					},
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: ptr.To[int32](2),
-						Replicas:             ptr.To(values.Replicas),
+						RevisionHistoryLimit: new(int32(2)),
+						Replicas:             new(values.Replicas),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: getLabels(),
 						},
@@ -336,7 +335,7 @@ metadata:
 											},
 										},
 										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
+											AllowPrivilegeEscalation: new(false),
 										},
 									},
 									{
@@ -379,7 +378,7 @@ metadata:
 											},
 										},
 										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
+											AllowPrivilegeEscalation: new(false),
 										},
 									},
 									{
@@ -422,7 +421,7 @@ metadata:
 											},
 										},
 										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
+											AllowPrivilegeEscalation: new(false),
 										},
 									},
 								},
@@ -457,7 +456,7 @@ metadata:
 										Name: "storage",
 										VolumeSource: corev1.VolumeSource{
 											EmptyDir: &corev1.EmptyDirVolumeSource{
-												SizeLimit: ptr.To(resource.MustParse("100Mi")),
+												SizeLimit: new(resource.MustParse("100Mi")),
 											},
 										},
 									},
@@ -699,8 +698,8 @@ status: {}
 					},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:       ptr.To("seed"),
-					KeepObjects: ptr.To(false),
+					Class:       new("seed"),
+					KeepObjects: new(false),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
@@ -712,7 +711,7 @@ status: {}
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			var err error

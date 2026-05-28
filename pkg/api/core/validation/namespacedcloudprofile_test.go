@@ -14,7 +14,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -209,7 +208,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
-				namespacedCloudProfile.Spec.CABundle = ptr.To("unsupported")
+				namespacedCloudProfile.Spec.CABundle = new("unsupported")
 
 				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 
@@ -249,7 +248,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						{
 							Version:        "1.1.0",
 							Classification: &classification,
-							ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)}),
+							ExpirationDate: new(metav1.Time{Time: time.Now().Add(24 * time.Hour)}),
 						},
 					}
 
@@ -298,7 +297,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 				It("should allow machine images that only override the update strategy", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{Name: machineImageName, UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
+						{Name: machineImageName, UpdateStrategy: new(core.UpdateStrategyMajor)},
 					}
 
 					Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(BeEmpty())
@@ -309,17 +308,17 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name:           machineImageName,
-							UpdateStrategy: ptr.To(core.UpdateStrategyPatch),
+							UpdateStrategy: new(core.UpdateStrategyPatch),
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        "3.4.6",
 										ExpirationDate: validExpirationDate,
-										Classification: ptr.To(core.ClassificationDeprecated),
+										Classification: new(core.ClassificationDeprecated),
 									},
 									CRI:                      []core.CRI{{Name: "containerd"}},
 									Architectures:            []string{"amd64"},
-									KubeletVersionConstraint: ptr.To(">= 1.32.0"),
+									KubeletVersionConstraint: new(">= 1.32.0"),
 								},
 							},
 						},
@@ -513,7 +512,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow positive maxNodesTotal", func() {
 				namespacedCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(BeEmpty())
@@ -521,7 +520,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should forbid zero maxNodesTotal", func() {
 				namespacedCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](0),
+					MaxNodesTotal: new(int32(0)),
 				}
 
 				Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -532,7 +531,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should forbid negative maxNodesTotal", func() {
 				namespacedCloudProfile.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](-1),
+					MaxNodesTotal: new(int32(-1)),
 				}
 
 				Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -655,7 +654,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow adding limits", func() {
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -663,7 +662,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow removing limits", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -672,7 +671,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 			It("should allow adding maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -680,7 +679,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow removing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{}
 
@@ -689,10 +688,10 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow unchanged maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -700,10 +699,10 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow increasing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](1000),
+					MaxNodesTotal: new(int32(1000)),
 				}
 
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
@@ -711,10 +710,10 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			It("should allow decreasing maxNodesTotal", func() {
 				cloudProfileOld.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](100),
+					MaxNodesTotal: new(int32(100)),
 				}
 				cloudProfileNew.Spec.Limits = &core.Limits{
-					MaxNodesTotal: ptr.To[int32](10),
+					MaxNodesTotal: new(int32(10)),
 				}
 
 				Expect(ValidateNamespacedCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())

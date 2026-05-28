@@ -25,10 +25,10 @@ func GetReplicaCount(failureToleranceType *gardencorev1beta1.FailureToleranceTyp
 	if failureToleranceType != nil &&
 		*failureToleranceType == "" &&
 		componentType == resourcesv1alpha1.HighAvailabilityConfigTypeController {
-		return ptr.To[int32](1)
+		return new(int32(1))
 	}
 
-	return ptr.To[int32](2)
+	return new(int32(2))
 }
 
 // GetNodeSelectorRequirementForZones returns a node selector requirement to ensure all pods are scheduled only on
@@ -111,10 +111,10 @@ func calculateMinDomains(numDomains, maxReplicas int32) *int32 {
 	// the number of replicas because there is no benefit of enforcing a further zone spread for additional replicas,
 	// e.g. when a rolling update is performed.
 	if maxReplicas < numDomains {
-		return ptr.To(maxReplicas)
+		return new(maxReplicas)
 	}
 	// Return the number of zones otherwise because it's not possible to spread pods over more zones than there are available.
-	return ptr.To(numDomains)
+	return new(numDomains)
 }
 
 // MutateMatchLabelKeys mutates the matchLabelKeys of the given topologySpreadConstraint by adding the "pod-template-hash" label key if it is not already present and removing it from the label selector match labels.

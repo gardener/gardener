@@ -12,7 +12,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -65,8 +64,8 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("secretbinding"),
-				CloudProfileName:  ptr.To("cloudprofile1"),
+				SecretBindingName: new("secretbinding"),
+				CloudProfileName:  new("cloudprofile1"),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -79,18 +78,18 @@ var _ = Describe("Shoot Reference controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("some-domain.example.com"),
+					Domain: new("some-domain.example.com"),
 					Providers: []gardencorev1beta1.DNSProvider{
-						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret1.Name}},
-						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret2.Name}},
-						{Type: ptr.To("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: workloadIdentity2.Name}},
+						{Type: new("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret1.Name}},
+						{Type: new("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secret2.Name}},
+						{Type: new("type"), CredentialsRef: &autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: workloadIdentity2.Name}},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -120,7 +119,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 				Resources: []gardencorev1beta1.NamedResourceReference{
 					{

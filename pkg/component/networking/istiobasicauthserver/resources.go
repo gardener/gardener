@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -77,7 +76,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 				MatchLabels: i.getLabels(),
 			},
 			Replicas:             &i.values.Replicas,
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
@@ -86,7 +85,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 					Labels: i.getLabels(),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					Containers: []corev1.Container{
 						{
 							Name:            name,
@@ -130,7 +129,7 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",
@@ -142,10 +141,10 @@ func (i *istioBasicAuthServer) getDeployment(volumes []corev1.Volume, volumeMoun
 					},
 					PriorityClassName: i.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsNonRoot: new(true),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Volumes: volumes,
 				},
@@ -217,12 +216,12 @@ func (i *istioBasicAuthServer) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler 
 				Name:       i.getPrefix() + v1beta1constants.DeploymentNameIstioBasicAuthServer,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 					ContainerName:    name,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				}},
 			},
 		},

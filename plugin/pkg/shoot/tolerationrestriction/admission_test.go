@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -91,7 +90,7 @@ var _ = Describe("toleration restriction", func() {
 
 				It("should not merge less-specific the global and project-level default tolerations into the shoot tolerations", func() {
 					config := &shoottolerationrestriction.Configuration{Defaults: []core.Toleration{{Key: "foo"}}}
-					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Defaults: []gardencorev1beta1.Toleration{{Key: "bar"}, {Key: "baz", Value: ptr.To("foo")}}}
+					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Defaults: []gardencorev1beta1.Toleration{{Key: "bar"}, {Key: "baz", Value: new("foo")}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
 					admissionHandler, _ = New(config)
@@ -140,12 +139,12 @@ var _ = Describe("toleration restriction", func() {
 					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Whitelist: []gardencorev1beta1.Toleration{
 						{Key: "foo"},
 						{Key: "bax"},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bar", Value: new("baz")},
 					}}
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
@@ -156,13 +155,13 @@ var _ = Describe("toleration restriction", func() {
 				It("should reject creating the shoot because its tolerations are not in the project's whitelist", func() {
 					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Whitelist: []gardencorev1beta1.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("bar")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("bar")},
+						{Key: "bar", Value: new("baz")},
 					}}
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
@@ -174,7 +173,7 @@ var _ = Describe("toleration restriction", func() {
 					config := &shoottolerationrestriction.Configuration{Whitelist: []core.Toleration{
 						{Key: "foo"},
 						{Key: "bax"},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bar", Value: new("baz")},
 					}}
 
 					admissionHandler, _ = New(config)
@@ -183,8 +182,8 @@ var _ = Describe("toleration restriction", func() {
 
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
@@ -195,8 +194,8 @@ var _ = Describe("toleration restriction", func() {
 				It("should reject creating the shoot because its tolerations are not in the global whitelist", func() {
 					config := &shoottolerationrestriction.Configuration{Whitelist: []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("bar")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("bar")},
+						{Key: "bar", Value: new("baz")},
 					}}
 
 					admissionHandler, _ = New(config)
@@ -205,8 +204,8 @@ var _ = Describe("toleration restriction", func() {
 
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
@@ -224,8 +223,8 @@ var _ = Describe("toleration restriction", func() {
 				It("should allow updating the shoot because no new (non-whitelisted) tolerations were added", func() {
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 					oldShoot := shoot.DeepCopy()
 
@@ -236,13 +235,13 @@ var _ = Describe("toleration restriction", func() {
 
 				It("should allow updating the shoot because old (non-whitelisted) tolerations were removed", func() {
 					shoot.Spec.Tolerations = []core.Toleration{
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bar", Value: new("baz")},
 					}
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
@@ -253,8 +252,8 @@ var _ = Describe("toleration restriction", func() {
 				It("should reject updating the shoot because old (non-whitelisted) tolerations were changed", func() {
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Tolerations[0].Key = "new"
@@ -267,8 +266,8 @@ var _ = Describe("toleration restriction", func() {
 				It("should reject updating the shoot because new (non-whitelisted) tolerations were added", func() {
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
-						{Key: "bax", Value: ptr.To("foo")},
-						{Key: "bar", Value: ptr.To("baz")},
+						{Key: "bax", Value: new("foo")},
+						{Key: "bar", Value: new("baz")},
 					}
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Tolerations = append(shoot.Spec.Tolerations, core.Toleration{Key: "new"})

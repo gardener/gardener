@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -285,7 +284,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		setGardenerResourceManagerReplicas = g.Add(flow.Task{
 			Name: "Setting gardener-resource-manager replicas to 2",
 			Fn: flow.TaskFn(func(_ context.Context) error {
-				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(ptr.To[int32](2))
+				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(new(int32(2)))
 				return nil
 			}),
 			SkipIf:       !cleanupShootResources,

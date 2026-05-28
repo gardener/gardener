@@ -5,8 +5,6 @@
 package botanist
 
 import (
-	"k8s.io/utils/ptr"
-
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/nodeproblemdetector"
@@ -27,7 +25,7 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 	}
 
 	if b.ShootUsesDNS() {
-		values.APIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
+		values.APIServerHost = new(b.outOfClusterAPIServerFQDN())
 	}
 
 	return nodeproblemdetector.New(

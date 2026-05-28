@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -165,10 +164,10 @@ var _ = Describe("Interface", func() {
 		}
 		gardenlet = seedmanagementv1alpha1.GardenletConfig{
 			Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-				ReplicaCount:         ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](1),
+				ReplicaCount:         new(int32(1)),
+				RevisionHistoryLimit: new(int32(1)),
 				Image: &seedmanagementv1alpha1.Image{
-					PullPolicy: ptr.To(corev1.PullIfNotPresent),
+					PullPolicy: new(corev1.PullIfNotPresent),
 				},
 			},
 			Config: runtime.RawExtension{
@@ -182,8 +181,8 @@ var _ = Describe("Interface", func() {
 					},
 				},
 			},
-			Bootstrap:       ptr.To(seedmanagementv1alpha1.BootstrapToken),
-			MergeWithParent: ptr.To(true),
+			Bootstrap:       new(seedmanagementv1alpha1.BootstrapToken),
+			MergeWithParent: new(true),
 		}
 
 		gardenNamespace = &corev1.Namespace{
@@ -251,9 +250,9 @@ var _ = Describe("Interface", func() {
 		expectMergeWithParent = func() {
 			mergedDeployment = managedSeed.Spec.Gardenlet.Deployment.DeepCopy()
 			mergedDeployment.Image = &seedmanagementv1alpha1.Image{
-				Repository: ptr.To("repository"),
-				Tag:        ptr.To("tag"),
-				PullPolicy: ptr.To(corev1.PullIfNotPresent),
+				Repository: new("repository"),
+				Tag:        new("tag"),
+				PullPolicy: new(corev1.PullIfNotPresent),
 			}
 
 			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration).DeepCopy()
@@ -538,7 +537,7 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
-				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagementv1alpha1.BootstrapNone)
+				managedSeed.Spec.Gardenlet.Bootstrap = new(seedmanagementv1alpha1.BootstrapNone)
 
 				Expect(gardenClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 
@@ -736,7 +735,7 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
-				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagementv1alpha1.BootstrapNone)
+				managedSeed.Spec.Gardenlet.Bootstrap = new(seedmanagementv1alpha1.BootstrapNone)
 
 				Expect(gardenClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 

@@ -10,7 +10,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -55,7 +54,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 				RestartPolicy: corev1.RestartPolicyNever,
 			},
 		},
-		BackoffLimit: ptr.To[int32](0),
+		BackoffLimit: new(int32(0)),
 	}
 	return job, c.Create(ctx, job)
 }

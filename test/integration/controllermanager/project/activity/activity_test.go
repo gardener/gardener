@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -194,8 +193,8 @@ var _ = Describe("Project Activity controller tests", func() {
 						Labels:       map[string]string{testID: testRunID},
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						SecretBindingName: ptr.To("mysecretbinding"),
-						CloudProfileName:  ptr.To("cloudprofile1"),
+						SecretBindingName: new("mysecretbinding"),
+						CloudProfileName:  new("cloudprofile1"),
 						Region:            "europe-central-1",
 						Provider: gardencorev1beta1.Provider{
 							Type: "foo-provider",
@@ -208,26 +207,26 @@ var _ = Describe("Project Activity controller tests", func() {
 										Type: "large",
 										Image: &gardencorev1beta1.ShootMachineImage{
 											Name:    "some-image",
-											Version: ptr.To("1.0.0"),
+											Version: new("1.0.0"),
 										},
 									},
 								},
 							},
 						},
 						DNS: &gardencorev1beta1.DNS{
-							Domain: ptr.To("some-domain.example.com"),
+							Domain: new("some-domain.example.com"),
 						},
 						Kubernetes: gardencorev1beta1.Kubernetes{
 							Version: "1.31.1",
 						},
 						Networking: &gardencorev1beta1.Networking{
-							Type: ptr.To("foo-networking"),
+							Type: new("foo-networking"),
 						},
 					},
 				}
 			},
 			func(obj client.Object) {
-				obj.(*gardencorev1beta1.Shoot).Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: ptr.To(true)}
+				obj.(*gardencorev1beta1.Shoot).Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: new(true)}
 			},
 			false,
 		)
@@ -245,12 +244,12 @@ var _ = Describe("Project Activity controller tests", func() {
 					},
 					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: "foo",
-						SeedName:   ptr.To("bar"),
+						SeedName:   new("bar"),
 					},
 				}
 			},
 			func(obj client.Object) {
-				obj.(*gardencorev1beta1.BackupEntry).Spec.SeedName = ptr.To("foo")
+				obj.(*gardencorev1beta1.BackupEntry).Spec.SeedName = new("foo")
 			},
 			false,
 		)
@@ -294,7 +293,7 @@ var _ = Describe("Project Activity controller tests", func() {
 				}
 			},
 			func(obj client.Object) {
-				obj.(*gardencorev1beta1.Quota).Spec.ClusterLifetimeDays = ptr.To[int32](14)
+				obj.(*gardencorev1beta1.Quota).Spec.ClusterLifetimeDays = new(int32(14))
 			},
 			true,
 		)

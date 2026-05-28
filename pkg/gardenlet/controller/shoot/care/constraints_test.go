@@ -38,7 +38,6 @@ import (
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -568,7 +567,7 @@ var _ = Describe("Constraints", func() {
 					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 						{
 							Name:           "worker1",
-							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
 					}
 					shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{

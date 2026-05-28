@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -44,7 +43,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 	}
 
 	if b.ShootUsesDNS() {
-		values.APIServerHost = ptr.To(b.outOfClusterAPIServerFQDN())
+		values.APIServerHost = new(b.outOfClusterAPIServerFQDN())
 	}
 
 	if v1beta1helper.IsCoreDNSAutoscalingModeUsed(b.Shoot.GetInfo().Spec.SystemComponents, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional) {

@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -99,8 +98,8 @@ var _ = Describe("Project Stale controller tests", func() {
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SecretBindingName: ptr.To("mysecretbinding"),
-					CloudProfileName:  ptr.To("cloudprofile1"),
+					SecretBindingName: new("mysecretbinding"),
+					CloudProfileName:  new("cloudprofile1"),
 					Region:            "europe-central-1",
 					Provider: gardencorev1beta1.Provider{
 						Type: "foo-provider",
@@ -113,20 +112,20 @@ var _ = Describe("Project Stale controller tests", func() {
 									Type: "large",
 									Image: &gardencorev1beta1.ShootMachineImage{
 										Name:    "some-image",
-										Version: ptr.To("1.0.0"),
+										Version: new("1.0.0"),
 									},
 								},
 							},
 						},
 					},
 					DNS: &gardencorev1beta1.DNS{
-						Domain: ptr.To("some-domain.example.com"),
+						Domain: new("some-domain.example.com"),
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.31.1",
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To("foo-networking"),
+						Type: new("foo-networking"),
 					},
 				},
 			}
@@ -146,7 +145,7 @@ var _ = Describe("Project Stale controller tests", func() {
 				},
 				Spec: gardencorev1beta1.BackupEntrySpec{
 					BucketName: "foo",
-					SeedName:   ptr.To("bar"),
+					SeedName:   new("bar"),
 				},
 			}
 

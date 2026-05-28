@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -136,7 +135,7 @@ func (s *service) Deploy(ctx context.Context) error {
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
 		}
-		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(kubeapiserverconstants.Port)), Protocol: ptr.To(corev1.ProtocolTCP)}
+		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(kubeapiserverconstants.Port)), Protocol: new(corev1.ProtocolTCP)}
 
 		// For shoot namespaces the kube-apiserver service needs extra labels and annotations to create required network policies
 		// which allow a connection from istio-ingress components to kube-apiserver.
@@ -173,7 +172,7 @@ func (s *service) Deploy(ctx context.Context) error {
 				TargetPort: intstr.FromInt32(kubeapiserverconstants.Port),
 			},
 		}, corev1.ServiceTypeClusterIP)
-		obj.Spec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicyPreferDualStack)
+		obj.Spec.IPFamilyPolicy = new(corev1.IPFamilyPolicyPreferDualStack)
 
 		return nil
 	}); err != nil {

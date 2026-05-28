@@ -11,7 +11,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/test"
 )
@@ -22,7 +21,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 			{
 				Alert: "PodStuckInPending",
 				Expr:  intstr.FromString(`sum_over_time(kube_pod_status_phase{phase="Pending"}[5m]) > 0`),
-				For:   ptr.To(monitoringv1.Duration("10m")),
+				For:   new(monitoringv1.Duration("10m")),
 				Labels: map[string]string{
 					"severity":   "warning",
 					"type":       "seed",

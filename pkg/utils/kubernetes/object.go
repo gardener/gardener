@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -141,12 +140,12 @@ func MakeUnique(obj runtime.Object) error {
 
 	switch o := obj.(type) {
 	case *corev1.Secret:
-		o.Immutable = ptr.To(true)
+		o.Immutable = new(true)
 		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(mergeMaps(o.StringData, o.Data))[:numberOfChecksumChars]
 		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 
 	case *corev1.ConfigMap:
-		o.Immutable = ptr.To(true)
+		o.Immutable = new(true)
 		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(mergeMaps(o.Data, o.BinaryData))[:numberOfChecksumChars]
 		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 

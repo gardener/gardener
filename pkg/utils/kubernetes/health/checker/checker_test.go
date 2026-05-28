@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -777,7 +776,7 @@ var _ = Describe("HealthChecker", func() {
 						},
 						Spec: monitoringv1.PrometheusSpec{
 							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-								Replicas: ptr.To(int32(3)),
+								Replicas: new(int32(3)),
 							},
 						},
 					}},
@@ -886,7 +885,7 @@ var _ = Describe("HealthChecker", func() {
 					return health.PrometheusHealthCheckResult{}, errors.New(msg)
 				}
 
-				prometheuses.Items[0].Spec.Replicas = ptr.To(int32(0))
+				prometheuses.Items[0].Spec.Replicas = new(int32(0))
 				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).To(BeNil())
 			})
@@ -900,7 +899,7 @@ var _ = Describe("HealthChecker", func() {
 						},
 						Spec: monitoringv1.PrometheusSpec{
 							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-								Replicas: ptr.To(int32(3)),
+								Replicas: new(int32(3)),
 							},
 						},
 					})

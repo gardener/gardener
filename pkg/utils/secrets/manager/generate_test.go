@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -607,10 +606,10 @@ var _ = Describe("Generate", func() {
 					Expect(len(secretList.Items[2].Data["bundle.crt"])).To(BeNumerically("<", 1500), "expected bundle with new CA only")
 				},
 
-				Entry("default 80% of 100d (=80d)", ptr.To(100*24*time.Hour), 0, 79*24*time.Hour, 81*24*time.Hour),
-				Entry("default 30d-10d (=20d)", ptr.To(30*24*time.Hour), 0, 19*24*time.Hour, 21*24*time.Hour),
-				Entry("renewAfterValidityPercentage 33% (=10d)", ptr.To(30*24*time.Hour), 33, 9*24*time.Hour, 11*24*time.Hour),
-				Entry("non-effective renewAfterValidityPercentage 70% (14d> default 20d-10d=10d)", ptr.To(20*24*time.Hour), 70, 9*24*time.Hour, 11*24*time.Hour),
+				Entry("default 80% of 100d (=80d)", new(100*24*time.Hour), 0, 79*24*time.Hour, 81*24*time.Hour),
+				Entry("default 30d-10d (=20d)", new(30*24*time.Hour), 0, 19*24*time.Hour, 21*24*time.Hour),
+				Entry("renewAfterValidityPercentage 33% (=10d)", new(30*24*time.Hour), 33, 9*24*time.Hour, 11*24*time.Hour),
+				Entry("non-effective renewAfterValidityPercentage 70% (14d> default 20d-10d=10d)", new(20*24*time.Hour), 70, 9*24*time.Hour, 11*24*time.Hour),
 			)
 		})
 
@@ -813,7 +812,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("Generate new control plane secret")
-				serverConfig.Validity = ptr.To(1337 * time.Minute)
+				serverConfig.Validity = new(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretsutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
 					CertificateSecretConfig: serverConfig,

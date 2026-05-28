@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -56,7 +55,7 @@ var _ = Describe("Actuator", func() {
 				Name:       "api.something.local.gardener.cloud",
 				RecordType: extensionsv1alpha1.DNSRecordTypeA,
 				Values:     []string{"1.2.3.4", "5.6.7.8"},
-				TTL:        ptr.To[int64](123),
+				TTL:        new(int64(123)),
 			},
 		}
 	})

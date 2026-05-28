@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,7 +34,7 @@ var _ = Describe("ShootValidator tests", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				CloudProfileName:  &cloudProfile.Name,
-				SecretBindingName: ptr.To(testSecretBinding.Name),
+				SecretBindingName: new(testSecretBinding.Name),
 				Region:            "region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "provider-type",
@@ -50,9 +49,9 @@ var _ = Describe("ShootValidator tests", func() {
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
 				Networking: &gardencorev1beta1.Networking{
-					Type:     ptr.To("foo-networking"),
-					Pods:     ptr.To("100.128.0.0/11"),
-					Services: ptr.To("100.72.0.0/13"),
+					Type:     new("foo-networking"),
+					Pods:     new("100.128.0.0/11"),
+					Services: new("100.72.0.0/13"),
 				},
 			},
 		}

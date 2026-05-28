@@ -15,7 +15,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -51,7 +50,7 @@ var _ = Describe("Gardenlet controller test", func() {
 					Spec: gardencorev1beta1.SeedSpec{
 						Backup: &gardencorev1beta1.Backup{
 							Provider: "test",
-							Region:   ptr.To("bar"),
+							Region:   new("bar"),
 							CredentialsRef: &corev1.ObjectReference{
 								Kind:       "Secret",
 								APIVersion: "v1",
@@ -87,10 +86,10 @@ var _ = Describe("Gardenlet controller test", func() {
 				Deployment: seedmanagementv1alpha1.GardenletSelfDeployment{
 					Helm: seedmanagementv1alpha1.GardenletHelm{OCIRepository: ociRepository},
 					GardenletDeployment: seedmanagementv1alpha1.GardenletDeployment{
-						ReplicaCount:         ptr.To[int32](1),
-						RevisionHistoryLimit: ptr.To[int32](1),
+						ReplicaCount:         new(int32(1)),
+						RevisionHistoryLimit: new(int32(1)),
 						Image: &seedmanagementv1alpha1.Image{
-							PullPolicy: ptr.To(corev1.PullIfNotPresent),
+							PullPolicy: new(corev1.PullIfNotPresent),
 						},
 					},
 				},
@@ -145,7 +144,7 @@ var _ = Describe("Gardenlet controller test", func() {
 
 		By("Update some value")
 		patch := client.MergeFrom(gardenlet.DeepCopy())
-		gardenlet.Spec.Deployment.RevisionHistoryLimit = ptr.To[int32](1337)
+		gardenlet.Spec.Deployment.RevisionHistoryLimit = new(int32(1337))
 		Expect(testClient.Patch(ctx, gardenlet, patch)).To(Succeed())
 
 		By("Gardenlet status should reflect successful reconciliation")
@@ -168,8 +167,8 @@ var _ = Describe("Gardenlet controller test", func() {
 
 	When("image vector overwrite configurations are provided", func() {
 		BeforeEach(func() {
-			gardenlet.Spec.Deployment.ImageVectorOverwrite = ptr.To("images: []")
-			gardenlet.Spec.Deployment.ComponentImageVectorOverwrite = ptr.To("components: []")
+			gardenlet.Spec.Deployment.ImageVectorOverwrite = new("images: []")
+			gardenlet.Spec.Deployment.ComponentImageVectorOverwrite = new("components: []")
 		})
 
 		It("should remove image vector overwrite configurations when removed from `Gardenlet` resource", func() {

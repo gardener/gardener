@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -69,7 +68,7 @@ var _ = Describe("Token controller tests", func() {
 					DefaultNamespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
 				},
 				Controller: controllerconfig.Controller{
-					SkipNameValidation: ptr.To(true),
+					SkipNameValidation: new(true),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -212,7 +211,7 @@ var _ = Describe("Token controller tests", func() {
 					DefaultNamespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
 				},
 				Controller: controllerconfig.Controller{
-					SkipNameValidation: ptr.To(true),
+					SkipNameValidation: new(true),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())

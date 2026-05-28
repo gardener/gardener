@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,7 +50,7 @@ var _ = Describe("mutator", func() {
 			seed = &core.Seed{ObjectMeta: metav1.ObjectMeta{Name: "the-seed"}}
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Name: "the-shoot", Namespace: "garden"},
-				Spec:       gardencorev1beta1.ShootSpec{SeedName: ptr.To("parent-seed")},
+				Spec:       gardencorev1beta1.ShootSpec{SeedName: new("parent-seed")},
 			}
 			managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{Name: "the-seed", Namespace: "garden"},

@@ -13,7 +13,6 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -97,13 +96,13 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 					Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-						ReplicaCount:         ptr.To[int32](1),
-						RevisionHistoryLimit: ptr.To[int32](1),
+						ReplicaCount:         new(int32(1)),
+						RevisionHistoryLimit: new(int32(1)),
 						Image: &seedmanagementv1alpha1.Image{
-							PullPolicy: ptr.To(corev1.PullIfNotPresent),
+							PullPolicy: new(corev1.PullIfNotPresent),
 						},
 					},
-					Bootstrap: ptr.To(seedmanagementv1alpha1.BootstrapToken),
+					Bootstrap: new(seedmanagementv1alpha1.BootstrapToken),
 				},
 			},
 		}
@@ -116,15 +115,15 @@ var _ = Describe("ManagedSeed controller test", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SeedName:         &seed.Name,
-				CloudProfileName: ptr.To("foo"),
+				CloudProfileName: new("foo"),
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo"),
+					Type: new("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("replica-name.example.com"),
+					Domain: new("replica-name.example.com"),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo",
@@ -135,9 +134,9 @@ var _ = Describe("ManagedSeed controller test", func() {
 								Type: "some-machine-type",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,
@@ -239,7 +238,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 
 		By("Create Shoot")
-		shoot.Spec.SecretBindingName = ptr.To(shootSecretBinding.Name)
+		shoot.Spec.SecretBindingName = new(shootSecretBinding.Name)
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
@@ -280,7 +279,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 					Spec: gardencorev1beta1.SeedSpec{
 						Backup: &gardencorev1beta1.Backup{
 							Provider: "test",
-							Region:   ptr.To("bar"),
+							Region:   new("bar"),
 							CredentialsRef: &corev1.ObjectReference{
 								APIVersion: "v1",
 								Kind:       "Secret",

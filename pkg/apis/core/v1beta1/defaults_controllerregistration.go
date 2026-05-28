@@ -8,13 +8,12 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 // SetDefaults_ControllerResource sets default values for ControllerResource objects.
 func SetDefaults_ControllerResource(obj *ControllerResource) {
 	if obj.Primary == nil {
-		obj.Primary = ptr.To(true)
+		obj.Primary = new(true)
 	}
 
 	if obj.Kind == "Extension" {

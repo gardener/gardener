@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -95,7 +94,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -105,8 +104,8 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		Config: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
-			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
-			DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
+			DefaultNotReadyTolerationSeconds:    new(int64(60)),
+			DefaultUnreachableTolerationSeconds: new(int64(120)),
 		},
 		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr)).To(Succeed())

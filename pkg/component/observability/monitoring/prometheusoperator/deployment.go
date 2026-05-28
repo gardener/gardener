@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
@@ -30,8 +29,8 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 			Labels:    GetLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -44,8 +43,8 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 					ServiceAccountName: serviceAccountName,
 					PriorityClassName:  p.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot:   ptr.To(true),
-						RunAsUser:      ptr.To[int64](65532),
+						RunAsNonRoot:   new(true),
+						RunAsUser:      new(int64(65532)),
 						SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 					},
 					Containers: []corev1.Container{
@@ -72,9 +71,9 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 							Ports: []corev1.ContainerPort{{
 								Name:          portName,

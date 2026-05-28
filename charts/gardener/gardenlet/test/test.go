@@ -594,7 +594,7 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             &maxUnavailable,
 			Selector:                   &metav1.LabelSelector{},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 
@@ -644,8 +644,8 @@ func ComputeExpectedGardenletConfiguration(
 				Burst: 130,
 			},
 			KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-				AutoRotationJitterPercentageMin: ptr.To[int32](70),
-				AutoRotationJitterPercentageMax: ptr.To[int32](90),
+				AutoRotationJitterPercentageMin: new(int32(70)),
+				AutoRotationJitterPercentageMax: new(int32(90)),
 			},
 		},
 		SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
@@ -680,12 +680,12 @@ func ComputeExpectedGardenletConfiguration(
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
-				LeaseResyncSeconds:       ptr.To[int32](2),
-				LeaseResyncMissThreshold: ptr.To[int32](10),
+				LeaseResyncSeconds:       new(int32(2)),
+				LeaseResyncMissThreshold: new(int32(10)),
 			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
-				ReconcileInMaintenanceOnly: ptr.To(false),
-				RespectSyncPeriodOverwrite: ptr.To(false),
+				ReconcileInMaintenanceOnly: new(false),
+				RespectSyncPeriodOverwrite: new(false),
 				ConcurrentSyncs:            &twenty,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Hour,
@@ -693,11 +693,11 @@ func ComputeExpectedGardenletConfiguration(
 				RetryDuration: &metav1.Duration{
 					Duration: 12 * time.Hour,
 				},
-				DNSEntryTTLSeconds: ptr.To[int64](120),
+				DNSEntryTTLSeconds: new(int64(120)),
 			},
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
-				JitterUpdates:   ptr.To(false),
+				JitterUpdates:   new(false),
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
@@ -750,7 +750,7 @@ func ComputeExpectedGardenletConfiguration(
 						},
 					},
 				},
-				WebhookRemediatorEnabled: ptr.To(false),
+				WebhookRemediatorEnabled: new(false),
 			},
 			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
@@ -797,7 +797,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
+			LeaderElect:       new(true),
 			LeaseDuration:     metav1.Duration{Duration: 15 * time.Second},
 			RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
 			RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
@@ -808,21 +808,21 @@ func ComputeExpectedGardenletConfiguration(
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
 		Logging: &gardenletconfigv1alpha1.Logging{
-			Enabled: ptr.To(false),
+			Enabled: new(false),
 			Vali: &gardenletconfigv1alpha1.Vali{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 				Garden: &gardenletconfigv1alpha1.GardenVali{
 					Storage: &gardenletconfigv1alpha1.DefaultCentralValiStorage,
 				},
 			},
 			VictoriaLogs: &gardenletconfigv1alpha1.VictoriaLogs{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 				Garden: &gardenletconfigv1alpha1.GardenVictoriaLogs{
 					Storage: &gardenletconfigv1alpha1.DefaultCentralVictoriaLogsStorage,
 				},
 			},
 			ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
-				Enabled: ptr.To(false),
+				Enabled: new(false),
 			},
 		},
 		Server: gardenletconfigv1alpha1.ServerConfiguration{
@@ -834,8 +834,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		Debugging: &componentbaseconfigv1alpha1.DebuggingConfiguration{
-			EnableProfiling:           ptr.To(false),
-			EnableContentionProfiling: ptr.To(false),
+			EnableProfiling:           new(false),
+			EnableContentionProfiling: new(false),
 		},
 		FeatureGates: featureGates,
 		Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
@@ -844,32 +844,32 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
-			ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
-			Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
+			ServiceName: new(v1beta1constants.DefaultSNIIngressServiceName),
+			Namespace:   new(v1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
 		Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
 			Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 			},
 		},
 		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
-				EnableBackupCompaction:    ptr.To(false),
-				EventsThreshold:           ptr.To[int64](1000000),
+				EnableBackupCompaction:    new(false),
+				EventsThreshold:           new(int64(1000000)),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
-				Workers:                   ptr.To[int64](3),
+				Workers:                   new(int64(3)),
 			},
 			CustodianController: &gardenletconfigv1alpha1.CustodianController{
-				Workers: ptr.To[int64](10),
+				Workers: new(int64(10)),
 			},
 			ETCDController: &gardenletconfigv1alpha1.ETCDController{
-				Workers: ptr.To[int64](50),
+				Workers: new(int64(50)),
 			},
 		},
 		NodeToleration: &gardenletconfigv1alpha1.NodeToleration{
-			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
-			DefaultUnreachableTolerationSeconds: ptr.To[int64](60),
+			DefaultNotReadyTolerationSeconds:    new(int64(60)),
+			DefaultUnreachableTolerationSeconds: new(int64(60)),
 		},
 	}
 
@@ -959,8 +959,8 @@ func ComputeExpectedGardenletDeploymentSpec(
 	}
 
 	deployment := appsv1.DeploymentSpec{
-		RevisionHistoryLimit: ptr.To[int32](2),
-		Replicas:             ptr.To[int32](2),
+		RevisionHistoryLimit: new(int32(2)),
+		Replicas:             new(int32(2)),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"app":  "gardener",
@@ -975,10 +975,10 @@ func ComputeExpectedGardenletDeploymentSpec(
 				PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystemCritical,
 				ServiceAccountName: "gardenlet",
 				SecurityContext: &corev1.PodSecurityContext{
-					RunAsNonRoot: ptr.To(true),
-					RunAsUser:    ptr.To[int64](65532),
-					RunAsGroup:   ptr.To[int64](65532),
-					FSGroup:      ptr.To[int64](65532),
+					RunAsNonRoot: new(true),
+					RunAsUser:    new(int64(65532)),
+					RunAsGroup:   new(int64(65532)),
+					FSGroup:      new(int64(65532)),
 					SeccompProfile: &corev1.SeccompProfile{
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
 					},
@@ -1020,7 +1020,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 						TerminationMessagePath:   "/dev/termination-log",
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
@@ -1035,13 +1035,13 @@ func ComputeExpectedGardenletDeploymentSpec(
 					{
 						Key:               "node.kubernetes.io/not-ready",
 						Operator:          "Exists",
-						TolerationSeconds: ptr.To[int64](60),
+						TolerationSeconds: new(int64(60)),
 						Effect:            "NoExecute",
 					},
 					{
 						Key:               "node.kubernetes.io/unreachable",
 						Operator:          "Exists",
-						TolerationSeconds: ptr.To[int64](60),
+						TolerationSeconds: new(int64(60)),
 						Effect:            "NoExecute",
 					},
 				},
@@ -1049,11 +1049,11 @@ func ComputeExpectedGardenletDeploymentSpec(
 					Name: "kube-api-access-gardener",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To[int32](420),
+							DefaultMode: new(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 									Path:              "token",
-									ExpirationSeconds: ptr.To[int64](43200),
+									ExpirationSeconds: new(int64(43200)),
 								}},
 								{ConfigMap: &corev1.ConfigMapProjection{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -1237,7 +1237,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 			},
 		})
 		deployment.Template.Spec.ServiceAccountName = ""
-		deployment.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
+		deployment.Template.Spec.AutomountServiceAccountToken = new(false)
 	}
 
 	deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

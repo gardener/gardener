@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -61,7 +60,7 @@ var _ = Describe("Worker", func() {
 		worker1Name                           = "worker1"
 		worker1Minimum                  int32 = 1
 		worker1Maximum                  int32 = 2
-		worker1Priority                       = ptr.To(int32(0))
+		worker1Priority                       = new(int32(0))
 		worker1MaxSurge                       = intstr.FromInt32(3)
 		worker1MaxUnavailable                 = intstr.FromInt32(4)
 		worker1Labels                         = map[string]string{"foo": "bar"}
@@ -87,12 +86,12 @@ var _ = Describe("Worker", func() {
 		worker1ProviderConfig                 = &runtime.RawExtension{Raw: []byte(`{"bar":"baz"}`)}
 		worker1Zone1                          = "worker1zone1"
 		worker1Zone2                          = "worker1zone1"
-		worker1Arch                           = ptr.To("amd64")
+		worker1Arch                           = new("amd64")
 
 		worker2Name                      = "worker2"
 		worker2Minimum             int32 = 5
 		worker2Maximum             int32 = 6
-		worker2Priority                  = ptr.To(int32(10))
+		worker2Priority                  = new(int32(10))
 		worker2MaxSurge                  = intstr.FromInt32(7)
 		worker2MaxUnavailable            = intstr.FromInt32(8)
 		worker2MachineType               = "worker2machinetype"
@@ -100,7 +99,7 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserDataKeyName           = "user-data-key-name-w2"
 		worker2UserDataSecretName        = "user-data-secret-name-w2"
-		worker2Arch                      = ptr.To("arm64")
+		worker2Arch                      = new("arm64")
 
 		machineTypes []gardencorev1beta1.MachineType
 
@@ -115,10 +114,10 @@ var _ = Describe("Worker", func() {
 
 		emptyAutoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
 		kubeletConfig          = &gardencorev1beta1.KubeletConfig{
-			CPUManagerPolicy: ptr.To("static"),
+			CPUManagerPolicy: new("static"),
 		}
 		workerKubeletConfig = &gardencorev1beta1.KubeletConfig{
-			CPUManagerPolicy: ptr.To("none"),
+			CPUManagerPolicy: new("none"),
 		}
 	)
 
@@ -230,7 +229,7 @@ var _ = Describe("Worker", func() {
 					MachineControllerManagerSettings: worker1MCMSettings,
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					ClusterAutoscaler:                &gardencorev1beta1.ClusterAutoscalerOptions{},
-					UpdateStrategy:                   ptr.To(gardencorev1beta1.AutoRollingUpdate),
+					UpdateStrategy:                   new(gardencorev1beta1.AutoRollingUpdate),
 				},
 				{
 					Name:           worker2Name,
@@ -251,7 +250,7 @@ var _ = Describe("Worker", func() {
 						Version: &workerKubernetesVersion,
 					},
 					ClusterAutoscaler: &gardencorev1beta1.ClusterAutoscalerOptions{},
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 			},
 		}
@@ -322,13 +321,13 @@ var _ = Describe("Worker", func() {
 					},
 					KubeletDataVolumeName:            &worker1KubeletDataVolumeName,
 					KubeletConfig:                    workerKubeletConfig,
-					KubernetesVersion:                ptr.To(kubernetesVersion.String()),
+					KubernetesVersion:                new(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
 					NodeTemplate:                     workerPool1NodeTemplate,
 					Architecture:                     worker1Arch,
 					ClusterAutoscaler:                emptyAutoscalerOptions,
-					UpdateStrategy:                   ptr.To(gardencorev1beta1.AutoRollingUpdate),
+					UpdateStrategy:                   new(gardencorev1beta1.AutoRollingUpdate),
 				},
 				{
 					Name:           worker2Name,
@@ -357,7 +356,7 @@ var _ = Describe("Worker", func() {
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
 					ClusterAutoscaler: emptyAutoscalerOptions,
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 			},
 		}
@@ -481,30 +480,30 @@ var _ = Describe("Worker", func() {
 
 			newValues := *values
 			newValues.Workers[0].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
-				ScaleDownUtilizationThreshold:    ptr.To(0.5),
-				ScaleDownGpuUtilizationThreshold: ptr.To(0.7),
-				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
-				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
-				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+				ScaleDownUtilizationThreshold:    new(0.5),
+				ScaleDownGpuUtilizationThreshold: new(0.7),
+				ScaleDownUnneededTime:            new(metav1.Duration{Duration: 1 * time.Minute}),
+				ScaleDownUnreadyTime:             new(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             new(metav1.Duration{Duration: 3 * time.Minute}),
 			}
 			newValues.Workers[1].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
-				ScaleDownGpuUtilizationThreshold: ptr.To(0.8),
-				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
-				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
+				ScaleDownGpuUtilizationThreshold: new(0.8),
+				ScaleDownUnneededTime:            new(metav1.Duration{Duration: 4 * time.Minute}),
+				MaxNodeProvisionTime:             new(metav1.Duration{Duration: 5 * time.Minute}),
 			}
 
 			expectedWorkerSpec := wSpec.DeepCopy()
 			expectedWorkerSpec.Pools[0].ClusterAutoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
-				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
-				ScaleDownGpuUtilizationThreshold: ptr.To("0.7"),
-				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
-				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
-				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+				ScaleDownUtilizationThreshold:    new("0.5"),
+				ScaleDownGpuUtilizationThreshold: new("0.7"),
+				ScaleDownUnneededTime:            new(metav1.Duration{Duration: 1 * time.Minute}),
+				ScaleDownUnreadyTime:             new(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             new(metav1.Duration{Duration: 3 * time.Minute}),
 			}
 			expectedWorkerSpec.Pools[1].ClusterAutoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
-				ScaleDownGpuUtilizationThreshold: ptr.To("0.8"),
-				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
-				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
+				ScaleDownGpuUtilizationThreshold: new("0.8"),
+				ScaleDownUnneededTime:            new(metav1.Duration{Duration: 4 * time.Minute}),
+				MaxNodeProvisionTime:             new(metav1.Duration{Duration: 5 * time.Minute}),
 			}
 
 			existingWorker := w.DeepCopy()

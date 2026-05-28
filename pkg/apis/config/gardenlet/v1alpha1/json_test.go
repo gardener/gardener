@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 )
@@ -27,14 +26,14 @@ var _ = Describe("JSON", func() {
 			Entry("new format with string duration",
 				`{"concurrentSyncs":10,"tokenExpirationDuration":"6h"}`,
 				TokenRequestorWorkloadIdentityControllerConfiguration{
-					ConcurrentSyncs:         ptr.To(10),
+					ConcurrentSyncs:         new(10),
 					TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 				},
 			),
 			Entry("old format with numeric duration (nanoseconds)",
 				`{"concurrentSyncs":10,"tokenExpirationDuration":21600000000000}`,
 				TokenRequestorWorkloadIdentityControllerConfiguration{
-					ConcurrentSyncs:         ptr.To(10),
+					ConcurrentSyncs:         new(10),
 					TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 				},
 			),
@@ -45,7 +44,7 @@ var _ = Describe("JSON", func() {
 			Entry("only concurrentSyncs",
 				`{"concurrentSyncs":5}`,
 				TokenRequestorWorkloadIdentityControllerConfiguration{
-					ConcurrentSyncs: ptr.To(5),
+					ConcurrentSyncs: new(5),
 				},
 			),
 			Entry("only new format duration",

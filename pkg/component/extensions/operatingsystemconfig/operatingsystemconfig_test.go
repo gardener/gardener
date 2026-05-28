@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -81,7 +80,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			clusterDomain       = "cluster-domain"
 			images              = map[string]*imagevector.Image{
 				"gardener-node-agent": {},
-				"pause-container":     {Repository: ptr.To("registry.k8s.io/pause"), Tag: ptr.To("latest")},
+				"pause-container":     {Repository: new("registry.k8s.io/pause"), Tag: new("latest")},
 			}
 			evictionHardMemoryAvailable = "100Mi"
 			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
@@ -168,7 +167,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Containerd: &extensionsv1alpha1.ContainerdConfig{
 							SandboxImage: "registry.k8s.io/pause:latest",
 						},
-						CgroupDriver: ptr.To(extensionsv1alpha1.CgroupDriverSystemd),
+						CgroupDriver: new(extensionsv1alpha1.CgroupDriverSystemd),
 					}
 
 					criConfigProvisioning = &extensionsv1alpha1.CRIConfig{
@@ -187,7 +186,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
 				maps.Copy(imagesCopy, images)
-				imagesCopy["hyperkube"] = &imagevector.Image{Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/hyperkube"), Tag: ptr.To("v" + k8sVersion.String())}
+				imagesCopy["hyperkube"] = &imagevector.Image{Repository: new("europe-docker.pkg.dev/gardener-project/releases/hyperkube"), Tag: new("v" + k8sVersion.String())}
 
 				apiServerURLForWorker := apiServerURL
 				if worker.ControlPlane != nil {
@@ -364,10 +363,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker1Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
-							Version:        ptr.To("12.34"),
+							Version:        new("12.34"),
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
 						},
 					},
@@ -377,10 +376,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker2Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "type2",
-							Version: ptr.To("12.34"),
+							Version: new("12.34"),
 						},
 					},
 					CRI: &gardencorev1beta1.CRI{
@@ -396,10 +395,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: inPlaceWorkerName1,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
-							Version:        ptr.To("12.34"),
+							Version:        new("12.34"),
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
 						},
 					},
@@ -407,21 +406,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 						Kubelet: &gardencorev1beta1.KubeletConfig{
 							KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-								CPU:    ptr.To(resource.MustParse("100m")),
-								Memory: ptr.To(resource.MustParse("100Mi")),
+								CPU:    new(resource.MustParse("100m")),
+								Memory: new(resource.MustParse("100Mi")),
 							},
 						},
 					},
 
-					UpdateStrategy: ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 				},
 				{
 					Name: inPlaceWorkerName2,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Architecture: new(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "type2",
-							Version: ptr.To("12.34"),
+							Version: new("12.34"),
 						},
 					},
 					CRI: &gardencorev1beta1.CRI{
@@ -432,7 +431,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Version: &workerKubernetesVersion,
 						Kubelet: &gardencorev1beta1.KubeletConfig{},
 					},
-					UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+					UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 				},
 			}
 
@@ -788,7 +787,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						if f.Path == "/var/lib/ca-certificates-local/ROOTcerts.crt" {
 							content, err := utils.DecodeBase64(f.Content.Inline.Data)
 							ExpectWithOffset(1, err).ToNot(HaveOccurred())
-							return ptr.To(string(content))
+							return new(string(content))
 						}
 					}
 					return nil
@@ -817,8 +816,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				When("worker CA bundle is set", func() {
 					BeforeEach(func() {
-						values.Workers[0].CABundle = ptr.To("foo")
-						values.Workers[1].CABundle = ptr.To("bar")
+						values.Workers[0].CABundle = new("foo")
+						values.Workers[1].CABundle = new("bar")
 					})
 
 					It("should append worker CA bundle to the CA bundle", func() {
@@ -862,15 +861,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    ptr.To(key + "-init"),
+							Name:    new(key + "-init"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
+							Purpose: new(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateInit},
 						},
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    ptr.To(key + "-original"),
+							Name:    new(key + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
+							Purpose: new(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
 						},
 					)
@@ -1155,7 +1154,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker1Name: {
 						Init: Data{
 							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							SecretName:                    ptr.To("cc-" + expected[0].Name),
+							SecretName:                    new("cc-" + expected[0].Name),
 							Object:                        worker1OSCDownloader,
 							IncludeSecretNameInWorkerPool: true,
 						},
@@ -1168,7 +1167,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker2Name: {
 						Init: Data{
 							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							SecretName:                    ptr.To("cc-" + expected[2].Name),
+							SecretName:                    new("cc-" + expected[2].Name),
 							Object:                        worker2OSCDownloader,
 							IncludeSecretNameInWorkerPool: true,
 						},
@@ -1379,7 +1378,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Machine: gardencorev1beta1.Machine{
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:    "type1",
-							Version: ptr.To("12.34"),
+							Version: new("12.34"),
 						},
 					},
 				}, nil, nil)
@@ -1414,14 +1413,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Type: "foo",
 					Image: &gardencorev1beta1.ShootMachineImage{
 						Name:    "bar",
-						Version: ptr.To("baz"),
+						Version: new("baz"),
 					},
 				},
 				ProviderConfig: &runtime.RawExtension{
 					Raw: []byte("foo"),
 				},
 				Volume: &gardencorev1beta1.Volume{
-					Type:       ptr.To("fast"),
+					Type:       new("fast"),
 					VolumeSize: "20Gi",
 				},
 			}
@@ -1441,20 +1440,20 @@ var _ = Describe("OperatingSystemConfig", func() {
 			}
 			kubeletConfig = &gardencorev1beta1.KubeletConfig{
 				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
-					CPU:              ptr.To(resource.MustParse("80m")),
-					Memory:           ptr.To(resource.MustParse("1Gi")),
-					PID:              ptr.To(resource.MustParse("10k")),
-					EphemeralStorage: ptr.To(resource.MustParse("20Gi")),
+					CPU:              new(resource.MustParse("80m")),
+					Memory:           new(resource.MustParse("1Gi")),
+					PID:              new(resource.MustParse("10k")),
+					EphemeralStorage: new(resource.MustParse("20Gi")),
 				},
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-					MemoryAvailable: ptr.To("100Mi"),
+					MemoryAvailable: new("100Mi"),
 				},
 				CPUManagerPolicy: nil,
 			}
 
 			kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
-				Mode:    ptr.To(gardencorev1beta1.ProxyModeIPTables),
-				Enabled: ptr.To(false),
+				Mode:    new(gardencorev1beta1.ProxyModeIPTables),
+				Enabled: new(false),
 			}
 
 			var err error
@@ -1470,8 +1469,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 		Context("hash value should not change", func() {
 			AfterEach(func() {
 				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
-					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPTables),
-					Enabled: ptr.To(false),
+					Mode:    new(gardencorev1beta1.ProxyModeIPTables),
+					Enabled: new(false),
 				}
 				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
 				Expect(err).NotTo(HaveOccurred())
@@ -1518,7 +1517,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("when changing the kubernetes version in the worker object", func() {
 				// must use kubernetesVersion instead
 				p.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-					Version: ptr.To("12.34.5"),
+					Version: new("12.34.5"),
 				}
 			})
 
@@ -1528,10 +1527,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("when specifying kubeReserved with different quantities", func() {
 				kubeletConfig.KubeReserved = &gardencorev1beta1.KubeletConfigReserved{
-					CPU:              ptr.To(resource.MustParse("80m")),
-					Memory:           ptr.To(resource.MustParse("1024Mi")),
-					PID:              ptr.To(resource.MustParse("10000")),
-					EphemeralStorage: ptr.To(resource.MustParse("20480Mi")),
+					CPU:              new(resource.MustParse("80m")),
+					Memory:           new(resource.MustParse("1024Mi")),
+					PID:              new(resource.MustParse("10000")),
+					EphemeralStorage: new(resource.MustParse("20480Mi")),
 				}
 			})
 
@@ -1574,7 +1573,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("when changing machine image version", func() {
-				p.Machine.Image.Version = ptr.To("new-version")
+				p.Machine.Image.Version = new("new-version")
 			})
 
 			It("when changing volume type", func() {
@@ -1629,43 +1628,43 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("when changing kubeReserved CPU", func() {
-				kubeletConfig.KubeReserved.CPU = ptr.To(resource.MustParse("100m"))
+				kubeletConfig.KubeReserved.CPU = new(resource.MustParse("100m"))
 			})
 
 			It("when changing kubeReserved memory", func() {
-				kubeletConfig.KubeReserved.Memory = ptr.To(resource.MustParse("2Gi"))
+				kubeletConfig.KubeReserved.Memory = new(resource.MustParse("2Gi"))
 			})
 
 			It("when changing kubeReserved PID", func() {
-				kubeletConfig.KubeReserved.PID = ptr.To(resource.MustParse("15k"))
+				kubeletConfig.KubeReserved.PID = new(resource.MustParse("15k"))
 			})
 
 			It("when changing kubeReserved ephemeral storage", func() {
-				kubeletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("42Gi"))
+				kubeletConfig.KubeReserved.EphemeralStorage = new(resource.MustParse("42Gi"))
 			})
 
 			It("when changing evictionHard memory threshold", func() {
-				kubeletConfig.EvictionHard.MemoryAvailable = ptr.To("200Mi")
+				kubeletConfig.EvictionHard.MemoryAvailable = new("200Mi")
 			})
 
 			It("when changing evictionHard image fs threshold", func() {
-				kubeletConfig.EvictionHard.ImageFSAvailable = ptr.To("200Mi")
+				kubeletConfig.EvictionHard.ImageFSAvailable = new("200Mi")
 			})
 
 			It("when changing evictionHard image fs inodes threshold", func() {
-				kubeletConfig.EvictionHard.ImageFSInodesFree = ptr.To("1k")
+				kubeletConfig.EvictionHard.ImageFSInodesFree = new("1k")
 			})
 
 			It("when changing evictionHard node fs threshold", func() {
-				kubeletConfig.EvictionHard.NodeFSAvailable = ptr.To("200Mi")
+				kubeletConfig.EvictionHard.NodeFSAvailable = new("200Mi")
 			})
 
 			It("when changing evictionHard node fs inodes threshold", func() {
-				kubeletConfig.EvictionHard.NodeFSInodesFree = ptr.To("1k")
+				kubeletConfig.EvictionHard.NodeFSInodesFree = new("1k")
 			})
 
 			It("when changing CPUManagerPolicy", func() {
-				kubeletConfig.CPUManagerPolicy = ptr.To("test")
+				kubeletConfig.CPUManagerPolicy = new("test")
 			})
 
 			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
@@ -1685,8 +1684,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 				var err error
 				kubernetesVersion = semver.MustParse("1.34")
 				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
-					Mode:    ptr.To(gardencorev1beta1.ProxyModeIPVS),
-					Enabled: ptr.To(true),
+					Mode:    new(gardencorev1beta1.ProxyModeIPVS),
+					Enabled: new(true),
 				}
 				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
 				Expect(err).ToNot(HaveOccurred())

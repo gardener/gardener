@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -42,7 +41,7 @@ import (
 func (k *kubeStateMetrics) serviceAccount() *corev1.ServiceAccount {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 	serviceAccount.Labels = k.getLabels()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 	return serviceAccount
 }
 
@@ -128,8 +127,8 @@ func (k *kubeStateMetrics) service() *corev1.Service {
 	service.Labels = k.getLabels()
 
 	metricsPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Port:     new(intstr.FromInt32(port)),
+		Protocol: new(corev1.ProtocolTCP),
 	}
 
 	switch k.values.ClusterType {
@@ -216,7 +215,7 @@ func (k *kubeStateMetrics) deployment(
 
 	deployment.Labels = deploymentLabels
 	deployment.Spec.Replicas = &k.values.Replicas
-	deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
+	deployment.Spec.RevisionHistoryLimit = new(int32(2))
 	deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: k.getLabels()}
 	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -269,7 +268,7 @@ func (k *kubeStateMetrics) deployment(
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      customResourceStateConfigMapName,
@@ -295,7 +294,7 @@ func (k *kubeStateMetrics) deployment(
 		deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	}
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		deployment.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
+		deployment.Spec.Template.Spec.AutomountServiceAccountToken = new(false)
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
 	}
 
@@ -328,7 +327,7 @@ func (k *kubeStateMetrics) verticalPodAutoscaler(deployment *appsv1.Deployment) 
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
@@ -341,9 +340,9 @@ func (k *kubeStateMetrics) podDisruptionBudget(deployment *appsv1.Deployment) *p
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-pdb" + k.values.NameSuffix, Namespace: k.namespace}}
 	podDisruptionBudget.Labels = k.getLabels()
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-		MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+		MaxUnavailable:             new(intstr.FromInt32(1)),
 		Selector:                   deployment.Spec.Selector,
-		UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+		UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 	}
 
 	return podDisruptionBudget
@@ -369,17 +368,17 @@ func (k *kubeStateMetrics) standardScrapeConfigSpec() monitoringv1alpha1.ScrapeC
 			{
 				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_" + labelKeyType},
 				Regex:        `(.+)`,
-				Replacement:  ptr.To(`${1}`),
+				Replacement:  new(`${1}`),
 				TargetLabel:  labelKeyType,
 			},
 			{
 				Action:      "replace",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 			},
 		},
 		MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -558,12 +557,12 @@ func (k *kubeStateMetrics) scrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
 			},
 			{
 				Action:      "replace",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 			},
 		},
 		MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -595,12 +594,12 @@ func (k *kubeStateMetrics) scrapeConfigGarden() *monitoringv1alpha1.ScrapeConfig
 			},
 			{
 				Action:      "replace",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: ptr.To("kube-state-metrics"),
+				Replacement: new("kube-state-metrics"),
 			},
 		},
 		MetricRelabelConfigs: []monitoringv1.RelabelConfig{
@@ -633,7 +632,7 @@ func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 		{
 			Alert: "KubeStateMetricsSeedDown",
 			Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
-			For:   ptr.To(monitoringv1.Duration("15m")),
+			For:   new(monitoringv1.Duration("15m")),
 			Labels: map[string]string{
 				"service":    "kube-state-metrics-seed",
 				"severity":   "critical",
@@ -648,7 +647,7 @@ func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 		{
 			Alert: "KubeStateMetricsShootDown",
 			Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
-			For:   ptr.To(monitoringv1.Duration("15m")),
+			For:   new(monitoringv1.Duration("15m")),
 			Labels: map[string]string{
 				"service":    "kube-state-metrics-shoot",
 				"severity":   "info",
@@ -663,7 +662,7 @@ func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 		{
 			Alert: "NoWorkerNodes",
 			Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
-			For:   ptr.To(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
+			For:   new(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
 			Labels: map[string]string{
 				"service":    "nodes",
 				"severity":   "blocker",

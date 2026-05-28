@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -103,9 +102,9 @@ var _ = Describe("VictoriaLogs", func() {
 					Labels: getLabels(),
 				},
 				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
-					DisableSelfServiceScrape: ptr.To(true),
-					UseStrictSecurity:        ptr.To(true),
-					UseDefaultResources:      ptr.To(false),
+					DisableSelfServiceScrape: new(true),
+					UseStrictSecurity:        new(true),
+					UseDefaultResources:      new(false),
 					Image: victoriametricsv1beta1.Image{
 						Repository: "europe-docker.pkg.dev/gardener-project/releases/some-image",
 						Tag:        "some-tag",
@@ -119,7 +118,7 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 				},
 				CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
-					ReplicaCount: ptr.To(int32(0)),
+					ReplicaCount: new(int32(0)),
 				},
 				RetentionPeriod: "15d",
 				Storage: &corev1.PersistentVolumeClaimSpec{
@@ -151,13 +150,13 @@ var _ = Describe("VictoriaLogs", func() {
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "vlsingle",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 					},
 				},
@@ -178,7 +177,7 @@ var _ = Describe("VictoriaLogs", func() {
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: ptr.To("victoria-logs"),
+							Replacement: new("victoria-logs"),
 							TargetLabel: "job",
 						},
 						{
@@ -198,7 +197,7 @@ var _ = Describe("VictoriaLogs", func() {
 					Rules: []monitoringv1.Rule{{
 						Alert: "VictoriaLogsDown",
 						Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("30m")),
+						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "logging",
 							"severity":   "warning",
@@ -234,11 +233,11 @@ var _ = Describe("VictoriaLogs", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: customResourcesManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -254,7 +253,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
@@ -519,7 +518,7 @@ func getVictoriaLogsPrometheusRule(label string) *monitoringv1.PrometheusRule {
 				Rules: []monitoringv1.Rule{{
 					Alert: "VictoriaLogsDown",
 					Expr:  intstr.FromString(`absent(up{job="victoria-logs"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("30m")),
+					For:   new(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
 						"severity":   "warning",

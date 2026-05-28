@@ -12,7 +12,6 @@ import (
 	"slices"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,7 +34,7 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 	if slices.ContainsFunc(extension.Spec.Resources, func(resource gardencorev1beta1.ControllerResource) bool {
 		return resource.Kind == extensionsv1alpha1.WorkerResource
 	}) && extension.Spec.Deployment != nil && extension.Spec.Deployment.ExtensionDeployment != nil && extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig == nil {
-		extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = ptr.To(true)
+		extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = new(true)
 	}
 
 	if req.Operation == admissionv1.Update {
@@ -47,7 +46,7 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 
 	for i, resource := range extension.Spec.Resources {
 		if resource.Primary == nil {
-			extension.Spec.Resources[i].Primary = ptr.To(true)
+			extension.Spec.Resources[i].Primary = new(true)
 		}
 
 		if resource.Kind == extensionsv1alpha1.ExtensionResource {

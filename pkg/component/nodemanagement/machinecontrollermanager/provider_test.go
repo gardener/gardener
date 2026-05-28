@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
@@ -84,7 +83,7 @@ var _ = Describe("Provider", func() {
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
+				AllowPrivilegeEscalation: new(false),
 			},
 		}
 	})
@@ -146,7 +145,7 @@ var _ = Describe("Provider", func() {
 	It("should return a default VPA container policy object for the provider-specific sidecar container", func() {
 		Expect(ProviderSidecarVPAContainerPolicy(provider)).To(Equal(vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName:    "machine-controller-manager-" + provider,
-			ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 		}))
 	})
 })

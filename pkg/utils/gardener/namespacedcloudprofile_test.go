@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -48,7 +47,7 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 						Name:         "m5.large",
 						CPU:          resource.MustParse("2"),
 						Memory:       resource.MustParse("8Gi"),
-						Architecture: ptr.To("amd64"),
+						Architecture: new("amd64"),
 					},
 				},
 			}
@@ -65,7 +64,7 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 
 			Expect(result.MachineTypes).To(HaveLen(1))
 			machineType := result.MachineTypes[0]
-			Expect(machineType.Architecture).To(Equal(ptr.To("amd64")))
+			Expect(machineType.Architecture).To(Equal(new("amd64")))
 			Expect(machineType.Capabilities[v1beta1constants.ArchitectureName]).To(BeEquivalentTo([]string{"amd64"}))
 		})
 
@@ -170,7 +169,7 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 			Expect(result.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64", "arm64"))
 			Expect(result.MachineImages[0].Versions[0].CapabilityFlavors).To(BeNil())
 			Expect(result.MachineTypes[0].Capabilities).To(BeNil())
-			Expect(result.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+			Expect(result.MachineTypes[0].Architecture).To(Equal(new("amd64")))
 		})
 
 		It("should leave architectures empty for machine image versions with empty capability flavors, to not overwrite images during deepMerge", func() {
@@ -233,13 +232,13 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 					Name:         "m5.large",
 					CPU:          resource.MustParse("2"),
 					Memory:       resource.MustParse("8Gi"),
-					Architecture: ptr.To("amd64"),
+					Architecture: new("amd64"),
 				},
 				{
 					Name:         "m6g.large",
 					CPU:          resource.MustParse("2"),
 					Memory:       resource.MustParse("8Gi"),
-					Architecture: ptr.To("arm64"),
+					Architecture: new("arm64"),
 				},
 			},
 		}
@@ -308,7 +307,7 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 				Name:         "m5.large",
 				CPU:          resource.MustParse("2"),
 				Memory:       resource.MustParse("8Gi"),
-				Architecture: ptr.To("amd64"),
+				Architecture: new("amd64"),
 				Capabilities: gardencorev1beta1.Capabilities{
 					"architecture": {"amd64"},
 				},
@@ -317,7 +316,7 @@ var _ = Describe("TransformSpecToParentFormat", func() {
 				Name:         "m6g.large",
 				CPU:          resource.MustParse("2"),
 				Memory:       resource.MustParse("8Gi"),
-				Architecture: ptr.To("arm64"),
+				Architecture: new("arm64"),
 				Capabilities: gardencorev1beta1.Capabilities{
 					"architecture": {"arm64"},
 				},

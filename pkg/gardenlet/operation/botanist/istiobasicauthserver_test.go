@@ -7,7 +7,6 @@ package botanist
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -31,7 +30,7 @@ var _ = Describe("IstioBasicAuthServer", func() {
 			Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 				SNI: &gardenletconfigv1alpha1.SNI{
 					Ingress: &gardenletconfigv1alpha1.SNIIngress{
-						Namespace: ptr.To("istio-ingress"),
+						Namespace: new("istio-ingress"),
 					},
 				},
 			},

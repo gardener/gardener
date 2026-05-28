@@ -145,7 +145,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 
 func (v *vpa) reconcileRecommenderServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
-	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	serviceAccount.AutomountServiceAccountToken = new(false)
 }
 
 func (v *vpa) reconcileRecommenderClusterRoleMetricsReader(clusterRole *rbacv1.ClusterRole) {
@@ -250,8 +250,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 	})
 	deployment.Spec = appsv1.DeploymentSpec{
-		Replicas:             ptr.To(ptr.Deref(v.values.Recommender.Replicas, 1)),
-		RevisionHistoryLimit: ptr.To[int32](2),
+		Replicas:             new(ptr.Deref(v.values.Recommender.Replicas, 1)),
+		RevisionHistoryLimit: new(int32(2)),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -284,7 +284,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
+						AllowPrivilegeEscalation: new(false),
 					},
 				}},
 			},
@@ -313,16 +313,16 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate)},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    recommenderContainerName,
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		},
@@ -376,8 +376,8 @@ func (v *vpa) computeRecommenderArgs() []string {
 
 func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(recommenderPortMetrics)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Port:     new(intstr.FromInt32(recommenderPortMetrics)),
+		Protocol: new(corev1.ProtocolTCP),
 	}
 
 	switch v.values.ClusterType {
@@ -410,7 +410,7 @@ func (v *vpa) reconcileRecommenderServiceMonitor(serviceMonitor *monitoringv1.Se
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To(recommender),
+					Replacement: new(recommender),
 					TargetLabel: "job",
 				},
 				{

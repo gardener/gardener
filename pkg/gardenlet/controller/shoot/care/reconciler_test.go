@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -66,7 +65,7 @@ var _ = Describe("Shoot Care Control", func() {
 				Namespace: shootNamespace,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To(seedName),
+				SeedName: new(seedName),
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{
 						{Name: "foo"},
@@ -74,7 +73,7 @@ var _ = Describe("Shoot Care Control", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName: ptr.To(seedName),
+				SeedName: new(seedName),
 			},
 		}
 

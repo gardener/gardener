@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -53,38 +52,38 @@ var _ = Describe("Shoot defaulting", func() {
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
 						obj.Spec.Provider.Workers = []Worker{{}}
 						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-							MaxPods: ptr.To[int32](250),
+							MaxPods: new(int32(250)),
 						}
 
 						SetObjectDefaults_Shoot(obj)
 
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](23)))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(new(int32(23))))
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 					})
 
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
 						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-							MaxPods: ptr.To[int32](64),
+							MaxPods: new(int32(64)),
 						}
 						obj.Spec.Provider.Workers = []Worker{{
 							Name: "1",
 							Kubernetes: &WorkerKubernetes{
 								Kubelet: &KubeletConfig{
-									MaxPods: ptr.To[int32](100),
+									MaxPods: new(int32(100)),
 								},
 							},
 						}, {
 							Name: "2",
 							Kubernetes: &WorkerKubernetes{
 								Kubelet: &KubeletConfig{
-									MaxPods: ptr.To[int32](260),
+									MaxPods: new(int32(260)),
 								},
 							},
 						}}
 
 						SetObjectDefaults_Shoot(obj)
 
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](22)))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(new(int32(22))))
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
 					})
 				})
@@ -105,7 +104,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 					It("should not default NodeCIDRMaskSize if NodeCIDRMaskSizeIPv6 is set by user for IPv6 single stack", func() {
 						obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{
-							NodeCIDRMaskSizeIPv6: ptr.To[int32](80),
+							NodeCIDRMaskSizeIPv6: new(int32(80)),
 						}
 						SetObjectDefaults_Shoot(obj)
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(80))))
@@ -196,7 +195,7 @@ var _ = Describe("Shoot defaulting", func() {
 				mode := ProxyModeIPVS
 				obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{
 					Mode:    &mode,
-					Enabled: ptr.To(false),
+					Enabled: new(false),
 				}
 				SetObjectDefaults_Shoot(obj)
 
@@ -232,7 +231,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not overwrite already set values for failSwapOn field", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = new(false)
 
 				SetObjectDefaults_Shoot(obj)
 
@@ -241,7 +240,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should default the swap behaviour", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = new(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				SetObjectDefaults_Shoot(obj)
 
@@ -252,7 +251,7 @@ var _ = Describe("Shoot defaulting", func() {
 			It("should not overwrite already set values for swap behaviour", func() {
 				noSwap := NoSwap
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = new(false)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{SwapBehavior: &noSwap}
 				SetObjectDefaults_Shoot(obj)
@@ -263,7 +262,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not default the swap behaviour because failSwapOn=true", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = new(true)
 				obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 				SetObjectDefaults_Shoot(obj)
 
@@ -272,7 +271,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not default the swap behaviour because kubelet NodeSwap feature gate is false", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+				obj.Spec.Kubernetes.Kubelet.FailSwapOn = new(false)
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -332,7 +331,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			It("should not overwrite already set values for serializeImagePulls field", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(false)
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = new(false)
 
 				SetObjectDefaults_Shoot(obj)
 
@@ -373,7 +372,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = new(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
@@ -394,7 +393,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = new(false)
 			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
@@ -423,7 +422,7 @@ var _ = Describe("Shoot defaulting", func() {
 					},
 				},
 			}
-			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = ptr.To(false)
+			obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = new(false)
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
@@ -482,7 +481,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for schedulerName field", func() {
-			obj.Spec.SchedulerName = ptr.To("foo-scheduler")
+			obj.Spec.SchedulerName = new("foo-scheduler")
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -582,7 +581,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for kubernetesDashboard field", func() {
 			obj.Spec.Addons = &Addons{
 				KubernetesDashboard: &KubernetesDashboard{
-					AuthenticationMode: ptr.To("foo"),
+					AuthenticationMode: new("foo"),
 				},
 			}
 
@@ -663,7 +662,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Maintenance = &Maintenance{
 				AutoUpdate: &MaintenanceAutoUpdate{
 					KubernetesVersion:   false,
-					MachineImageVersion: ptr.To(false),
+					MachineImageVersion: new(false),
 				},
 			}
 
@@ -767,7 +766,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for log verbosity level", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: ptr.To[int32](3)}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: new(int32(3))}}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -782,7 +781,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 		It("should not overwrite the already set encryption provider type", func() {
 			const EncryptionProviderTypeFoo EncryptionProviderType = "foo"
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EncryptionConfig: &EncryptionConfig{Provider: EncryptionProvider{Type: ptr.To(EncryptionProviderTypeFoo)}}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EncryptionConfig: &EncryptionConfig{Provider: EncryptionProvider{Type: new(EncryptionProviderTypeFoo)}}}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -797,7 +796,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 		It("should not overwrite the already set values for defaultNotReadyTolerationSeconds field", func() {
 			var tolerationSeconds int64 = 120
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: ptr.To(tolerationSeconds)}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultNotReadyTolerationSeconds: new(tolerationSeconds)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -820,7 +819,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 		It("should not overwrite the already set values for defaultUnreachableTolerationSeconds field", func() {
 			var tolerationSeconds int64 = 120
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: ptr.To(tolerationSeconds)}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{DefaultUnreachableTolerationSeconds: new(tolerationSeconds)}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -870,7 +869,7 @@ var _ = Describe("Shoot defaulting", func() {
 		obj.Spec.Provider.Workers = []Worker{
 			{Name: "Default Worker"},
 			{Name: "Worker with machine architecture type",
-				Machine: Machine{Architecture: ptr.To("test")}},
+				Machine: Machine{Architecture: new("test")}},
 		}
 
 		SetObjectDefaults_Shoot(obj)
@@ -967,8 +966,8 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should default the worker fields for update strategy InPlaceUpdate", func() {
-			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(AutoInPlaceUpdate)
-			obj.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
+			obj.Spec.Provider.Workers[0].UpdateStrategy = new(AutoInPlaceUpdate)
+			obj.Spec.Provider.Workers[1].UpdateStrategy = new(ManualInPlaceUpdate)
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.Workers[0].MaxSurge).To(PointTo(Equal(intstr.FromInt32(0))))
@@ -992,27 +991,27 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Provider.Workers = []Worker{
 				{
 					Name:                             "worker-1",
-					MaxSurge:                         ptr.To(intstr.FromInt32(2)),
-					MaxUnavailable:                   ptr.To(intstr.FromInt32(1)),
+					MaxSurge:                         new(intstr.FromInt32(2)),
+					MaxUnavailable:                   new(intstr.FromInt32(1)),
 					SystemComponents:                 &WorkerSystemComponents{Allow: false},
-					UpdateStrategy:                   ptr.To(AutoInPlaceUpdate),
-					MachineControllerManagerSettings: &MachineControllerManagerSettings{DisableHealthTimeout: ptr.To(false)},
+					UpdateStrategy:                   new(AutoInPlaceUpdate),
+					MachineControllerManagerSettings: &MachineControllerManagerSettings{DisableHealthTimeout: new(false)},
 				},
 				{
 					Name:                             "worker-2",
-					MaxSurge:                         ptr.To(intstr.FromInt32(0)),
-					MaxUnavailable:                   ptr.To(intstr.FromInt32(2)),
+					MaxSurge:                         new(intstr.FromInt32(0)),
+					MaxUnavailable:                   new(intstr.FromInt32(2)),
 					SystemComponents:                 &WorkerSystemComponents{Allow: false},
-					UpdateStrategy:                   ptr.To(ManualInPlaceUpdate),
-					MachineControllerManagerSettings: &MachineControllerManagerSettings{DisableHealthTimeout: ptr.To(false)},
+					UpdateStrategy:                   new(ManualInPlaceUpdate),
+					MachineControllerManagerSettings: &MachineControllerManagerSettings{DisableHealthTimeout: new(false)},
 				},
 				{
 					Name:                             "worker-3",
-					MaxSurge:                         ptr.To(intstr.FromInt32(1)),
-					MaxUnavailable:                   ptr.To(intstr.FromInt32(2)),
+					MaxSurge:                         new(intstr.FromInt32(1)),
+					MaxUnavailable:                   new(intstr.FromInt32(2)),
 					SystemComponents:                 &WorkerSystemComponents{Allow: false},
-					UpdateStrategy:                   ptr.To(AutoRollingUpdate),
-					MachineControllerManagerSettings: &MachineControllerManagerSettings{DisableHealthTimeout: ptr.To(true)},
+					UpdateStrategy:                   new(AutoRollingUpdate),
+					MachineControllerManagerSettings: &MachineControllerManagerSettings{DisableHealthTimeout: new(true)},
 				},
 			}
 
@@ -1080,18 +1079,18 @@ var _ = Describe("Shoot defaulting", func() {
 				ScaleDownDelayAfterDelete:       &metav1.Duration{Duration: 2 * time.Hour},
 				ScaleDownDelayAfterFailure:      &metav1.Duration{Duration: 3 * time.Hour},
 				ScaleDownUnneededTime:           &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold:   ptr.To(0.8),
+				ScaleDownUtilizationThreshold:   new(0.8),
 				ScanInterval:                    &metav1.Duration{Duration: 5 * time.Hour},
 				Expander:                        &expanderRandom,
 				MaxNodeProvisionTime:            &metav1.Duration{Duration: 6 * time.Hour},
-				MaxGracefulTerminationSeconds:   ptr.To(int32(60 * 60 * 24)),
-				IgnoreDaemonsetsUtilization:     ptr.To(true),
-				EmitPerNodeGroupMetrics:         ptr.To(true),
-				Verbosity:                       ptr.To[int32](4),
+				MaxGracefulTerminationSeconds:   new(int32(60 * 60 * 24)),
+				IgnoreDaemonsetsUtilization:     new(true),
+				EmitPerNodeGroupMetrics:         new(true),
+				Verbosity:                       new(int32(4)),
 				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:              ptr.To[int32](20),
-				MaxScaleDownParallelism:         ptr.To[int32](15),
-				MaxDrainParallelism:             ptr.To[int32](5),
+				MaxEmptyBulkDelete:              new(int32(20)),
+				MaxScaleDownParallelism:         new(int32(15)),
+				MaxDrainParallelism:             new(int32(5)),
 				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
 				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
 				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
@@ -1128,17 +1127,17 @@ var _ = Describe("Shoot defaulting", func() {
 				ScaleDownDelayAfterDelete:       &metav1.Duration{Duration: 2 * time.Hour},
 				ScaleDownDelayAfterFailure:      &metav1.Duration{Duration: 3 * time.Hour},
 				ScaleDownUnneededTime:           &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold:   ptr.To(0.8),
+				ScaleDownUtilizationThreshold:   new(0.8),
 				ScanInterval:                    &metav1.Duration{Duration: 5 * time.Hour},
 				Expander:                        &expanderRandom,
 				MaxNodeProvisionTime:            &metav1.Duration{Duration: 6 * time.Hour},
-				MaxGracefulTerminationSeconds:   ptr.To(int32(60 * 60 * 24)),
-				IgnoreDaemonsetsUtilization:     ptr.To(true),
-				EmitPerNodeGroupMetrics:         ptr.To(true),
-				Verbosity:                       ptr.To[int32](4),
+				MaxGracefulTerminationSeconds:   new(int32(60 * 60 * 24)),
+				IgnoreDaemonsetsUtilization:     new(true),
+				EmitPerNodeGroupMetrics:         new(true),
+				Verbosity:                       new(int32(4)),
 				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:              ptr.To[int32](17),
-				MaxDrainParallelism:             ptr.To[int32](5),
+				MaxEmptyBulkDelete:              new(int32(17)),
+				MaxDrainParallelism:             new(int32(5)),
 				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
 				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
 				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
@@ -1204,22 +1203,22 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
 				EvictAfterOOMThreshold:                   &metav1.Duration{Duration: 5 * time.Minute},
-				EvictionRateBurst:                        ptr.To[int32](2),
-				EvictionRateLimit:                        ptr.To(1.0),
+				EvictionRateBurst:                        new(int32(2)),
+				EvictionRateLimit:                        new(1.0),
 				EvictionTolerance:                        &evictionTolerance,
 				RecommendationMarginFraction:             &recommendationMarginFraction,
 				UpdaterInterval:                          &metav1.Duration{Duration: 2 * time.Minute},
 				RecommenderInterval:                      &metav1.Duration{Duration: 2 * time.Minute},
-				TargetCPUPercentile:                      ptr.To(0.333),
-				RecommendationLowerBoundCPUPercentile:    ptr.To(0.303),
-				RecommendationUpperBoundCPUPercentile:    ptr.To(0.393),
+				TargetCPUPercentile:                      new(0.333),
+				RecommendationLowerBoundCPUPercentile:    new(0.303),
+				RecommendationUpperBoundCPUPercentile:    new(0.393),
 				CPUHistogramDecayHalfLife:                &metav1.Duration{Duration: 2 * time.Minute},
-				TargetMemoryPercentile:                   ptr.To(0.444),
-				RecommendationLowerBoundMemoryPercentile: ptr.To(0.404),
-				RecommendationUpperBoundMemoryPercentile: ptr.To(0.494),
+				TargetMemoryPercentile:                   new(0.444),
+				RecommendationLowerBoundMemoryPercentile: new(0.404),
+				RecommendationUpperBoundMemoryPercentile: new(0.494),
 				MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
 				MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
-				MemoryAggregationIntervalCount:           ptr.To[int64](42),
+				MemoryAggregationIntervalCount:           new(int64(42)),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -1262,7 +1261,7 @@ var _ = Describe("Shoot defaulting", func() {
 			})
 
 			It("should not overwrite existing extension type", func() {
-				obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type = ptr.To("stackit")
+				obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type = new("stackit")
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type).To(PointTo(Equal("stackit")))

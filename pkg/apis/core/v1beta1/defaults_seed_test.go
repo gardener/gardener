@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -42,15 +41,15 @@ var _ = Describe("Seed defaulting", func() {
 
 		It("should default the excessCapacityReservation field when excess capacity reservation is enabled and excess capacity reservation config empty", func() {
 			var excessCapacityReservation = SeedSettingExcessCapacityReservation{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 				Configs: []SeedSettingExcessCapacityReservationConfig{
 					{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
 				},
 			}
 
 			obj.Spec.Settings = &SeedSettings{}
-			obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{Enabled: ptr.To(true)}
-			obj.Spec.Settings.ExcessCapacityReservation.Enabled = ptr.To(true)
+			obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{Enabled: new(true)}
+			obj.Spec.Settings.ExcessCapacityReservation.Enabled = new(true)
 
 			SetObjectDefaults_Seed(obj)
 
@@ -61,7 +60,7 @@ var _ = Describe("Seed defaulting", func() {
 		It("should not overwrite the already set values for seed settings field", func() {
 			var (
 				excessCapacityReservation = SeedSettingExcessCapacityReservation{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 					Configs: []SeedSettingExcessCapacityReservationConfig{
 						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")}},
 					},
@@ -107,7 +106,7 @@ var _ = Describe("Seed defaulting", func() {
 			obj.Spec.Settings = &SeedSettings{
 				LoadBalancerServices: &SeedSettingLoadBalancerServices{
 					ZonalIngress: &SeedSettingLoadBalancerServicesZonalIngress{
-						Enabled: ptr.To(false), // user sets to false
+						Enabled: new(false), // user sets to false
 					},
 				},
 			}

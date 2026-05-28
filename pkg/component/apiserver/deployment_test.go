@@ -10,7 +10,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/component/apiserver"
@@ -30,18 +29,18 @@ var _ = Describe("Deployment", func() {
 				values           = Values{
 					FeatureGates: map[string]bool{"Foo": true, "Bar": false},
 					Requests: &gardencorev1beta1.APIServerRequests{
-						MaxMutatingInflight:    ptr.To[int32](1),
-						MaxNonMutatingInflight: ptr.To[int32](2),
+						MaxMutatingInflight:    new(int32(1)),
+						MaxNonMutatingInflight: new(int32(2)),
 					},
 					Logging: &gardencorev1beta1.APIServerLogging{
-						Verbosity:           ptr.To[int32](3),
-						HTTPAccessVerbosity: ptr.To[int32](4),
+						Verbosity:           new(int32(3)),
+						HTTPAccessVerbosity: new(int32(4)),
 					},
 					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
-						Default: ptr.To[int32](6),
+						Default: new(int32(6)),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
-							{APIGroup: ptr.To("foo"), Resource: "bar"},
-							{APIGroup: ptr.To("baz"), Resource: "foo", CacheSize: 7},
+							{APIGroup: new("foo"), Resource: "bar"},
+							{APIGroup: new("baz"), Resource: "foo", CacheSize: 7},
 						},
 					},
 				}
@@ -102,7 +101,7 @@ var _ = Describe("Deployment", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretETCDClient.Name,
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},
@@ -111,7 +110,7 @@ var _ = Describe("Deployment", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretServer.Name,
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(int32(0640)),
 										},
 									},
 								},

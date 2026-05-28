@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -246,7 +245,7 @@ var _ = Describe("handler", func() {
 						},
 
 						Entry("seed name is nil", nil),
-						Entry("seed name is different", ptr.To("some-different-seed")),
+						Entry("seed name is different", new("some-different-seed")),
 					)
 
 					It("should allow the request because seed name in spec matches", func() {
@@ -356,7 +355,7 @@ var _ = Describe("handler", func() {
 						},
 
 						Entry("seed name is nil", nil),
-						Entry("seed name is different", ptr.To("some-different-seed")),
+						Entry("seed name is different", new("some-different-seed")),
 					)
 
 					It("should allow the request because seed name matches", func() {
@@ -514,9 +513,9 @@ var _ = Describe("handler", func() {
 						},
 
 						Entry("seed name is nil", nil, nil),
-						Entry("seed name is different", ptr.To("some-different-seed"), nil),
+						Entry("seed name is different", new("some-different-seed"), nil),
 						Entry("seed name is equal but bucket's seed name is nil", &seedName, nil),
-						Entry("seed name is equal but bucket's seed name is different", &seedName, ptr.To("some-different-seed")),
+						Entry("seed name is equal but bucket's seed name is different", &seedName, new("some-different-seed")),
 					)
 
 					It("should allow the request because seed name matches for both entry and bucket", func() {
@@ -651,7 +650,7 @@ var _ = Describe("handler", func() {
 								},
 								Spec: gardencorev1beta1.BackupEntrySpec{
 									BucketName: "some-different-bucket",
-									SeedName:   ptr.To("some-different-seedname"),
+									SeedName:   new("some-different-seedname"),
 								},
 							}
 
@@ -943,7 +942,7 @@ var _ = Describe("handler", func() {
 										},
 
 										Entry("seed name is nil", nil),
-										Entry("seed name is different", ptr.To("some-different-seed")),
+										Entry("seed name is different", new("some-different-seed")),
 									)
 
 									It("should allow the request because the seed name of the shoot referenced by the managedseed matches", func() {
@@ -1083,7 +1082,7 @@ var _ = Describe("handler", func() {
 									Name: name,
 								},
 								Spec: gardencorev1beta1.BackupBucketSpec{
-									SeedName: ptr.To("some-different-seed"),
+									SeedName: new("some-different-seed"),
 								},
 							}
 							Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
@@ -1163,7 +1162,7 @@ var _ = Describe("handler", func() {
 										Namespace: namespace,
 									},
 									Spec: gardencorev1beta1.ShootSpec{
-										SeedName: ptr.To("some-different-seed"),
+										SeedName: new("some-different-seed"),
 									},
 								}
 
@@ -1335,7 +1334,7 @@ var _ = Describe("handler", func() {
 										Namespace: namespace,
 									},
 									Spec: gardencorev1beta1.ShootSpec{
-										SeedName: ptr.To("some-different-seed"),
+										SeedName: new("some-different-seed"),
 									},
 								}
 
@@ -1551,7 +1550,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
-							shoot.Spec.SeedName = ptr.To("some-other-seed")
+							shoot.Spec.SeedName = new("some-other-seed")
 
 							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -1905,7 +1904,7 @@ var _ = Describe("handler", func() {
 									Namespace: managedSeed1Namespace,
 									Name:      "shoot1",
 								},
-								Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-other-seed-name")},
+								Spec: gardencorev1beta1.ShootSpec{SeedName: new("some-other-seed-name")},
 							}
 							shoot2 = &gardencorev1beta1.Shoot{
 								ObjectMeta: metav1.ObjectMeta{
@@ -2187,7 +2186,7 @@ var _ = Describe("handler", func() {
 										Name:      name,
 										Namespace: namespace,
 									},
-									Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")},
+									Spec: gardencorev1beta1.ShootSpec{SeedName: new("some-different-seed")},
 								}
 
 								Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -2321,7 +2320,7 @@ var _ = Describe("handler", func() {
 										Name:      name,
 										Namespace: namespace,
 									},
-									Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")},
+									Spec: gardencorev1beta1.ShootSpec{SeedName: new("some-different-seed")},
 								}
 
 								Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -2732,7 +2731,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
-								shoot.Spec.SeedName = ptr.To("some-other-seed")
+								shoot.Spec.SeedName = new("some-other-seed")
 
 								Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 								Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
@@ -3120,7 +3119,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
-							shoot.Spec.SeedName = ptr.To("some-other-seed")
+							shoot.Spec.SeedName = new("some-other-seed")
 
 							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())

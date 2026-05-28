@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -167,7 +166,7 @@ func (c *coreDNS) Deploy(ctx context.Context) error {
 					{
 						Alert: "CoreDNSDown",
 						Expr:  intstr.FromString(`absent(up{job="coredns"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("20m")),
+						For:   new(monitoringv1.Duration("20m")),
 						Labels: map[string]string{
 							"service":    serviceName,
 							"severity":   "critical",
@@ -243,7 +242,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -418,13 +417,13 @@ import custom/*.server
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](2),
-				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             new(int32(2)),
+				RevisionHistoryLimit: new(int32(2)),
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       ptr.To(intstr.FromInt32(1)),
-						MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+						MaxSurge:       new(intstr.FromInt32(1)),
+						MaxUnavailable: new(intstr.FromInt32(0)),
 					},
 				},
 				Selector: &metav1.LabelSelector{
@@ -440,9 +439,9 @@ import custom/*.server
 						ServiceAccountName: serviceAccount.Name,
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To[int64](65534),
-							FSGroup:            ptr.To[int64](1),
+							RunAsNonRoot:       new(true),
+							RunAsUser:          new(int64(65534)),
+							FSGroup:            new(int64(1)),
 							SupplementalGroups: []int64{1},
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -507,12 +506,12 @@ import custom/*.server
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 									Drop: []corev1.Capability{"all"},
 								},
-								ReadOnlyRootFilesystem: ptr.To(true),
+								ReadOnlyRootFilesystem: new(true),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -549,8 +548,8 @@ import custom/*.server
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: configMapCustom.Name,
 										},
-										DefaultMode: ptr.To[int32](420),
-										Optional:    ptr.To(true),
+										DefaultMode: new(int32(420)),
+										Optional:    new(true),
 									},
 								},
 							},
@@ -565,7 +564,7 @@ import custom/*.server
 				Name:      "coredns-autoscaler",
 				Namespace: metav1.NamespaceSystem,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterProportionalDNSAutoscalerClusterRole = &rbacv1.ClusterRole{
@@ -621,7 +620,7 @@ import custom/*.server
 				Labels:    getClusterProportionalDNSAutoscalerLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{corednsconstants.LabelKey: clusterProportionalDNSAutoscalerLabelValue},
 				},
@@ -633,10 +632,10 @@ import custom/*.server
 						PriorityClassName:  "system-cluster-critical",
 						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To[int64](65534),
+							RunAsNonRoot:       new(true),
+							RunAsUser:          new(int64(65534)),
 							SupplementalGroups: []int64{65534},
-							FSGroup:            ptr.To[int64](65534),
+							FSGroup:            new(int64(65534)),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
@@ -664,11 +663,11 @@ import custom/*.server
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"all"},
 								},
-								ReadOnlyRootFilesystem: ptr.To(true),
+								ReadOnlyRootFilesystem: new(true),
 							},
 						}},
 					},
@@ -698,7 +697,7 @@ import custom/*.server
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -712,9 +711,9 @@ import custom/*.server
 				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable:             new(intstr.FromInt32(1)),
 				Selector:                   deployment.Spec.Selector,
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -727,7 +726,7 @@ import custom/*.server
 				},
 			},
 			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				MinReplicas: ptr.To[int32](2),
+				MinReplicas: new(int32(2)),
 				MaxReplicas: 5,
 				Metrics: []autoscalingv2.MetricSpec{{
 					Type: autoscalingv2.ResourceMetricSourceType,
@@ -735,7 +734,7 @@ import custom/*.server
 						Name: corev1.ResourceCPU,
 						Target: autoscalingv2.MetricTarget{
 							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To[int32](70),
+							AverageUtilization: new(int32(70)),
 						},
 					},
 				}},

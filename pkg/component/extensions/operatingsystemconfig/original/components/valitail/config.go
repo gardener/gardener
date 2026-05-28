@@ -12,7 +12,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -59,7 +58,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: new(uint32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -74,7 +73,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: ptr.To[uint32](0644),
+		Permissions: new(uint32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -87,9 +86,9 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 func getValitailUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Enable:  ptr.To(true),
-		Content: ptr.To(`[Unit]
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
 [Install]

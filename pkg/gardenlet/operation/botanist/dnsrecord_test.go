@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -103,13 +102,13 @@ var _ = Describe("dnsrecord", func() {
 				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 					Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
 						Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
-							DNSEntryTTLSeconds: ptr.To(ttl),
+							DNSEntryTTLSeconds: new(ttl),
 						},
 					},
 				},
 				Shoot: &shoot.Shoot{
 					ControlPlaneNamespace: controlPlaneNamespace,
-					ExternalClusterDomain: ptr.To(externalDomain),
+					ExternalClusterDomain: new(externalDomain),
 					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
 						Provider: externalProvider,
@@ -120,7 +119,7 @@ var _ = Describe("dnsrecord", func() {
 							},
 						},
 					},
-					InternalClusterDomain: ptr.To(internalDomain),
+					InternalClusterDomain: new(internalDomain),
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
 							ExternalDNSRecord: externalDNSRecord,
@@ -151,7 +150,7 @@ var _ = Describe("dnsrecord", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To(externalDomain),
+					Domain: new(externalDomain),
 				},
 			},
 		})
@@ -187,9 +186,9 @@ var _ = Describe("dnsrecord", func() {
 				Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:         controlPlaneNamespace,
-				TTL:               ptr.To(ttl),
+				TTL:               new(ttl),
 				Type:              externalProvider,
-				Zone:              ptr.To(externalZone),
+				Zone:              new(externalZone),
 				DNSName:           "api." + externalDomain,
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
@@ -259,11 +258,11 @@ var _ = Describe("dnsrecord", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: controlPlaneNamespace,
 					},
-					Zone:       ptr.To(externalZone),
+					Zone:       new(externalZone),
 					Name:       "api." + externalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},
-					TTL:        ptr.To(ttl),
+					TTL:        new(ttl),
 				},
 			}))
 
@@ -334,11 +333,11 @@ var _ = Describe("dnsrecord", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: controlPlaneNamespace,
 					},
-					Zone:       ptr.To(externalZone),
+					Zone:       new(externalZone),
 					Name:       "api." + externalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},
-					TTL:        ptr.To(ttl),
+					TTL:        new(ttl),
 				},
 			}))
 
@@ -379,9 +378,9 @@ var _ = Describe("dnsrecord", func() {
 				Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 				SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 				Namespace:         controlPlaneNamespace,
-				TTL:               ptr.To(ttl),
+				TTL:               new(ttl),
 				Type:              internalProvider,
-				Zone:              ptr.To(internalZone),
+				Zone:              new(internalZone),
 				DNSName:           "api." + internalDomain,
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
@@ -456,11 +455,11 @@ var _ = Describe("dnsrecord", func() {
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName,
 						Namespace: controlPlaneNamespace,
 					},
-					Zone:       ptr.To(internalZone),
+					Zone:       new(internalZone),
 					Name:       "api." + internalDomain,
 					RecordType: extensionsv1alpha1.DNSRecordTypeA,
 					Values:     []string{address},
-					TTL:        ptr.To(ttl),
+					TTL:        new(ttl),
 				},
 			}))
 

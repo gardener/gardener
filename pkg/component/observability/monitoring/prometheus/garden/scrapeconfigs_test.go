@@ -11,7 +11,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 )
@@ -65,7 +64,7 @@ metric_relabel_configs:
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action:      "replace",
-						Replacement: ptr.To("prometheus-garden"),
+						Replacement: new("prometheus-garden"),
 						TargetLabel: "job",
 					}},
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -102,9 +101,9 @@ metric_relabel_configs:
 					&monitoringv1alpha1.ScrapeConfig{
 						ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate"},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
-							HonorLabels:     ptr.To(true),
-							HonorTimestamps: ptr.To(false),
-							MetricsPath:     ptr.To("/federate"),
+							HonorLabels:     new(true),
+							HonorTimestamps: new(false),
+							MetricsPath:     new("/federate"),
 							Params: map[string][]string{
 								"match[]": {
 									`{__name__=~"seed:(.+):count"}`,
@@ -126,7 +125,7 @@ metric_relabel_configs:
 							StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: prometheusAggregateTargets}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{{
 								Action:      "replace",
-								Replacement: ptr.To("prometheus-aggregate"),
+								Replacement: new("prometheus-aggregate"),
 								TargetLabel: "job",
 							}},
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -138,10 +137,10 @@ metric_relabel_configs:
 					&monitoringv1alpha1.ScrapeConfig{
 						ObjectMeta: metav1.ObjectMeta{Name: "prometheus-aggregate-ingress"},
 						Spec: monitoringv1alpha1.ScrapeConfigSpec{
-							HonorLabels:     ptr.To(true),
-							HonorTimestamps: ptr.To(false),
-							MetricsPath:     ptr.To("/federate"),
-							Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
+							HonorLabels:     new(true),
+							HonorTimestamps: new(false),
+							MetricsPath:     new("/federate"),
+							Scheme:          new(monitoringv1.SchemeHTTPS),
 							Params: map[string][]string{
 								"match[]": {
 									`{__name__=~"seed:(.+):count"}`,
@@ -160,7 +159,7 @@ metric_relabel_configs:
 									`{__name__="kube_node_spec_taint"}`,
 								},
 							},
-							TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+							TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
 							BasicAuth: &monitoringv1.BasicAuth{
 								Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: globalMonitoringSecret.Name}, Key: "username"},
 								Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: globalMonitoringSecret.Name}, Key: "password"},
@@ -168,7 +167,7 @@ metric_relabel_configs:
 							StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: prometheusAggregateIngressTargets}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{{
 								Action:      "replace",
-								Replacement: ptr.To("prometheus-aggregate"),
+								Replacement: new("prometheus-aggregate"),
 								TargetLabel: "job",
 							}},
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{

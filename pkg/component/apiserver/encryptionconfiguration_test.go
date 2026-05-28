@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -82,7 +81,7 @@ resources:
 					},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data:      expectedSecretETCDEncryptionConfiguration.Data,
 			}))
 
@@ -152,7 +151,7 @@ resources:
 					},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data:      expectedSecretETCDEncryptionConfiguration.Data,
 			}))
 
@@ -253,7 +252,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
@@ -339,7 +338,7 @@ resources:
 						},
 						ResourceVersion: "1",
 					},
-					Immutable: ptr.To(true),
+					Immutable: new(true),
 					Data:      expectedSecretETCDEncryptionConfiguration.Data,
 				}))
 
@@ -385,7 +384,7 @@ resources:
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  secretETCDEncryptionConfiguration.Name,
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							}},

@@ -7,7 +7,6 @@ package migration_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -32,10 +31,10 @@ var _ = Describe("Add", func() {
 			predicate = reconciler.ShootPredicate()
 			shoot = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: ptr.To("seed-1"),
+					SeedName: new("seed-1"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: ptr.To("seed-1"),
+					SeedName: new("seed-1"),
 				},
 			}
 		})
@@ -46,7 +45,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true because shoot needs migration", func() {
-				shoot.Spec.SeedName = ptr.To("seed-2")
+				shoot.Spec.SeedName = new("seed-2")
 
 				Expect(predicate.Create(event.CreateEvent{Object: shoot})).To(BeTrue())
 			})
@@ -75,7 +74,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true because seed name is changed", func() {
-				shootNew.Spec.SeedName = ptr.To("seed-2")
+				shootNew.Spec.SeedName = new("seed-2")
 
 				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shootNew, ObjectOld: shoot})).To(BeTrue())
 			})

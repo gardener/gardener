@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -111,7 +110,7 @@ var _ = Describe("Etcd", func() {
 				expectedReplicas:                  PointTo(Equal(int32(1))),
 				expectedETCDMainStorageCapacity:   Equal("25Gi"),
 				expectedETCDEventsStorageCapacity: Equal("10Gi"),
-				expectedDefragmentationSchedule:   Equal(ptr.To("34 12 */3 * *")),
+				expectedDefragmentationSchedule:   Equal(new("34 12 */3 * *")),
 				expectedMaintenanceTimeWindow:     Equal(maintenanceTimeWindow),
 				expectedHighAvailabilityEnabled:   Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 			}
@@ -148,7 +147,7 @@ var _ = Describe("Etcd", func() {
 		Context("with ManagedSeed", func() {
 			BeforeEach(func() {
 				botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-				validator.expectedDefragmentationSchedule = Equal(ptr.To("34 12 * * *"))
+				validator.expectedDefragmentationSchedule = Equal(new("34 12 * * *"))
 			})
 
 			It("should successfully create an etcd interface (normal class)", func() {
@@ -258,11 +257,11 @@ var _ = Describe("Etcd", func() {
 				},
 				ControlPlaneNamespace: namespace,
 				BackupEntryName:       namespace + "--" + string(shootUID),
-				InternalClusterDomain: ptr.To("internal.example.com"),
+				InternalClusterDomain: new("internal.example.com"),
 			}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 				Status: gardencorev1beta1.SeedStatus{
-					ClusterIdentity: ptr.To("seed-identity"),
+					ClusterIdentity: new("seed-identity"),
 				},
 			})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -406,10 +405,10 @@ var _ = Describe("Etcd", func() {
 
 					for _, etcd := range []*mocketcd.MockInterface{etcdMain, etcdEvents} {
 						gomock.InOrder(
-							etcd.EXPECT().GetReplicas().Return(ptr.To[int32](3)),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](1)),
+							etcd.EXPECT().GetReplicas().Return(new(int32(3))),
+							etcd.EXPECT().SetReplicas(new(int32(1))),
 							etcd.EXPECT().Deploy(ctx),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](3)),
+							etcd.EXPECT().SetReplicas(new(int32(3))),
 						)
 					}
 
@@ -427,10 +426,10 @@ var _ = Describe("Etcd", func() {
 
 					for _, etcd := range []*mocketcd.MockInterface{etcdMain, etcdEvents} {
 						gomock.InOrder(
-							etcd.EXPECT().GetReplicas().Return(ptr.To[int32](3)),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](1)),
+							etcd.EXPECT().GetReplicas().Return(new(int32(3))),
+							etcd.EXPECT().SetReplicas(new(int32(1))),
 							etcd.EXPECT().Deploy(ctx),
-							etcd.EXPECT().SetReplicas(ptr.To[int32](3)),
+							etcd.EXPECT().SetReplicas(new(int32(3))),
 						)
 					}
 

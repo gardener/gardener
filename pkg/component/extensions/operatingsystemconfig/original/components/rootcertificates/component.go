@@ -11,7 +11,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -69,7 +68,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		// This file contains Gardener CAs for Debian based OS
 		{
 			Path:        PathLocalSSLRootCerts,
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -80,7 +79,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		// This file contains Gardener CAs for Redhat/SUSE OS
 		{
 			Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-			Permissions: ptr.To[uint32](0644),
+			Permissions: new(uint32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -92,8 +91,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	updateCACertsUnit := extensionsv1alpha1.Unit{
 		Name:    "updatecacerts.service",
-		Command: ptr.To(extensionsv1alpha1.CommandStart),
-		Content: ptr.To(`[Unit]
+		Command: new(extensionsv1alpha1.CommandStart),
+		Content: new(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
@@ -123,7 +122,7 @@ func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 
 	return extensionsv1alpha1.File{
 		Path:        pathUpdateLocalCaCertificates,
-		Permissions: ptr.To[uint32](0744),
+		Permissions: new(uint32(0744)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

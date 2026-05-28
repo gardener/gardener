@@ -17,7 +17,6 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -56,7 +55,7 @@ var _ = Describe("ShootClientMap", func() {
 				Name:      "forbidden-fruit",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To("apple-seed"),
+				SeedName: new("apple-seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: "shoot--eden--forbidden-fruit",

@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -204,7 +203,7 @@ var _ = Describe("Kubernetes Utils", func() {
 
 			It("should return false and appropriate message if shoot acts as seed, not all shoot conditions are true and shoot is being hibernated", func() {
 				shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				}
 
 				appendShootConditionsToShoot(shoot)
@@ -216,7 +215,7 @@ var _ = Describe("Kubernetes Utils", func() {
 
 			It("should return true and empty message if shoot acts as seed, not all seed conditions are true and shoot is being hibernated", func() {
 				shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				}
 
 				appendShootConditionsToShoot(shoot)

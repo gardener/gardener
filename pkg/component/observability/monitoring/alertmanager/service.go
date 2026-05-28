@@ -11,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -42,8 +41,8 @@ func (a *alertManager) service() *corev1.Service {
 	}
 
 	networkPolicyPort := networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Port:     new(intstr.FromInt32(port)),
+		Protocol: new(corev1.ProtocolTCP),
 	}
 
 	switch a.values.ClusterType {

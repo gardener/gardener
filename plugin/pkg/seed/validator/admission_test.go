@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,9 +50,9 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					CloudProfileName:  ptr.To("profile"),
+					CloudProfileName:  new("profile"),
 					Region:            "europe",
-					SecretBindingName: ptr.To("my-secret"),
+					SecretBindingName: new("my-secret"),
 					SeedName:          &seedName,
 				},
 			}
@@ -187,7 +186,7 @@ var _ = Describe("validator", func() {
 				It("should allow default domains removal when there are shoots but the removed domain is not used", func() {
 					shootWithDifferentDomain := shoot.DeepCopy()
 					shootWithDifferentDomain.Spec.DNS = &gardencorev1beta1.DNS{
-						Domain: ptr.To("my-shoot.unused.com"),
+						Domain: new("my-shoot.unused.com"),
 					}
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootWithDifferentDomain)).To(Succeed())
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -198,7 +197,7 @@ var _ = Describe("validator", func() {
 				It("should forbid default domains removal when there are shoots using the removed domain", func() {
 					shootUsingRemovedDomain := shoot.DeepCopy()
 					shootUsingRemovedDomain.Spec.DNS = &gardencorev1beta1.DNS{
-						Domain: ptr.To("my-shoot.test.com"),
+						Domain: new("my-shoot.test.com"),
 					}
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootUsingRemovedDomain)).To(Succeed())
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -210,7 +209,7 @@ var _ = Describe("validator", func() {
 					newSeed.Spec.DNS.Defaults[0].Type = "cloudflare"
 					shootWithDifferentDomain := shoot.DeepCopy()
 					shootWithDifferentDomain.Spec.DNS = &gardencorev1beta1.DNS{
-						Domain: ptr.To("my-shoot.other.com"),
+						Domain: new("my-shoot.other.com"),
 					}
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootWithDifferentDomain)).To(Succeed())
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -320,7 +319,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should disallow seed deletion because shoot migration is yet not finished", func() {
-				shoot.Spec.SeedName = ptr.To(seedName + "-1")
+				shoot.Spec.SeedName = new(seedName + "-1")
 				shoot.Status.SeedName = &seedName
 
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
@@ -333,7 +332,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should allow deletion of empty seed", func() {
-				shoot.Spec.SeedName = ptr.To(seedName + "-1")
+				shoot.Spec.SeedName = new(seedName + "-1")
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 

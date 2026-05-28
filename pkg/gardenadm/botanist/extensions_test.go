@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -64,7 +63,7 @@ var _ = Describe("Extensions", func() {
 							ControlPlane: &gardencorev1beta1.WorkerControlPlane{
 								Exposure: &gardencorev1beta1.Exposure{
 									Extension: &gardencorev1beta1.ExtensionExposure{
-										Type: ptr.To("ext-selfhostedshootexposure"),
+										Type: new("ext-selfhostedshootexposure"),
 									},
 								},
 							},
@@ -77,14 +76,14 @@ var _ = Describe("Extensions", func() {
 						}},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: ptr.To("ext-network"),
+						Type: new("ext-network"),
 					},
 					DNS: &gardencorev1beta1.DNS{
-						Domain: ptr.To("foo.gardener.cloud"),
+						Domain: new("foo.gardener.cloud"),
 						Providers: []gardencorev1beta1.DNSProvider{
 							{
-								Type:    ptr.To("clouddns"),
-								Primary: ptr.To(true),
+								Type:    new("clouddns"),
+								Primary: new(true),
 								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 									APIVersion: "v1",
 									Kind:       "Secret",
@@ -92,7 +91,7 @@ var _ = Describe("Extensions", func() {
 								},
 							},
 							{
-								Type: ptr.To("unused"),
+								Type: new("unused"),
 								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
 									APIVersion: "v1",
 									Kind:       "Secret",

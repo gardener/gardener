@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -76,7 +75,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 				Namespace: resourceNamespace,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Paused:   true,
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{

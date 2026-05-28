@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -116,7 +115,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -176,7 +175,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						v1beta1constants.LabelApp: labelValue,
 					}),
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -191,7 +190,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						DNSPolicy:                     corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName:            serviceAccount.Name,
 						HostNetwork:                   false,
-						TerminationGracePeriodSeconds: ptr.To(daemonSetTerminationGracePeriodSeconds),
+						TerminationGracePeriodSeconds: new(daemonSetTerminationGracePeriodSeconds),
 						PriorityClassName:             v1beta1constants.PriorityClassNameShootSystem900,
 						SecurityContext: &corev1.PodSecurityContext{
 							SeccompProfile: &corev1.SeccompProfile{
@@ -209,7 +208,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 									"exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json,/config/readonly-monitor.json .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-port=" + strconv.Itoa(daemonSetPrometheusPort),
 								},
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: ptr.To(true),
+									Privileged: new(true),
 								},
 								Env: []corev1.EnvVar{
 									{
@@ -346,7 +345,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

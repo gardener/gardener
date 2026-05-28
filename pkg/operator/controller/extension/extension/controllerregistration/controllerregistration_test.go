@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -79,11 +78,11 @@ var _ = Describe("ControllerRegistration", func() {
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
 								OCIRepository: &gardencorev1.OCIRepository{
-									Ref: ptr.To(ociRef),
+									Ref: new(ociRef),
 								},
 							},
 						},
-						InjectGardenKubeconfig: ptr.To(true),
+						InjectGardenKubeconfig: new(true),
 					},
 				},
 			},
@@ -106,10 +105,10 @@ var _ = Describe("ControllerRegistration", func() {
 					},
 					Helm: &gardencorev1.HelmControllerDeployment{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Ref: ptr.To(ociRef),
+							Ref: new(ociRef),
 						},
 					},
-					InjectGardenKubeconfig: ptr.To(true),
+					InjectGardenKubeconfig: new(true),
 				},
 				&gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -160,13 +159,13 @@ var _ = Describe("ControllerRegistration", func() {
 					},
 					Helm: &gardencorev1.HelmControllerDeployment{
 						OCIRepository: &gardencorev1.OCIRepository{
-							Ref: ptr.To(ociRef),
+							Ref: new(ociRef),
 							PullSecretRef: &corev1.LocalObjectReference{
 								Name: expectedSecret.Name,
 							},
 						},
 					},
-					InjectGardenKubeconfig: ptr.To(true),
+					InjectGardenKubeconfig: new(true),
 				},
 				&gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{

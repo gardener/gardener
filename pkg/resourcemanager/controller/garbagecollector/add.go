@@ -7,7 +7,6 @@ package garbagecollector
 import (
 	"time"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -25,7 +24,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.TargetClient = targetCluster.GetClient()
 	}
 	if r.MinimumObjectLifetime == nil {
-		r.MinimumObjectLifetime = ptr.To(10 * time.Minute)
+		r.MinimumObjectLifetime = new(10 * time.Minute)
 	}
 
 	return builder.

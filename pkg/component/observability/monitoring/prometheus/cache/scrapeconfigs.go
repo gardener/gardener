@@ -13,7 +13,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 var (
@@ -37,7 +36,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
 			RelabelConfigs: []monitoringv1.RelabelConfig{{
 				Action:      "replace",
-				Replacement: ptr.To("prometheus-" + Label),
+				Replacement: new("prometheus-" + Label),
 				TargetLabel: "job",
 			}},
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{

@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -695,7 +694,7 @@ var _ = Describe("Predicate", func() {
 
 		Context("when class is set to 'shoot'", func() {
 			BeforeEach(func() {
-				extensionClass = ptr.To[extensionsv1alpha1.ExtensionClass]("shoot")
+				extensionClass = new(extensionsv1alpha1.ExtensionClass("shoot"))
 			})
 
 			It("should match an empty class (nil)", func() {
@@ -721,7 +720,7 @@ var _ = Describe("Predicate", func() {
 
 		Context("when class is set to 'garden'", func() {
 			BeforeEach(func() {
-				extensionClass = ptr.To[extensionsv1alpha1.ExtensionClass]("garden")
+				extensionClass = new(extensionsv1alpha1.ExtensionClass("garden"))
 			})
 
 			It("should not match an empty class (nil)", func() {

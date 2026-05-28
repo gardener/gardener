@@ -354,7 +354,7 @@ func syncMachineTypeLegacyArchitecture(newMachineTypes []core.MachineType, capab
 		// Sync capability architecture to architecture field.
 		defaultedCapabilities := core.GetCapabilitiesWithAppliedDefaults(newMachineTypes[i].Capabilities, capabilityDefinitions)
 		if len(defaultedCapabilities[v1beta1constants.ArchitectureName]) == 1 {
-			newMachineTypes[i].Architecture = ptr.To(defaultedCapabilities[v1beta1constants.ArchitectureName][0])
+			newMachineTypes[i].Architecture = new(defaultedCapabilities[v1beta1constants.ArchitectureName][0])
 		}
 	}
 }

@@ -7,7 +7,6 @@ package v1alpha1_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
@@ -23,21 +22,21 @@ var _ = Describe("Defaults", func() {
 		It("should default replicas to 1 and revisionHistoryLimit to 10", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj.Spec.Replicas).To(Equal(ptr.To[int32](1)))
+			Expect(obj.Spec.Replicas).To(Equal(new(int32(1))))
 			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
-			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(ptr.To[int32](10)))
+			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(new(int32(10))))
 		})
 
 		It("should not overwrite the already set values for ManagedSeedSet spec", func() {
 			obj.Spec = ManagedSeedSetSpec{
-				Replicas:             ptr.To[int32](5),
-				RevisionHistoryLimit: ptr.To[int32](15),
+				Replicas:             new(int32(5)),
+				RevisionHistoryLimit: new(int32(15)),
 			}
 			SetObjectDefaults_ManagedSeedSet(obj)
 
-			Expect(obj.Spec.Replicas).To(Equal(ptr.To[int32](5)))
+			Expect(obj.Spec.Replicas).To(Equal(new(int32(5))))
 			Expect(obj.Spec.UpdateStrategy).NotTo(BeNil())
-			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(ptr.To[int32](15)))
+			Expect(obj.Spec.RevisionHistoryLimit).To(Equal(new(int32(15))))
 		})
 	})
 
@@ -47,18 +46,18 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy).To(Equal(&UpdateStrategy{
-				Type: ptr.To(RollingUpdateStrategyType),
+				Type: new(RollingUpdateStrategyType),
 			}))
 		})
 
 		It("should not overwrite already set values for UpdateStrategy", func() {
 			obj.Spec.UpdateStrategy = &UpdateStrategy{
-				Type: ptr.To(UpdateStrategyType("foo")),
+				Type: new(UpdateStrategyType("foo")),
 			}
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy).To(Equal(&UpdateStrategy{
-				Type: ptr.To(UpdateStrategyType("foo")),
+				Type: new(UpdateStrategyType("foo")),
 			}))
 		})
 	})
@@ -71,20 +70,20 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
-				Partition: ptr.To[int32](0),
+				Partition: new(int32(0)),
 			}))
 		})
 
 		It("should not overwrote the already set values for RollingUpdateStrategy", func() {
 			obj.Spec.UpdateStrategy = &UpdateStrategy{
 				RollingUpdate: &RollingUpdateStrategy{
-					Partition: ptr.To[int32](1),
+					Partition: new(int32(1)),
 				},
 			}
 			SetObjectDefaults_ManagedSeedSet(obj)
 
 			Expect(obj.Spec.UpdateStrategy.RollingUpdate).To(Equal(&RollingUpdateStrategy{
-				Partition: ptr.To[int32](1),
+				Partition: new(int32(1)),
 			}))
 		})
 	})

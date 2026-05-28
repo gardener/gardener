@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -41,8 +40,8 @@ var _ = Describe("Handler", func() {
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
 								OCIRepository: &gardencorev1.OCIRepository{
-									Repository: ptr.To("example.com/repo"),
-									Tag:        ptr.To("v0.0.0"),
+									Repository: new("example.com/repo"),
+									Tag:        new("v0.0.0"),
 								},
 							},
 						},
@@ -103,7 +102,7 @@ var _ = Describe("Handler", func() {
 
 		It("should return success if the extension resources are added", func() {
 			newExtension := extension.DeepCopy()
-			newExtension.Spec.Resources = append(newExtension.Spec.Resources, gardencorev1beta1.ControllerResource{Kind: "BackupBucket", Type: "test", Primary: ptr.To(false)})
+			newExtension.Spec.Resources = append(newExtension.Spec.Resources, gardencorev1beta1.ControllerResource{Kind: "BackupBucket", Type: "test", Primary: new(false)})
 
 			warning, err := handler.ValidateUpdate(ctx, extension, newExtension)
 			Expect(warning).To(BeNil())
@@ -111,9 +110,9 @@ var _ = Describe("Handler", func() {
 		})
 
 		It("should prevent changing the primary field", func() {
-			extension.Spec.Resources[0].Primary = ptr.To(true)
+			extension.Spec.Resources[0].Primary = new(true)
 			newExtension := extension.DeepCopy()
-			newExtension.Spec.Resources[0].Primary = ptr.To(false)
+			newExtension.Spec.Resources[0].Primary = new(false)
 
 			warning, err := handler.ValidateUpdate(ctx, extension, newExtension)
 			Expect(warning).To(BeNil())

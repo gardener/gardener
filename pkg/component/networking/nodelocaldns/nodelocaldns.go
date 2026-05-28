@@ -414,7 +414,7 @@ func createCleanupConfigMap(ctx context.Context, shootClient client.Client) erro
 		cm.Data = map[string]string{
 			dataKeyCleanupScript: cleanupScript,
 		}
-		cm.Immutable = ptr.To(true)
+		cm.Immutable = new(true)
 		return nil
 	})
 	return err
@@ -430,7 +430,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 	_, err := controllerutil.CreateOrUpdate(ctx, shootClient, cleanupDaemonSet, func() error {
 		metav1.SetMetaDataLabel(&cleanupDaemonSet.ObjectMeta, v1beta1constants.LabelApp, labelValueAndCleanupName)
 		cleanupDaemonSet.Spec = appsv1.DaemonSetSpec{
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					v1beta1constants.LabelApp: labelValueAndCleanupName,
@@ -498,7 +498,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 								Capabilities: &corev1.Capabilities{
 									Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"},
 								},
-								Privileged: ptr.To(false),
+								Privileged: new(false),
 							},
 						},
 					},
@@ -510,7 +510,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: cleanupConfigMapName,
 									},
-									DefaultMode: ptr.To[int32](0775),
+									DefaultMode: new(int32(0775)),
 								},
 							},
 						},
@@ -519,7 +519,7 @@ func createCleanupDaemonSet(ctx context.Context, shootClient client.Client, alpi
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
 									Path: volumeMountPathXtablesLock,
-									Type: ptr.To(corev1.HostPathFileOrCreate),
+									Type: new(corev1.HostPathFileOrCreate),
 								},
 							},
 						},

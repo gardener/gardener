@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -403,7 +402,7 @@ var _ = Describe("Mutator", func() {
 							Units: []extensionsv1alpha1.Unit{
 								{
 									Name:    "kubelet.service",
-									Content: ptr.To(newServiceContent),
+									Content: new(newServiceContent),
 								},
 							},
 							Files: []extensionsv1alpha1.File{
@@ -470,7 +469,7 @@ var _ = Describe("Mutator", func() {
 				It("should invoke appropriate ensurer methods with OperatingSystemConfig", func() {
 					oldOSC := newOSC.DeepCopy()
 					oldOSC.Spec.CRIConfig = nil
-					oldOSC.Spec.Units[0].Content = ptr.To(oldServiceContent)
+					oldOSC.Spec.Units[0].Content = new(oldServiceContent)
 					oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
 					oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
 
@@ -482,7 +481,7 @@ var _ = Describe("Mutator", func() {
 							return nil
 						},
 					)
-					ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.Background(), gomock.Any(), ptr.To(newKubernetesGeneralConfigData), ptr.To(oldKubernetesGeneralConfigData)).DoAndReturn(
+					ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.Background(), gomock.Any(), new(newKubernetesGeneralConfigData), new(oldKubernetesGeneralConfigData)).DoAndReturn(
 						func(_ context.Context, _ extensionscontextwebhook.GardenContext, newData, _ *string) error {
 							*newData = mutatedKubernetesGeneralConfigData
 							return nil
@@ -529,7 +528,7 @@ var _ = Describe("Mutator", func() {
 
 				It("should not add invalid file content to OSC", func() {
 					oldOSC := newOSC.DeepCopy()
-					oldOSC.Spec.Units[0].Content = ptr.To(oldServiceContent)
+					oldOSC.Spec.Units[0].Content = new(oldServiceContent)
 					oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
 					oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
 
@@ -541,7 +540,7 @@ var _ = Describe("Mutator", func() {
 							return nil
 						},
 					)
-					ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.Background(), gomock.Any(), ptr.To(newKubernetesGeneralConfigData), ptr.To(oldKubernetesGeneralConfigData)).DoAndReturn(
+					ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.Background(), gomock.Any(), new(newKubernetesGeneralConfigData), new(oldKubernetesGeneralConfigData)).DoAndReturn(
 						func(_ context.Context, _ extensionscontextwebhook.GardenContext, newData, _ *string) error {
 							*newData = ""
 							return nil
@@ -597,7 +596,7 @@ var _ = Describe("Mutator", func() {
 func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	kubeletUnit := extensionswebhook.UnitWithName(osc.Spec.Units, "kubelet.service")
 	ExpectWithOffset(1, kubeletUnit).To(Not(BeNil()))
-	ExpectWithOffset(1, kubeletUnit.Content).To(Equal(ptr.To(mutatedServiceContent)))
+	ExpectWithOffset(1, kubeletUnit.Content).To(Equal(new(mutatedServiceContent)))
 
 	customMTU := extensionswebhook.UnitWithName(osc.Spec.Units, "custom-mtu.service")
 	ExpectWithOffset(1, customMTU).To(Not(BeNil()))

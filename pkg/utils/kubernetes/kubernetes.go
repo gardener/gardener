@@ -30,7 +30,6 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -697,7 +696,7 @@ func (c *ComparableTolerations) Transform(toleration corev1.Toleration) corev1.T
 
 	tolerationSeconds := *toleration.TolerationSeconds
 	if _, ok := c.tolerationSeconds[tolerationSeconds]; !ok {
-		c.tolerationSeconds[tolerationSeconds] = ptr.To(tolerationSeconds)
+		c.tolerationSeconds[tolerationSeconds] = new(tolerationSeconds)
 	}
 
 	toleration.TolerationSeconds = c.tolerationSeconds[tolerationSeconds]

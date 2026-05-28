@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -100,7 +99,7 @@ var _ = BeforeSuite(func() {
 		Scheme:  kubernetes.SeedScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -112,7 +111,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig{
-			ConcurrentSyncs:    ptr.To(5),
+			ConcurrentSyncs:    new(5),
 			NamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{testID: testRunID}}},
 			IngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 				Namespace:   ingressControllerNamespace,

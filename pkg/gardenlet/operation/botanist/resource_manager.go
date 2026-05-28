@@ -10,7 +10,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -41,12 +40,12 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 			DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
 			IsWorkerless:                              b.Shoot.IsWorkerless,
-			KubernetesServiceHost:                     ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
+			KubernetesServiceHost:                     new(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
 			LogLevel:                                  logger.InfoLevel,
 			LogFormat:                                 logger.FormatJSON,
 			NodeAgentReconciliationMaxDelay:           b.Shoot.OSCSyncJitterPeriod,
 			NodeAgentAuthorizerEnabled:                true,
-			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)),
+			NodeAgentAuthorizerAuthorizeWithSelectors: new(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)),
 			// TODO(shafeeqes): Remove PodTopologySpreadConstraints webhook once the
 			// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
 			PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
@@ -64,7 +63,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	)
 
 	if b.Shoot.HasManagedInfrastructure() {
-		values.MachineNamespace = ptr.To(b.Shoot.ControlPlaneNamespace)
+		values.MachineNamespace = new(b.Shoot.ControlPlaneNamespace)
 	}
 
 	if b.Shoot.IsSelfHosted() {

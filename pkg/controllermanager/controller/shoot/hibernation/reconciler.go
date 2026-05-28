@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -132,10 +131,10 @@ func (r *Reconciler) hibernateOrWakeUpShootBasedOnSchedule(ctx context.Context, 
 	patch := client.MergeFrom(shoot.DeepCopy())
 	switch schedule.operation {
 	case hibernate:
-		shoot.Spec.Hibernation.Enabled = ptr.To(true)
+		shoot.Spec.Hibernation.Enabled = new(true)
 		r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, gardencorev1beta1.EventActionReconcile, "Hibernating cluster due to schedule")
 	case wakeUp:
-		shoot.Spec.Hibernation.Enabled = ptr.To(false)
+		shoot.Spec.Hibernation.Enabled = new(false)
 		r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, gardencorev1beta1.EventActionReconcile, "Waking up cluster due to schedule")
 	}
 	if err := r.Client.Patch(ctx, shoot, patch); err != nil {

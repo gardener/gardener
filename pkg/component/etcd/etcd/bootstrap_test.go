@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -58,7 +57,7 @@ var _ = Describe("Etcd", func() {
 		namespace                = "shoot--foo--bar"
 		etcdDruidImage           = "etcd/druid:1.2.3"
 		imageVectorOverwrite     *string
-		imageVectorOverwriteFull = ptr.To("some overwrite")
+		imageVectorOverwriteFull = new("some overwrite")
 		secretNameCA             = "ca"
 
 		priorityClassName = "some-priority-class"
@@ -73,7 +72,7 @@ var _ = Describe("Etcd", func() {
 		managedResourceSecretName = "managedresource-" + managedResourceName
 
 		etcdOperatorConfigMountPath = "/operator_config/config.yaml"
-		etcdOperatorConfigYAML      = ptr.To(`apiVersion: config.druid.gardener.cloud/v1alpha1
+		etcdOperatorConfigYAML      = new(`apiVersion: config.druid.gardener.cloud/v1alpha1
 clientConnection:
   acceptContentTypes: ""
   burst: 150
@@ -141,15 +140,15 @@ webhooks:
 	JustBeforeEach(func() {
 		etcdConfig = &gardenletconfigv1alpha1.ETCDConfig{
 			ETCDController: &gardenletconfigv1alpha1.ETCDController{
-				Workers: ptr.To[int64](25),
+				Workers: new(int64(25)),
 			},
 			CustodianController: &gardenletconfigv1alpha1.CustodianController{
-				Workers: ptr.To[int64](3),
+				Workers: new(int64(3)),
 			},
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
-				Workers:                   ptr.To[int64](3),
-				EnableBackupCompaction:    ptr.To(true),
-				EventsThreshold:           ptr.To[int64](1000000),
+				Workers:                   new(int64(3)),
+				EnableBackupCompaction:    new(true),
+				EventsThreshold:           new(int64(1000000)),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: time.Second * 60},
 				ActiveDeadlineDuration:    &metav1.Duration{Duration: time.Hour * 3},
 			},
@@ -310,11 +309,11 @@ webhooks:
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("100M"),
 								},
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
 							{
 								ContainerName: "*",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 							},
 						},
 					},
@@ -324,7 +323,7 @@ webhooks:
 						Name:       "etcd-druid",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 					},
 				},
 			}
@@ -341,7 +340,7 @@ webhooks:
 				Data: map[string]string{
 					"images_overwrite.yaml": *imageVectorOverwriteFull,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 			}
 
 			configMapOperatorConfig = &corev1.ConfigMap{
@@ -356,7 +355,7 @@ webhooks:
 				Data: map[string]string{
 					"config.yaml": *etcdOperatorConfigYAML,
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 			}
 
 			deploymentWithoutImageVectorOverwriteFor = &appsv1.Deployment{
@@ -373,8 +372,8 @@ webhooks:
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](1),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
@@ -414,7 +413,7 @@ webhooks:
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -439,7 +438,7 @@ webhooks:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "etcd-druid-webhook",
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 										},
 									},
 								},
@@ -474,8 +473,8 @@ webhooks:
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](1),
+					Replicas:             new(int32(1)),
+					RevisionHistoryLimit: new(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
@@ -522,7 +521,7 @@ webhooks:
 										},
 									},
 									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
+										AllowPrivilegeEscalation: new(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -552,7 +551,7 @@ webhooks:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "etcd-druid-webhook",
-											DefaultMode: ptr.To[int32](420),
+											DefaultMode: new(int32(420)),
 										},
 									},
 								},
@@ -630,15 +629,15 @@ webhooks:
 							Service: &admissionregistrationv1.ServiceReference{
 								Name:      "etcd-druid",
 								Namespace: namespace,
-								Path:      ptr.To("/webhooks/etcdcomponents"),
-								Port:      ptr.To[int32](443),
+								Path:      new("/webhooks/etcdcomponents"),
+								Port:      new(int32(443)),
 							},
 							CABundle: nil,
 						},
-						FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-						MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-						SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-						TimeoutSeconds:          ptr.To[int32](10),
+						FailurePolicy:           new(admissionregistrationv1.Fail),
+						MatchPolicy:             new(admissionregistrationv1.Exact),
+						SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+						TimeoutSeconds:          new(int32(10)),
 						AdmissionReviewVersions: []string{"v1", "v1beta1"},
 						ObjectSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"app.kubernetes.io/managed-by": "etcd-druid"}},
 						Rules: []admissionregistrationv1.RuleWithOperations{
@@ -647,7 +646,7 @@ webhooks:
 									APIGroups:   []string{corev1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"serviceaccounts", "services", "configmaps"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
 							},
@@ -656,7 +655,7 @@ webhooks:
 									APIGroups:   []string{corev1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"persistentvolumeclaims"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 							},
@@ -665,7 +664,7 @@ webhooks:
 									APIGroups:   []string{rbacv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"roles", "rolebindings"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
 							},
@@ -674,7 +673,7 @@ webhooks:
 									APIGroups:   []string{appsv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"statefulsets"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
 							},
@@ -683,7 +682,7 @@ webhooks:
 									APIGroups:   []string{policyv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"poddisruptionbudgets"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
 							},
@@ -692,7 +691,7 @@ webhooks:
 									APIGroups:   []string{batchv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"jobs"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
 							},
@@ -701,7 +700,7 @@ webhooks:
 									APIGroups:   []string{coordinationv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"leases"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 							},
@@ -713,15 +712,15 @@ webhooks:
 							Service: &admissionregistrationv1.ServiceReference{
 								Name:      "etcd-druid",
 								Namespace: namespace,
-								Path:      ptr.To("/webhooks/etcdcomponents"),
-								Port:      ptr.To[int32](443),
+								Path:      new("/webhooks/etcdcomponents"),
+								Port:      new(int32(443)),
 							},
 							CABundle: nil,
 						},
-						FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-						MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-						SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-						TimeoutSeconds:          ptr.To(int32(10)),
+						FailurePolicy:           new(admissionregistrationv1.Fail),
+						MatchPolicy:             new(admissionregistrationv1.Exact),
+						SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+						TimeoutSeconds:          new(int32(10)),
 						AdmissionReviewVersions: []string{"v1", "v1beta1"},
 						Rules: []admissionregistrationv1.RuleWithOperations{
 							{
@@ -729,7 +728,7 @@ webhooks:
 									APIGroups:   []string{appsv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"statefulsets/scale"},
-									Scope:       ptr.To(admissionregistrationv1.AllScopes),
+									Scope:       new(admissionregistrationv1.AllScopes),
 								},
 								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
 							},
@@ -747,13 +746,13 @@ webhooks:
 					},
 				},
 				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					MaxUnavailable: new(intstr.FromInt32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
 						},
 					},
-					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+					UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 				},
 				Status: policyv1.PodDisruptionBudgetStatus{
 					CurrentHealthy:     0,
@@ -814,11 +813,11 @@ webhooks:
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -839,7 +838,7 @@ webhooks:
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			manifests, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])

@@ -10,7 +10,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 )
@@ -24,7 +23,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: ptr.To("prometheus-aggregate"),
+							Replacement: new("prometheus-aggregate"),
 							TargetLabel: "job",
 						}},
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -35,8 +34,8 @@ var _ = Describe("ScrapeConfigs", func() {
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "prometheus"},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						HonorTimestamps: ptr.To(false),
-						MetricsPath:     ptr.To("/federate"),
+						HonorTimestamps: new(false),
+						MetricsPath:     new("/federate"),
 						Params: map[string][]string{
 							"match[]": {
 								`{__name__=~"metering:.+", __name__!~"metering:.+(over_time|_seconds|:this_month)"}`,
@@ -64,7 +63,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 							{
 								Action:      "replace",
-								Replacement: ptr.To("prometheus"),
+								Replacement: new("prometheus"),
 								TargetLabel: "job",
 							},
 						},

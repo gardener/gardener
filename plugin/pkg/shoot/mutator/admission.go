@@ -403,7 +403,7 @@ func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMinor = ptr.To(v)
+		shootVersionMinor = new(v)
 	}
 	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
 		v, err := strconv.ParseUint(versionParts[0], 10, 0)
@@ -411,11 +411,11 @@ func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, 
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMajor = ptr.To(v)
+		shootVersionMajor = new(v)
 	}
 
 	if latestVersion := findLatestSupportedVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
-		return ptr.To(latestVersion.String()), nil
+		return new(latestVersion.String()), nil
 	}
 
 	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))
@@ -663,5 +663,5 @@ func parseSemanticVersionPart(part string) (*uint64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s must be a semantic version: %w", part, err)
 	}
-	return ptr.To(v), nil
+	return new(v), nil
 }

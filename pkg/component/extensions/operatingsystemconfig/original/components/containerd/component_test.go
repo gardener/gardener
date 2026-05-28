@@ -7,7 +7,6 @@ package containerd_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -34,8 +33,8 @@ var _ = Describe("Component", func() {
 
 			logrotateUnit := extensionsv1alpha1.Unit{
 				Name:   "containerd-logrotate.service",
-				Enable: ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Enable: new(true),
+				Content: new(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
@@ -46,9 +45,9 @@ WantedBy=multi-user.target`),
 
 			logrotateTimerUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-logrotate.timer",
-				Command: ptr.To(extensionsv1alpha1.CommandStart),
-				Enable:  ptr.To(true),
-				Content: ptr.To(`[Unit]
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
+				Content: new(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10
@@ -60,7 +59,7 @@ WantedBy=multi-user.target`),
 
 			logrotateConfigFile := extensionsv1alpha1.File{
 				Path:        "/etc/systemd/containerd.conf",
-				Permissions: ptr.To[uint32](0644),
+				Permissions: new(uint32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: logRotateData,

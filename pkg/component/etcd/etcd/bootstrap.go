@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -166,8 +165,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		serviceMonitor                 = b.getServiceMonitor()
 
 		portMetrics = networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(metricsPort)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
+			Port:     new(intstr.FromInt32(metricsPort)),
+			Protocol: new(corev1.ProtocolTCP),
 		}
 	)
 
@@ -299,13 +298,13 @@ func (b *bootstrapper) getEtcdOperatorConfig() *druidconfigv1alpha1.OperatorConf
 		},
 		Controllers: druidconfigv1alpha1.ControllerConfiguration{
 			Etcd: druidconfigv1alpha1.EtcdControllerConfiguration{
-				ConcurrentSyncs:                    ptr.To(int(*b.etcdConfig.ETCDController.Workers)),
+				ConcurrentSyncs:                    new(int(*b.etcdConfig.ETCDController.Workers)),
 				DisableEtcdServiceAccountAutomount: true,
 				EnableEtcdSpecAutoReconcile:        false,
 			},
 			Compaction: druidconfigv1alpha1.CompactionControllerConfiguration{
 				Enabled:         *b.etcdConfig.BackupCompactionController.EnableBackupCompaction,
-				ConcurrentSyncs: ptr.To(int(*b.etcdConfig.BackupCompactionController.Workers)),
+				ConcurrentSyncs: new(int(*b.etcdConfig.BackupCompactionController.Workers)),
 				EventsThreshold: *b.etcdConfig.BackupCompactionController.EventsThreshold,
 			},
 			EtcdCopyBackupsTask: druidconfigv1alpha1.EtcdCopyBackupsTaskControllerConfiguration{
@@ -313,7 +312,7 @@ func (b *bootstrapper) getEtcdOperatorConfig() *druidconfigv1alpha1.OperatorConf
 				Enabled: true,
 			},
 			EtcdOpsTask: druidconfigv1alpha1.EtcdOpsTaskControllerConfiguration{
-				ConcurrentSyncs: ptr.To(3),
+				ConcurrentSyncs: new(3),
 				RequeueInterval: &metav1.Duration{Duration: 15 * time.Second},
 			},
 		},
@@ -355,7 +354,7 @@ func (b *bootstrapper) getServiceAccount() *corev1.ServiceAccount {
 			Namespace: b.namespace,
 			Labels:    b.labels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -490,10 +489,10 @@ func (b *bootstrapper) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("100M"),
 					},
-					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				}, {
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 				}},
 			},
 		},
@@ -537,8 +536,8 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 		Service: &admissionregistrationv1.ServiceReference{
 			Name:      druidServiceName,
 			Namespace: b.namespace,
-			Path:      ptr.To("/webhooks/etcdcomponents"),
-			Port:      ptr.To[int32](webhookServerServicePort),
+			Path:      new("/webhooks/etcdcomponents"),
+			Port:      new(int32(webhookServerServicePort)),
 		},
 		CABundle: caBundle,
 	}
@@ -553,10 +552,10 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 			{
 				Name:                    "etcdcomponents.webhooks.druid.gardener.cloud",
 				ClientConfig:            clientConfig,
-				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-				MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-				TimeoutSeconds:          ptr.To[int32](10),
+				FailurePolicy:           new(admissionregistrationv1.Fail),
+				MatchPolicy:             new(admissionregistrationv1.Exact),
+				SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+				TimeoutSeconds:          new(int32(10)),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					druidcorev1alpha1.LabelManagedByKey: druidcorev1alpha1.LabelManagedByValue,
@@ -567,7 +566,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{corev1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"serviceaccounts", "services", "configmaps"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opUpdateAndDelete,
 					},
@@ -576,7 +575,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{corev1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"persistentvolumeclaims"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opDelete,
 					},
@@ -585,7 +584,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{rbacv1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"roles", "rolebindings"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opUpdateAndDelete,
 					},
@@ -594,7 +593,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{appsv1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"statefulsets"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opUpdateAndDelete,
 					},
@@ -603,7 +602,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{policyv1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"poddisruptionbudgets"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opUpdateAndDelete,
 					},
@@ -612,7 +611,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{batchv1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"jobs"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opUpdateAndDelete,
 					},
@@ -621,7 +620,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{coordinationv1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"leases"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opDelete,
 					},
@@ -633,10 +632,10 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 				// Refer https://github.com/kubernetes/kubernetes/issues/113594#issuecomment-1332573990.
 				Name:                    "stsscale.etcdcomponents.webhooks.druid.gardener.cloud",
 				ClientConfig:            clientConfig,
-				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-				MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
-				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-				TimeoutSeconds:          ptr.To[int32](10),
+				FailurePolicy:           new(admissionregistrationv1.Fail),
+				MatchPolicy:             new(admissionregistrationv1.Exact),
+				SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+				TimeoutSeconds:          new(int32(10)),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
@@ -644,7 +643,7 @@ func (b *bootstrapper) getValidatingWebhookConfiguration(caBundle []byte) *admis
 							APIGroups:   []string{appsv1.GroupName},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"statefulsets/scale"},
-							Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							Scope:       new(admissionregistrationv1.AllScopes),
 						},
 						Operations: opUpdateAndDelete,
 					},
@@ -664,8 +663,8 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 			}, b.labels()),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: b.labels(),
 			},
@@ -697,7 +696,7 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 								ContainerPort: metricsPort,
 							}},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -719,7 +718,7 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  serverSecretName,
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 								},
 							},
 						},
@@ -770,9 +769,9 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 			Labels:    b.labels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   deployment.Spec.Selector,
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 }

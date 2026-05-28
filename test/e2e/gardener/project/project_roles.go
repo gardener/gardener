@@ -13,7 +13,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -42,7 +41,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 				Name: projectName,
 			},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: ptr.To("garden-" + projectName),
+				Namespace: new("garden-" + projectName),
 			},
 		}
 

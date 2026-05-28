@@ -7,7 +7,6 @@ package nodeinit_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
@@ -41,7 +40,7 @@ var _ = Describe("Init", func() {
 				),
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardenadm/download.sh",
-					Permissions: ptr.To[uint32](0755),
+					Permissions: new(uint32(0755)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

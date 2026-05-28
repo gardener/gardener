@@ -15,7 +15,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -109,7 +108,7 @@ var _ = Describe("Bastion controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    ptr.To("10.2.0.0/16"),
+					Nodes:    new("10.2.0.0/16"),
 				},
 			},
 		}
@@ -121,8 +120,8 @@ var _ = Describe("Bastion controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  ptr.To("test-cloudprofile"),
+				SecretBindingName: new("my-provider-account"),
+				CloudProfileName:  new("test-cloudprofile"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: providerType,
@@ -135,7 +134,7 @@ var _ = Describe("Bastion controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
@@ -145,7 +144,7 @@ var _ = Describe("Bastion controller tests", func() {
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}
@@ -308,7 +307,7 @@ var _ = Describe("Bastion controller tests", func() {
 					"Reason":  Equal("SuccessfullyReconciled"),
 					"Message": Equal("The bastion has been reconciled successfully."),
 				})))
-				g.Expect(operationsBastion.Status.ObservedGeneration).To(Equal(ptr.To(operationsBastion.Generation)))
+				g.Expect(operationsBastion.Status.ObservedGeneration).To(Equal(new(operationsBastion.Generation)))
 			}).Should(Succeed())
 		})
 	})

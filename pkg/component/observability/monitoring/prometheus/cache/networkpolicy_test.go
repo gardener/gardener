@@ -11,7 +11,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 )
@@ -30,7 +29,7 @@ var _ = Describe("NetworkPolicy", func() {
 					},
 					Egress: []networkingv1.NetworkPolicyEgressRule{{
 						To:    []networkingv1.NetworkPolicyPeer{},
-						Ports: []networkingv1.NetworkPolicyPort{{Port: ptr.To(intstr.FromInt32(16909)), Protocol: ptr.To(corev1.ProtocolTCP)}},
+						Ports: []networkingv1.NetworkPolicyPort{{Port: new(intstr.FromInt32(16909)), Protocol: new(corev1.ProtocolTCP)}},
 					}},
 					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -53,7 +52,7 @@ var _ = Describe("NetworkPolicy", func() {
 					},
 					Egress: []networkingv1.NetworkPolicyEgressRule{{
 						To:    []networkingv1.NetworkPolicyPeer{{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDR}}},
-						Ports: []networkingv1.NetworkPolicyPort{{Port: ptr.To(intstr.FromInt32(16909)), Protocol: ptr.To(corev1.ProtocolTCP)}},
+						Ports: []networkingv1.NetworkPolicyPort{{Port: new(intstr.FromInt32(16909)), Protocol: new(corev1.ProtocolTCP)}},
 					}},
 					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -75,7 +74,7 @@ var _ = Describe("NetworkPolicy", func() {
 					},
 					Egress: []networkingv1.NetworkPolicyEgressRule{{
 						To:    []networkingv1.NetworkPolicyPeer{},
-						Ports: []networkingv1.NetworkPolicyPort{{Port: ptr.To(intstr.FromInt32(10250)), Protocol: ptr.To(corev1.ProtocolTCP)}},
+						Ports: []networkingv1.NetworkPolicyPort{{Port: new(intstr.FromInt32(10250)), Protocol: new(corev1.ProtocolTCP)}},
 					}},
 					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -98,7 +97,7 @@ var _ = Describe("NetworkPolicy", func() {
 					},
 					Egress: []networkingv1.NetworkPolicyEgressRule{{
 						To:    []networkingv1.NetworkPolicyPeer{{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDR}}},
-						Ports: []networkingv1.NetworkPolicyPort{{Port: ptr.To(intstr.FromInt32(10250)), Protocol: ptr.To(corev1.ProtocolTCP)}},
+						Ports: []networkingv1.NetworkPolicyPort{{Port: new(intstr.FromInt32(10250)), Protocol: new(corev1.ProtocolTCP)}},
 					}},
 					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},

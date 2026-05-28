@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	backupentryregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/backupentry"
@@ -120,8 +119,8 @@ var _ = Describe("#Canonicalize", func() {
 		It("should correctly add the seed labels", func() {
 			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "foo", "bar")
 			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
-			backupEntry.Spec.SeedName = ptr.To("spec-seed")
-			backupEntry.Status.SeedName = ptr.To("status-seed")
+			backupEntry.Spec.SeedName = new("spec-seed")
+			backupEntry.Status.SeedName = new("status-seed")
 
 			backupentryregistry.NewStrategy().Canonicalize(backupEntry)
 

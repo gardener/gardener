@@ -89,7 +89,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
 			APIAudiences:    []string{v1beta1constants.GardenerAudience},
-			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassShoot),
+			Class:           new(resourcesv1alpha1.ResourceManagerClassShoot),
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}

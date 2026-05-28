@@ -157,7 +157,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	_ context.Context,
 	_ *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
-) (map[string]interface{}, error) {
+) (map[string]any, error) {
 	config, err := helper.CloudProfileConfigFromCluster(cluster)
 	if err != nil {
 		return nil, err
@@ -202,21 +202,21 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 	}
 
 	return map[string]any{
-		"global": map[string]interface{}{
+		"global": map[string]any{
 			"genericTokenKubeconfigSecretName": extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster),
 		},
 		local.CloudControllerManagerName: map[string]any{
 			"replicas":                 extensionscontroller.GetControlPlaneReplicas(cluster, scaledDown, 1),
 			"clusterName":              cluster.Shoot.Status.TechnicalID,
 			"hasManagedInfrastructure": v1beta1helper.HasManagedInfrastructure(cluster.Shoot),
-			"podAnnotations": map[string]interface{}{
+			"podAnnotations": map[string]any{
 				"checksum/configmap-" + local.CloudProviderConfigName: checksums[local.CloudProviderConfigName],
 			},
-			"podLabels": map[string]interface{}{
+			"podLabels": map[string]any{
 				v1beta1constants.LabelPodMaintenanceRestart: "true",
 			},
 			"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane300,
-			"server": map[string]interface{}{
+			"server": map[string]any{
 				"tlsSecret":       serverSecret.Name,
 				"tlsCipherSuites": kubernetesutils.TLSCipherSuites,
 			},

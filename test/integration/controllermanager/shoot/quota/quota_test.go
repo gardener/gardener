@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +38,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "Project",
 				},
-				ClusterLifetimeDays: ptr.To[int32](1),
+				ClusterLifetimeDays: new(int32(1)),
 			},
 		}
 
@@ -84,8 +83,8 @@ var _ = Describe("Shoot Quota controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: ptr.To(secretBinding.Name),
-				CloudProfileName:  ptr.To("cloudprofile1"),
+				SecretBindingName: new(secretBinding.Name),
+				CloudProfileName:  new("cloudprofile1"),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -98,20 +97,20 @@ var _ = Describe("Shoot Quota controller tests", func() {
 								Type: "large",
 								Image: &gardencorev1beta1.ShootMachineImage{
 									Name:    "some-image",
-									Version: ptr.To("1.0.0"),
+									Version: new("1.0.0"),
 								},
 							},
 						},
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: ptr.To("some-domain.example.com"),
+					Domain: new("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: ptr.To("foo-networking"),
+					Type: new("foo-networking"),
 				},
 			},
 		}

@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -106,7 +105,7 @@ func (d *localDriver) applyService(ctx context.Context, providerClient client.Cl
 				Name:        "ssh",
 				Port:        22,
 				Protocol:    corev1.ProtocolTCP,
-				AppProtocol: ptr.To("ssh"),
+				AppProtocol: new("ssh"),
 			},
 		},
 	}
@@ -168,7 +167,7 @@ func (d *localDriver) applyPod(
 				Image:           providerSpec.Image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				SecurityContext: &corev1.SecurityContext{
-					Privileged: ptr.To(true),
+					Privileged: new(true),
 				},
 				Env: []corev1.EnvVar{{
 					Name: "NODE_NAME",
@@ -226,7 +225,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  userDataSecret.Name,
-						DefaultMode: ptr.To[int32](0777),
+						DefaultMode: new(int32(0777)),
 					},
 				},
 			},
@@ -249,7 +248,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{
 						Path: "/var/run/docker.sock",
-						Type: ptr.To(corev1.HostPathSocket),
+						Type: new(corev1.HostPathSocket),
 					},
 				},
 			},

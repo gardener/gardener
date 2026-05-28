@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -62,7 +61,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
 							// The chosen value of 6 CPU is aligned with the average value for memory - 24G. Preserve the cpu:memory ratio of 1:4.
-							AverageValue: ptr.To(resource.MustParse("6")),
+							AverageValue: new(resource.MustParse("6")),
 						},
 					},
 				},
@@ -73,14 +72,14 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
 							// The chosen value of 24G is aligned with the average value for cpu - 6 CPU cores. Preserve the cpu:memory ratio of 1:4.
-							AverageValue: ptr.To(resource.MustParse("24G")),
+							AverageValue: new(resource.MustParse("24G")),
 						},
 					},
 				},
 			},
 			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
 				ScaleUp: &autoscalingv2.HPAScalingRules{
-					StabilizationWindowSeconds: ptr.To[int32](60),
+					StabilizationWindowSeconds: new(int32(60)),
 					Policies: []autoscalingv2.HPAScalingPolicy{
 						// Allow to upscale 100% of the current number of pods every 1 minute to see whether any upscale recommendation will still hold true after the cluster has settled
 						{
@@ -91,7 +90,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hp
 					},
 				},
 				ScaleDown: &autoscalingv2.HPAScalingRules{
-					StabilizationWindowSeconds: ptr.To[int32](1800),
+					StabilizationWindowSeconds: new(int32(1800)),
 					Policies: []autoscalingv2.HPAScalingPolicy{
 						// Allow to downscale one pod every 5 minutes to see whether any downscale recommendation will still hold true after the cluster has settled (conservatively)
 						{

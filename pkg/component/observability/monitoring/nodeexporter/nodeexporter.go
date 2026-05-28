@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -129,7 +128,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "NodeExporterDown",
 						Expr:  intstr.FromString(`absent(up{job="` + name + `"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "warning",
@@ -144,7 +143,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "K8SNodeOutOfDisk",
 						Expr:  intstr.FromString(`kube_node_status_condition{condition="OutOfDisk", status="true"} == 1`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "critical",
@@ -159,7 +158,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "K8SNodeMemoryPressure",
 						Expr:  intstr.FromString(`kube_node_status_condition{condition="MemoryPressure", status="true"} == 1`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "warning",
@@ -174,7 +173,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "K8SNodeDiskPressure",
 						Expr:  intstr.FromString(`kube_node_status_condition{condition="DiskPressure", status="true"} == 1`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "warning",
@@ -193,7 +192,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "VMRootfsFull",
 						Expr:  intstr.FromString(`node_filesystem_free{mountpoint="/"} < 1024`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "critical",
@@ -208,7 +207,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 					{
 						Alert: "VMConntrackTableFull",
 						Expr:  intstr.FromString(`instance:conntrack_entries_usage:percent > 90`),
-						For:   ptr.To(monitoringv1.Duration("1h")),
+						For:   new(monitoringv1.Duration("1h")),
 						Labels: map[string]string{
 							"service":    name,
 							"severity":   "critical",
@@ -294,7 +293,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		service = &corev1.Service{
@@ -330,7 +329,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},
@@ -358,10 +357,10 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						HostPID:                      true,
 						PriorityClassName:            "system-cluster-critical",
 						ServiceAccountName:           serviceAccount.Name,
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To[int64](65534),
+							RunAsNonRoot: new(true),
+							RunAsUser:    new(int64(65534)),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
@@ -429,7 +428,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -493,7 +492,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},

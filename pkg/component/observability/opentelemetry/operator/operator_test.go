@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -78,7 +77,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -232,8 +231,8 @@ var _ = Describe("OpenTelemetry Operator", func() {
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To[int32](2),
-				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: new(int32(2)),
+				Replicas:             new(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
@@ -248,10 +247,10 @@ var _ = Describe("OpenTelemetry Operator", func() {
 						ServiceAccountName: name,
 						PriorityClassName:  priorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To[int64](65532),
-							RunAsGroup:   ptr.To[int64](65532),
-							FSGroup:      ptr.To[int64](65532),
+							RunAsNonRoot: new(true),
+							RunAsUser:    new(int64(65532)),
+							RunAsGroup:   new(int64(65532)),
+							FSGroup:      new(int64(65532)),
 						},
 						Containers: []corev1.Container{
 							{
@@ -295,7 +294,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 								},
 							},
 						},
@@ -329,7 +328,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -367,11 +366,11 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: operatorManagedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -389,7 +388,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 			operatorManagedResourceSecret.Name = operatorManagedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(Succeed())
 			Expect(operatorManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(operatorManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(operatorManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(operatorManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 	})

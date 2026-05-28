@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -79,7 +78,7 @@ var _ = Describe("ShootState", func() {
 		Context("with data to backup", func() {
 			var (
 				existingGardenerData      = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
-				existingExtensionsData    = []gardencorev1beta1.ExtensionResourceState{{Name: ptr.To("some-data")}}
+				existingExtensionsData    = []gardencorev1beta1.ExtensionResourceState{{Name: new("some-data")}}
 				existingResourcesData     = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
 				expectedSpec              gardencorev1beta1.ShootStateSpec
 				cleanupMachineObjectsFunc func(ctx context.Context)
@@ -97,13 +96,13 @@ var _ = Describe("ShootState", func() {
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", controlPlaneNamespace, false, true))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", controlPlaneNamespace, true, false))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret4", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
-					s.Immutable = ptr.To(true)
+					s.Immutable = new(true)
 				}))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret5", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
 					s.Type = corev1.SecretTypeTLS
 				}))).To(Succeed())
 				Expect(fakeSeedClient.Create(ctx, newSecret("secret6", controlPlaneNamespace, true, false, func(s *corev1.Secret) {
-					s.Immutable = ptr.To(true)
+					s.Immutable = new(true)
 					s.Type = corev1.SecretTypeTLS
 				}))).To(Succeed())
 
@@ -166,27 +165,27 @@ var _ = Describe("ShootState", func() {
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
 							Kind:  "BackupEntry",
-							Name:  ptr.To("backupentry"),
+							Name:  new("backupentry"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)},
 						},
 						{
 							Kind:  "ContainerRuntime",
-							Name:  ptr.To("containerruntime"),
+							Name:  new("containerruntime"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
 						},
 						{
 							Kind:  "ControlPlane",
-							Name:  ptr.To("controlplane"),
+							Name:  new("controlplane"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
 						},
 						{
 							Kind:  "DNSRecord",
-							Name:  ptr.To("dnsrecord"),
+							Name:  new("dnsrecord"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)},
 						},
 						{
 							Kind:  "Extension",
-							Name:  ptr.To("extension"),
+							Name:  new("extension"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)},
 							Resources: []gardencorev1beta1.NamedResourceReference{{
 								Name: "resource-ref1",
@@ -199,28 +198,28 @@ var _ = Describe("ShootState", func() {
 						},
 						{
 							Kind:  "Infrastructure",
-							Name:  ptr.To("infrastructure"),
+							Name:  new("infrastructure"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)},
 						},
 						{
 							Kind:  "Network",
-							Name:  ptr.To("network"),
+							Name:  new("network"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)},
 						},
 						{
 							Kind:    "OperatingSystemConfig",
-							Name:    ptr.To("osc"),
-							Purpose: ptr.To(""),
+							Name:    new("osc"),
+							Purpose: new(""),
 							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
 						},
 						{
 							Kind:  "SelfHostedShootExposure",
-							Name:  ptr.To("selfhostedshootexposure"),
+							Name:  new("selfhostedshootexposure"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"selfhostedshootexposure"}`)},
 						},
 						{
 							Kind:  "Worker",
-							Name:  ptr.To("worker"),
+							Name:  new("worker"),
 							State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
 						},
 					},

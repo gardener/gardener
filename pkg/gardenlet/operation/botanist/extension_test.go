@@ -16,7 +16,6 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -117,7 +116,7 @@ var _ = Describe("Extensions", func() {
 							Kind:                extensionKind,
 							Type:                barExtensionType,
 							AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
-							WorkerlessSupported: ptr.To(true),
+							WorkerlessSupported: new(true),
 						},
 					},
 				},
@@ -129,7 +128,7 @@ var _ = Describe("Extensions", func() {
 			barExtensionDisabled = gardencorev1beta1.Extension{
 				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
-				Disabled:       ptr.To(true),
+				Disabled:       new(true),
 			}
 		)
 

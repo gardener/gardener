@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -99,7 +98,7 @@ var _ = Describe("PersesOperator", func() {
 				Namespace: namespace,
 				Labels:    map[string]string{"app": "perses-operator"},
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		deployment = &appsv1.Deployment{
@@ -109,8 +108,8 @@ var _ = Describe("PersesOperator", func() {
 				Labels:    map[string]string{"app": "perses-operator"},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(1)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             new(int32(1)),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "perses-operator"},
 				},
@@ -169,9 +168,9 @@ var _ = Describe("PersesOperator", func() {
 									PeriodSeconds:       10,
 								},
 								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-									ReadOnlyRootFilesystem:   ptr.To(true),
+									ReadOnlyRootFilesystem:   new(true),
 								},
 							},
 						},
@@ -193,7 +192,7 @@ var _ = Describe("PersesOperator", func() {
 					Name:       "perses-operator",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -205,7 +204,7 @@ var _ = Describe("PersesOperator", func() {
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -355,9 +354,9 @@ var _ = Describe("PersesOperator", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
+						Class:       new("seed"),
 						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 					Status: healthyManagedResourceStatus,
 				}
@@ -368,7 +367,7 @@ var _ = Describe("PersesOperator", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			})

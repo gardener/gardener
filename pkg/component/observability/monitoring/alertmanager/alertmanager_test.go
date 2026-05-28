@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -197,7 +196,7 @@ var _ = Describe("Alertmanager", func() {
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
 				},
-				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
+				SecurityContext: &corev1.PodSecurityContext{RunAsUser: new(int64(0))},
 				Storage: &monitoringv1.StorageSpec{
 					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "alertmanager-db"},
@@ -234,7 +233,7 @@ var _ = Describe("Alertmanager", func() {
 					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -246,12 +245,12 @@ var _ = Describe("Alertmanager", func() {
 							MaxAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("200Mi"),
 							},
-							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues:    new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -265,9 +264,9 @@ var _ = Describe("Alertmanager", func() {
 			Spec: monitoringv1alpha1.AlertmanagerConfigSpec{
 				Route: &monitoringv1alpha1.Route{
 					GroupBy:        []string{"service"},
-					GroupWait:      ptr.To(monitoringv1.NonEmptyDuration("5m")),
-					GroupInterval:  ptr.To(monitoringv1.NonEmptyDuration("5m")),
-					RepeatInterval: ptr.To(monitoringv1.NonEmptyDuration("72h")),
+					GroupWait:      new(monitoringv1.NonEmptyDuration("5m")),
+					GroupInterval:  new(monitoringv1.NonEmptyDuration("5m")),
+					RepeatInterval: new(monitoringv1.NonEmptyDuration("72h")),
 					Receiver:       "dev-null",
 					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"matchers":[{"matchType":"=~","name":"visibility","value":"all|operator"}],"receiver":"email-kubernetes-ops"}`)}},
 				},
@@ -308,11 +307,11 @@ var _ = Describe("Alertmanager", func() {
 					{
 						Name: "email-kubernetes-ops",
 						EmailConfigs: []monitoringv1alpha1.EmailConfig{{
-							To:           ptr.To(string(alertingSMTPSecret.Data["to"])),
-							From:         ptr.To(string(alertingSMTPSecret.Data["from"])),
-							Smarthost:    ptr.To(string(alertingSMTPSecret.Data["smarthost"])),
-							AuthUsername: ptr.To(string(alertingSMTPSecret.Data["auth_username"])),
-							AuthIdentity: ptr.To(string(alertingSMTPSecret.Data["auth_identity"])),
+							To:           new(string(alertingSMTPSecret.Data["to"])),
+							From:         new(string(alertingSMTPSecret.Data["from"])),
+							Smarthost:    new(string(alertingSMTPSecret.Data["smarthost"])),
+							AuthUsername: new(string(alertingSMTPSecret.Data["auth_username"])),
+							AuthIdentity: new(string(alertingSMTPSecret.Data["auth_identity"])),
 							AuthPassword: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",
@@ -453,13 +452,13 @@ var _ = Describe("Alertmanager", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"component":    "alertmanager",
 					"role":         "monitoring",
 					"alertmanager": name,
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 	})
@@ -502,9 +501,9 @@ var _ = Describe("Alertmanager", func() {
 					},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:       ptr.To("seed"),
+					Class:       new("seed"),
 					SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 				Status: healthyManagedResourceStatus,
 			}
@@ -515,7 +514,7 @@ var _ = Describe("Alertmanager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
@@ -580,22 +579,22 @@ var _ = Describe("Alertmanager", func() {
 
 					config.Spec.Receivers[1].EmailConfigs = []monitoringv1alpha1.EmailConfig{
 						{
-							To:           ptr.To(values.EmailReceivers[0]),
-							From:         ptr.To(string(alertingSMTPSecret.Data["from"])),
-							Smarthost:    ptr.To(string(alertingSMTPSecret.Data["smarthost"])),
-							AuthUsername: ptr.To(string(alertingSMTPSecret.Data["auth_username"])),
-							AuthIdentity: ptr.To(string(alertingSMTPSecret.Data["auth_identity"])),
+							To:           new(values.EmailReceivers[0]),
+							From:         new(string(alertingSMTPSecret.Data["from"])),
+							Smarthost:    new(string(alertingSMTPSecret.Data["smarthost"])),
+							AuthUsername: new(string(alertingSMTPSecret.Data["auth_username"])),
+							AuthIdentity: new(string(alertingSMTPSecret.Data["auth_identity"])),
 							AuthPassword: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",
 							},
 						},
 						{
-							To:           ptr.To(values.EmailReceivers[1]),
-							From:         ptr.To(string(alertingSMTPSecret.Data["from"])),
-							Smarthost:    ptr.To(string(alertingSMTPSecret.Data["smarthost"])),
-							AuthUsername: ptr.To(string(alertingSMTPSecret.Data["auth_username"])),
-							AuthIdentity: ptr.To(string(alertingSMTPSecret.Data["auth_identity"])),
+							To:           new(values.EmailReceivers[1]),
+							From:         new(string(alertingSMTPSecret.Data["from"])),
+							Smarthost:    new(string(alertingSMTPSecret.Data["smarthost"])),
+							AuthUsername: new(string(alertingSMTPSecret.Data["auth_username"])),
+							AuthIdentity: new(string(alertingSMTPSecret.Data["auth_identity"])),
 							AuthPassword: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
 								Key:                  "auth_password",
@@ -624,7 +623,7 @@ var _ = Describe("Alertmanager", func() {
 				It("should successfully deploy all resources", func() {
 					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-tcp-mesh-tcp"] = "allowed"
 					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-mesh-udp"] = "allowed"
-					alertManager.Spec.Replicas = ptr.To[int32](2)
+					alertManager.Spec.Replicas = new(int32(2))
 
 					Expect(managedResource).To(consistOf(
 						service,

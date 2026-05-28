@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -131,7 +130,7 @@ var _ = Describe("seed", func() {
 		})
 
 		It("should return a copied class value if specified", func() {
-			class := ptr.To("my-load-balancer-class")
+			class := new("my-load-balancer-class")
 
 			seed.SetInfo(&gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{

@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -122,7 +121,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMaxNodesTotal(int64(0))
 				clusterAutoscaler.EXPECT().SetReplicas(int32(1))
-				kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(ptr.To[int32](1))
+				kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(new(int32(1)))
 			})
 
 			It("should set the secrets, namespace uid, machine deployments, and deploy", func() {
@@ -168,14 +167,14 @@ var _ = Describe("ClusterAutoscaler", func() {
 		It("should scale the CA deployment", func() {
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: namespace},
-				Spec:       appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)},
+				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(1))},
 			}
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
 			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "cluster-autoscaler"}, deployment)).To(Succeed())
-			Expect(deployment.Spec.Replicas).To(Equal(ptr.To[int32](0)))
+			Expect(deployment.Spec.Replicas).To(Equal(new(int32(0))))
 		})
 
 		It("should fail when the scale call fails", func() {
@@ -203,11 +202,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 			shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](24),
+						NodeCIDRMaskSize: new(int32(24)),
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods: ptr.To("100.64.0.0/12"),
+					Pods: new("100.64.0.0/12"),
 				},
 			}}
 			_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
@@ -217,7 +216,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			maxNetworks = 4096
 
 			botanist.Shoot.CloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-				MaxNodesTotal: ptr.To[int32](100),
+				MaxNodesTotal: new(int32(100)),
 			}
 
 			namespace = "shoot--foo--bar"
@@ -249,13 +248,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		It("should return the CloudProfile limit if it is lower than the network limit", func() {
 
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 10)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = new(maxNetworks - 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the network limit if it is lower than the CloudProfile limit", func() {
 
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks + 10)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = new(maxNetworks + 10)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks))
 		})
 
@@ -272,7 +271,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClientWithMachines).Build()
 
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 100)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = new(maxNetworks - 100)
 			Expect(botanist.CalculateMaxNodesTotal(ctx, shoot)).To(BeEquivalentTo(maxNetworks - 50))
 		})
 	})
@@ -313,7 +312,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](24),
+						NodeCIDRMaskSize: new(int32(24)),
 					},
 				},
 			}},
@@ -324,11 +323,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](24),
+						NodeCIDRMaskSize: new(int32(24)),
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods: ptr.To("100.64.0.0/12"),
+					Pods: new("100.64.0.0/12"),
 				},
 			}},
 			4096,
@@ -338,12 +337,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](24),
+						NodeCIDRMaskSize: new(int32(24)),
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:  ptr.To("100.64.0.0/11"),
-					Nodes: ptr.To("10.250.0.0/16"),
+					Pods:  new("100.64.0.0/11"),
+					Nodes: new("10.250.0.0/16"),
 				},
 			}},
 			8192,
@@ -353,12 +352,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](24),
+						NodeCIDRMaskSize: new(int32(24)),
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:  ptr.To("100.64.0.0/12"),
-					Nodes: ptr.To("10.250.0.0/16"),
+					Pods:  new("100.64.0.0/12"),
+					Nodes: new("10.250.0.0/16"),
 				},
 			}},
 			4096,
@@ -368,12 +367,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](24),
+						NodeCIDRMaskSize: new(int32(24)),
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:  ptr.To("100.64.0.0/11"),
-					Nodes: ptr.To("10.250.0.0/20"),
+					Pods:  new("100.64.0.0/11"),
+					Nodes: new("10.250.0.0/20"),
 				},
 			}},
 			4094,
@@ -383,12 +382,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-						NodeCIDRMaskSize: ptr.To[int32](64),
+						NodeCIDRMaskSize: new(int32(64)),
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Pods:       ptr.To("2001:db8:1::/48"),
-					Nodes:      ptr.To("2001:db8:2::/48"),
+					Pods:       new("2001:db8:1::/48"),
+					Nodes:      new("2001:db8:2::/48"),
 					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
 				},
 			}},
@@ -400,11 +399,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: ptr.To[int32](24),
+							NodeCIDRMaskSize: new(int32(24)),
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods: ptr.To("100.64.0.0/12"),
+						Pods: new("100.64.0.0/12"),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -421,12 +420,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: ptr.To[int32](24),
+							NodeCIDRMaskSize: new(int32(24)),
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods:  ptr.To("100.64.0.0/12"),
-						Nodes: ptr.To("10.250.0.0/16"),
+						Pods:  new("100.64.0.0/12"),
+						Nodes: new("10.250.0.0/16"),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -444,12 +443,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: ptr.To[int32](24),
+							NodeCIDRMaskSize: new(int32(24)),
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Pods:  ptr.To("100.64.0.0/11"),
-						Nodes: ptr.To("10.250.0.0/20"),
+						Pods:  new("100.64.0.0/11"),
+						Nodes: new("10.250.0.0/20"),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{
@@ -467,7 +466,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: ptr.To[int32](24),
+							NodeCIDRMaskSize: new(int32(24)),
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
@@ -489,7 +488,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: ptr.To[int32](24),
+							NodeCIDRMaskSize: new(int32(24)),
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{

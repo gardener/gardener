@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -45,7 +44,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: ptr.To("seed"),
+				SeedName: new("seed"),
 				Maintenance: &gardencorev1beta1.Maintenance{
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: "220000+0000",
@@ -54,7 +53,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName:      ptr.To("seed"),
+				SeedName:      new("seed"),
 				LastOperation: &gardencorev1beta1.LastOperation{},
 				Gardener: gardencorev1beta1.Gardener{
 					// don't bother injecting an arbitrary version,
@@ -73,8 +72,8 @@ var _ = Describe("CalculateControllerInfos", func() {
 		// default shoot controller settings
 		cfg = gardenletconfigv1alpha1.ShootControllerConfiguration{
 			SyncPeriod:                 &metav1.Duration{Duration: time.Hour},
-			RespectSyncPeriodOverwrite: ptr.To(false),
-			ReconcileInMaintenanceOnly: ptr.To(false),
+			RespectSyncPeriodOverwrite: new(false),
+			ReconcileInMaintenanceOnly: new(false),
 		}
 	})
 
@@ -116,7 +115,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
+				cfg.RespectSyncPeriodOverwrite = new(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -262,7 +261,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				BeforeEach(func() {
 					shootSyncPeriod = 2 * time.Hour
 
-					cfg.RespectSyncPeriodOverwrite = ptr.To(true)
+					cfg.RespectSyncPeriodOverwrite = new(true)
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootSyncPeriod, shootSyncPeriod.String())
 				})
 
@@ -359,7 +358,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 			Context("confined by operator (reconcileInMaintenanceOnly)", func() {
 				BeforeEach(func() {
-					cfg.ReconcileInMaintenanceOnly = ptr.To(true)
+					cfg.ReconcileInMaintenanceOnly = new(true)
 				})
 
 				testReconciliationsConfined()
@@ -367,7 +366,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 			Context("confined by user (confineSpecUpdateRollout)", func() {
 				BeforeEach(func() {
-					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(true)
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = new(true)
 				})
 
 				testReconciliationsConfined()
@@ -376,7 +375,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
+				cfg.RespectSyncPeriodOverwrite = new(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -472,7 +471,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 		BeforeEach(func() {
 			shoot.Generation = 2
 			shoot.Status.ObservedGeneration = 1
-			shoot.Spec.SeedName = ptr.To("other")
+			shoot.Spec.SeedName = new("other")
 			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 		})
@@ -503,7 +502,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
+				cfg.RespectSyncPeriodOverwrite = new(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -563,9 +562,9 @@ var _ = Describe("CalculateControllerInfos", func() {
 		BeforeEach(func() {
 			shoot.Generation = 2
 			shoot.Status.ObservedGeneration = 2
-			shoot.Spec.SeedName = ptr.To("other")
+			shoot.Spec.SeedName = new("other")
 			// after successful Migrate operation, the source gardenlet updates status.seedName to be spec.seedName
-			shoot.Status.SeedName = ptr.To("other")
+			shoot.Status.SeedName = new("other")
 			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeMigrate
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 		})
@@ -596,7 +595,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
+				cfg.RespectSyncPeriodOverwrite = new(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 
@@ -687,7 +686,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 
 		Context("shoot is ignored", func() {
 			BeforeEach(func() {
-				cfg.RespectSyncPeriodOverwrite = ptr.To(true)
+				cfg.RespectSyncPeriodOverwrite = new(true)
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
 			})
 

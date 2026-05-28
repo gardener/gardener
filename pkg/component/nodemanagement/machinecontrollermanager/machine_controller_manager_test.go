@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -94,7 +93,7 @@ var _ = Describe("MachineControllerManager", func() {
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
 			},
-			AutomountServiceAccountToken: ptr.To(false),
+			AutomountServiceAccountToken: new(false),
 		}
 
 		roleBinding = &rbacv1.RoleBinding{
@@ -222,7 +221,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &replicas,
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "kubernetes",
 					"role": "machine-controller-manager",
@@ -286,12 +285,12 @@ var _ = Describe("MachineControllerManager", func() {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						}},
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",
-						TerminationGracePeriodSeconds: ptr.To[int64](5),
+						TerminationGracePeriodSeconds: new(int64(5)),
 						Tolerations:                   []corev1.Toleration{{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}},
 					},
 				},
@@ -308,14 +307,14 @@ var _ = Describe("MachineControllerManager", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "machine-controller-manager",
 					},
 				},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -334,17 +333,17 @@ var _ = Describe("MachineControllerManager", func() {
 					Name:       "machine-controller-manager",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "machine-controller-manager",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -362,7 +361,7 @@ var _ = Describe("MachineControllerManager", func() {
 					Rules: []monitoringv1.Rule{{
 						Alert: "MachineControllerManagerDown",
 						Expr:  intstr.FromString(`absent(up{job="machine-controller-manager"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
+						For:   new(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":    "machine-controller-manager",
 							"severity":   "critical",
@@ -556,7 +555,7 @@ subjects:
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  ptr.To(false),
+				KeepObjects:  new(false),
 			},
 		}
 	})
@@ -624,7 +623,7 @@ subjects:
 				managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
 				Expect(actualManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(actualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(actualManagedResourceSecret.Immutable).To(Equal(new(true)))
 
 				manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
 				Expect(err).NotTo(HaveOccurred())
@@ -751,7 +750,7 @@ subjects:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To[int32](1)
+				deploy.Spec.Replicas = new(int32(1))
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

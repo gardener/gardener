@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -140,8 +139,8 @@ var _ = Describe("Defaults", func() {
 						},
 					}),
 				},
-				Bootstrap:       ptr.To(BootstrapServiceAccount),
-				MergeWithParent: ptr.To(false),
+				Bootstrap:       new(BootstrapServiceAccount),
+				MergeWithParent: new(false),
 			}
 
 			SetObjectDefaults_ManagedSeed(obj)
@@ -190,22 +189,22 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Gardenlet = GardenletConfig{}
 			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(ptr.To[int32](2)))
-			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](2)))
+			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(new(int32(2))))
+			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(new(int32(2))))
 			Expect(obj.Spec.Gardenlet.Deployment.Image).NotTo(BeNil())
 		})
 
 		It("should not overwrite the already set values for GardenletDeployment field", func() {
 			obj.Spec.Gardenlet = GardenletConfig{
 				Deployment: &GardenletDeployment{
-					ReplicaCount:         ptr.To[int32](3),
-					RevisionHistoryLimit: ptr.To[int32](3),
+					ReplicaCount:         new(int32(3)),
+					RevisionHistoryLimit: new(int32(3)),
 				},
 			}
 			SetObjectDefaults_ManagedSeed(obj)
 
-			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(ptr.To[int32](3)))
-			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](3)))
+			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(new(int32(3))))
+			Expect(obj.Spec.Gardenlet.Deployment.RevisionHistoryLimit).To(Equal(new(int32(3))))
 			Expect(obj.Spec.Gardenlet.Deployment.Image).NotTo(BeNil())
 		})
 	})
@@ -216,21 +215,21 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				PullPolicy: ptr.To(corev1.PullIfNotPresent),
+				PullPolicy: new(corev1.PullIfNotPresent),
 			}))
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
 			obj.Spec.Gardenlet = GardenletConfig{
 				Deployment: &GardenletDeployment{
-					Image: &Image{Tag: ptr.To("latest")},
+					Image: &Image{Tag: new("latest")},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        ptr.To("latest"),
-				PullPolicy: ptr.To(corev1.PullAlways),
+				Tag:        new("latest"),
+				PullPolicy: new(corev1.PullAlways),
 			}))
 		})
 
@@ -238,16 +237,16 @@ var _ = Describe("Defaults", func() {
 			obj.Spec.Gardenlet = GardenletConfig{
 				Deployment: &GardenletDeployment{
 					Image: &Image{
-						Tag:        ptr.To("foo"),
-						PullPolicy: ptr.To(corev1.PullNever),
+						Tag:        new("foo"),
+						PullPolicy: new(corev1.PullNever),
 					},
 				}}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
-				Tag:        ptr.To("foo"),
-				PullPolicy: ptr.To(corev1.PullNever),
+				Tag:        new("foo"),
+				PullPolicy: new(corev1.PullNever),
 			}))
 		})
 	})

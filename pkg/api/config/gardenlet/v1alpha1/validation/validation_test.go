@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -45,7 +44,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
 					SyncPeriod:           &metav1.Duration{Duration: time.Hour},
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
-					DNSEntryTTLSeconds:   ptr.To[int64](120),
+					DNSEntryTTLSeconds:   new(int64(120)),
 				},
 				ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 					ConcurrentSyncs:                     &concurrentSyncs,
@@ -169,8 +168,8 @@ var _ = Describe("GardenletConfiguration", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 								Validity:                        &metav1.Duration{Duration: time.Hour},
-								AutoRotationJitterPercentageMin: ptr.To[int32](13),
-								AutoRotationJitterPercentageMax: ptr.To[int32](37),
+								AutoRotationJitterPercentageMin: new(int32(13)),
+								AutoRotationJitterPercentageMax: new(int32(37)),
 							},
 						}
 
@@ -194,7 +193,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage min less than 1", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMin: ptr.To[int32](0),
+								AutoRotationJitterPercentageMin: new(int32(0)),
 							},
 						}
 
@@ -208,7 +207,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage max more than 100", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMax: ptr.To[int32](101),
+								AutoRotationJitterPercentageMax: new(int32(101)),
 							},
 						}
 
@@ -222,8 +221,8 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage min equal max", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMin: ptr.To[int32](13),
-								AutoRotationJitterPercentageMax: ptr.To[int32](13),
+								AutoRotationJitterPercentageMin: new(int32(13)),
+								AutoRotationJitterPercentageMax: new(int32(13)),
 							},
 						}
 
@@ -237,8 +236,8 @@ var _ = Describe("GardenletConfiguration", func() {
 					It("should forbid auto rotation jitter percentage min higher than max", func() {
 						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-								AutoRotationJitterPercentageMin: ptr.To[int32](14),
-								AutoRotationJitterPercentageMax: ptr.To[int32](13),
+								AutoRotationJitterPercentageMin: new(int32(14)),
+								AutoRotationJitterPercentageMax: new(int32(13)),
 							},
 						}
 
@@ -282,7 +281,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should allow disabling leader election", func() {
-				cfg.LeaderElection.LeaderElect = ptr.To(false)
+				cfg.LeaderElection.LeaderElect = new(false)
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
@@ -335,7 +334,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid too low values for the DNS TTL", func() {
-				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To(int64(-1))
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = new(int64(-1))
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 
@@ -346,7 +345,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid too high values for the DNS TTL", func() {
-				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To[int64](601)
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = new(int64(601))
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 
@@ -492,7 +491,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should return errors because concurrent syncs are < 0", func() {
-				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = ptr.To(-1)
+				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = new(-1)
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -557,7 +556,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("seed template", func() {
 			It("should forbid invalid fields in seed template", func() {
-				cfg.SeedConfig.Spec.Networks.Nodes = ptr.To("")
+				cfg.SeedConfig.Spec.Networks.Nodes = new("")
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 
@@ -611,13 +610,13 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should pass as sni config contains a valid external service ip", func() {
-				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
+				cfg.SNI.Ingress.ServiceExternalIP = new("1.1.1.1")
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 			})
 
 			It("should forbid as sni config contains an empty external service ip", func() {
-				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("")
+				cfg.SNI.Ingress.ServiceExternalIP = new("")
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -627,7 +626,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid as sni config contains an invalid external service ip", func() {
-				cfg.SNI.Ingress.ServiceExternalIP = ptr.To("a.b.c.d")
+				cfg.SNI.Ingress.ServiceExternalIP = new("a.b.c.d")
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -684,19 +683,19 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should allow specifying a non-empty class", func() {
-					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("non-default")
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = new("non-default")
 
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should allow specifying a qualified class", func() {
-					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("stackit.cloud/yawol")
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = new("stackit.cloud/yawol")
 
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should deny specifying an empty class", func() {
-					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To("")
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = new("")
 
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ContainElement(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -708,7 +707,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should deny specifying a class that Kubernetes does not accept", func() {
-					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = ptr.To(".invalid-")
+					cfg.ExposureClassHandlers[0].LoadBalancerService.Class = new(".invalid-")
 
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(ContainElement(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -722,19 +721,19 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			Context("serviceExternalIP", func() {
 				It("should allow to use an external service ip as loadbalancer ip is valid", func() {
-					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = new("1.1.1.1")
 
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should allow to use an external service ip", func() {
-					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("1.1.1.1")
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = new("1.1.1.1")
 
 					Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
 				})
 
 				It("should forbid to use an empty external service ip", func() {
-					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("")
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = new("")
 
 					errorList := ValidateGardenletConfiguration(cfg, nil)
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -744,7 +743,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should forbid to use an invalid external service ip", func() {
-					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = ptr.To("a.b.c.d")
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = new("a.b.c.d")
 
 					errorList := ValidateGardenletConfiguration(cfg, nil)
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -773,8 +772,8 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			It("should pass with valid toleration options", func() {
 				cfg.NodeToleration = &gardenletconfigv1alpha1.NodeToleration{
-					DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
-					DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
+					DefaultNotReadyTolerationSeconds:    new(int64(60)),
+					DefaultUnreachableTolerationSeconds: new(int64(120)),
 				}
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
@@ -782,8 +781,8 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			It("should fail with invalid toleration options", func() {
 				cfg.NodeToleration = &gardenletconfigv1alpha1.NodeToleration{
-					DefaultNotReadyTolerationSeconds:    ptr.To(int64(-1)),
-					DefaultUnreachableTolerationSeconds: ptr.To(int64(-2)),
+					DefaultNotReadyTolerationSeconds:    new(int64(-1)),
+					DefaultUnreachableTolerationSeconds: new(int64(-2)),
 				}
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)

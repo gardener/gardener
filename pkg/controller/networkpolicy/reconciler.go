@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -498,10 +497,10 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					},
 				},
 				Ports: []networkingv1.NetworkPolicyPort{
-					{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(corednsconstants.PortServiceServer))},
-					{Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(corednsconstants.PortServiceServer))},
-					{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(corednsconstants.PortServer))},
-					{Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(corednsconstants.PortServer))},
+					{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+					{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+					{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
+					{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
 				},
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},

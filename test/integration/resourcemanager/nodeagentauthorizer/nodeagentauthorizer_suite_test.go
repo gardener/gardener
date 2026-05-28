@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
@@ -203,7 +202,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -219,7 +218,7 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
 		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
+			SkipNameValidation: new(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -311,7 +310,7 @@ func createAuthorizationConfigurationFile(kubeconfigFileNameMachine, kubeconfigF
 					}},
 					ConnectionInfo: apiserverv1beta1.WebhookConnectionInfo{
 						Type:           apiserverv1beta1.AuthorizationWebhookConnectionInfoTypeKubeConfigFile,
-						KubeConfigFile: ptr.To(kubeconfigFileNameMachine),
+						KubeConfigFile: new(kubeconfigFileNameMachine),
 					},
 				},
 			},
@@ -332,7 +331,7 @@ func createAuthorizationConfigurationFile(kubeconfigFileNameMachine, kubeconfigF
 					}},
 					ConnectionInfo: apiserverv1beta1.WebhookConnectionInfo{
 						Type:           apiserverv1beta1.AuthorizationWebhookConnectionInfoTypeKubeConfigFile,
-						KubeConfigFile: ptr.To(kubeconfigFileNameNode),
+						KubeConfigFile: new(kubeconfigFileNameNode),
 					},
 				},
 			},

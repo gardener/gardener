@@ -7,7 +7,6 @@ package prometheus
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 func (p *prometheus) serviceAccount() *corev1.ServiceAccount {
@@ -17,6 +16,6 @@ func (p *prometheus) serviceAccount() *corev1.ServiceAccount {
 			Namespace: p.namespace,
 			Labels:    p.getLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }

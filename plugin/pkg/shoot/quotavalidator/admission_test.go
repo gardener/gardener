@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -204,8 +203,8 @@ var _ = Describe("quotavalidator", func() {
 					Name:      "test-shoot",
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName:  ptr.To("profile"),
-					SecretBindingName: ptr.To("test-binding"),
+					CloudProfileName:  new("profile"),
+					SecretBindingName: new("test-binding"),
 					Provider: core.Provider{
 						Workers: workersBase,
 					},
@@ -228,8 +227,8 @@ var _ = Describe("quotavalidator", func() {
 					Name:      "test-shoot",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					CloudProfileName:  ptr.To("profile"),
-					SecretBindingName: ptr.To("test-binding"),
+					CloudProfileName:  new("profile"),
+					SecretBindingName: new("test-binding"),
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
 							{
@@ -318,7 +317,7 @@ var _ = Describe("quotavalidator", func() {
 				shoot2 := *versionedShootBase.DeepCopy()
 				shoot2.Name = "test-shoot-2"
 				shoot2.Spec.SecretBindingName = nil
-				shoot2.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
+				shoot2.Spec.CredentialsBindingName = new(credentialsBinding.Name)
 
 				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot2)).To(Succeed())

@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -72,14 +71,14 @@ func (g *gardenerAPIServer) deployment(
 		},
 		Spec: appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
-			RevisionHistoryLimit: ptr.To[int32](2),
+			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             g.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge:       ptr.To(intstr.FromString("100%")),
-					MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+					MaxSurge:       new(intstr.FromString("100%")),
+					MaxUnavailable: new(intstr.FromInt32(0)),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -94,15 +93,15 @@ func (g *gardenerAPIServer) deployment(
 					}),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem500,
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
-						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsNonRoot: new(true),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Containers: []corev1.Container{{
 						Name:            containerName,
@@ -144,7 +143,7 @@ func (g *gardenerAPIServer) deployment(
 							TimeoutSeconds:      15,
 						},
 						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
+							AllowPrivilegeEscalation: new(false),
 						},
 					}},
 				},

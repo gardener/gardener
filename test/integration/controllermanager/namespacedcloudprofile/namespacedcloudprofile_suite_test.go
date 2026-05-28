@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -116,7 +115,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&namespacedcloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
+			ConcurrentSyncs: new(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

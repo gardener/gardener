@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -173,11 +172,11 @@ var _ = Describe("Vali", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: ptr.To("seed"),
+						Class: new("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -199,7 +198,7 @@ var _ = Describe("Vali", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
@@ -215,7 +214,7 @@ var _ = Describe("Vali", func() {
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
@@ -229,7 +228,7 @@ var _ = Describe("Vali", func() {
 				managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 				Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecretTarget.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
@@ -278,11 +277,11 @@ var _ = Describe("Vali", func() {
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: ptr.To("seed"),
+						Class: new("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
-						KeepObjects: ptr.To(false),
+						KeepObjects: new(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -299,7 +298,7 @@ var _ = Describe("Vali", func() {
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
@@ -349,11 +348,11 @@ var _ = Describe("Vali", func() {
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
+					Class: new("seed"),
 					SecretRefs: []corev1.LocalObjectReference{{
 						Name: managedResource.Spec.SecretRefs[0].Name,
 					}},
-					KeepObjects: ptr.To(false),
+					KeepObjects: new(false),
 				},
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
@@ -370,7 +369,7 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			test.PrometheusRule(getPrometheusRule("aggregate"), "testdata/aggregate-vali.prometheusrule.test.yaml")
@@ -417,7 +416,7 @@ var _ = Describe("Vali", func() {
 
 			sts = &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{Name: valiStatefulSetName, Namespace: gardenNamespace, Generation: 2},
-				Spec:       appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
+				Spec:       appsv1.StatefulSetSpec{Replicas: new(int32(2))},
 			}
 
 			managedResource = &resourcesv1alpha1.ManagedResource{
@@ -758,7 +757,7 @@ func getServiceMonitor(label string, withTelegraf bool) *monitoringv1.ServiceMon
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To("vali"),
+						Replacement: new("vali"),
 						TargetLabel: "job",
 					},
 					{
@@ -781,7 +780,7 @@ func getServiceMonitor(label string, withTelegraf bool) *monitoringv1.ServiceMon
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: ptr.To("vali-telegraf"),
+					Replacement: new("vali-telegraf"),
 					TargetLabel: "job",
 				},
 				{
@@ -794,7 +793,7 @@ func getServiceMonitor(label string, withTelegraf bool) *monitoringv1.ServiceMon
 				TargetLabel:  "__name__",
 				Regex:        `iptables_(.+)`,
 				Action:       "replace",
-				Replacement:  ptr.To("shoot_node_logging_incoming_$1"),
+				Replacement:  new("shoot_node_logging_incoming_$1"),
 			}},
 		})
 	}
@@ -820,7 +819,7 @@ func getPrometheusRule(label string) *monitoringv1.PrometheusRule {
 				Rules: []monitoringv1.Rule{{
 					Alert: "ValiDown",
 					Expr:  intstr.FromString(`absent(up{job="vali"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("30m")),
+					For:   new(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
 						"severity":   "warning",
@@ -975,17 +974,17 @@ func getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    valiName,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
 						ContainerName: "*",
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
@@ -1100,7 +1099,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: ptr.To[int32](1),
+			Replicas: new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -1112,9 +1111,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            priorityClassName,
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:             ptr.To[int64](10001),
+						FSGroup:             new(int64(10001)),
 						FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 					},
 					InitContainers: []corev1.Container{
@@ -1127,10 +1126,10 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								"/vali-init.sh || true",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged:   ptr.To(true),
-								RunAsUser:    ptr.To[int64](0),
-								RunAsNonRoot: ptr.To(false),
-								RunAsGroup:   ptr.To[int64](0),
+								Privileged:   new(true),
+								RunAsUser:    new(int64(0)),
+								RunAsNonRoot: new(false),
+								RunAsGroup:   new(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -1196,11 +1195,11 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsUser:                ptr.To[int64](10001),
-								RunAsGroup:               ptr.To[int64](10001),
-								RunAsNonRoot:             ptr.To(true),
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								RunAsUser:                new(int64(10001)),
+								RunAsGroup:               new(int64(10001)),
+								RunAsNonRoot:             new(true),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 						},
 						{
@@ -1234,11 +1233,11 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsUser:                ptr.To[int64](10001),
-								RunAsGroup:               ptr.To[int64](10001),
-								RunAsNonRoot:             ptr.To(true),
-								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								RunAsUser:                new(int64(10001)),
+								RunAsGroup:               new(int64(10001)),
+								RunAsNonRoot:             new(true),
+								ReadOnlyRootFilesystem:   new(true),
 							},
 						},
 					},
@@ -1250,7 +1249,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: ptr.To[int32](0520),
+									DefaultMode: new(int32(0520)),
 								},
 							},
 						},
@@ -1301,7 +1300,7 @@ wait
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
+					AllowPrivilegeEscalation: new(false),
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{
 							"NET_ADMIN",
@@ -1347,11 +1346,11 @@ wait
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65534),
-					RunAsNonRoot:             ptr.To(true),
-					ReadOnlyRootFilesystem:   ptr.To(true),
+					AllowPrivilegeEscalation: new(false),
+					RunAsUser:                new(int64(65532)),
+					RunAsGroup:               new(int64(65534)),
+					RunAsNonRoot:             new(true),
+					ReadOnlyRootFilesystem:   new(true),
 				},
 				Ports: []corev1.ContainerPort{
 					{
@@ -1385,7 +1384,7 @@ wait
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](420),
+						DefaultMode: new(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -1398,7 +1397,7 @@ wait
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "generic-token-kubeconfig",
 									},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 							{
@@ -1412,7 +1411,7 @@ wait
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "shoot-access-kube-rbac-proxy",
 									},
-									Optional: ptr.To(false),
+									Optional: new(false),
 								},
 							},
 						},

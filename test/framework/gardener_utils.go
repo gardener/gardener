@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,7 +85,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	}
 
 	const expirationSeconds int64 = 6 * 3600 // 6h
-	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, shoot, ptr.To(expirationSeconds))
+	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, shoot, new(expirationSeconds))
 	if err != nil {
 		return seed, nil, fmt.Errorf("failed to request AdminKubeConfig for Shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
@@ -331,7 +330,7 @@ func (f *GardenerFramework) updateBinding(ctx context.Context, shoot *gardencore
 			return retry.MinorError(err)
 		}
 
-		updatedShoot.Spec.SeedName = ptr.To(seedName)
+		updatedShoot.Spec.SeedName = new(seedName)
 		if err := f.GardenClient.Client().SubResource("binding").Update(ctx, updatedShoot); err != nil {
 			log.Error(err, "Unable to update binding")
 			return retry.MinorError(err)

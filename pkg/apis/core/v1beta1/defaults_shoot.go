@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
@@ -50,7 +49,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	for i, worker := range obj.Spec.Provider.Workers {
 		if worker.Machine.Architecture == nil {
-			obj.Spec.Provider.Workers[i].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+			obj.Spec.Provider.Workers[i].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
 		}
 
 		if worker.CRI == nil {
@@ -59,7 +58,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
 			if worker.Kubernetes.Kubelet.FailSwapOn == nil {
-				obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
+				obj.Spec.Provider.Workers[i].Kubernetes.Kubelet.FailSwapOn = new(true)
 			}
 
 			if nodeSwapFeatureGateEnabled, ok := worker.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*worker.Kubernetes.Kubelet.FailSwapOn {
@@ -75,17 +74,17 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 
 		if worker.ControlPlane != nil && worker.ControlPlane.Exposure != nil && worker.ControlPlane.Exposure.Extension != nil && worker.ControlPlane.Exposure.Extension.Type == nil {
-			worker.ControlPlane.Exposure.Extension.Type = ptr.To(obj.Spec.Provider.Type)
+			worker.ControlPlane.Exposure.Extension.Type = new(obj.Spec.Provider.Type)
 		}
 	}
 
 	// these fields are relevant only for shoot with workers
 	if len(obj.Spec.Provider.Workers) > 0 {
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To[int64](300)
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = new(int64(300))
 		}
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To[int64](300)
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = new(int64(300))
 		}
 
 		if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -104,7 +103,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			// The default is mostly only relevant for the local setup.
 			// For most providers, the values is dependent on the infrastructure.
 			// Either this value is ignored or should be set explicitly by the user.
-			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = ptr.To[int32](64)
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(int32(64))
 		}
 
 		if IsDualStack(obj.Spec.Networking.IPFamilies) {
@@ -116,7 +115,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 				// The default is mostly only relevant for the local setup.
 				// For most providers, the values is dependent on the infrastructure.
 				// Either this value is ignored or should be set explicitly by the user.
-				obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = ptr.To[int32](64)
+				obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = new(int32(64))
 			}
 		}
 
@@ -140,7 +139,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 		}
 		if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
-			obj.Spec.Kubernetes.KubeProxy.Enabled = ptr.To(true)
+			obj.Spec.Kubernetes.KubeProxy.Enabled = new(true)
 		}
 
 		if obj.Spec.Addons != nil && obj.Spec.Addons.KubernetesDashboard != nil && obj.Spec.Addons.KubernetesDashboard.Enabled {
@@ -154,7 +153,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 		}
 		if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = ptr.To(true)
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = new(true)
 		}
 
 		if nodeSwapFeatureGateEnabled, ok := obj.Spec.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn {
@@ -173,22 +172,22 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge = &metav1.Duration{}
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = ptr.To[int32](50)
+			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = new(int32(50))
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = ptr.To[int32](40)
+			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = new(int32(40))
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
 			// SerializeImagePulls defaults to true when MaxParallelImagePulls is not set
 			if obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls == nil || *obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls < 2 {
-				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = new(true)
 			} else {
-				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(false)
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = new(false)
 			}
 		}
 
 		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
-			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)
+			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
 		}
 
 		if obj.Spec.Provider.WorkersSettings == nil {
@@ -213,7 +212,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if obj.Spec.SchedulerName == nil {
-		obj.Spec.SchedulerName = ptr.To(v1beta1constants.DefaultSchedulerName)
+		obj.Spec.SchedulerName = new(v1beta1constants.DefaultSchedulerName)
 	}
 }
 
@@ -230,10 +229,10 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Requests = &APIServerRequests{}
 	}
 	if obj.Requests.MaxNonMutatingInflight == nil {
-		obj.Requests.MaxNonMutatingInflight = ptr.To[int32](400)
+		obj.Requests.MaxNonMutatingInflight = new(int32(400))
 	}
 	if obj.Requests.MaxMutatingInflight == nil {
-		obj.Requests.MaxMutatingInflight = ptr.To[int32](200)
+		obj.Requests.MaxMutatingInflight = new(int32(200))
 	}
 	if obj.EventTTL == nil {
 		obj.EventTTL = &metav1.Duration{Duration: time.Hour}
@@ -242,13 +241,13 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Logging = &APIServerLogging{}
 	}
 	if obj.Logging.Verbosity == nil {
-		obj.Logging.Verbosity = ptr.To[int32](2)
+		obj.Logging.Verbosity = new(int32(2))
 	}
 	if obj.EncryptionConfig == nil {
 		obj.EncryptionConfig = &EncryptionConfig{}
 	}
 	if obj.EncryptionConfig.Provider.Type == nil {
-		obj.EncryptionConfig.Provider.Type = ptr.To(EncryptionProviderTypeAESCBC)
+		obj.EncryptionConfig.Provider.Type = new(EncryptionProviderTypeAESCBC)
 	}
 }
 
@@ -273,65 +272,65 @@ func SetDefaults_Maintenance(obj *Maintenance) {
 // SetDefaults_VerticalPodAutoscaler sets default values for VerticalPodAutoscaler objects.
 func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 	if obj.EvictAfterOOMThreshold == nil {
-		obj.EvictAfterOOMThreshold = ptr.To(DefaultEvictAfterOOMThreshold)
+		obj.EvictAfterOOMThreshold = new(DefaultEvictAfterOOMThreshold)
 	}
 	if obj.EvictionRateBurst == nil {
-		obj.EvictionRateBurst = ptr.To(DefaultEvictionRateBurst)
+		obj.EvictionRateBurst = new(DefaultEvictionRateBurst)
 	}
 	if obj.EvictionRateLimit == nil {
-		obj.EvictionRateLimit = ptr.To(DefaultEvictionRateLimit)
+		obj.EvictionRateLimit = new(DefaultEvictionRateLimit)
 	}
 	if obj.EvictionTolerance == nil {
-		obj.EvictionTolerance = ptr.To(DefaultEvictionTolerance)
+		obj.EvictionTolerance = new(DefaultEvictionTolerance)
 	}
 	if obj.RecommendationMarginFraction == nil {
-		obj.RecommendationMarginFraction = ptr.To(DefaultRecommendationMarginFraction)
+		obj.RecommendationMarginFraction = new(DefaultRecommendationMarginFraction)
 	}
 	if obj.UpdaterInterval == nil {
-		obj.UpdaterInterval = ptr.To(DefaultUpdaterInterval)
+		obj.UpdaterInterval = new(DefaultUpdaterInterval)
 	}
 	if obj.RecommenderInterval == nil {
-		obj.RecommenderInterval = ptr.To(DefaultRecommenderInterval)
+		obj.RecommenderInterval = new(DefaultRecommenderInterval)
 	}
 	if obj.TargetCPUPercentile == nil {
-		obj.TargetCPUPercentile = ptr.To(DefaultTargetCPUPercentile)
+		obj.TargetCPUPercentile = new(DefaultTargetCPUPercentile)
 	}
 	if obj.RecommendationLowerBoundCPUPercentile == nil {
-		obj.RecommendationLowerBoundCPUPercentile = ptr.To(DefaultRecommendationLowerBoundCPUPercentile)
+		obj.RecommendationLowerBoundCPUPercentile = new(DefaultRecommendationLowerBoundCPUPercentile)
 	}
 	if obj.RecommendationUpperBoundCPUPercentile == nil {
-		obj.RecommendationUpperBoundCPUPercentile = ptr.To(DefaultRecommendationUpperBoundCPUPercentile)
+		obj.RecommendationUpperBoundCPUPercentile = new(DefaultRecommendationUpperBoundCPUPercentile)
 	}
 	if obj.CPUHistogramDecayHalfLife == nil {
-		obj.CPUHistogramDecayHalfLife = ptr.To(DefaultCPUHistogramDecayHalfLife)
+		obj.CPUHistogramDecayHalfLife = new(DefaultCPUHistogramDecayHalfLife)
 	}
 	if obj.TargetMemoryPercentile == nil {
-		obj.TargetMemoryPercentile = ptr.To(DefaultTargetMemoryPercentile)
+		obj.TargetMemoryPercentile = new(DefaultTargetMemoryPercentile)
 	}
 	if obj.RecommendationLowerBoundMemoryPercentile == nil {
-		obj.RecommendationLowerBoundMemoryPercentile = ptr.To(DefaultRecommendationLowerBoundMemoryPercentile)
+		obj.RecommendationLowerBoundMemoryPercentile = new(DefaultRecommendationLowerBoundMemoryPercentile)
 	}
 	if obj.RecommendationUpperBoundMemoryPercentile == nil {
-		obj.RecommendationUpperBoundMemoryPercentile = ptr.To(DefaultRecommendationUpperBoundMemoryPercentile)
+		obj.RecommendationUpperBoundMemoryPercentile = new(DefaultRecommendationUpperBoundMemoryPercentile)
 	}
 	if obj.MemoryHistogramDecayHalfLife == nil {
-		obj.MemoryHistogramDecayHalfLife = ptr.To(DefaultMemoryHistogramDecayHalfLife)
+		obj.MemoryHistogramDecayHalfLife = new(DefaultMemoryHistogramDecayHalfLife)
 	}
 	if obj.MemoryAggregationInterval == nil {
-		obj.MemoryAggregationInterval = ptr.To(DefaultMemoryAggregationInterval)
+		obj.MemoryAggregationInterval = new(DefaultMemoryAggregationInterval)
 	}
 	if obj.MemoryAggregationIntervalCount == nil {
-		obj.MemoryAggregationIntervalCount = ptr.To(DefaultMemoryAggregationIntervalCount)
+		obj.MemoryAggregationIntervalCount = new(DefaultMemoryAggregationIntervalCount)
 	}
 	if obj.RecommenderUpdateWorkerCount == nil {
-		obj.RecommenderUpdateWorkerCount = ptr.To(DefaultRecommenderUpdateWorkerCount)
+		obj.RecommenderUpdateWorkerCount = new(DefaultRecommenderUpdateWorkerCount)
 	}
 }
 
 // SetDefaults_Worker sets default values for Worker objects.
 func SetDefaults_Worker(obj *Worker) {
 	if obj.UpdateStrategy == nil {
-		obj.UpdateStrategy = ptr.To(AutoRollingUpdate)
+		obj.UpdateStrategy = new(AutoRollingUpdate)
 	}
 
 	if *obj.UpdateStrategy == AutoInPlaceUpdate || *obj.UpdateStrategy == ManualInPlaceUpdate {
@@ -347,7 +346,7 @@ func SetDefaults_Worker(obj *Worker) {
 			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}
 		}
 		if obj.MachineControllerManagerSettings.DisableHealthTimeout == nil {
-			obj.MachineControllerManagerSettings.DisableHealthTimeout = ptr.To(true)
+			obj.MachineControllerManagerSettings.DisableHealthTimeout = new(true)
 		}
 	} else {
 		if obj.MaxSurge == nil {
@@ -381,7 +380,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.ScaleDownUnneededTime = &metav1.Duration{Duration: 30 * time.Minute}
 	}
 	if obj.ScaleDownUtilizationThreshold == nil {
-		obj.ScaleDownUtilizationThreshold = ptr.To(float64(0.5))
+		obj.ScaleDownUtilizationThreshold = new(float64(0.5))
 	}
 	if obj.ScanInterval == nil {
 		obj.ScanInterval = &metav1.Duration{Duration: 10 * time.Second}
@@ -394,16 +393,16 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
 	}
 	if obj.MaxGracefulTerminationSeconds == nil {
-		obj.MaxGracefulTerminationSeconds = ptr.To[int32](600)
+		obj.MaxGracefulTerminationSeconds = new(int32(600))
 	}
 	if obj.IgnoreDaemonsetsUtilization == nil {
-		obj.IgnoreDaemonsetsUtilization = ptr.To(false)
+		obj.IgnoreDaemonsetsUtilization = new(false)
 	}
 	if obj.EmitPerNodeGroupMetrics == nil {
-		obj.EmitPerNodeGroupMetrics = ptr.To(false)
+		obj.EmitPerNodeGroupMetrics = new(false)
 	}
 	if obj.Verbosity == nil {
-		obj.Verbosity = ptr.To[int32](2)
+		obj.Verbosity = new(int32(2))
 	}
 	if obj.NewPodScaleUpDelay == nil {
 		obj.NewPodScaleUpDelay = &metav1.Duration{Duration: 0}
@@ -412,11 +411,11 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		if obj.MaxEmptyBulkDelete != nil {
 			obj.MaxScaleDownParallelism = obj.MaxEmptyBulkDelete
 		} else {
-			obj.MaxScaleDownParallelism = ptr.To[int32](10)
+			obj.MaxScaleDownParallelism = new(int32(10))
 		}
 	}
 	if obj.MaxDrainParallelism == nil {
-		obj.MaxDrainParallelism = ptr.To[int32](1)
+		obj.MaxDrainParallelism = new(int32(1))
 	}
 	if obj.InitialNodeGroupBackoffDuration == nil {
 		obj.InitialNodeGroupBackoffDuration = &metav1.Duration{Duration: 5 * time.Minute}

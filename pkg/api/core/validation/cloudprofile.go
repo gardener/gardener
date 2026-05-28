@@ -432,7 +432,7 @@ func validateBastionMachineType(bastionMachineType *core.BastionMachineType, mac
 		return nil, field.ErrorList{field.Invalid(fldPath.Child("name"), bastionMachineType.Name, "machine type not found in spec.machineTypes")}
 	}
 
-	return ptr.To(machineTypes[machineIndex].GetArchitecture(capabilityDefinitions)), nil
+	return new(machineTypes[machineIndex].GetArchitecture(capabilityDefinitions)), nil
 }
 
 func validateBastionImage(bastionImage *core.BastionMachineImage, machineImages []core.MachineImage, capabilities core.Capabilities, machineArch *string, fldPath *field.Path) field.ErrorList {

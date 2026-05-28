@@ -7,7 +7,6 @@ package controlplane
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -19,14 +18,14 @@ func ScrapeConfig(namespace string, kubeAPIServerTarget monitoringv1alpha1.Targe
 		ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-apiserver", namespace, shootprometheus.Label),
 		Spec: monitoringv1alpha1.ScrapeConfigSpec{
 			Params:      map[string][]string{"module": {moduleName}},
-			MetricsPath: ptr.To("/probe"),
+			MetricsPath: new("/probe"),
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 				Targets: []monitoringv1alpha1.Target{kubeAPIServerTarget},
 			}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					TargetLabel: "type",
-					Replacement: ptr.To("seed"),
+					Replacement: new("seed"),
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__address__"},
@@ -40,12 +39,12 @@ func ScrapeConfig(namespace string, kubeAPIServerTarget monitoringv1alpha1.Targe
 				},
 				{
 					TargetLabel: "__address__",
-					Replacement: ptr.To("blackbox-exporter:9115"),
+					Replacement: new("blackbox-exporter:9115"),
 					Action:      "replace",
 				},
 				{
 					Action:      "replace",
-					Replacement: ptr.To("blackbox-apiserver"),
+					Replacement: new("blackbox-apiserver"),
 					TargetLabel: "job",
 				},
 			},

@@ -130,7 +130,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 	mgr, err := manager.New(runtimeRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.SeedScheme,
-		GracefulShutdownTimeout: ptr.To(5 * time.Second),
+		GracefulShutdownTimeout: new(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		Metrics: metricsserver.Options{

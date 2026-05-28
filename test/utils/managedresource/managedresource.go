@@ -11,7 +11,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,7 +39,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		For(&resourcesv1alpha1.ManagedResource{}).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
-			RecoverPanic:            ptr.To(true),
+			RecoverPanic:            new(true),
 		}).
 		Complete(r)
 }

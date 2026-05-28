@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -39,7 +38,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []gardencorev1beta1.LifecycleStage{
 					{
 						Classification: gardencorev1beta1.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
 					},
 				},
 			})
@@ -52,11 +51,11 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []gardencorev1beta1.LifecycleStage{
 					{
 						Classification: gardencorev1beta1.ClassificationPreview,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
 					},
 				},
 			})
@@ -69,19 +68,19 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []gardencorev1beta1.LifecycleStage{
 					{
 						Classification: gardencorev1beta1.ClassificationPreview,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationDeprecated,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationExpired,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(8 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(8 * time.Hour))),
 					},
 				},
 			})
@@ -94,15 +93,15 @@ var _ = Describe("CloudProfile Helper", func() {
 				Lifecycle: []gardencorev1beta1.LifecycleStage{
 					{
 						Classification: gardencorev1beta1.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-4 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-4 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationDeprecated,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationExpired,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					},
 				},
 			})
@@ -118,15 +117,15 @@ var _ = Describe("CloudProfile Helper", func() {
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationSupported,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationDeprecated,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(4 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(4 * time.Hour))),
 					},
 					{
 						Classification: gardencorev1beta1.ClassificationExpired,
-						StartTime:      ptr.To(metav1.NewTime(now.Add(5 * time.Hour))),
+						StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
 					},
 				},
 			})
@@ -135,7 +134,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining supported for deprecated classification field", func() {
 			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
-				Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+				Classification: new(gardencorev1beta1.ClassificationSupported),
 				Version:        "1.28.0",
 			})
 			Expect(classification).To(Equal(gardencorev1beta1.ClassificationSupported))
@@ -143,7 +142,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining expired for deprecated expiration date field", func() {
 			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
-				ExpirationDate: ptr.To(metav1.NewTime(now.Add(-1 * time.Hour))),
+				ExpirationDate: new(metav1.NewTime(now.Add(-1 * time.Hour))),
 				Version:        "1.28.0",
 			})
 			Expect(classification).To(Equal(gardencorev1beta1.ClassificationExpired))
@@ -151,9 +150,9 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("determining preview for deprecated classification and expiration date field", func() {
 			classification := CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{
-				Classification: ptr.To(gardencorev1beta1.ClassificationPreview),
+				Classification: new(gardencorev1beta1.ClassificationPreview),
 				Version:        "1.28.0",
-				ExpirationDate: ptr.To(metav1.NewTime(now.Add(3 * time.Hour))),
+				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
 			})
 			Expect(classification).To(Equal(gardencorev1beta1.ClassificationPreview))
 		})
@@ -233,7 +232,7 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			shootMachineImage = gardencorev1beta1.ShootMachineImage{
 				Name:    "coreos",
-				Version: ptr.To("0.0.2"),
+				Version: new("0.0.2"),
 			}
 		})
 
@@ -250,7 +249,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = ptr.To("0.0.4")
+			shootMachineImage.Version = new("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
 			Expect(exists).To(BeFalse())
 		})
@@ -577,7 +576,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			"1.1.0",
 			true, // target minor
 			true,
-			ptr.To("1.3.2"),
+			new("1.3.2"),
 			uint64(3), // next minor version to be found
 			false,
 		),
@@ -605,7 +604,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			"1.1.0",
 			false, // target major
 			true,
-			ptr.To("4.3.2"),
+			new("4.3.2"),
 			uint64(4), // next major version to be found
 			false,
 		),
@@ -628,7 +627,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			"1.1.0",
 			true, // target minor
 			true,
-			ptr.To("1.4.2"),
+			new("1.4.2"),
 			uint64(3), // next minor version to be found
 			false,
 		),
@@ -651,7 +650,7 @@ var _ = Describe("CloudProfile Helper", func() {
 			"1.1.0",
 			false, // target major
 			true,
-			ptr.To("4.4.2"),
+			new("4.4.2"),
 			uint64(3), // next major version to be found
 			false,
 		),

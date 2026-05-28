@@ -5,8 +5,6 @@
 package v1beta1
 
 import (
-	"k8s.io/utils/ptr"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
@@ -31,7 +29,7 @@ func SetDefaults_CloudProfile(cloudProfile *CloudProfile) {
 	for i := range cloudProfile.Spec.MachineTypes {
 		machineType := &cloudProfile.Spec.MachineTypes[i]
 		if machineType.Architecture == nil {
-			machineType.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+			machineType.Architecture = new(v1beta1constants.ArchitectureAMD64)
 		}
 	}
 }
@@ -58,13 +56,13 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 // SetDefaults_MachineType sets default values for MachineType objects.
 func SetDefaults_MachineType(obj *MachineType) {
 	if obj.Usable == nil {
-		obj.Usable = ptr.To(true)
+		obj.Usable = new(true)
 	}
 }
 
 // SetDefaults_VolumeType sets default values for VolumeType objects.
 func SetDefaults_VolumeType(obj *VolumeType) {
 	if obj.Usable == nil {
-		obj.Usable = ptr.To(true)
+		obj.Usable = new(true)
 	}
 }

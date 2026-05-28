@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -75,8 +74,8 @@ var _ = Describe("ActuatorReconcile", func() {
 					Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
 					RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
 						UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
-							MaxSurge:       ptr.To(intstr.FromInt32(1)),
-							MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+							MaxSurge:       new(intstr.FromInt32(1)),
+							MaxUnavailable: new(intstr.FromInt32(0)),
 						},
 					},
 				}
@@ -87,8 +86,8 @@ var _ = Describe("ActuatorReconcile", func() {
 					Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
 					InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
 						UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
-							MaxSurge:       ptr.To(intstr.FromInt32(1)),
-							MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+							MaxSurge:       new(intstr.FromInt32(1)),
+							MaxUnavailable: new(intstr.FromInt32(0)),
 						},
 					},
 				}
@@ -126,7 +125,7 @@ var _ = Describe("ActuatorReconcile", func() {
 					Strategy:             machineDeployment.Strategy,
 					Replicas:             replicas,
 					MinReadySeconds:      500,
-					RevisionHistoryLimit: ptr.To[int32](0),
+					RevisionHistoryLimit: new(int32(0)),
 					Template: machinev1alpha1.MachineTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: templateLabels,
@@ -179,8 +178,8 @@ var _ = Describe("ActuatorReconcile", func() {
 					Pools: []extensionsv1alpha1.WorkerPool{
 						{
 							Name:              "pool1",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-							KubernetesVersion: ptr.To("1.32.0"),
+							UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
+							KubernetesVersion: new("1.32.0"),
 						},
 					},
 				},
@@ -370,7 +369,7 @@ var _ = Describe("ActuatorReconcile", func() {
 				}, 2),
 				Entry("should set deployment replicas to 0 when marked for hibernation", func() {
 					cluster.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-						Enabled: ptr.To(true),
+						Enabled: new(true),
 					}
 				}, 0),
 				Entry("should set replicas to min when cluster autoscaler is not used", func() {
@@ -421,7 +420,7 @@ var _ = Describe("ActuatorReconcile", func() {
 				}
 
 				cluster.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				}
 
 				err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, false)
@@ -473,18 +472,18 @@ var _ = Describe("ActuatorReconcile", func() {
 					Pools: []extensionsv1alpha1.WorkerPool{
 						{
 							Name:              "pool1",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-							KubernetesVersion: ptr.To("1.32.0"),
+							UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
+							KubernetesVersion: new("1.32.0"),
 						},
 						{
 							Name:              "pool2",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
-							KubernetesVersion: ptr.To("1.31.0"),
+							UpdateStrategy:    new(gardencorev1beta1.ManualInPlaceUpdate),
+							KubernetesVersion: new("1.31.0"),
 						},
 						{
 							Name:              "pool3",
-							UpdateStrategy:    ptr.To(gardencorev1beta1.AutoRollingUpdate),
-							KubernetesVersion: ptr.To("1.31.0"),
+							UpdateStrategy:    new(gardencorev1beta1.AutoRollingUpdate),
+							KubernetesVersion: new("1.31.0"),
 						},
 					},
 				},
@@ -559,7 +558,7 @@ var _ = Describe("ActuatorReconcile", func() {
 		})
 
 		It("should not add non in-place update worker pools to the worker status", func() {
-			worker.Spec.Pools[0].UpdateStrategy = ptr.To(gardencorev1beta1.AutoRollingUpdate)
+			worker.Spec.Pools[0].UpdateStrategy = new(gardencorev1beta1.AutoRollingUpdate)
 
 			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
 			Expect(err).NotTo(HaveOccurred())
@@ -574,13 +573,13 @@ var _ = Describe("ActuatorReconcile", func() {
 			worker.Spec.Pools = []extensionsv1alpha1.WorkerPool{
 				{
 					Name:              "pool1",
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-					KubernetesVersion: ptr.To("1.32.0"),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
+					KubernetesVersion: new("1.32.0"),
 				},
 				{
 					Name:              "pool3",
-					UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
-					KubernetesVersion: ptr.To("1.32.0"),
+					UpdateStrategy:    new(gardencorev1beta1.AutoInPlaceUpdate),
+					KubernetesVersion: new("1.32.0"),
 				},
 			}
 			Expect(seedClient.Update(ctx, worker)).To(Succeed())
@@ -602,9 +601,9 @@ var _ = Describe("ActuatorReconcile", func() {
 				"pool2": "04863233bf6b9bb0",
 			}))
 
-			worker.Spec.Pools[0].KubernetesVersion = ptr.To("1.33.0")
-			worker.Spec.Pools[1].KubernetesVersion = ptr.To("1.31.0")
-			worker.Spec.Pools[2].KubernetesVersion = ptr.To("1.32.0")
+			worker.Spec.Pools[0].KubernetesVersion = new("1.33.0")
+			worker.Spec.Pools[1].KubernetesVersion = new("1.31.0")
+			worker.Spec.Pools[2].KubernetesVersion = new("1.32.0")
 
 			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
 			Expect(err).NotTo(HaveOccurred())
@@ -627,9 +626,9 @@ var _ = Describe("ActuatorReconcile", func() {
 			machineDeployment2.Status.Replicas = 3
 			Expect(seedClient.Status().Update(ctx, machineDeployment2)).To(Succeed())
 
-			worker.Spec.Pools[0].KubernetesVersion = ptr.To("1.33.0")
-			worker.Spec.Pools[1].KubernetesVersion = ptr.To("1.32.0")
-			worker.Spec.Pools[2].KubernetesVersion = ptr.To("1.31.0")
+			worker.Spec.Pools[0].KubernetesVersion = new("1.33.0")
+			worker.Spec.Pools[1].KubernetesVersion = new("1.32.0")
+			worker.Spec.Pools[2].KubernetesVersion = new("1.31.0")
 
 			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
 			Expect(err).NotTo(HaveOccurred())

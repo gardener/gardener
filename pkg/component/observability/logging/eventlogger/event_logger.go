@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -187,7 +186,7 @@ func (l *eventLogger) reconcileRBACForSeed(ctx context.Context) error {
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, l.client, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+		serviceAccount.AutomountServiceAccountToken = new(false)
 		serviceAccount.Labels = getLabels()
 		return nil
 	}); err != nil {
@@ -235,8 +234,8 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, l.client, deployment, func() error {
 		deployment.Labels = getLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To[int32](1),
-			Replicas:             ptr.To(l.values.Replicas),
+			RevisionHistoryLimit: new(int32(1)),
+			Replicas:             new(l.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -264,7 +263,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						},
 					},
@@ -307,7 +306,7 @@ func (l *eventLogger) reconcileVPA(ctx context.Context) error {
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},

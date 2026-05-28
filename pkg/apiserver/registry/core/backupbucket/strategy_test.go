@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	backupbucketregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/backupbucket"
@@ -204,7 +203,7 @@ func newBackupBucket() *core.BackupBucket {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: core.BackupBucketSpec{
-			SeedName: ptr.To("foo"),
+			SeedName: new("foo"),
 			ShootRef: &corev1.ObjectReference{
 				Name:      "shoot-name",
 				Namespace: "shoot-namespace",

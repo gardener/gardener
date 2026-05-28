@@ -29,7 +29,6 @@ import (
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -99,7 +98,7 @@ var _ = Describe("KubeAPIServer", func() {
 			runsAsStaticPod = false
 			auditWebhookConfig = nil
 			istioTLSTerminationEnabled = false
-			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: ptr.To("authn-version")}
+			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: new("authn-version")}
 			authorizationWebhookConfigs = []kubeapiserver.AuthorizationWebhook{{Name: "custom", Kubeconfig: []byte("bar"), WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"}}}
 			resourcesToStoreInETCDEvents = []schema.GroupResource{{Resource: "foo", Group: "bar"}}
 
@@ -124,7 +123,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			It("should set the field to true if explicitly enabled", func() {
-				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
+				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: new(true)}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
@@ -199,10 +198,10 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("default plugins with overrides",
 					[]gardencorev1beta1.AdmissionPlugin{
-						{Name: "NodeRestriction", Config: &runtime.RawExtension{Raw: []byte("node-restriction-config")}, KubeconfigSecretName: ptr.To("secret-1")},
+						{Name: "NodeRestriction", Config: &runtime.RawExtension{Raw: []byte("node-restriction-config")}, KubeconfigSecretName: new("secret-1")},
 					},
 					[]apiserver.AdmissionPluginConfig{
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction", Config: &runtime.RawExtension{Raw: []byte("node-restriction-config")}, KubeconfigSecretName: ptr.To("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction", Config: &runtime.RawExtension{Raw: []byte("node-restriction-config")}, KubeconfigSecretName: new("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
 					},
 					false,
 				),
@@ -225,8 +224,8 @@ var _ = Describe("KubeAPIServer", func() {
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NodeRestriction", Config: &runtime.RawExtension{Raw: []byte("node-restriction-config")}},
 						{Name: "Foo"},
-						{Name: "Bar", Disabled: ptr.To(true)},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: ptr.To(true)},
+						{Name: "Bar", Disabled: new(true)},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: new(true)},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction", Config: &runtime.RawExtension{Raw: []byte("node-restriction-config")}}},
@@ -236,7 +235,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("skipping default plugins if disabled",
 					[]gardencorev1beta1.AdmissionPlugin{
-						{Name: "NodeRestriction", Disabled: ptr.To(true)},
+						{Name: "NodeRestriction", Disabled: new(true)},
 						{Name: "Foo"},
 						{Name: "Bar"},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
@@ -264,36 +263,36 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Priority"},
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "LimitRanger"},
-						{Name: "ServiceAccount", Disabled: ptr.To(true)},
+						{Name: "ServiceAccount", Disabled: new(true)},
 						{Name: "NodeRestriction"},
 						{Name: "DefaultStorageClass"},
-						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: new(true)},
 						{Name: "ResourceQuota"},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "ServiceAccount", Disabled: ptr.To(true)},
-						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
+						{Name: "ServiceAccount", Disabled: new(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: new(true)},
 					}
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
 					apiServerConfig.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "Priority"},
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: new(true)},
 						{Name: "LimitRanger"},
 						{Name: "ServiceAccount"},
 						{Name: "NodeRestriction"},
-						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
+						{Name: "DefaultStorageClass", Disabled: new(true)},
 						{Name: "DefaultTolerationSeconds"},
 						{Name: "ResourceQuota"},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: new(true)},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
-						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: new(true)},
+						{Name: "DefaultStorageClass", Disabled: new(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: new(true)},
 					}
 				})
 			})
@@ -661,11 +660,11 @@ exemptions:
 								},
 							},
 						}
-						auditWebhookConfig = &apiserver.AuditWebhook{Version: ptr.To("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: new("audit-version")}
 					},
 					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &apiserver.AuditWebhook{Version: ptr.To("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: new("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),
@@ -771,7 +770,7 @@ exemptions:
 							},
 						}
 					},
-					ptr.To(config),
+					new(config),
 					Not(HaveOccurred()),
 				),
 			)
@@ -948,9 +947,9 @@ authorizers:
 							Kubeconfig: []byte("webhook-kubeconfig"),
 							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
 								AuthorizedTTL:                            metav1.Duration{Duration: 5 * time.Minute},
-								CacheAuthorizedRequests:                  ptr.To(true),
+								CacheAuthorizedRequests:                  new(true),
 								UnauthorizedTTL:                          metav1.Duration{Duration: 30 * time.Second},
-								CacheUnauthorizedRequests:                ptr.To(true),
+								CacheUnauthorizedRequests:                new(true),
 								Timeout:                                  metav1.Duration{Duration: 3 * time.Second},
 								SubjectAccessReviewVersion:               "v1",
 								MatchConditionSubjectAccessReviewVersion: "v1",
@@ -974,8 +973,8 @@ authorizers:
 
 			It("should set the fields to the configured values", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-					DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
-					DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
+					DefaultNotReadyTolerationSeconds:    new(int64(120)),
+					DefaultUnreachableTolerationSeconds: new(int64(130)),
 				}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
@@ -1036,8 +1035,8 @@ authorizers:
 
 			It("should set the field to the configured values", func() {
 				requests := &gardencorev1beta1.APIServerRequests{
-					MaxMutatingInflight:    ptr.To[int32](1),
-					MaxNonMutatingInflight: ptr.To[int32](2),
+					MaxMutatingInflight:    new(int32(1)),
+					MaxNonMutatingInflight: new(int32(2)),
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
@@ -1083,7 +1082,7 @@ authorizers:
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   ptr.To[int32](1),
+					Default:   new(int32(1)),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
@@ -1283,7 +1282,7 @@ authorizers:
 
 			Entry("no change due to already set",
 				nil,
-				kubeapiserver.AutoscalingConfig{Replicas: ptr.To[int32](1)},
+				kubeapiserver.AutoscalingConfig{Replicas: new(int32(1))},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
@@ -1306,7 +1305,7 @@ authorizers:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To[int32](3),
+							Replicas: new(int32(3)),
 						},
 					})).To(Succeed())
 				},
@@ -1322,7 +1321,7 @@ authorizers:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To[int32](0),
+							Replicas: new(int32(0)),
 						},
 					})).To(Succeed())
 				},

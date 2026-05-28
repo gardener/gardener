@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 )
@@ -36,9 +35,9 @@ var _ = Describe("Logging", func() {
 								Tag:                    "kubernetes.*",
 								Path:                   "/var/log/containers/*.log",
 								ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_vali-*.log",
-								RefreshIntervalSeconds: ptr.To[int64](10),
+								RefreshIntervalSeconds: new(int64(10)),
 								MemBufLimit:            "60MB",
-								SkipLongLines:          ptr.To(true),
+								SkipLongLines:          new(true),
 								DB:                     "/var/fluentbit/flb_kube.db",
 								DBSync:                 "Normal",
 								IgnoreOlder:            "30m",

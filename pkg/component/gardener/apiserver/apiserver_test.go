@@ -26,7 +26,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -140,7 +139,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			Image:                             image,
 			LogFormat:                         logFormat,
 			LogLevel:                          logLevel,
-			GoAwayChance:                      ptr.To(0.0015),
+			GoAwayChance:                      new(0.0015),
 			ShootAdminKubeconfigMaxExpiration: &metav1.Duration{Duration: 1 * time.Hour},
 			TopologyAwareRoutingEnabled:       true,
 			WorkloadIdentityTokenIssuer:       workloadIdentityIssuer,
@@ -190,12 +189,12 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "apiserver",
 				}},
-				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -223,7 +222,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt32(8443),
 				}},
-				TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferSameZone),
+				TrafficDistribution: new(corev1.ServiceTrafficDistributionPreferSameZone),
 			},
 		}
 
@@ -243,7 +242,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Name:       "gardener-apiserver",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -256,11 +255,11 @@ var _ = Describe("GardenerAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("12"),
 								corev1.ResourceMemory: resource.MustParse("48G"),
 							},
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
-							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -289,7 +288,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				MinReadySeconds:      30,
-				RevisionHistoryLimit: ptr.To[int32](2),
+				RevisionHistoryLimit: new(int32(2)),
 				Replicas:             &replicas,
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -298,8 +297,8 @@ var _ = Describe("GardenerAPIServer", func() {
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       ptr.To(intstr.FromString("100%")),
-						MaxUnavailable: ptr.To(intstr.FromInt32(0)),
+						MaxSurge:       new(intstr.FromString("100%")),
+						MaxUnavailable: new(intstr.FromInt32(0)),
 					},
 				},
 				Template: corev1.PodTemplateSpec{
@@ -328,13 +327,13 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						PriorityClassName:            "gardener-garden-system-500",
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To[int64](65532),
-							RunAsGroup:   ptr.To[int64](65532),
-							FSGroup:      ptr.To[int64](65532),
+							RunAsNonRoot: new(true),
+							RunAsUser:    new(int64(65532)),
+							RunAsGroup:   new(int64(65532)),
+							FSGroup:      new(int64(65532)),
 						},
 						Containers: []corev1.Container{{
 							Name:            "gardener-apiserver",
@@ -403,7 +402,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								TimeoutSeconds:      15,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -469,7 +468,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "etcd-client",
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							},
@@ -478,7 +477,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver",
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							},
@@ -515,7 +514,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  "gardener-apiserver-etcd-encryption-configuration-fe8711ae",
-										DefaultMode: ptr.To[int32](0640),
+										DefaultMode: new(int32(0640)),
 									},
 								},
 							},
@@ -560,8 +559,8 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 			AddressType: "IPv4",
 			Ports: []discoveryv1.EndpointPort{{
-				Port:     ptr.To(int32(443)),
-				Protocol: ptr.To(corev1.ProtocolTCP),
+				Port:     new(int32(443)),
+				Protocol: new(corev1.ProtocolTCP),
 			}},
 			Endpoints: []discoveryv1.Endpoint{{
 				Addresses: []string{clusterIP},
@@ -677,11 +676,11 @@ var _ = Describe("GardenerAPIServer", func() {
 					"role": "apiserver",
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
-					TargetPort: ptr.To(intstr.FromInt32(8443)),
-					Scheme:     ptr.To(monitoringv1.SchemeHTTPS),
+					TargetPort: new(intstr.FromInt32(8443)),
+					Scheme:     new(monitoringv1.SchemeHTTPS),
 					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
@@ -781,7 +780,7 @@ resources:
 								},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      expectedSecretETCDEncryptionConfiguration.Data,
 						}))
 
@@ -874,7 +873,7 @@ resources:
 									},
 									ResourceVersion: "1",
 								},
-								Immutable: ptr.To(true),
+								Immutable: new(true),
 								Data:      expectedSecretETCDEncryptionConfiguration.Data,
 							}))
 
@@ -950,7 +949,7 @@ resources:
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
-						Immutable: ptr.To(true),
+						Immutable: new(true),
 						Data:      expectedSecret.Data,
 					}))
 				})
@@ -973,7 +972,7 @@ resources:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      secretAdmissionKubeconfigs.Data,
 						}))
 					})
@@ -1010,7 +1009,7 @@ resources:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      secretAdmissionKubeconfigs.Data,
 						}))
 					})
@@ -1041,7 +1040,7 @@ rules:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      configMapAuditPolicy.Data,
 						}))
 					})
@@ -1076,7 +1075,7 @@ rules:
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      configMapAuditPolicy.Data,
 						}))
 					})
@@ -1103,7 +1102,7 @@ plugins: null
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1181,7 +1180,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1251,7 +1250,7 @@ kubeConfigFile: ""
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1315,7 +1314,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 								ResourceVersion: "1",
 							},
-							Immutable: ptr.To(true),
+							Immutable: new(true),
 							Data:      configMapAdmission.Data,
 						}))
 					})
@@ -1352,9 +1351,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							},
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class:       ptr.To("seed"),
+							Class:       new("seed"),
 							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
-							KeepObjects: ptr.To(false),
+							KeepObjects: new(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
@@ -1378,7 +1377,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
-							KeepObjects:  ptr.To(false),
+							KeepObjects:  new(false),
 						},
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
@@ -1389,7 +1388,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					expectedRuntimeObjects = []client.Object{deployment, serviceMonitor, vpa, podDisruptionBudget}
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecretRuntime.Immutable).To(Equal(new(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					expectedVirtualObjects := []client.Object{
@@ -1407,7 +1406,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					expectedVirtualObjects = append(expectedVirtualObjects, endpointsResources...)
 					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecretVirtual.Immutable).To(Equal(new(true)))
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 

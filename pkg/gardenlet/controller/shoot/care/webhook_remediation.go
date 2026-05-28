@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -238,13 +237,13 @@ func newRemediator(log logr.Logger, webhookConfigKind, webhookConfigName, webhoo
 func (r *remediator) timeoutSeconds() *int32 {
 	var timeoutSeconds int32 = WebhookMaximumTimeoutSecondsNotProblematic
 	r.reportf("timeoutSeconds", "set to %d", timeoutSeconds)
-	return ptr.To(timeoutSeconds)
+	return new(timeoutSeconds)
 }
 
 func (r *remediator) timeoutSecondsToThree() *int32 {
 	var timeoutSeconds int32 = WebhookMaximumTimeoutSecondsNotProblematicForLeases
 	r.reportf("timeoutSeconds", "set to %d", timeoutSeconds)
-	return ptr.To(timeoutSeconds)
+	return new(timeoutSeconds)
 }
 
 func (r *remediator) selectors(matchers []webhookmatchers.WebhookConstraintMatcher) (objectSelector, namespaceSelector []metav1.LabelSelectorRequirement) {

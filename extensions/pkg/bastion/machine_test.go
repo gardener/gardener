@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/extensions/pkg/bastion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -56,7 +55,7 @@ var _ = Describe("Bastion VM Details", func() {
 				MachineTypes: []gardencorev1beta1.MachineType{{
 					CPU:          resource.MustParse("4"),
 					Name:         desired.MachineTypeName,
-					Architecture: ptr.To(desired.Architecture),
+					Architecture: new(desired.Architecture),
 					Capabilities: gardencorev1beta1.Capabilities{
 						"architecture": []string{v1beta1constants.ArchitectureAMD64},
 						"cap1":         []string{"val1", "val2"},
@@ -68,7 +67,7 @@ var _ = Describe("Bastion VM Details", func() {
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version:        desired.ImageVersion,
-								Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+								Classification: new(gardencorev1beta1.ClassificationSupported),
 							},
 							Architectures: []string{desired.Architecture, v1beta1constants.ArchitectureARM64},
 							CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
@@ -89,7 +88,7 @@ var _ = Describe("Bastion VM Details", func() {
 		newVersion := gardencorev1beta1.MachineImageVersion{
 			ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 				Version:        version,
-				Classification: ptr.To(classification),
+				Classification: new(classification),
 			},
 			Architectures:     archs,
 			CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{{Capabilities: capabilities}},
@@ -149,7 +148,7 @@ var _ = Describe("Bastion VM Details", func() {
 		})
 
 		It("forbid unknown image version", func() {
-			cloudProfile.Spec.Bastion.MachineImage.Version = ptr.To("6.6.6")
+			cloudProfile.Spec.Bastion.MachineImage.Version = new("6.6.6")
 			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
 			Expect(err).To(HaveOccurred())
 		})
@@ -174,7 +173,7 @@ var _ = Describe("Bastion VM Details", func() {
 				CPU:          resource.MustParse("1"),
 				GPU:          resource.MustParse("1"),
 				Name:         "smallerMachine",
-				Architecture: ptr.To(desired.Architecture),
+				Architecture: new(desired.Architecture),
 				Capabilities: gardencorev1beta1.Capabilities{
 					"architecture": []string{v1beta1constants.ArchitectureAMD64},
 				},
@@ -190,8 +189,8 @@ var _ = Describe("Bastion VM Details", func() {
 				CPU:          resource.MustParse("1"),
 				GPU:          resource.MustParse("1"),
 				Name:         "smallerMachine",
-				Usable:       ptr.To(false),
-				Architecture: ptr.To(desired.Architecture),
+				Usable:       new(false),
+				Architecture: new(desired.Architecture),
 				Capabilities: gardencorev1beta1.Capabilities{
 					"architecture": []string{v1beta1constants.ArchitectureAMD64},
 				},
@@ -210,7 +209,7 @@ var _ = Describe("Bastion VM Details", func() {
 
 		It("should use version which has been specified", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationSupported, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
-			cloudProfile.Spec.Bastion.MachineImage.Version = ptr.To("1.2.3")
+			cloudProfile.Spec.Bastion.MachineImage.Version = new("1.2.3")
 			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
@@ -218,7 +217,7 @@ var _ = Describe("Bastion VM Details", func() {
 
 		It("should not allow preview image even if version is specified", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationPreview, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
-			cloudProfile.Spec.Bastion.MachineImage.Version = ptr.To("1.2.4")
+			cloudProfile.Spec.Bastion.MachineImage.Version = new("1.2.4")
 			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
 			Expect(err).To(HaveOccurred())
 		})

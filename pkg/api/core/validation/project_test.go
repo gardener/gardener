@@ -15,7 +15,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -121,7 +120,7 @@ var _ = Describe("Project Validation Tests", func() {
 
 		DescribeTable("Project spec.namespace",
 			func(namespace string, matcher gomegatypes.GomegaMatcher) {
-				project.Spec.Namespace = ptr.To(namespace)
+				project.Spec.Namespace = new(namespace)
 
 				errorList := ValidateProject(project)
 
@@ -192,18 +191,18 @@ var _ = Describe("Project Validation Tests", func() {
 				BeEmpty(),
 			),
 			Entry("should allow valid description",
-				ptr.To(`This is a project description, 庭師.`),
+				new(`This is a project description, 庭師.`),
 				BeEmpty(),
 			),
 			Entry("should forbid Project with empty description",
-				ptr.To(""),
+				new(""),
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.description"),
 				}))),
 			),
 			Entry("should forbid Project description with special characters",
-				ptr.To("<foo>"),
+				new("<foo>"),
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.description"),
@@ -212,16 +211,16 @@ var _ = Describe("Project Validation Tests", func() {
 		)
 
 		It("should allow already accepted invalid project description", func() {
-			project.Spec.Description = ptr.To("<foo>")
+			project.Spec.Description = new("<foo>")
 			newProject := prepareProjectForUpdate(project)
 
 			Expect(ValidateProjectUpdate(newProject, project)).To(BeEmpty())
 		})
 
 		It("should forbid Project description with special characters when updated", func() {
-			project.Spec.Description = ptr.To("foo")
+			project.Spec.Description = new("foo")
 			newProject := prepareProjectForUpdate(project)
-			newProject.Spec.Description = ptr.To("<foo>")
+			newProject.Spec.Description = new("<foo>")
 
 			Expect(ValidateProjectUpdate(newProject, project)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
@@ -242,18 +241,18 @@ var _ = Describe("Project Validation Tests", func() {
 				BeEmpty(),
 			),
 			Entry("should allow valid purpose",
-				ptr.To(`This is a project purpose, 庭師.`),
+				new(`This is a project purpose, 庭師.`),
 				BeEmpty(),
 			),
 			Entry("should forbid Project with empty purpose",
-				ptr.To(""),
+				new(""),
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.purpose"),
 				}))),
 			),
 			Entry("should forbid Project purpose with special characters",
-				ptr.To("<foo>"),
+				new("<foo>"),
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.purpose"),
@@ -262,16 +261,16 @@ var _ = Describe("Project Validation Tests", func() {
 		)
 
 		It("should allow already accepted invalid project purpose", func() {
-			project.Spec.Purpose = ptr.To("<foo>")
+			project.Spec.Purpose = new("<foo>")
 			newProject := prepareProjectForUpdate(project)
 
 			Expect(ValidateProjectUpdate(newProject, project)).To(BeEmpty())
 		})
 
 		It("should forbid Project purpose with special characters when updated", func() {
-			project.Spec.Purpose = ptr.To("foo")
+			project.Spec.Purpose = new("foo")
 			newProject := prepareProjectForUpdate(project)
-			newProject.Spec.Purpose = ptr.To("<foo>")
+			newProject.Spec.Purpose = new("<foo>")
 
 			Expect(ValidateProjectUpdate(newProject, project)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
@@ -464,11 +463,11 @@ var _ = Describe("Project Validation Tests", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: ptr.To("baz")},
-				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: new("baz")},
+				{Key: "bar", Value: new("baz")},
 				{Key: "baz"},
-				{Key: "baz", Value: ptr.To("baz")},
-				{Key: "!nvalid", Value: ptr.To("va!ue")},
+				{Key: "baz", Value: new("baz")},
+				{Key: "!nvalid", Value: new("va!ue")},
 				{Key: strings.Repeat("n", 64)},
 			}
 			project.Spec.Tolerations = &core.ProjectTolerations{
@@ -618,7 +617,7 @@ var _ = Describe("Project Validation Tests", func() {
 				project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, core.DualApprovalForDeletion{
 					Resource:               "shoots",
 					Selector:               metav1.LabelSelector{MatchLabels: map[string]string{}},
-					IncludeServiceAccounts: ptr.To(false),
+					IncludeServiceAccounts: new(false),
 				})
 
 				Expect(ValidateProject(project)).To(BeEmpty())
@@ -636,13 +635,13 @@ var _ = Describe("Project Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("namespace change w/ preset namespace", ptr.To("garden-dev"), ptr.To("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("namespace change w/ preset namespace", new("garden-dev"), new("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.namespace"),
 			})))),
-			Entry("namespace change w/o preset namespace", nil, ptr.To("garden-core"), BeEmpty()),
+			Entry("namespace change w/o preset namespace", nil, new("garden-core"), BeEmpty()),
 			Entry("no change (both unset)", nil, nil, BeEmpty()),
-			Entry("no change (same value)", ptr.To("garden-dev"), ptr.To("garden-dev"), BeEmpty()),
+			Entry("no change (same value)", new("garden-dev"), new("garden-dev"), BeEmpty()),
 		)
 
 		It("should forbid Project updates trying to change the createdBy field", func() {

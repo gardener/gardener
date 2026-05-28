@@ -10,7 +10,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("VPAInPlaceUpdates tests", func() {
@@ -37,7 +36,7 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 	Context("when skip label is specified", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			}
 		})
 
@@ -45,7 +44,7 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, "vpa-in-place-updates.resources.gardener.cloud/skip", "")
 
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeRecreate)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeRecreate)))
 		})
 
 	})
@@ -53,13 +52,13 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 	Context("when mutation completes", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			}
 		})
 
 		It("should add a mutation label to vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 			Expect(vpa.ObjectMeta.Labels).To(HaveKeyWithValue("vpa-in-place-updates.resources.gardener.cloud/mutated", "true"))
 		})
 	})
@@ -67,59 +66,59 @@ var _ = Describe("VPAInPlaceUpdates tests", func() {
 	Context("when update mode is Auto", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeAuto),
 			}
 		})
 
 		It("should mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 		})
 	})
 
 	Context("when update mode is Recreate", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			}
 		})
 
 		It("should mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 		})
 	})
 
 	Context("when update mode is Initial", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeInitial),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeInitial),
 			}
 		})
 
 		It("should not mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInitial)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeInitial)))
 		})
 	})
 
 	Context("when update mode is Off", func() {
 		BeforeEach(func() {
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeOff),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeOff),
 			}
 		})
 
 		It("should not mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeOff)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeOff)))
 		})
 	})
 
 	Context("when update mode is not specified", func() {
 		It("should mutate vertical pod autoscaler", func() {
 			Expect(testClient.Create(ctx, vpa)).To(Succeed())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(ptr.To(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(Equal(new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)))
 		})
 	})
 })

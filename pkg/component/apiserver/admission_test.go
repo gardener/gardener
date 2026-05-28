@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -54,7 +53,7 @@ var _ = Describe("Admission", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data:      map[string][]byte{},
 			}))
 		})
@@ -81,7 +80,7 @@ var _ = Describe("Admission", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string][]byte{
 					"baz-kubeconfig.yaml": []byte("foo"),
 				},
@@ -104,7 +103,7 @@ var _ = Describe("Admission", func() {
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins: null
@@ -161,7 +160,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
@@ -240,7 +239,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
@@ -306,7 +305,7 @@ kubeConfigFile: ""
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 					ResourceVersion: "1",
 				},
-				Immutable: ptr.To(true),
+				Immutable: new(true),
 				Data: map[string]string{
 					"admission-configuration.yaml": `apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration

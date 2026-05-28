@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -117,8 +116,8 @@ var _ = Describe("mutator", func() {
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Architecture: ptr.To("amd64"),
-							Usable:       ptr.To(true),
+							Architecture: new("amd64"),
+							Usable:       new(true),
 							Capabilities: gardencorev1beta1.Capabilities{
 								"architecture":   []string{v1beta1constants.ArchitectureAMD64},
 								"someCapability": []string{"value2"},
@@ -138,7 +137,7 @@ var _ = Describe("mutator", func() {
 					Namespace: "garden-my-project",
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName: ptr.To("profile"),
+					CloudProfileName: new("profile"),
 					Kubernetes: core.Kubernetes{
 						Version: "1.6.4",
 					},
@@ -152,7 +151,7 @@ var _ = Describe("mutator", func() {
 										Name:    validMachineImageName,
 										Version: "0.0.1",
 									},
-									Architecture: ptr.To("amd64"),
+									Architecture: new("amd64"),
 								},
 							},
 						},
@@ -226,7 +225,7 @@ var _ = Describe("mutator", func() {
 			It("should reject because the referenced seed was not found", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
-				shoot.Spec.SeedName = ptr.To("seed")
+				shoot.Spec.SeedName = new("seed")
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 
 				err := admissionHandler.Admit(ctx, attrs, nil)
@@ -235,7 +234,7 @@ var _ = Describe("mutator", func() {
 
 			Context("CloudProfile reference and CloudProfileName", func() {
 				It("should fail when both cloudProfileName and cloudProfile are provided for a new shoot", func() {
-					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfileName = new("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "CloudProfile",
 						Name: "profile",
@@ -297,10 +296,10 @@ var _ = Describe("mutator", func() {
 
 			It("should add deploy tasks because shoot is waking up from hibernation", func() {
 				oldShoot.Spec.Hibernation = &core.Hibernation{
-					Enabled: ptr.To(true),
+					Enabled: new(true),
 				}
 				shoot.Spec.Hibernation = &core.Hibernation{
-					Enabled: ptr.To(false),
+					Enabled: new(false),
 				}
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -432,9 +431,9 @@ var _ = Describe("mutator", func() {
 
 			DescribeTable("confine spec roll-out checks",
 				func(specChange, oldConfine, confine bool, oldOperation, operation *core.LastOperation, matcher types.GomegaMatcher) {
-					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(oldConfine)
+					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = new(oldConfine)
 					oldShoot.Status.LastOperation = oldOperation
-					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = ptr.To(confine)
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = new(confine)
 					shoot.Status.LastOperation = operation
 					if specChange {
 						shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
@@ -544,7 +543,7 @@ var _ = Describe("mutator", func() {
 					Pods:     &podsCIDR,
 					Services: &servicesCIDR,
 				}
-				shoot.Spec.SeedName = ptr.To(seed.Name)
+				shoot.Spec.SeedName = new(seed.Name)
 				shoot.Spec.Networking = &core.Networking{
 					Pods:       nil,
 					Services:   nil,
@@ -613,7 +612,7 @@ var _ = Describe("mutator", func() {
 
 			It("should use seed defaults for workerless IPv6 shoots when available", func() {
 				servicesCIDR := "2001:db8:10::/112"
-				seed.Spec.Networks.ShootDefaults.Services = ptr.To(servicesCIDR)
+				seed.Spec.Networks.ShootDefaults.Services = new(servicesCIDR)
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -656,14 +655,14 @@ var _ = Describe("mutator", func() {
 		Context("kubernetes version", func() {
 			BeforeEach(func() {
 				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.28.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.28.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
 					{Version: "1.27.3"},
 					{Version: "1.27.2"},
-					{Version: "1.26.8", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
+					{Version: "1.26.8", Classification: new(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
 					{Version: "1.26.7"},
 					{Version: "1.26.6"},
 					{Version: "1.25.11"},
-					{Version: "1.24.12", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
+					{Version: "1.24.12", Classification: new(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
 				}
 
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -758,7 +757,7 @@ var _ = Describe("mutator", func() {
 
 				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
 					shoot.Spec.Kubernetes.Version = "1.26"
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.26")}
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: new("1.26")}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1045,7 +1044,7 @@ var _ = Describe("mutator", func() {
 							Image: &core.ShootMachineImage{
 								Name: validMachineImageName,
 							},
-							Architecture: ptr.To("arm64"),
+							Architecture: new("arm64"),
 						},
 						Minimum: 1,
 						Maximum: 1,
@@ -1256,7 +1255,7 @@ var _ = Describe("mutator", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 							Name: imageName1,
 						}
-						shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+						shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1293,7 +1292,7 @@ var _ = Describe("mutator", func() {
 										Name:    validMachineImageName,
 										Version: "24.0",
 									},
-									Architecture: ptr.To("amd64"),
+									Architecture: new("amd64"),
 								},
 							},
 						}
@@ -1333,7 +1332,7 @@ var _ = Describe("mutator", func() {
 										Name:    validMachineImageName,
 										Version: "24",
 									},
-									Architecture: ptr.To("amd64"),
+									Architecture: new("amd64"),
 								},
 							},
 						}
@@ -1372,7 +1371,7 @@ var _ = Describe("mutator", func() {
 										Name:    validMachineImageName,
 										Version: "24",
 									},
-									Architecture: ptr.To("amd64"),
+									Architecture: new("amd64"),
 								},
 							},
 						}
@@ -1392,7 +1391,7 @@ var _ = Describe("mutator", func() {
 						Name:    imageName1,
 						Version: nonExpiredVersion,
 					}
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("amd64")
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = new("amd64")
 
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				})
@@ -1482,7 +1481,7 @@ var _ = Describe("mutator", func() {
 					newWorker.Machine.Image = nil
 					newWorker2.Machine.Image = nil
 					newWorker2.Machine.Type = "machine-type-3"
-					newWorker2.Machine.Architecture = ptr.To("arm64")
+					newWorker2.Machine.Architecture = new("arm64")
 					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker, *newWorker2)
 
 					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -1512,7 +1511,7 @@ var _ = Describe("mutator", func() {
 					newWorker.Name = "second-worker"
 					newWorker2.Name = "third-worker"
 					newWorker2.Machine.Type = "machine-type-3"
-					newWorker2.Machine.Architecture = ptr.To("arm64")
+					newWorker2.Machine.Architecture = new("arm64")
 					newWorker.Machine.Image = &core.ShootMachineImage{
 						Name: imageName2,
 					}
@@ -1540,7 +1539,7 @@ var _ = Describe("mutator", func() {
 					newShoot := shoot.DeepCopy()
 					newShoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-3"
 					newShoot.Spec.Provider.Workers[0].Machine.Image = nil
-					newShoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("arm64")
+					newShoot.Spec.Provider.Workers[0].Machine.Architecture = new("arm64")
 
 					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1650,7 +1649,7 @@ var _ = Describe("mutator", func() {
 									Name:    validMachineImageName,
 									Version: "24.0",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}
@@ -1696,7 +1695,7 @@ var _ = Describe("mutator", func() {
 									Name:    validMachineImageName,
 									Version: "24.0.20260101",
 								},
-								Architecture: ptr.To("amd64"),
+								Architecture: new("amd64"),
 							},
 						},
 					}

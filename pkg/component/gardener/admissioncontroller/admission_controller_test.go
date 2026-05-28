@@ -28,7 +28,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -103,13 +102,13 @@ var _ = Describe("GardenerAdmissionController", func() {
 							APIGroups:   []string{""},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"secrets", "configmaps"},
-							Size:        ptr.To(resource.MustParse("1Mi")),
+							Size:        new(resource.MustParse("1Mi")),
 						},
 						{
 							APIGroups:   []string{"core.gardener.cloud"},
 							APIVersions: []string{"v1beta1"},
 							Resources:   []string{"shoots"},
-							Size:        ptr.To(resource.MustParse("100Ki")),
+							Size:        new(resource.MustParse("100Ki")),
 						},
 					},
 					UnrestrictedSubjects: []rbacv1.Subject{{
@@ -462,7 +461,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 		},
 	}
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeManagedResourceSecret), runtimeManagedResourceSecret)).To(Succeed())
-	ExpectWithOffset(1, runtimeManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+	ExpectWithOffset(1, runtimeManagedResourceSecret.Immutable).To(Equal(new(true)))
 	ExpectWithOffset(1, runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 	By("Check Virtual Cluster Resources")
@@ -491,7 +490,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 	}
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualManagedResourceSecret), virtualManagedResourceSecret)).To(Succeed())
 	ExpectWithOffset(1, ok).To(BeTrue())
-	ExpectWithOffset(1, virtualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+	ExpectWithOffset(1, virtualManagedResourceSecret.Immutable).To(Equal(new(true)))
 	ExpectWithOffset(1, virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 }
 
@@ -554,8 +553,8 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To[int32](1),
-			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             new(int32(1)),
+			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -573,12 +572,12 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            "gardener-garden-system-400",
-					AutomountServiceAccountToken: ptr.To(false),
+					AutomountServiceAccountToken: new(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsNonRoot: new(true),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Containers: []corev1.Container{
 						{
@@ -617,7 +616,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 								TimeoutSeconds:      5,
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -643,7 +642,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  serverCertSecretName,
-									DefaultMode: ptr.To[int32](0640),
+									DefaultMode: new(int32(0640)),
 								},
 							},
 						},
@@ -659,7 +658,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 							Name: "kubeconfig",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -670,7 +669,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 													Key:  "kubeconfig",
 													Path: "kubeconfig",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 										{
@@ -682,7 +681,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 													Key:  "token",
 													Path: "token",
 												}},
-												Optional: ptr.To(false),
+												Optional: new(false),
 											},
 										},
 									},
@@ -739,10 +738,10 @@ func service(namespace string, testValues Values) *corev1.Service {
 
 	if testValues.TopologyAwareRoutingEnabled {
 		if versionutils.ConstraintK8sGreaterEqual134.Check(testValues.RuntimeVersion) {
-			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferSameZone)
+			svc.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferSameZone)
 		} else {
 			// For Kubernetes >= 1.32 (minimum supported version), use PreferClose
-			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+			svc.Spec.TrafficDistribution = new(corev1.ServiceTrafficDistributionPreferClose)
 		}
 	}
 
@@ -757,9 +756,9 @@ func podDisruptionBudget(namespace string) *policyv1.PodDisruptionBudget {
 			Labels:    GetLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable:             new(intstr.FromInt32(1)),
 			Selector:                   &metav1.LabelSelector{MatchLabels: GetLabels()},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 }
@@ -816,7 +815,7 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 					},
 					{
 						ContainerName: "*",
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
@@ -932,7 +931,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "validate-namespace-deletion.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -948,7 +947,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-namespace-deletion"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/validate-namespace-deletion"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -956,7 +955,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "validate-kubeconfig-secrets.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 					Rule: admissionregistrationv1.Rule{
@@ -973,7 +972,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-kubeconfig-secrets"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/validate-kubeconfig-secrets"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -981,7 +980,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "internal-domain-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
 					Rule: admissionregistrationv1.Rule{
@@ -997,7 +996,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/admission/validate-internal-domain"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/admission/validate-internal-domain"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1005,7 +1004,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "audit-policies.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1031,7 +1030,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/audit-policies"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/audit-policies"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1039,7 +1038,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "authentication-configuration.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1065,7 +1064,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/authentication-configuration"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/authentication-configuration"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1073,7 +1072,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "authorization-configuration.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1099,7 +1098,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/authorization-configuration"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/authorization-configuration"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1107,7 +1106,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "shoot-kubeconfig-secret-ref.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
@@ -1125,7 +1124,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-shoot-kubeconfig-secret-ref"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/validate-shoot-kubeconfig-secret-ref"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1133,7 +1132,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			{
 				Name:                    "update-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{
@@ -1155,7 +1154,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/update-restriction"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/update-restriction"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1167,7 +1166,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 		webhookConfig.Webhooks = append(webhookConfig.Webhooks, admissionregistrationv1.ValidatingWebhook{
 			Name:                    "validate-resource-size.gardener.cloud",
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			TimeoutSeconds:          ptr.To[int32](10),
+			TimeoutSeconds:          new(int32(10)),
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1194,7 +1193,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				},
 			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-resource-size"),
+				URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/validate-resource-size"),
 				CABundle: caBundle,
 			},
 			SideEffects: &sideEffectsNone,
@@ -1206,7 +1205,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			admissionregistrationv1.ValidatingWebhook{
 				Name:                    "seed-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
@@ -1276,7 +1275,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/admission/seedrestriction"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/admission/seedrestriction"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1284,7 +1283,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 			admissionregistrationv1.ValidatingWebhook{
 				Name:                    "shoot-restriction.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
@@ -1306,7 +1305,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/admission/shootrestriction"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/admission/shootrestriction"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
@@ -1331,7 +1330,7 @@ func mutatingWebhookConfiguration(namespace string, caBundle []byte) *admissionr
 			{
 				Name:                    "sync-provider-secret-labels.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          ptr.To[int32](10),
+				TimeoutSeconds:          new(int32(10)),
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -1357,7 +1356,7 @@ func mutatingWebhookConfiguration(namespace string, caBundle []byte) *admissionr
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/sync-provider-secret-labels"),
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/sync-provider-secret-labels"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,

@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 )
@@ -36,7 +35,7 @@ var _ = Describe("Logging", func() {
 								Regex:      "^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$",
 								TimeKey:    "time",
 								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-								TimeKeep:   ptr.To(true),
+								TimeKeep:   new(true),
 							},
 							Decoders: []fluentbitv1alpha2.Decorder{ // spellchecker:disable-line
 								{
