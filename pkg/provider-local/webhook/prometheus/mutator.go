@@ -10,7 +10,6 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -51,7 +50,7 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	// `Wait for PersistentVolumes to be cleaned up` step waits for PV reclaim, which
 	// is gated on the pod releasing the PVC. Shrink the grace period so cleanup waits
 	// stay short and PV reclaim is what we're actually measuring.
-	prometheus.Spec.TerminationGracePeriodSeconds = ptr.To[int64](60)
+	prometheus.Spec.TerminationGracePeriodSeconds = new(int64(60))
 
 	if !seedPrometheuses.Has(prometheus.Name) {
 		return nil
