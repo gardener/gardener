@@ -29,7 +29,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	comptest "github.com/gardener/gardener/pkg/component/test"
@@ -65,10 +64,9 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		kubeRBACProxyShootAccessSecretName          = "shoot-access-rbac-proxy"
 		opentelemetryCollectorShootAccessSecretName = "shoot-access-opentelemetry-collector"
 		values                                      Values
-
-		c         client.Client
-		component Interface
-		consistOf func(...client.Object) types.GomegaMatcher
+		c                                           client.Client
+		component                                   Interface
+		consistOf                                   func(...client.Object) types.GomegaMatcher
 
 		customResourcesManagedResourceName   = "opentelemetry-collector"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
@@ -333,7 +331,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
 						v1beta1constants.LabelNetworkPolicyScrapeTargets +
 						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
-					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: v1beta1constants.LabelNetworkPolicyShootNamespaceAlias,
+					resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: "all-shoots",
 					resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 					"networking.istio.io/exportTo":                             "istio-ingress",
 				},
@@ -1041,11 +1039,12 @@ func getValitailClusterRoleBinding(name, appName, roleName, subjectName string) 
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelRole:  v1beta1constants.LabelObservability,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleObservability,
-		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428):                                v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelObservabilityApplication:                                      "opentelemetry-collector",
+		v1beta1constants.LabelApp:                            "opentelemetry-collector",
+		v1beta1constants.LabelRole:                           "observability",
+		v1beta1constants.GardenRole:                          "observability",
+		gardenerutils.NetworkPolicyLabel("logging", 3100):    "allowed",
+		gardenerutils.NetworkPolicyLabel("logging-vl", 9428): "allowed",
+		v1beta1constants.LabelNetworkPolicyToDNS:             "allowed",
+		v1beta1constants.LabelObservabilityApplication:       "opentelemetry-collector",
 	}
 }
