@@ -289,7 +289,47 @@ users:
 				"/var/lib/opentelemetry-collector/kubeconfig",
 			}
 
-			expectedUnits := []extensionsv1alpha1.Unit{otelDaemonUnit}
+			otelHealthCheckUnit := extensionsv1alpha1.Unit{
+				Name:    UnitNameHealthCheck,
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(`[Unit]
+Description=opentelemetry-collector health check
+OnFailure=opentelemetry-collector-restart.service
+[Install]
+WantedBy=multi-user.target
+[Service]
+Type=oneshot
+ExecCondition=/bin/sh -c "systemctl is-active --quiet opentelemetry-collector.service"
+ExecStart=/bin/sh -c "curl -fsSm 15 http://127.0.0.1:18888/metrics"`),
+			}
+
+			otelRestartUnit := extensionsv1alpha1.Unit{
+				Name:    UnitNameRestart,
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(`[Unit]
+Description=Restart opentelemetry-collector.service when opentelemetry-collector-healthcheck.service fails
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "systemctl restart opentelemetry-collector.service"`),
+			}
+
+			otelTimerUnit := extensionsv1alpha1.Unit{
+				Name:    UnitNameTimer,
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(`[Unit]
+Description=Run opentelemetry-collector-healthcheck.service every 5 minutes to validate that opentelemetry-collector.service is working as expected
+[Install]
+WantedBy=multi-user.target
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=1min
+Unit=opentelemetry-collector-healthcheck.service`),
+			}
+
+			expectedUnits := []extensionsv1alpha1.Unit{otelDaemonUnit, otelHealthCheckUnit, otelRestartUnit, otelTimerUnit}
 
 			Expect(units).To(ConsistOf(expectedUnits))
 			Expect(files).To(ConsistOf(expectedFiles))
