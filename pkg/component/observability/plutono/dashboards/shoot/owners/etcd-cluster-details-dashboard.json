@@ -360,7 +360,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "2 * etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"} + (1 - etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}) * (1 - etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"})",
+          "expr": "1 + etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"} - etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}",
           "instant": false,
           "interval": "",
           "legendFormat": "{{pod}}",
@@ -1067,7 +1067,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Total number of active peers in the cluster per member",
+      "description": "Total number of active peers in the cluster for the selected member",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1302,9 +1302,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m])",
+          "expr": "label_replace(\n  label_replace(\n    rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m]),\n    \"from\", \"$1\", \"pod\", \"(.*)\"\n  ),\n  \"server_id\", \"$1\", \"To\", \"(.*)\"\n)\n* on(job, server_id) group_left(pod)\netcd_server_id{job=\"kube-etcd3-$role\"}",
           "interval": "",
-          "legendFormat": "{{pod}} -> {{To}}",
+          "legendFormat": "{{from}} -> {{pod}}",
           "refId": "A"
         }
       ],
@@ -1399,9 +1399,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m])",
+          "expr": "label_replace(\n  label_replace(\n    rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m]),\n    \"receiver\", \"$1\", \"pod\", \"(.*)\"\n  ),\n  \"server_id\", \"$1\", \"From\", \"(.*)\"\n)\n* on(job, server_id) group_left(pod)\netcd_server_id{job=\"kube-etcd3-$role\"}",
           "interval": "",
-          "legendFormat": "{{pod}} <- {{From}}",
+          "legendFormat": "{{receiver}} <- {{pod}}",
           "refId": "A"
         }
       ],
