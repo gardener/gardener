@@ -168,7 +168,7 @@ var _ = Describe("ResourceManager", func() {
 			fakeErr         = errors.New("fake err")
 
 			fakeClient    client.Client
-			fakeClock     clock.Clock
+			fakeClock     *testclock.FakeClock
 			k8sSeedClient kubernetes.Interface
 			scheme        *runtime.Scheme
 
@@ -278,6 +278,17 @@ var _ = Describe("ResourceManager", func() {
 						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": fakeClock.Now().Add(-time.Hour).Format(time.RFC3339)}
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+					})
+
+					It("bootstraps because the shoot token expired while the shoot was hibernated", func() {
+						// Token is valid at startup (renew timestamp is 1h in the future).
+						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
+						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+
+						// Simulate time passing while the shoot was hibernated: clock advances past the renew timestamp.
+						fakeClock.Step(2 * time.Hour)
 
 						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 					})
