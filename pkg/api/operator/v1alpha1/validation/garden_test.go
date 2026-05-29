@@ -3374,7 +3374,7 @@ var _ = Describe("Validation Tests", func() {
 						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 							Resources: oldResources,
 							Provider: gardencorev1beta1.EncryptionProvider{
-								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+								Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 							},
 						}
 						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
@@ -3382,7 +3382,7 @@ var _ = Describe("Validation Tests", func() {
 								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 									Resources: oldGardenerResources,
 									Provider: gardencorev1beta1.EncryptionProvider{
-										Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+										Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 									},
 								},
 							},
@@ -3396,13 +3396,13 @@ var _ = Describe("Validation Tests", func() {
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 							Resources: oldResources,
 							Provider: gardencorev1beta1.EncryptionProvider{
-								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+								Type: new(gardencorev1beta1.EncryptionProviderTypeSecretbox),
 							},
 						}
 						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 							Resources: oldGardenerResources,
 							Provider: gardencorev1beta1.EncryptionProvider{
-								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+								Type: new(gardencorev1beta1.EncryptionProviderTypeSecretbox),
 							},
 						}
 
@@ -3415,7 +3415,7 @@ var _ = Describe("Validation Tests", func() {
 						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 							Resources: oldResources,
 							Provider: gardencorev1beta1.EncryptionProvider{
-								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+								Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 							},
 						}
 						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
@@ -3423,7 +3423,7 @@ var _ = Describe("Validation Tests", func() {
 								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 									Resources: oldGardenerResources,
 									Provider: gardencorev1beta1.EncryptionProvider{
-										Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeAESCBC),
+										Type: new(gardencorev1beta1.EncryptionProviderTypeAESCBC),
 									},
 								},
 							},
@@ -3438,13 +3438,13 @@ var _ = Describe("Validation Tests", func() {
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 							Resources: oldResources,
 							Provider: gardencorev1beta1.EncryptionProvider{
-								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+								Type: new(gardencorev1beta1.EncryptionProviderTypeSecretbox),
 							},
 						}
 						newGarden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 							Resources: oldGardenerResources,
 							Provider: gardencorev1beta1.EncryptionProvider{
-								Type: ptr.To(gardencorev1beta1.EncryptionProviderTypeSecretbox),
+								Type: new(gardencorev1beta1.EncryptionProviderTypeSecretbox),
 							},
 						}
 
