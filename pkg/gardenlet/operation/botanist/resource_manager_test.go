@@ -20,6 +20,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -217,6 +218,7 @@ var _ = Describe("ResourceManager", func() {
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
+			fakeClock     *testclock.FakeClock
 			sm            secretsmanager.Interface
 
 			bootstrapKubeconfigSecret *corev1.Secret
@@ -230,12 +232,14 @@ var _ = Describe("ResourceManager", func() {
 
 			c = mockclient.NewMockClient(ctrl)
 			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
+			fakeClock = testclock.NewFakeClock(time.Now())
 			sm = fakesecretsmanager.New(c, controlPlaneNamespace)
 
 			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")
 			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "ca"}, gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 			botanist.SeedClientSet = k8sSeedClient
+			botanist.Clock = fakeClock
 			botanist.SecretsManager = sm
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{

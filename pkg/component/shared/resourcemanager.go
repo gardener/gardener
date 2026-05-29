@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/component-base/version"
+	clockutils "k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -121,8 +122,6 @@ func NewTargetGardenerResourceManager(
 }
 
 var (
-	// Now is an alias for time.Now(). Exposed for testing.
-	Now = time.Now()
 	// TimeoutWaitForGardenerResourceManagerBootstrapping is the maximum time the bootstrap process for the
 	// gardener-resource-manager may take.
 	// Exposed for testing.
@@ -140,6 +139,7 @@ var (
 func DeployGardenerResourceManager(
 	ctx context.Context,
 	c client.Client,
+	clock clockutils.Clock,
 	secretsManager secretsmanager.Interface,
 	gardenerResourceManager resourcemanager.Interface,
 	namespace string,
@@ -156,7 +156,7 @@ func DeployGardenerResourceManager(
 		gardenerResourceManager.SetReplicas(&replicaCount)
 	}
 
-	mustBootstrap, err := mustBootstrapGardenerResourceManager(ctx, c, gardenerResourceManager, namespace)
+	mustBootstrap, err := mustBootstrapGardenerResourceManager(ctx, c, clock, gardenerResourceManager, namespace)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func DeployGardenerResourceManager(
 		timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForGardenerResourceManagerBootstrapping)
 		defer cancel()
 
-		if err := WaitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, namespace); err != nil {
+		if err := WaitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, clock, namespace); err != nil {
 			return err
 		}
 	}
@@ -193,7 +193,7 @@ func DeployGardenerResourceManager(
 	return gardenerResourceManager.Deploy(ctx)
 }
 
-func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, gardenerResourceManager resourcemanager.Interface, namespace string) (bool, error) {
+func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, clock clockutils.Clock, gardenerResourceManager resourcemanager.Interface, namespace string) (bool, error) {
 	if ptr.Deref(gardenerResourceManager.GetReplicas(), 0) == 0 {
 		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
@@ -215,7 +215,7 @@ func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, 
 	if err2 != nil {
 		return false, fmt.Errorf("could not parse renew timestamp: %w", err2)
 	}
-	if Now.UTC().After(renewTime.UTC()) {
+	if clock.Now().UTC().After(renewTime.UTC()) {
 		return true, nil // Shoot token was not renewed.
 	}
 
@@ -269,7 +269,7 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 	)
 }
 
-func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.Client, namespace string) error {
+func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.Client, clock clockutils.Clock, namespace string) error {
 	shootAccessSecret := gardenerutils.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, namespace)
 
 	if err := retryutils.Until(ctx, IntervalWaitForGardenerResourceManagerBootstrapping, func(ctx context.Context) (bool, error) {
@@ -290,7 +290,7 @@ func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.
 			return retryutils.SevereError(fmt.Errorf("could not parse renew timestamp: %w", err2))
 		}
 
-		if Now.UTC().After(renewTime.UTC()) {
+		if clock.Now().UTC().After(renewTime.UTC()) {
 			return retryutils.MinorError(errors.New("token not yet renewed"))
 		}
 
