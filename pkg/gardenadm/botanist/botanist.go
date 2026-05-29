@@ -64,6 +64,10 @@ type GardenadmBotanist struct {
 	// This field is only relevant for shoot with unmanaged infrastructure.
 	Zone *string
 
+	// BackupDataPath is the local path on the node where the etcd backup data is stored.
+	// When set, the bootstrap etcd will be initialized from this path using the Local storage provider.
+	BackupDataPath string
+
 	operatingSystemConfigSecret       *corev1.Secret
 	gardenerResourceManagerServiceIPs []string
 	useEtcdManagedByDruid             bool

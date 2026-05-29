@@ -505,6 +505,8 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 		b.Zone = new(opts.Zone)
 	}
 
+	b.BackupDataPath = opts.BackupDataPath
+
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed checking whether kubeconfig file %s exists: %w", botanist.PathKubeconfig, err)
