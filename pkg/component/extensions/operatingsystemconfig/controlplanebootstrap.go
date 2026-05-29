@@ -71,11 +71,6 @@ func NewControlPlaneBootstrap(
 				Name:      "gardenadm-" + values.Worker.Name,
 				Namespace: values.Namespace,
 			}},
-			// Ensure that the secret name is included in the worker pool mapping, so that the worker pool hash in the
-			// self-hosted shoot will result in the same hash.
-			// Without the NodeAgentSecretName, the WorkerPoolHash func will always use hash version v1, although we used v2
-			// in the bootstrap cluster.
-			IncludeSecretNameInWorkerPool: true,
 		},
 	}
 }

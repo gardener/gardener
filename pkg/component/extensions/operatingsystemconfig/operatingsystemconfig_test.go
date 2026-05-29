@@ -1085,26 +1085,22 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							Object:                        worker1OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                      worker1OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							Object:                        worker1OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                      worker1OSCOriginal,
 						},
 					},
 					worker2Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							Object:                        worker2OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                      worker2OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							Object:                        worker2OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                      worker2OSCOriginal,
 						},
 					},
 				}))
@@ -1151,28 +1147,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							SecretName:                    new("cc-" + expected[0].Name),
-							Object:                        worker1OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							SecretName:                  new("cc-" + expected[0].Name),
+							Object:                      worker1OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							Object:                        worker1OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                      worker1OSCOriginal,
 						},
 					},
 					worker2Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							SecretName:                    new("cc-" + expected[2].Name),
-							Object:                        worker2OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							SecretName:                  new("cc-" + expected[2].Name),
+							Object:                      worker2OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							Object:                        worker2OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                      worker2OSCOriginal,
 						},
 					},
 				}))

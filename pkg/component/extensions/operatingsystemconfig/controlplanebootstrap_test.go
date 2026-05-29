@@ -178,7 +178,6 @@ var _ = Describe("controlPlaneBootstrap", func() {
 			Expect(deployer.WorkerPoolNameToOperatingSystemConfigsMap()).To(
 				HaveKeyWithValue(worker.Name, HaveField("Init", And(
 					HaveField("SecretName", new(ccSecret.Name)),
-					HaveField("IncludeSecretNameInWorkerPool", true),
 					HaveField("GardenerNodeAgentSecretName", "gardener-node-agent-control-plane-afd64c60da0e2d2d"),
 				))),
 			)
