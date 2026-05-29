@@ -109,13 +109,17 @@ func DurationUntilNextVersionTransition(cloudProfile *gardencorev1beta1.CloudPro
 		if t == nil {
 			return
 		}
-		if now.Before(t.Time) && (next.IsZero() || next.After(t.Time)) {
+
+		isInFuture := now.Before(t.Time)
+		isBeforeNext := next.IsZero() || next.After(t.Time)
+
+		if isInFuture && isBeforeNext {
 			next = t.Time
 		}
 	}
 
 	evaluateVersion := func(v gardencorev1beta1.ExpirableVersion) {
-		if v.ExpirationDate != nil {
+		if len(v.Lifecycle) == 0 {
 			evaluate(v.ExpirationDate)
 			return
 		}
@@ -125,11 +129,11 @@ func DurationUntilNextVersionTransition(cloudProfile *gardencorev1beta1.CloudPro
 		}
 	}
 
-	for _, version := range cloudProfile.Kubernetes.Versions {
+	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
 		evaluateVersion(version)
 	}
 
-	for _, image := range cloudProfile.MachineImages {
+	for _, image := range cloudProfile.Spec.MachineImages {
 		for _, version := range image.Versions {
 			evaluateVersion(version.ExpirableVersion)
 		}
