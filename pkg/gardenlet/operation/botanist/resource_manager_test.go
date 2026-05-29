@@ -200,7 +200,6 @@ var _ = Describe("ResourceManager", func() {
 			fakeClock     *testclock.FakeClock
 			rm            *fakeresourcemanager.ResourceManager
 			kubeAPIServer *fakeKubeAPIServer
-			now           time.Time
 
 			bootstrapKubeconfigSecret *corev1.Secret
 			shootAccessSecret         *corev1.Secret
@@ -208,8 +207,7 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
-			now = time.Now()
-			fakeClock = testclock.NewFakeClock(now)
+			fakeClock = testclock.NewFakeClock(time.Now())
 			botanist.Clock = fakeClock
 
 			rm = &fakeresourcemanager.ResourceManager{}
@@ -226,7 +224,7 @@ var _ = Describe("ResourceManager", func() {
 					Name:      "shoot-access-gardener-resource-manager",
 					Namespace: controlPlaneNamespace,
 					Annotations: map[string]string{
-						resourcesv1alpha1.ServiceAccountTokenRenewTimestamp: now.Add(time.Hour).Format(time.RFC3339),
+						resourcesv1alpha1.ServiceAccountTokenRenewTimestamp: fakeClock.Now().Add(time.Hour).Format(time.RFC3339),
 					},
 				},
 			}
@@ -397,7 +395,7 @@ var _ = Describe("ResourceManager", func() {
 
 					It("bootstraps because the shoot access secret was not renewed", func() {
 						shootAccessSecret.Annotations = map[string]string{
-							resourcesv1alpha1.ServiceAccountTokenRenewTimestamp: now.Add(-time.Hour).Format(time.RFC3339),
+							resourcesv1alpha1.ServiceAccountTokenRenewTimestamp: fakeClock.Now().Add(-time.Hour).Format(time.RFC3339),
 						}
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
@@ -504,7 +502,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the shoot access token was not renewed", func() {
-						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(-time.Hour).Format(time.RFC3339)}
+						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": fakeClock.Now().Add(-time.Hour).Format(time.RFC3339)}
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 

@@ -178,7 +178,6 @@ var _ = Describe("ResourceManager", func() {
 			bootstrapKubeconfigSecret *corev1.Secret
 			shootAccessSecret         *corev1.Secret
 			managedResource           *resourcesv1alpha1.ManagedResource
-			now                       time.Time
 		)
 
 		BeforeEach(func() {
@@ -186,9 +185,7 @@ var _ = Describe("ResourceManager", func() {
 
 			resourceManager = &fakeresourcemanager.ResourceManager{}
 
-			now = time.Unix(60, 0)
-
-			fakeClock = testclock.NewFakeClock(now)
+			fakeClock = testclock.NewFakeClock(time.Unix(60, 0))
 
 			scheme = runtime.NewScheme()
 			Expect(kubernetesscheme.AddToScheme(scheme)).To(Succeed())
@@ -217,7 +214,7 @@ var _ = Describe("ResourceManager", func() {
 					Name:      "shoot-access-gardener-resource-manager",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(time.Hour).Format(time.RFC3339),
+						"serviceaccount.resources.gardener.cloud/token-renew-timestamp": fakeClock.Now().Add(time.Hour).Format(time.RFC3339),
 					},
 				},
 			}
@@ -278,7 +275,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("bootstraps because the shoot access secret was not renewed", func() {
-						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(-time.Hour).Format(time.RFC3339)}
+						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": fakeClock.Now().Add(-time.Hour).Format(time.RFC3339)}
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -360,7 +357,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the shoot access token was not renewed", func() {
-						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": now.Add(-time.Hour).Format(time.RFC3339)}
+						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": fakeClock.Now().Add(-time.Hour).Format(time.RFC3339)}
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
