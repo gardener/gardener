@@ -89,6 +89,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	return shared.DeployGardenerResourceManager(
 		ctx,
 		b.SeedClientSet.Client(),
+		b.Clock,
 		b.SecretsManager,
 		b.Shoot.Components.ControlPlane.ResourceManager,
 		b.Shoot.ControlPlaneNamespace,

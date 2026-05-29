@@ -15,6 +15,8 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -195,6 +197,7 @@ var _ = Describe("ResourceManager", func() {
 			controlPlaneNamespace = "fake-seed-ns"
 
 			fakeClient    client.Client
+			fakeClock     *testclock.FakeClock
 			rm            *fakeresourcemanager.ResourceManager
 			kubeAPIServer *fakeKubeAPIServer
 			now           time.Time
@@ -206,7 +209,8 @@ var _ = Describe("ResourceManager", func() {
 
 		BeforeEach(func() {
 			now = time.Now()
-			DeferCleanup(test.WithVar(&shared.Now, now))
+			fakeClock = testclock.NewFakeClock(now)
+			botanist.Clock = fakeClock
 
 			rm = &fakeresourcemanager.ResourceManager{}
 			kubeAPIServer = &fakeKubeAPIServer{autoscalingReplicas: new(int32(1))}
@@ -368,7 +372,7 @@ var _ = Describe("ResourceManager", func() {
 			Context("with success", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVar(&shared.WaitUntilGardenerResourceManagerBootstrapped,
-						func(_ context.Context, _ client.Client, _ string) error { return nil },
+						func(_ context.Context, _ client.Client, _ clock.Clock, _ string) error { return nil },
 					))
 				})
 
