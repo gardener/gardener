@@ -7,7 +7,6 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -305,11 +304,6 @@ func testManualWorkersRollout(s *ShootContext) {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		// Skip the test for IPv6 single-stack Shoot as it is extremely flaky (success rate < 30%).
-		//
-		// TODO(shafeeqes, acumino, ary1992): Debug and fix the flaky test for ipv6.
-		var withInPlaceUpdateWorkers = os.Getenv("IPFAMILY") != "ipv6"
-
 		test := func(s *ShootContext, withoutWorkersRollout, workersRollout bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
@@ -398,7 +392,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) && withInPlaceUpdateWorkers {
+			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
 					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
 				}, SpecTimeout(2*time.Minute))
@@ -407,9 +401,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if !withoutWorkersRollout {
 				// test rotation for every rotation type
-				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, !v1beta1helper.IsWorkerless(s.Shoot) && withInPlaceUpdateWorkers)
+				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, !v1beta1helper.IsWorkerless(s.Shoot))
 			} else {
-				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, !v1beta1helper.IsWorkerless(s.Shoot) && withInPlaceUpdateWorkers)
+				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, !v1beta1helper.IsWorkerless(s.Shoot))
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
@@ -417,7 +411,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				ItShouldInitializeShootClient(s)
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
-				if !v1beta1helper.IsWorkerless(s.Shoot) && withInPlaceUpdateWorkers {
+				if !v1beta1helper.IsWorkerless(s.Shoot) {
 					It("should compare the node names after the test", func(ctx SpecContext) {
 						totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
 						s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
@@ -444,17 +438,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				BeforeTestSetup(func() {
 					shoot := DefaultShoot("e2e-rotate")
 
-					if withInPlaceUpdateWorkers {
-						worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-						worker1.Minimum = 2
-						worker1.Maximum = 2
-						worker1.MaxUnavailable = new(intstr.FromInt(1))
-						worker1.MaxSurge = new(intstr.FromInt(0))
+					worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+					worker1.Minimum = 2
+					worker1.Maximum = 2
+					worker1.MaxUnavailable = new(intstr.FromInt(1))
+					worker1.MaxSurge = new(intstr.FromInt(0))
 
-						worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+					worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
-					}
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
 
 					s = NewTestContext().ForShoot(shoot)
 				})
@@ -469,17 +461,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				BeforeTestSetup(func() {
 					shoot := DefaultShoot("e2e-rot-noroll")
 
-					if withInPlaceUpdateWorkers {
-						worker2 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-						worker2.Minimum = 2
-						worker2.Maximum = 2
-						worker2.MaxUnavailable = new(intstr.FromInt(1))
-						worker2.MaxSurge = new(intstr.FromInt(0))
+					worker2 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+					worker2.Minimum = 2
+					worker2.Maximum = 2
+					worker2.MaxUnavailable = new(intstr.FromInt(1))
+					worker2.MaxSurge = new(intstr.FromInt(0))
 
-						worker3 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+					worker3 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker2, worker3)
-					}
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker2, worker3)
 
 					// Add an extra worker pool when worker rollout should not be performed such that we can make proper
 					// assertions of the shoot status
