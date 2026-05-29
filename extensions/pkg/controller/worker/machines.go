@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,13 +20,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
@@ -93,85 +90,16 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 }
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
-func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV1, additionalDataV2, additionalDataInPlace []string) (string, error) {
+func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV2, additionalDataInPlace []string) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
 		return WorkerPoolHashInPlace(pool, cluster, additionalDataInPlace...)
 	}
 
-	if pool.NodeAgentSecretName != nil {
-		return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
-	}
-	return WorkerPoolHashV1(pool, cluster, additionalDataV1...)
-}
-
-// WorkerPoolHashV1 returns a hash value for a given worker pool and a given cluster resource.
-func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
-	kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
-	if pool.KubernetesVersion != nil {
-		kubernetesVersion = *pool.KubernetesVersion
-	}
-	shootVersionMajorMinor, err := util.VersionMajorMinor(kubernetesVersion)
-	if err != nil {
-		return "", err
+	if pool.NodeAgentSecretName == nil {
+		return "", fmt.Errorf("missing node-agent secret name for worker pool %v", pool.Name)
 	}
 
-	data := []string{
-		shootVersionMajorMinor,
-		pool.MachineType,
-		pool.MachineImage.Name + pool.MachineImage.Version,
-	}
-
-	if pool.Volume != nil {
-		data = append(data, pool.Volume.Size)
-
-		if pool.Volume.Type != nil {
-			data = append(data, *pool.Volume.Type)
-		}
-	}
-
-	if pool.ProviderConfig != nil && pool.ProviderConfig.Raw != nil {
-		data = append(data, string(pool.ProviderConfig.Raw))
-	}
-
-	data = append(data, additionalData...)
-
-	for _, w := range cluster.Shoot.Spec.Provider.Workers {
-		if pool.Name == w.Name {
-			if w.CRI != nil {
-				data = append(data, string(w.CRI.Name))
-			}
-		}
-	}
-
-	if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil {
-		if status.Credentials.Rotation.CertificateAuthorities != nil {
-			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.String())
-			}
-		}
-		if status.Credentials.Rotation.ServiceAccountKey != nil {
-			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.String())
-			}
-		}
-	}
-
-	parsedVersion, err := semver.NewVersion(kubernetesVersion)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse Kubernetes version %q: %w", kubernetesVersion, err)
-	}
-
-	if (versionutils.ConstraintK8sLess134.Check(parsedVersion) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents)) ||
-		(v1beta1helper.IsKubeProxyIPVSMode(cluster.Shoot.Spec.Kubernetes.KubeProxy) && v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents)) {
-		data = append(data, "node-local-dns")
-	}
-
-	var result strings.Builder
-	for _, v := range data {
-		result.WriteString(utils.ComputeSHA256Hex([]byte(v)))
-	}
-
-	return utils.ComputeSHA256Hex([]byte(result.String()))[:5], nil
+	return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
 }
 
 // WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
@@ -192,9 +120,10 @@ func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (str
 func WorkerPoolHashInPlace(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	data := []string{}
 
-	if pool.NodeAgentSecretName != nil {
-		data = append(data, *pool.NodeAgentSecretName)
+	if pool.NodeAgentSecretName == nil {
+		return "", fmt.Errorf("missing node-agent secret name for worker pool %v", pool.Name)
 	}
+	data = append(data, *pool.NodeAgentSecretName)
 
 	// In case of in-place update, the following data are omitted from the node-agent secret name calculation, but we still want to create a different machine class.
 	// So we add this data to the hash calculation here.
