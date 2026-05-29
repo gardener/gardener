@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
@@ -150,7 +151,13 @@ func rewriteEncryptedData(
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 
-		if err := c.List(ctx, objList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
+		// Use a per-List timeout so that a hung TCP connection to the shoot kube-apiserver
+		// (e.g. due to transient IPv6 connectivity issues) surfaces as a retryable error
+		// instead of blocking for the entire parent-context deadline.
+		listCtx, listCancel := context.WithTimeout(ctx, time.Minute)
+		err := c.List(listCtx, objList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)})
+		listCancel()
+		if err != nil {
 			return err
 		}
 
