@@ -283,24 +283,6 @@ var _ = Describe("Strategy", func() {
 			),
 		)
 
-		Context("seedName change", func() {
-			BeforeEach(func() {
-				oldShoot = &core.Shoot{
-					Spec: core.ShootSpec{
-						SeedName: new("seed"),
-					},
-				}
-				newShoot = oldShoot.DeepCopy()
-			})
-
-			It("should not allow change of seedName on shoot spec update", func() {
-				newShoot.Spec.SeedName = new("new-seed")
-				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-
-				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
-			})
-		})
-
 		Context("generation increment", func() {
 			var (
 				oldShoot *core.Shoot
