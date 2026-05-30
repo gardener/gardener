@@ -45,8 +45,8 @@ import (
 	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	opentelemetryv1alpha1 "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1"
-	opentelemetryv1beta1 "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1beta1"
+	opentelemetryv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
+	opentelemetryv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 )
 
 var (
