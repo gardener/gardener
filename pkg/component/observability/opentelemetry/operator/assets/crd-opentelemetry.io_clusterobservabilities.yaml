@@ -1,0 +1,286 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: clusterobservabilities.opentelemetry.io
+spec:
+  group: opentelemetry.io
+  names:
+    kind: ClusterObservability
+    listKind: ClusterObservabilityList
+    plural: clusterobservabilities
+    singular: clusterobservability
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: OTLP exporter endpoint
+      jsonPath: .spec.exporter.endpoint
+      name: Endpoint
+      type: string
+    - description: Current phase
+      jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterObservability is the Schema for the clusterobservabilities
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              ClusterObservabilitySpec defines the desired state of ClusterObservability.
+              This follows a simplified design using a single OTLP HTTP exporter for all signals.
+            properties:
+              exporter:
+                description: |-
+                  Exporter defines the OTLP HTTP exporter configuration for all signals.
+                  The collector will automatically append appropriate paths for each signal type.
+                properties:
+                  compression:
+                    description: |-
+                      Compression defines the compression algorithm to use.
+                      By default gzip compression is enabled. Use "none" to disable.
+                    enum:
+                    - gzip
+                    - none
+                    - ""
+                    type: string
+                  encoding:
+                    description: |-
+                      Encoding defines the encoding to use for the messages.
+                      Valid options: proto, json. Default is proto.
+                    enum:
+                    - proto
+                    - json
+                    type: string
+                  endpoint:
+                    description: Endpoint is the target base URL to send data to (e.g.,
+                      https://example.com:4318).
+                    type: string
+                  headers:
+                    additionalProperties:
+                      type: string
+                    description: Headers defines additional headers to be sent with
+                      each request.
+                    type: object
+                  logs_endpoint:
+                    description: |-
+                      LogsEndpoint is the target URL to send log data to (e.g., https://example.com:4318/v1/logs).
+                      If this setting is present the endpoint setting is ignored for logs.
+                    type: string
+                  metrics_endpoint:
+                    description: |-
+                      MetricsEndpoint is the target URL to send metric data to (e.g., https://example.com:4318/v1/metrics).
+                      If this setting is present the endpoint setting is ignored for metrics.
+                    type: string
+                  profiles_endpoint:
+                    description: |-
+                      ProfilesEndpoint is the target URL to send profile data to (e.g., https://example.com:4318/v1/development/profiles).
+                      If this setting is present the endpoint setting is ignored for profiles.
+                    type: string
+                  read_buffer_size:
+                    description: ReadBufferSize for HTTP client. Default is 0.
+                    minimum: 0
+                    type: integer
+                  retry_on_failure:
+                    description: RetryOnFailure defines retry configuration for failed
+                      requests.
+                    properties:
+                      enabled:
+                        description: Enabled controls whether retry is enabled. Default
+                          is true.
+                        type: boolean
+                      initial_interval:
+                        description: InitialInterval is the initial retry interval
+                          (e.g., "5s"). Default is 5s.
+                        type: string
+                      max_elapsed_time:
+                        description: MaxElapsedTime is the maximum elapsed time for
+                          retries (e.g., "5m"). Default is 5m.
+                        type: string
+                      max_interval:
+                        description: MaxInterval is the maximum retry interval (e.g.,
+                          "30s"). Default is 30s.
+                        type: string
+                      multiplier:
+                        description: Multiplier is the multiplier for retry intervals
+                          (e.g., "1.5"). Default is 1.5.
+                        type: string
+                      randomization_factor:
+                        description: RandomizationFactor is the randomization factor
+                          for retry intervals (e.g., "0.5"). Default is 0.5.
+                        type: string
+                    type: object
+                  sending_queue:
+                    description: SendingQueue defines configuration for the sending
+                      queue.
+                    properties:
+                      enabled:
+                        description: Enabled controls whether the queue is enabled.
+                          Default is true.
+                        type: boolean
+                      num_consumers:
+                        description: NumConsumers is the number of consumers that
+                          dequeue batches. Default is 10.
+                        minimum: 1
+                        type: integer
+                      queue_size:
+                        description: QueueSize is the maximum number of batches allowed
+                          in queue at a given time. Default is 1000.
+                        minimum: 1
+                        type: integer
+                    type: object
+                  timeout:
+                    description: Timeout is the HTTP request time limit (e.g., "30s",
+                      "1m"). Default is 30s.
+                    type: string
+                  tls:
+                    description: TLS defines TLS configuration for the exporter.
+                    properties:
+                      ca_file:
+                        description: CAFile is the path to the CA certificate file
+                          for server verification.
+                        type: string
+                      cert_file:
+                        description: CertFile is the path to the client certificate
+                          file for mutual TLS.
+                        type: string
+                      insecure:
+                        description: Insecure controls whether to use insecure transport.
+                          Default is false.
+                        type: boolean
+                      key_file:
+                        description: KeyFile is the path to the client private key
+                          file for mutual TLS.
+                        type: string
+                      server_name:
+                        description: ServerName for TLS handshake. If empty, uses
+                          the hostname from endpoint.
+                        type: string
+                    type: object
+                  traces_endpoint:
+                    description: |-
+                      TracesEndpoint is the target URL to send trace data to (e.g., https://example.com:4318/v1/traces).
+                      If this setting is present the endpoint setting is ignored for traces.
+                    type: string
+                  write_buffer_size:
+                    description: WriteBufferSize for HTTP client. Default is 512 *
+                      1024.
+                    minimum: 0
+                    type: integer
+                type: object
+            required:
+            - exporter
+            type: object
+          status:
+            description: ClusterObservabilityStatus defines the observed state of
+              ClusterObservability.
+            properties:
+              componentsStatus:
+                additionalProperties:
+                  description: ComponentStatus represents the status of an individual
+                    component.
+                  properties:
+                    lastUpdated:
+                      description: LastUpdated is the last time this status was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message provides additional information about the
+                        component status.
+                      type: string
+                    ready:
+                      description: Ready indicates whether the component is ready.
+                      type: boolean
+                  type: object
+                description: ComponentsStatus provides status information about individual
+                  observability components.
+                type: object
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the ClusterObservability state.
+                items:
+                  description: ClusterObservabilityCondition represents a condition
+                    of a ClusterObservability.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    observedGeneration:
+                      description: ObservedGeneration represents the .metadata.generation
+                        that the condition was set based upon.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition.
+                      type: string
+                    type:
+                      description: Type of condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              configVersions:
+                additionalProperties:
+                  type: string
+                description: |-
+                  ConfigVersions tracks the version hashes of the configuration files used.
+                  This enables detection of config changes when operator is upgraded.
+                type: object
+              message:
+                description: Message provides additional information about the current
+                  state.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the most recent generation observed for this ClusterObservability.
+                  It corresponds to the ClusterObservability's generation, which is updated on mutation
+                  by the API Server.
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase of the ClusterObservability.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

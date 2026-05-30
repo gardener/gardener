@@ -3238,6 +3238,29 @@ spec:
                       x-kubernetes-map-type: atomic
                   type: object
                 type: array
+              hostAliases:
+                description: |-
+                  HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts file if specified.
+                  This is only valid for non-hostNetwork pods and is not supported on Windows.
+                items:
+                  description: |-
+                    HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
+                    pod's hosts file.
+                  properties:
+                    hostnames:
+                      description: Hostnames for the above IP address.
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    ip:
+                      description: IP address of the host file entry.
+                      type: string
+                  required:
+                  - ip
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
               hostNetwork:
                 description: HostNetwork indicates if the pod should run in the host
                   networking namespace.
@@ -3246,6 +3269,41 @@ spec:
                 description: HostPID indicates if the pod should have access to the
                   host process ID namespace.
                 type: boolean
+              hostUsers:
+                description: HostUsers isolates pod processes in a separate user namespace,
+                  reducing the risk of privilege escalation.
+                type: boolean
+              httpRoute:
+                description: |-
+                  HttpRoute is used to specify how OpenTelemetry Collector is exposed via Gateway API HTTPRoute.
+                  This functionality is only available if one of the valid modes is set.
+                  Valid modes are: deployment, daemonset and statefulset.
+                properties:
+                  enabled:
+                    description: Enabled indicates whether the HTTP route configuration
+                      is enabled.
+                    type: boolean
+                  gateway:
+                    description: Gateway specifies the name of the Gateway resource
+                      to associate with the HTTP route.
+                    type: string
+                  gatewayNamespace:
+                    description: |-
+                      GatewayNamespace specifies the namespace of the Gateway resource.
+                      Default is the same namespace as the collector.
+                    type: string
+                  hostnames:
+                    description: |-
+                      Hostnames specifies the hostnames for the HTTP route.
+                      Multiple hostnames can be specified to match requests with any of the given hostnames.
+                      If empty, the route matches requests with any hostname.
+                    items:
+                      type: string
+                    type: array
+                required:
+                - enabled
+                - gateway
+                type: object
               image:
                 description: Image indicates the container image to use for the generated
                   pods.
@@ -5321,6 +5379,14 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                 type: object
+              podManagementPolicy:
+                description: |-
+                  PodManagementPolicy defines the pod creation and termination order in StatefulSet.
+                  If not specified, it will default to "Parallel"
+                enum:
+                - OrderedReady
+                - Parallel
+                type: string
               podSecurityContext:
                 description: |-
                   PodSecurityContext configures the pod security context for the
@@ -5973,7 +6039,7 @@ spec:
               serviceAccount:
                 description: |-
                   ServiceAccount indicates the name of an existing service account to use with this instance. When set,
-                  the operator will not automatically create a ServiceAccount.
+                  the operator will not automatically Create a ServiceAccount.
                 type: string
               serviceName:
                 description: |-
@@ -6978,6 +7044,12 @@ spec:
                     - consistent-hashing
                     - per-node
                     type: string
+                  allowInsecureAuthSecrets:
+                    description: |-
+                      AllowInsecureAuthSecrets controls whether auth secret values (e.g. basicAuth passwords)
+                      are served over plain HTTP without requiring mTLS. Only enable this when the target allocator
+                      endpoint is secured by a service mesh or equivalent transport-level security.
+                    type: boolean
                   collectorNotReadyGracePeriod:
                     default: 30s
                     description: |-
@@ -7170,6 +7242,22 @@ spec:
                     description: Image indicates the container image to use for the
                       OpenTelemetry TargetAllocator.
                     type: string
+                  mtls:
+                    description: Mtls defines the mTLS configuration for the target
+                      allocator. If enabled, the target allocator will communicate
+                      with the collector over mTLS.
+                    properties:
+                      enabled:
+                        description: Enabled indicates whether to enable mTLS between
+                          the target allocator and the collector.
+                        type: boolean
+                      useCertManager:
+                        default: true
+                        description: |-
+                          UseCertManager defines whether cert-manager should be used to provision certificates for mTLS.
+                          Defaults to true.
+                        type: boolean
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -7475,6 +7563,17 @@ spec:
                         items:
                           type: string
                         type: array
+                      denyFSAccessThroughSMs:
+                        description: |-
+                          DenyFSAccessThroughSMs causes the Target Allocator to drop ServiceMonitor and
+                          PodMonitor endpoints that reference arbitrary files on the file system. When
+                          enabled, endpoints with bearerTokenFile, tlsConfig.caFile, tlsConfig.certFile,
+                          or tlsConfig.keyFile are dropped from the produced scrape configuration while
+                          the remaining endpoints are kept. This prevents tenants from stealing the
+                          Collector's service account token via ServiceMonitor bearerTokenFile
+                          references. This is the equivalent of ArbitraryFSAccessThroughSMs.Deny from
+                          the Prometheus Operator.
+                        type: boolean
                       denyNamespaces:
                         description: DenyNamespaces Namespaces to scope the interaction
                           of the Target Allocator and the apiserver (deny list). This
@@ -7486,9 +7585,119 @@ spec:
                         description: Enabled indicates whether to use a PrometheusOperator
                           custom resources as targets or not.
                         type: boolean
+                      evaluationInterval:
+                        default: 30s
+                        description: |-
+                          Default interval between rule evaluations.
+
+                          Default: "30s"
+                        format: duration
+                        type: string
+                      podMonitorNamespaceSelector:
+                        default: {}
+                        description: |-
+                          Namespaces to be selected for PodMonitor discovery.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
                       podMonitorSelector:
                         description: |-
                           PodMonitors to be selected for target discovery.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      probeNamespaceSelector:
+                        default: {}
+                        description: |-
+                          Namespaces to be selected for Probe discovery.
                           A label selector is a label query over a set of resources. The result of matchLabels and
                           matchExpressions are ANDed. An empty label selector matches all objects. A null
                           label selector matches no objects.
@@ -7596,6 +7805,57 @@ spec:
                         type: array
                         x-kubernetes-list-type: atomic
                         x-kubernetes-preserve-unknown-fields: true
+                      scrapeConfigNamespaceSelector:
+                        default: {}
+                        description: |-
+                          Namespaces to be selected for ScrapeConfig discovery.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
                       scrapeConfigSelector:
                         description: |-
                           ScrapeConfigs to be selected for target discovery.
@@ -7650,11 +7910,75 @@ spec:
                         default: 30s
                         description: |-
                           Default interval between consecutive scrapes. Intervals set in ServiceMonitors and PodMonitors override it.
-                          Equivalent to the same setting on the Prometheus CR.
 
                           Default: "30s"
                         format: duration
                         type: string
+                      scrapeProtocols:
+                        description: |-
+                          ScrapeProtocols define the protocols to negotiate during a scrape. It tells clients the
+                          protocols supported by Prometheus in order of preference (from most to least preferred).
+                        items:
+                          type: string
+                        type: array
+                      secretNamespaces:
+                        description: |-
+                          SecretNamespaces Namespaces to scope the watching of secrets for the Target Allocator.
+                          If not configured, defaults to the target allocator's own namespace.
+                        items:
+                          type: string
+                        type: array
+                      serviceMonitorNamespaceSelector:
+                        default: {}
+                        description: |-
+                          Namespaces to be selected for ServiceMonitor discovery.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
                       serviceMonitorSelector:
                         description: |-
                           ServiceMonitors to be selected for target discovery.
@@ -7970,7 +8294,7 @@ spec:
                   serviceAccount:
                     description: |-
                       ServiceAccount indicates the name of an existing service account to use with this instance. When set,
-                      the operator will not automatically create a ServiceAccount for the TargetAllocator.
+                      the operator will not automatically Create a ServiceAccount for the TargetAllocator.
                     type: string
                   tolerations:
                     description: |-
