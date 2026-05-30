@@ -44,8 +44,6 @@ build:
             - pkg/utils/errors
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
-            - third_party/open-telemetry/opentelemetry-operator/apis/v1alpha1
-            - third_party/open-telemetry/opentelemetry-operator/apis/v1beta1
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

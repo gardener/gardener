@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -38,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 )
 
 const (
