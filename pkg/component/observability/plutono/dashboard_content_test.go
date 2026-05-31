@@ -22,12 +22,15 @@ func getDashboardData() map[string]map[string]interface{} {
 	result := make(map[string]map[string]interface{})
 	allDashboards := GardenAndShootDashboards()
 	_ = fs.WalkDir(allDashboards, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".json") {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".json") {
 			return nil
 		}
 		data, readErr := fs.ReadFile(allDashboards, path)
 		if readErr != nil {
-			return nil
+			return readErr
 		}
 		var obj map[string]interface{}
 		if jsonErr := json.Unmarshal(data, &obj); jsonErr == nil {
