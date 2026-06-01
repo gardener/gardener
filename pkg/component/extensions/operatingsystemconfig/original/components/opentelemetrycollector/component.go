@@ -23,10 +23,6 @@ const (
 	// UnitNameHealthCheck is the name of the opentelemetry-collector healthcheck oneshot.
 	UnitNameHealthCheck = "opentelemetry-collector-healthcheck.service"
 
-	// UnitNameRestart is the name of the opentelemetry-collector restart oneshot
-	// triggered via OnFailure when the healthcheck fails.
-	UnitNameRestart = "opentelemetry-collector-restart.service"
-
 	// UnitNameTimer is the name of the opentelemetry-collector timer.
 	UnitNameTimer = "opentelemetry-collector.timer"
 
@@ -90,7 +86,6 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		units,
 		getOpenTelemetryCollectorUnit(),
 		getOpenTelemetryCollectorHealthCheckUnit(),
-		getOpenTelemetryCollectorRestartUnit(),
 		getOpenTelemetryCollectorTimerUnit(),
 	)
 	files = append(files, collectorConfigFile, getOpenTelemetryCollectorCAFile(ctx), extensionsv1alpha1.File{

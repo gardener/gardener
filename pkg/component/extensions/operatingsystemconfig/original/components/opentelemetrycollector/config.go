@@ -129,27 +129,15 @@ func getOpenTelemetryCollectorHealthCheckUnit() extensionsv1alpha1.Unit {
 		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
-Description=opentelemetry-collector health check
-OnFailure=` + UnitNameRestart + `
+Description=Health check for ` + UnitName + `
+After=` + UnitName + `
+Requisite=` + UnitName + `
 [Install]
 WantedBy=multi-user.target
 [Service]
 Type=oneshot
-ExecCondition=/bin/sh -c "systemctl is-active --quiet ` + UnitName + `"
-ExecStart=/bin/sh -c "curl -fsSm 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics"`),
-	}
-}
-
-func getOpenTelemetryCollectorRestartUnit() extensionsv1alpha1.Unit {
-	return extensionsv1alpha1.Unit{
-		Name:    UnitNameRestart,
-		Command: new(extensionsv1alpha1.CommandStart),
-		Enable:  new(true),
-		Content: new(`[Unit]
-Description=Restart ` + UnitName + ` when ` + UnitNameHealthCheck + ` fails
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c "systemctl restart ` + UnitName + `"`),
+ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart ` + UnitName + `'
+ExecStart=/usr/bin/curl -fsS --max-time 5 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics`),
 	}
 }
 
@@ -161,9 +149,10 @@ func getOpenTelemetryCollectorTimerUnit() extensionsv1alpha1.Unit {
 		Content: new(`[Unit]
 Description=Run ` + UnitNameHealthCheck + ` every 5 minutes to validate that ` + UnitName + ` is working as expected
 [Install]
-WantedBy=multi-user.target
+WantedBy=timers.target
 [Timer]
-OnCalendar=*:0/5
+OnBootSec=2min
+OnUnitActiveSec=5min
 AccuracySec=1min
 Unit=` + UnitNameHealthCheck),
 	}
