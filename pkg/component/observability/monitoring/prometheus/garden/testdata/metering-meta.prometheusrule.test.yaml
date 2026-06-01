@@ -3,6 +3,53 @@ rule_files:
 
 tests:
 
+# _garden_shoot_info
+- name: _garden_shoot_info
+  input_series:
+  - series: garden_shoot_info{
+        shoot_uid         = "6fe5a58a-f98e-4cf3-9fbd-197d5bcb2a78",
+        project           = "some-project",
+        name              = "some-shoot",
+        iaas              = "shoot-iaas",
+        region            = "shoot-region",
+        seed              = "some-seed",
+        seed_iaas         = "seed-iaas",
+        seed_region       = "seed-region",
+        failure_tolerance = "zone",
+        version           = "1.26.7",
+        cost_object_type  = "some-cost-object-type",
+        cost_object       = "0101010xxx",
+        cost_object_owner = "some-owner",
+        gardener_version  = "1.42.3",
+        is_seed           = "false",
+        is_workerless     = "false",
+        is_hibernated     = "false",
+        status            = "healthy",
+        some_label        = "some-value"}
+    values: 0
+  promql_expr_test:
+  - expr: _garden_shoot_info
+    exp_samples:
+    - labels: _garden_shoot_info{
+        shoot_uid         = "6fe5a58a-f98e-4cf3-9fbd-197d5bcb2a78",
+        project           = "some-project",
+        name              = "some-shoot",
+        iaas              = "shoot-iaas",
+        region            = "shoot-region",
+        seed              = "some-seed",
+        seed_iaas         = "seed-iaas",
+        seed_region       = "seed-region",
+        failure_tolerance = "zone",
+        version           = "1.26.7",
+        cost_object_type  = "some-cost-object-type",
+        cost_object       = "0101010xxx",
+        cost_object_owner = "some-owner",
+        gardener_version  = "1.42.3",
+        is_seed           = "false",
+        is_workerless     = "false",
+        is_hibernated     = "false"}
+      value: 0
+
 # metering:*:sum_by_namespace:meta merge in meta data from the garden_shoot_info metrics
 - name: metering:cpu_requests:sum_by_namespace:meta
   input_series:
