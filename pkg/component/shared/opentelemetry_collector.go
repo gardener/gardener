@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
+	"github.com/gardener/gardener/pkg/features"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -52,6 +53,7 @@ func NewOpenTelemetryCollector(
 			PriorityClassName:       priorityClassName,
 			ClusterType:             clusterType,
 			IsGardenCluster:         isGardenCluster,
+			VictoriaLogsBackend:     features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 		},
 		secretsManager,
 	), nil
