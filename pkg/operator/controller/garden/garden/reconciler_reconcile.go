@@ -1068,6 +1068,7 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 		return shared.DeployGardenerResourceManager(
 			ctx,
 			r.RuntimeClientSet.Client(),
+			r.Clock,
 			secretsManager,
 			resourceManager,
 			r.GardenNamespace,
