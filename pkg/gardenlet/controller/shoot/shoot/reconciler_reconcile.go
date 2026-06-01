@@ -464,9 +464,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet, o.SecretsManager, o.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption())
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf: v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
-				sets.New(o.Shoot.ResourcesToEncrypt...).Equal(sets.New(o.Shoot.EncryptedResources...)) && (o.Shoot.EncryptionProviderToUse == o.Shoot.UsedEncryptionProvider ||
-				v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting),
+			SkipIf: o.Shoot.HibernationEnabled ||
+				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
+					sets.New(o.Shoot.ResourcesToEncrypt...).Equal(sets.New(o.Shoot.EncryptedResources...)) && (o.Shoot.EncryptionProviderToUse == o.Shoot.UsedEncryptionProvider ||
+					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		snapshotETCD = g.Add(flow.Task{
@@ -474,7 +475,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
 			}),
-			SkipIf: !allowBackup ||
+			SkipIf: !allowBackup || o.Shoot.HibernationEnabled ||
 				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 					sets.New(o.Shoot.ResourcesToEncrypt...).Equal(sets.New(o.Shoot.EncryptedResources...)) && (o.Shoot.EncryptionProviderToUse == o.Shoot.UsedEncryptionProvider ||
 					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting)),
@@ -522,10 +523,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 				return nil
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf: v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting &&
-				sets.New(o.Shoot.ResourcesToEncrypt...).Equal(sets.New(o.Shoot.EncryptedResources...)) && (o.Shoot.EncryptionProviderToUse == o.Shoot.UsedEncryptionProvider ||
-				v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing ||
-				v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPrepared),
+			SkipIf: o.Shoot.HibernationEnabled ||
+				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting &&
+					sets.New(o.Shoot.ResourcesToEncrypt...).Equal(sets.New(o.Shoot.EncryptedResources...)) && (o.Shoot.EncryptionProviderToUse == o.Shoot.UsedEncryptionProvider ||
+					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing ||
+					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPrepared)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, snapshotETCD),
 		})
 		deployKubeScheduler = g.Add(flow.Task{

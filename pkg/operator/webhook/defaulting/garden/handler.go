@@ -10,7 +10,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	operatorv1alpha1helper "github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
@@ -53,17 +52,6 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	}
 	if garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Provider.Type == nil {
 		garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig.Provider.Type = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type
-	}
-
-	if garden.Status.Credentials == nil {
-		garden.Status.Credentials = &operatorv1alpha1.Credentials{}
-	}
-	if garden.Status.Credentials.EncryptionAtRest == nil {
-		garden.Status.Credentials.EncryptionAtRest = &operatorv1alpha1.EncryptionAtRest{}
-	}
-
-	if len(garden.Status.Credentials.EncryptionAtRest.Provider.Type) == 0 {
-		garden.Status.Credentials.EncryptionAtRest.Provider.Type = operatorv1alpha1helper.GetKubeAPIServerEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
 	}
 
 	return nil
