@@ -22,5 +22,6 @@ func RegisterFeatureGates() {
 		features.PrometheusHealthChecks,
 		features.RemoveVali,
 		features.DisableNginxIngressInGarden,
+		features.OpenTelemetryCollector,
 	)))
 }
