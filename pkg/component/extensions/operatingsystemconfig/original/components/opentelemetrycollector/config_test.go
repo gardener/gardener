@@ -93,6 +93,11 @@ extensions:
     create_directory: true
   bearertokenauth:
     filename: /var/lib/opentelemetry-collector/auth-token
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: /healthz
+  pprof:
+    endpoint: 0.0.0.0:1777
 
 receivers:
   journald/journal:
