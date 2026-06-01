@@ -79,7 +79,7 @@ SKAFFOLD_VERSION ?= v2.21.0
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.53.2
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
-VGOPATH_VERSION ?= v0.1.10
+VGOPATH_VERSION ?= v0.1.11
 # renovate: datasource=github-releases depName=crate-ci/typos
 TYPOS_VERSION ?= v1.47.0
 GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
