@@ -891,6 +891,7 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 		newKubeAPIServerEncryptionConfig     = &gardencore.EncryptionConfig{}
 		oldGAPIServerEncryptionConfig        = &gardencore.EncryptionConfig{}
 		newGAPIServerEncryptionConfig        = &gardencore.EncryptionConfig{}
+		newLastOperation                     = &gardencore.LastOperation{}
 		etcdEncryptionKeyRotation            = &gardencore.ETCDEncryptionKeyRotation{}
 		kubeAPIServerEncryptionConfigFldPath = field.NewPath("spec", "virtualCluster", "kubernetes", "kubeAPIServer", "encryptionConfig")
 		gAPIServerEncryptionConfigFldPath    = field.NewPath("spec", "virtualCluster", "gardener", "gardenerAPIServer", "encryptionConfig")
@@ -926,16 +927,22 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 			return allErrs
 		}
 	}
+	if newGarden.Status.LastOperation != nil {
+		if err := gardenCoreScheme.Convert(newGarden.Status.LastOperation, newLastOperation, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(field.NewPath("status", "lastOperation"), err))
+			return allErrs
+		}
+	}
 
 	for _, r := range utils.FilterEntriesByFilterFn(helper.GetEncryptedResourcesInStatus(newGarden.Status), operator.IsServedByKubeAPIServer) {
 		currentEncryptedKubernetesResources.Insert(schema.ParseGroupResource(r))
 	}
-	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, currentEncryptedKubernetesResources, gardencore.EncryptionProviderType(currentEncryptionProviderType), etcdEncryptionKeyRotation, false, kubeAPIServerEncryptionConfigFldPath)...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, currentEncryptedKubernetesResources, gardencore.EncryptionProviderType(currentEncryptionProviderType), etcdEncryptionKeyRotation, false, newLastOperation, kubeAPIServerEncryptionConfigFldPath)...)
 
 	for _, r := range utils.FilterEntriesByFilterFn(helper.GetEncryptedResourcesInStatus(newGarden.Status), operator.IsServedByGardenerAPIServer) {
 		currentEncryptedGardenerResources.Insert(schema.ParseGroupResource(r))
 	}
-	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, currentEncryptedGardenerResources, gardencore.EncryptionProviderType(currentEncryptionProviderType), etcdEncryptionKeyRotation, false, gAPIServerEncryptionConfigFldPath)...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, currentEncryptedGardenerResources, gardencore.EncryptionProviderType(currentEncryptionProviderType), etcdEncryptionKeyRotation, false, newLastOperation, gAPIServerEncryptionConfigFldPath)...)
 
 	return allErrs
 }
