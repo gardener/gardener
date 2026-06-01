@@ -57,7 +57,7 @@ GOBUILDCACHE               := $(TOOLS_BIN_DIR)/gobuildcache
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION ?= v2.12.2
 # renovate: datasource=github-releases depName=securego/gosec
-GOSEC_VERSION ?= v2.26.1
+GOSEC_VERSION ?= v2.27.0
 # renovate: datasource=github-releases depName=google/addlicense
 GO_ADD_LICENSE_VERSION ?= v1.2.0
 # renovate: datasource=github-releases depName=incu6us/goimports-reviser
