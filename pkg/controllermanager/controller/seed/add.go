@@ -13,6 +13,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/imagepullsecret"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
 )
@@ -33,6 +34,10 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 
 	if err := (&secrets.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding secrets reconciler: %w", err)
+	}
+
+	if err := (&imagepullsecret.Reconciler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding image pull secret reconciler: %w", err)
 	}
 
 	if err := reference.AddToManager(mgr, v1beta1constants.GardenNamespace, *cfg.Controllers.SeedReference); err != nil {
