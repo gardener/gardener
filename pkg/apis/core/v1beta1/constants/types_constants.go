@@ -326,6 +326,8 @@ const (
 	GardenRoleOCICABundle = "oci-ca-bundle"
 	// GardenRoleObservability is the value of the GardenRole key indicating type 'observability'.
 	GardenRoleObservability = "observability"
+	// GardenRoleImagePullSecret is the value of the GardenRole key indicating type 'image-pull-secret'.
+	GardenRoleImagePullSecret = "image-pull-secret"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
@@ -1152,4 +1154,9 @@ const (
 	// that contains a label selector for shoots. The static manifests will only be propagated for shoots matching the
 	// selector.
 	AnnotationStaticManifestsShootSelector = "static-manifests.shoot.gardener.cloud/selector"
+	// AnnotationImagePullSecretSeedNames is an annotation on an image pull secret in the garden namespace
+	// that lists the comma-separated names of the seeds this secret should be copied to.
+	// gardener-controller-manager reads this annotation and copies the secret into each listed seed's
+	// seed-<name> namespace, from where the gardenlet propagates it to the seed cluster.
+	AnnotationImagePullSecretSeedNames = "gardener.cloud/seed-names"
 )

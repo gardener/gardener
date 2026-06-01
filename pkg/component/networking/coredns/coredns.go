@@ -620,10 +620,10 @@ import custom/*.server
 				Labels:    getClusterProportionalDNSAutoscalerLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{corednsconstants.LabelKey: clusterProportionalDNSAutoscalerLabelValue},
 				},
+				RevisionHistoryLimit: new(int32(2)),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: getClusterProportionalDNSAutoscalerLabels(),
@@ -793,6 +793,8 @@ import custom/*.server
 		managedObjects = append(managedObjects, horizontalPodAutoscaler)
 	}
 
+	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
+	kubernetesutils.InjectImagePullSecret(&clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec)
 	return registry.AddAllAndSerialize(managedObjects...)
 }
 

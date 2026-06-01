@@ -26,6 +26,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -274,6 +275,30 @@ func InjectKubernetesServiceHostEnv(containers []corev1.Container, host string) 
 			Name:      "KUBERNETES_SERVICE_HOST",
 			Value:     host,
 			ValueFrom: nil,
+		})
+	}
+}
+
+// InjectImagePullSecret injects image pull secrets into the given PodSpec based on the configured image vector.
+// Only StaticSecret credentials are injected via imagePullSecrets; other credential types (e.g. KubeletCredentialProvider)
+// are handled separately.
+func InjectImagePullSecret(podSpec *corev1.PodSpec) {
+	secretNames := sets.New[string]()
+
+	allContainers := make([]corev1.Container, 0, len(podSpec.InitContainers)+len(podSpec.Containers))
+	allContainers = append(allContainers, podSpec.InitContainers...)
+	allContainers = append(allContainers, podSpec.Containers...)
+
+	for _, container := range allContainers {
+		cred := imagevector.ContainerImagePullCredentialForImage(container.Image)
+		if cred != nil && cred.Type == "StaticSecret" && cred.SecretName != nil {
+			secretNames.Insert(*cred.SecretName)
+		}
+	}
+
+	for _, name := range sets.List(secretNames) {
+		podSpec.ImagePullSecrets = append(podSpec.ImagePullSecrets, corev1.LocalObjectReference{
+			Name: name,
 		})
 	}
 }

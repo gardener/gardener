@@ -261,6 +261,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 	}
 
 	v.injectAPIServerConnectionSpec(deployment, updater, serviceAccountName)
+	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 }
 
 func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
