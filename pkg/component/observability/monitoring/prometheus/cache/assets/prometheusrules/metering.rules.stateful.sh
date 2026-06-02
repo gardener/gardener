@@ -31,8 +31,6 @@ cat <<EOF
           metering:$NAME:sum_by_namespace:sum_over_time * 60
         /
           (metering:memory_usage_seconds != 0)
-      or
-        metering:$NAME:sum_by_namespace:sum_over_time
 
 
   - record: metering:$NAME:sum_by_namespace:avg_over_time:this_month
