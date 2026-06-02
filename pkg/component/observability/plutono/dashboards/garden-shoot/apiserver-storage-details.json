@@ -19,7 +19,7 @@
   "links": [],
   "panels": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
@@ -28,90 +28,89 @@
         "y": 0
       },
       "id": 45,
-      "panels": [
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateYlGn",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 6,
-            "x": 0,
-            "y": 1
-          },
-          "heatmap": {},
-          "hideZeroBuckets": true,
-          "highlightCards": true,
-          "id": 2,
-          "legend": {
-            "show": true
-          },
-          "pluginVersion": "7.3.7",
-          "repeat": "type",
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "type": {
-              "selected": false,
-              "text": "unknown",
-              "value": "unknown"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=~\"$apiserver\",type=~\"$type\",operation=~\"$operation\"}[$__rate_interval])) by (le)",
-              "format": "heatmap",
-              "interval": "",
-              "intervalFactor": 3,
-              "legendFormat": "{{le}}",
-              "refId": "A"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$type",
-          "tooltip": {
-            "show": true,
-            "showHistogram": false
-          },
-          "tooltipDecimals": 5,
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": 1,
-            "format": "s",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        }
-      ],
+      "panels": [],
       "title": "ETCD Request Duration Per Type And Operation",
       "type": "row"
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateYlGn",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 2,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.3.7",
+      "repeat": "type",
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "type": {
+          "selected": false,
+          "text": "unknown",
+          "value": "unknown"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=~\"$apiserver\",type=~\"$type\",operation=~\"$operation\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "interval": "",
+          "intervalFactor": 3,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "$type",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "tooltipDecimals": 5,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": 1,
+        "format": "s",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
     }
   ],
   "schemaVersion": 26,
@@ -145,7 +144,7 @@
         "name": "apiserver",
         "options": [],
         "query": "label_values(apiserver_request_total,job)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -177,7 +176,7 @@
         "name": "type",
         "options": [],
         "query": "label_values(etcd_request_duration_seconds_bucket,type)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -209,7 +208,7 @@
         "name": "operation",
         "options": [],
         "query": "label_values(etcd_request_duration_seconds_bucket,operation)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
