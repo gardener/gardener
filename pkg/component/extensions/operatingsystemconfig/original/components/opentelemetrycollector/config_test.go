@@ -296,8 +296,8 @@ users:
 			}
 
 			otelHealthCheckUnit := extensionsv1alpha1.Unit{
-				Name:    UnitNameHealthCheck,
-				Enable:  new(true),
+				Name:   UnitNameHealthCheck,
+				Enable: new(true),
 				Content: new(`[Unit]
 Description=Health check for opentelemetry-collector.service
 After=opentelemetry-collector.service
