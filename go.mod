@@ -20,7 +20,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management v0.23.0
-	github.com/gardener/dependency-watchdog v1.7.0
+	github.com/gardener/dependency-watchdog v1.8.0
 	github.com/gardener/etcd-druid/api v0.36.3
 	github.com/gardener/machine-controller-manager v0.61.3
 	github.com/gardener/terminal-controller-manager v0.36.0
@@ -93,7 +93,7 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/gardener/gardener/pkg/apis v1.142.1 // overwritten by replace directive below
+require github.com/gardener/gardener/pkg/apis v1.143.0 // overwritten by replace directive below
 
 replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
 
@@ -318,7 +318,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
