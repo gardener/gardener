@@ -75,8 +75,6 @@ spec:
             metering:persistent_volume_claims:sum_by_namespace:sum_over_time * 60
           /
             (metering:disk_usage_seconds != 0)
-        or
-          metering:persistent_volume_claims:sum_by_namespace:sum_over_time
 
 
     - record: metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month
@@ -129,8 +127,6 @@ spec:
             metering:cpu_usage:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:cpu_usage:sum_by_namespace:sum_over_time
 
 
     - record: metering:cpu_usage:sum_by_namespace:avg_over_time:this_month
@@ -156,8 +152,6 @@ spec:
             metering:cpu_requests:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:cpu_requests:sum_by_namespace:sum_over_time
 
 
     - record: metering:cpu_requests:sum_by_namespace:avg_over_time:this_month
@@ -183,8 +177,6 @@ spec:
             metering:memory_usage:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:memory_usage:sum_by_namespace:sum_over_time
 
 
     - record: metering:memory_usage:sum_by_namespace:avg_over_time:this_month
@@ -210,8 +202,6 @@ spec:
             metering:working_set_memory:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:working_set_memory:sum_by_namespace:sum_over_time
 
 
     - record: metering:working_set_memory:sum_by_namespace:avg_over_time:this_month
@@ -237,8 +227,6 @@ spec:
             metering:memory_requests:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:memory_requests:sum_by_namespace:sum_over_time
 
 
     - record: metering:memory_requests:sum_by_namespace:avg_over_time:this_month
@@ -264,8 +252,6 @@ spec:
             metering:network_transmit:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:network_transmit:sum_by_namespace:sum_over_time
 
 
     - record: metering:network_transmit:sum_by_namespace:avg_over_time:this_month
@@ -291,8 +277,6 @@ spec:
             metering:network_receive:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:network_receive:sum_by_namespace:sum_over_time
 
 
     - record: metering:network_receive:sum_by_namespace:avg_over_time:this_month
@@ -318,8 +302,6 @@ spec:
             metering:persistent_volume_usage:sum_by_namespace:sum_over_time * 60
           /
             (metering:memory_usage_seconds != 0)
-        or
-          metering:persistent_volume_usage:sum_by_namespace:sum_over_time
 
 
     - record: metering:persistent_volume_usage:sum_by_namespace:avg_over_time:this_month
