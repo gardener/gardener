@@ -131,11 +131,13 @@ EOF
       fi
 
       if [[ "$OSTYPE" == "darwin"* ]]; then
-        local desired_resolver_config="nameserver $dns_ip"
-        if ! grep -q "$desired_resolver_config" /etc/resolver/local.gardener.cloud ; then
+        if ! grep -q "$dns_ip" /etc/resolver/local.gardener.cloud || ! grep -q "$dns_ipv6" /etc/resolver/local.gardener.cloud ; then
           echo "Configuring macOS to resolve the local.gardener.cloud zone using the local setup's DNS server"
           ${SUDO}mkdir -p /etc/resolver
-          echo "$desired_resolver_config" | ${SUDO}tee /etc/resolver/local.gardener.cloud
+          cat <<EOF | ${SUDO}tee /etc/resolver/local.gardener.cloud
+nameserver $dns_ipv6
+nameserver $dns_ip
+EOF
         fi
       elif [[ "$OSTYPE" == "linux"* && -f /etc/systemd/resolved.conf ]]; then
         if [[ ! -d /etc/systemd/resolved.conf.d ]]; then
