@@ -579,7 +579,7 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 			if err != nil {
 				return nil, err
 			}
-			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
+			wantedOSCNames.Insert(oscKey + oscPurposeSuffix(purpose))
 		}
 	}
 
@@ -623,7 +623,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(int, *extens
 			if err != nil {
 				return err
 			}
-			oscName := oscKey + keySuffix(version, worker.Machine.Image, purpose)
+			oscName := oscKey + oscPurposeSuffix(purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -1121,24 +1121,6 @@ func oscPurposeSuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) s
 	default:
 		return ""
 	}
-}
-
-func keySuffix(
-	version int,
-	machineImage *gardencorev1beta1.ShootMachineImage,
-	purpose extensionsv1alpha1.OperatingSystemConfigPurpose,
-) string {
-	var imagePrefix string
-	if version == 1 && machineImage != nil {
-		imagePrefix = "-" + machineImage.Name
-	}
-
-	suffix := oscPurposeSuffix(purpose)
-	if suffix == "" {
-		return ""
-	}
-
-	return imagePrefix + suffix
 }
 
 func generateOSCName(
