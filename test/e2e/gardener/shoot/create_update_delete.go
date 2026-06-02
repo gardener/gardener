@@ -27,6 +27,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/bastion"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/exposureclass"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/zerodowntimevalidator"
 	"github.com/gardener/gardener/test/utils/access"
@@ -157,6 +158,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			}
+
+			exposureclass.VerifyExposureClassSwitch(s, ItShouldWaitForShootToBeReconciledAndHealthy)
 
 			ItShouldAnnotateShoot(s, map[string]string{
 				"shoot.gardener.cloud/skip-readiness": "",
