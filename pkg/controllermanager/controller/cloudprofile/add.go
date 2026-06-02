@@ -5,7 +5,6 @@
 package cloudprofile
 
 import (
-	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -25,9 +24,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorder(ControllerName + "-controller")
-	}
-	if r.Clock == nil {
-		r.Clock = clock.RealClock{}
 	}
 
 	return builder.

@@ -8,12 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -31,8 +31,6 @@ type Reconciler struct {
 	Client   client.Client
 	Config   controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration
 	Recorder events.EventRecorder
-
-	Clock clock.Clock
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -107,7 +105,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{
-		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&cloudProfile.Spec, r.Clock),
+		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&cloudProfile.Spec, time.Now()),
 	}, nil
 }
 

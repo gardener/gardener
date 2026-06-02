@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -38,7 +37,6 @@ var _ = Describe("Reconciler", func() {
 
 		cloudProfileName string
 		fakeErr          error
-		fakeClock        *testclock.FakeClock
 		reconciler       reconcile.Reconciler
 		cloudProfile     *gardencorev1beta1.CloudProfile
 	)
@@ -46,7 +44,6 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		cloudProfileName = "test-cloudprofile"
 		fakeErr = errors.New("fake err")
-		fakeClock = testclock.NewFakeClock(time.Now())
 
 		fakeClient = fakeclient.NewClientBuilder().
 			WithScheme(kubernetes.GardenScheme).
@@ -57,7 +54,7 @@ var _ = Describe("Reconciler", func() {
 				indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 			).
 			Build()
-		reconciler = &Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+		reconciler = &Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
@@ -229,7 +226,7 @@ var _ = Describe("Reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			now = fakeClock.Now()
+			now = time.Now()
 			future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 			past = &metav1.Time{Time: now.Add(-24 * time.Hour)}
 		})

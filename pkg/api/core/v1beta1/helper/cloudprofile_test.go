@@ -162,13 +162,13 @@ var _ = Describe("CloudProfile Helper", func() {
 
 	Describe("Get the duration until the next lifecycle stage from the CloudProfile", func() {
 		var (
-			now          = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-			cloudProfile gardencorev1beta1.CloudProfile
+			now              = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+			cloudProfileSpec gardencorev1beta1.CloudProfileSpec
 		)
 
 		BeforeEach(func() {
-			cloudProfile = gardencorev1beta1.CloudProfile{
-				Spec: gardencorev1beta1.CloudProfileSpec{
+			cloudProfileSpec =
+				gardencorev1beta1.CloudProfileSpec{
 					Kubernetes: gardencorev1beta1.KubernetesSettings{
 						Versions: []gardencorev1beta1.ExpirableVersion{
 							{},
@@ -181,14 +181,13 @@ var _ = Describe("CloudProfile Helper", func() {
 							},
 						},
 					},
-				},
-			}
+				}
 		})
 
 		addK8sLifecycles := func(ts ...time.Duration) {
 			for _, t := range ts {
-				cloudProfile.Spec.Kubernetes.Versions[0].Lifecycle = append(
-					cloudProfile.Spec.Kubernetes.Versions[0].Lifecycle,
+				cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = append(
+					cloudProfileSpec.Kubernetes.Versions[0].Lifecycle,
 					gardencorev1beta1.LifecycleStage{
 						StartTime: ptr.To(metav1.NewTime(now.Add(t))),
 					},
@@ -198,8 +197,8 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		addMachineLifecycles := func(ts ...time.Duration) {
 			for _, t := range ts {
-				cloudProfile.Spec.MachineImages[0].Versions[0].ExpirableVersion.Lifecycle = append(
-					cloudProfile.Spec.MachineImages[0].Versions[0].ExpirableVersion.Lifecycle,
+				cloudProfileSpec.MachineImages[0].Versions[0].Lifecycle = append(
+					cloudProfileSpec.MachineImages[0].Versions[0].Lifecycle,
 					gardencorev1beta1.LifecycleStage{
 						StartTime: ptr.To(metav1.NewTime(now.Add(t))),
 					},
@@ -209,57 +208,57 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("should prefer lifecycle over expiration ", func() {
 			addK8sLifecycles(2*time.Hour, 5*time.Hour)
-			cloudProfile.Spec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			cloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 2*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should use expiration if now lifecycle is set", func() {
-			cloudProfile.Spec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			cloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 1*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should return the duration of the next k8s version lifecycle based on a chronological order", func() {
 			addK8sLifecycles(2*time.Hour, 5*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 2*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should return the duration of the next k8s version lifecycle without a chronological order", func() {
 			addK8sLifecycles(3*time.Hour, 1*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 1*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should return the duration of the next k8s version lifecycle with start time in the past", func() {
 			addK8sLifecycles(3*time.Hour, -1*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 3*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should return the duration of the next machine version lifecycle based on a chronological order", func() {
 			addMachineLifecycles(2*time.Hour, 5*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 2*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should return the duration of the next machine version lifecycle without a chronological order", func() {
 			addMachineLifecycles(3*time.Hour, 1*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 1*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should return the duration of the next machine version lifecycle with start time in the past", func() {
 			addMachineLifecycles(3*time.Hour, -1*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 3*time.Hour, 100*time.Millisecond),
 			)
 		})
@@ -267,7 +266,7 @@ var _ = Describe("CloudProfile Helper", func() {
 		It("should return the duration of the next k8s and machine version lifecycle", func() {
 			addK8sLifecycles(1*time.Hour, 2*time.Hour)
 			addMachineLifecycles(3*time.Hour, 4*time.Hour)
-			Expect(DurationUntilNextVersionTransition(&cloudProfile, now)).To(
+			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 1*time.Hour, 100*time.Millisecond),
 			)
 		})

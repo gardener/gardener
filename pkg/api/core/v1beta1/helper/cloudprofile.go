@@ -14,7 +14,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -97,13 +96,8 @@ func VersionIsDeprecated(version gardencorev1beta1.ExpirableVersion) bool {
 // DurationUntilNextVersionTransition returns the duration until the earliest upcoming lifecycle start time
 // or expiration date of any Kubernetes version or MachineImageVersion in the given <cloudProfile>.
 // If no future lifecycle start is found, it returns 0.
-func DurationUntilNextVersionTransition(cloudProfile *gardencorev1beta1.CloudProfileSpec, clock clock.Clock) time.Duration {
-	if cloudProfile == nil || clock == nil {
-		return 0
-	}
-
+func DurationUntilNextVersionTransition(cloudProfileSpec *gardencorev1beta1.CloudProfileSpec, now time.Time) time.Duration {
 	var next time.Time
-	now := clock.Now()
 
 	evaluate := func(t *metav1.Time) {
 		if t == nil {
@@ -129,11 +123,11 @@ func DurationUntilNextVersionTransition(cloudProfile *gardencorev1beta1.CloudPro
 		}
 	}
 
-	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
+	for _, version := range cloudProfileSpec.Kubernetes.Versions {
 		evaluateVersion(version)
 	}
 
-	for _, image := range cloudProfile.Spec.MachineImages {
+	for _, image := range cloudProfileSpec.MachineImages {
 		for _, version := range image.Versions {
 			evaluateVersion(version.ExpirableVersion)
 		}
