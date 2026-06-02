@@ -3953,6 +3953,11 @@ func (in *Monitoring) DeepCopyInto(out *Monitoring) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.AlertingSecretName != nil {
+		in, out := &in.AlertingSecretName, &out.AlertingSecretName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

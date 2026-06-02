@@ -10,8 +10,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/component"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
 
 const dataKeyAuthPassword = "auth_password"
@@ -36,23 +38,12 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 			Namespace: a.namespace,
 		},
 		Spec: monitoringv1alpha1.AlertmanagerConfigSpec{
-			// The root route on which each incoming alert enters.
 			Route: &monitoringv1alpha1.Route{
-				// The labels by which incoming alerts are grouped together.
-				GroupBy: []string{"service"},
-				// When a new group of alerts is created by an incoming alert, wait at least 'group_wait' to send the
-				// initial notification.
-				// This way ensures that you get multiple alerts for the same group that start firing shortly after
-				// another are batched together on the first notification.
-				GroupWait: new(monitoringv1.NonEmptyDuration("5m")),
-				// When the first notification was sent, wait 'group_interval' to send a batch of new alerts that
-				// started firing for that group.
-				GroupInterval: new(monitoringv1.NonEmptyDuration("5m")),
-				// If an alert has successfully been sent, wait 'repeat_interval' to resend them.
+				GroupBy:        []string{"service"},
+				GroupWait:      new(monitoringv1.NonEmptyDuration("5m")),
+				GroupInterval:  new(monitoringv1.NonEmptyDuration("5m")),
 				RepeatInterval: new(monitoringv1.NonEmptyDuration("72h")),
-				// Send alerts by default to nowhere
-				Receiver: "dev-null",
-				// email only for critical and blocker
+				Receiver:       "dev-null",
 				Routes: []apiextensionsv1.JSON{{Raw: []byte(`
 				  {"matchers": [{"name": "visibility",
 				                 "matchType": "=~",
@@ -60,38 +51,31 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 				   "receiver": "` + emailReceiverName + `"}`)}},
 			},
 			InhibitRules: []monitoringv1alpha1.InhibitRule{
-				// Apply inhibition if the alert name is the same.
 				{
 					SourceMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "critical", MatchType: monitoringv1alpha1.MatchEqual}},
 					TargetMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "warning", MatchType: monitoringv1alpha1.MatchEqual}},
 					Equal:       []string{"alertname", "service", "cluster"},
 				},
-				// Stop all alerts for type=shoot if there are VPN problems.
 				{
 					SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "vpn", MatchType: monitoringv1alpha1.MatchEqual}},
 					TargetMatch: []monitoringv1alpha1.Matcher{{Name: "type", Value: "shoot", MatchType: monitoringv1alpha1.MatchRegexp}},
 					Equal:       []string{"type", "cluster"},
 				},
-				// Stop warning and critical alerts if there is a blocker
 				{
 					SourceMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "blocker", MatchType: monitoringv1alpha1.MatchEqual}},
 					TargetMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "^(critical|warning)$", MatchType: monitoringv1alpha1.MatchRegexp}},
 					Equal:       []string{"cluster"},
 				},
-				// If the API server is down inhibit no worker nodes alert. No worker nodes depends on
-				// kube-state-metrics which depends on the API server.
 				{
 					SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "kube-apiserver", MatchType: monitoringv1alpha1.MatchEqual}},
 					TargetMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "nodes", MatchType: monitoringv1alpha1.MatchRegexp}},
 					Equal:       []string{"cluster"},
 				},
-				// If API server is down inhibit kube-state-metrics alerts.
 				{
 					SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "kube-apiserver", MatchType: monitoringv1alpha1.MatchEqual}},
 					TargetMatch: []monitoringv1alpha1.Matcher{{Name: "severity", Value: "info", MatchType: monitoringv1alpha1.MatchRegexp}},
 					Equal:       []string{"cluster"},
 				},
-				// No Worker nodes depends on kube-state-metrics. Inhibit no worker nodes if kube-state-metrics is down.
 				{
 					SourceMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "kube-state-metrics-shoot", MatchType: monitoringv1alpha1.MatchEqual}},
 					TargetMatch: []monitoringv1alpha1.Matcher{{Name: "service", Value: "nodes", MatchType: monitoringv1alpha1.MatchRegexp}},
@@ -107,6 +91,30 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 			},
 		},
 	}
+}
+
+// customConfig decodes the owner-supplied AlertmanagerConfig from values.AdditionalAlertmanagerConfig and
+// returns it ready to be added to the managed resource. It injects the "alertmanager: <name>" label because
+// the Alertmanager CR's alertmanagerConfigSelector matches on that label — without it prometheus-operator
+// would ignore the config. The resource name is suffixed with "-custom" to avoid collision with the
+// Gardener-managed config produced by config().
+func (a *alertManager) customConfig() *monitoringv1alpha1.AlertmanagerConfig {
+	if len(a.values.AdditionalAlertmanagerConfig) == 0 {
+		return nil
+	}
+
+	obj := &monitoringv1alpha1.AlertmanagerConfig{}
+	if err := runtime.DecodeInto(monitoringutils.Decoder, a.values.AdditionalAlertmanagerConfig, obj); err != nil {
+		return nil
+	}
+
+	obj.Name = a.name() + "-custom"
+	obj.Namespace = a.namespace
+	if obj.Labels == nil {
+		obj.Labels = map[string]string{}
+	}
+	obj.Labels["alertmanager"] = a.values.Name
+	return obj
 }
 
 func (a *alertManager) smtpSecret() *corev1.Secret {

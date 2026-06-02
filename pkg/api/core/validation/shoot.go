@@ -2113,6 +2113,9 @@ func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
+// forbiddenScrapeNamespaces lists Kubernetes system namespaces that must not be used as additional scrape
+// namespaces. Scraping these would expose node/cluster internals that shoot owners should not access and
+// could generate excessive noise in the shoot Prometheus instance.
 var forbiddenScrapeNamespaces = sets.New("kube-system", "kube-public", "kube-node-lease")
 
 func validateAdditionalScrapeNamespaces(namespaces []string, fldPath *field.Path) field.ErrorList {

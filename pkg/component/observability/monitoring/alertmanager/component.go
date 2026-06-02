@@ -61,6 +61,10 @@ type Values struct {
 	EmailReceivers []string
 	// ExternalExposure contains configuration for exposing this AlertManager instance via a VirtualService resource.
 	ExternalExposure *ExposureValues
+	// AdditionalAlertmanagerConfig is an optional raw Alertmanager configuration fragment provided by the shoot owner.
+	// It must contain a valid YAML document with "receivers" and/or "route" subtrees that will be merged into the
+	// default Alertmanager configuration as an additional AlertmanagerConfig resource.
+	AdditionalAlertmanagerConfig []byte
 }
 
 // ExposureValues contains configuration for exposing this AlertManager instance via a VirtualService resource.
@@ -117,6 +121,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		a.podDisruptionBudget(),
 		a.config(),
 		a.smtpSecret(),
+		a.customConfig(),
 	}, istioResources...)
 
 	resources, err := registry.AddAllAndSerialize(objects...)

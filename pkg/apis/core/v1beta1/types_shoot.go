@@ -1686,12 +1686,21 @@ type Monitoring struct {
 	// Alerting contains information about the alerting configuration for the shoot cluster.
 	// +optional
 	Alerting *Alerting `json:"alerting,omitempty" protobuf:"bytes,1,opt,name=alerting"`
-	// AdditionalNamespaces is a list of additional namespaces in the seed cluster whose pods and services should
-	// have their metrics scraped by the shoot's Prometheus instance. By default, only the shoot's control plane
-	// namespace is scraped. This allows shoot owners to extend metric collection to workloads deployed alongside
-	// the control plane (e.g. in dedicated addon namespaces).
+	// AdditionalNamespaces is a list of namespaces in the shoot cluster whose services annotated with
+	// prometheus.io/scrape=true should be scraped by prometheus-shoot. By default prometheus-shoot only
+	// scrapes Gardener's own control plane components. This allows shoot owners to extend metric collection
+	// to their application workloads without modifying the managed Prometheus resource (changes would be
+	// reverted by gardener-resource-manager). Discovery uses the shoot kube-apiserver endpoint with the same
+	// bearer token and CA that prometheus-shoot already uses for existing scrapers, so no additional RBAC is needed.
 	// +optional
 	AdditionalNamespaces []string `json:"additionalNamespaces,omitempty" protobuf:"bytes,2,rep,name=additionalNamespaces"`
+	// AlertingSecretName is the name of a secret in the shoot's project namespace whose
+	// "alertmanager-config.yaml" key contains an AlertmanagerConfig resource. Gardener reads the secret via
+	// the garden API client, injects the alertmanager selector label required by prometheus-operator, and
+	// includes the resource in the managed Alertmanager. This enables shoot owners to configure additional
+	// notification channels (Slack, PagerDuty, webhooks, etc.) without touching the managed resource directly.
+	// +optional
+	AlertingSecretName *string `json:"alertingSecretName,omitempty" protobuf:"bytes,3,opt,name=alertingSecretName"`
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).

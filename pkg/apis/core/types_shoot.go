@@ -1287,9 +1287,17 @@ type MaintenanceTimeWindow struct {
 type Monitoring struct {
 	// Alerting contains information about the alerting configuration for the shoot cluster.
 	Alerting *Alerting
-	// AdditionalNamespaces is a list of additional namespaces in the seed cluster whose pods and services should
-	// have their metrics scraped by the shoot's Prometheus instance.
+	// AdditionalNamespaces is a list of shoot cluster namespaces whose annotated services
+	// (prometheus.io/scrape=true) prometheus-shoot should scrape in addition to the control plane.
+	// The prometheus-shoot ServiceAccount already has a ClusterRoleBinding in the shoot cluster, so no
+	// additional RBAC is required.
 	AdditionalNamespaces []string
+	// AlertingSecretName is the name of a secret in the shoot's project namespace whose
+	// "alertmanager-config.yaml" key contains an AlertmanagerConfig resource body. Gardener injects the
+	// required alertmanager selector label and adds the resource to the managed Alertmanager, allowing shoot
+	// owners to configure receivers (Slack, PagerDuty, webhooks, etc.) without modifying the managed resource
+	// directly (which would be reverted by gardener-resource-manager).
+	AlertingSecretName *string
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).

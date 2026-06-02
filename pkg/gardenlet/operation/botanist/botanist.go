@@ -88,7 +88,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// control plane components
-	o.Shoot.Components.ControlPlane.Alertmanager, err = b.DefaultAlertmanager()
+	o.Shoot.Components.ControlPlane.Alertmanager, err = b.DefaultAlertmanager(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -11,7 +11,9 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -25,7 +27,7 @@ import (
 )
 
 // DefaultAlertmanager creates a new alertmanager deployer.
-func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
+func (b *Botanist) DefaultAlertmanager(ctx context.Context) (alertmanager.Interface, error) {
 	var emailReceivers []string
 	if monitoring := b.Shoot.GetInfo().Spec.Monitoring; monitoring != nil && monitoring.Alerting != nil {
 		emailReceivers = monitoring.Alerting.EmailReceivers
@@ -40,7 +42,7 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		istioNamespace = b.WildcardIstioNamespace()
 	}
 
-	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, alertmanager.Values{
+	values := alertmanager.Values{
 		Name:               "shoot",
 		ClusterType:        component.ClusterTypeShoot,
 		PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
@@ -55,7 +57,26 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 			IstioIngressGatewayLabels:    istioLabels,
 			IstioIngressGatewayNamespace: istioNamespace,
 		},
-	})
+	}
+
+	if monitoring := b.Shoot.GetInfo().Spec.Monitoring; monitoring != nil && monitoring.AlertingSecretName != nil {
+		// The secret lives in the shoot's project namespace in the virtual garden cluster, so it must be
+		// fetched via GardenClient rather than SeedClientSet. A not-found is treated as a no-op so that
+		// a stale reference in the Shoot spec does not block reconciliation.
+		secretRef := &corev1.Secret{}
+		if err := b.GardenClient.Get(ctx, client.ObjectKey{
+			Namespace: b.Shoot.GetInfo().Namespace,
+			Name:      *monitoring.AlertingSecretName,
+		}, secretRef); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("failed to get alerting secret %q: %w", *monitoring.AlertingSecretName, err)
+			}
+		} else if config, ok := secretRef.Data["alertmanager-config.yaml"]; ok {
+			values.AdditionalAlertmanagerConfig = config
+		}
+	}
+
+	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values)
 }
 
 // DeployAlertManager reconciles the shoot alert manager.
@@ -156,10 +177,6 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		},
 	}
 
-	if monitoring := b.Shoot.GetInfo().Spec.Monitoring; monitoring != nil && len(monitoring.AdditionalNamespaces) > 0 {
-		values.AdditionalScrapeNamespaces = monitoring.AdditionalNamespaces
-	}
-
 	if b.Shoot.WantsAlertmanager {
 		values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &prometheus.Alertmanager{Name: "alertmanager-shoot"})
 
@@ -204,7 +221,14 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
-	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.ControlPlaneNamespace, caSecret.Name, b.Shoot.IsWorkerless))
+	scrapeConfigs := shootprometheus.CentralScrapeConfigs(b.Shoot.ControlPlaneNamespace, caSecret.Name, b.Shoot.IsWorkerless)
+	// Append per-namespace scrape configs for any additional shoot cluster namespaces the shoot owner has
+	// opted into. Each config discovers endpoints via the shoot kube-apiserver, scoped to one namespace,
+	// so they are managed independently and do not affect control-plane scraping.
+	if monitoring := b.Shoot.GetInfo().Spec.Monitoring; monitoring != nil && len(monitoring.AdditionalNamespaces) > 0 {
+		scrapeConfigs = append(scrapeConfigs, shootprometheus.AdditionalNamespaceScrapeConfigs(monitoring.AdditionalNamespaces, caSecret.Name)...)
+	}
+	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(scrapeConfigs)
 
 	return b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx)
 }

@@ -442,3 +442,100 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 
 	return out
 }
+
+// AdditionalNamespaceScrapeConfigs returns ScrapeConfig resources that scrape services annotated with
+// prometheus.io/scrape=true in the given shoot cluster namespaces. One ScrapeConfig is generated per
+// namespace so that each can be individually managed and labelled.
+//
+// Discovery targets the shoot kube-apiserver via the in-cluster service name and port, using the same
+// AccessSecretName bearer token and cluster CA certificate that existing scrapers (cadvisor, kubelet, etc.)
+// already use. No new RBAC is required because the prometheus-shoot ServiceAccount already has a
+// ClusterRoleBinding granting read access across the shoot cluster.
+//
+// A SampleLimit of 2000 per namespace is enforced to prevent a misconfigured workload from overwhelming
+// the shoot Prometheus instance with cardinality.
+func AdditionalNamespaceScrapeConfigs(namespaces []string, clusterCASecretName string) []*monitoringv1alpha1.ScrapeConfig {
+	var out []*monitoringv1alpha1.ScrapeConfig
+	for _, ns := range namespaces {
+		out = append(out, &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "shoot-annotated-endpoints-" + ns,
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: new(false),
+				Scheme:      new(monitoringv1.SchemeHTTPS),
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+					Key:                  resourcesv1alpha1.DataKeyToken,
+				}},
+				TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+					Key:                  secretsutils.DataKeyCertificateBundle,
+				}}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:      monitoringv1alpha1.KubernetesRoleEndpoint,
+					APIServer: new("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{
+						Names: []string{ns},
+					},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
+						Key:                  resourcesv1alpha1.DataKeyToken,
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{CA: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: clusterCASecretName},
+						Key:                  secretsutils.DataKeyCertificateBundle,
+					}}},
+				}},
+				SampleLimit: new(uint64(2000)),
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_annotation_prometheus_io_scrape"},
+						Action:       "keep",
+						Regex:        `true`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_annotation_prometheus_io_scheme"},
+						Action:       "replace",
+						Regex:        `(https?)`,
+						TargetLabel:  "__scheme__",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_annotation_prometheus_io_path"},
+						Action:       "replace",
+						Regex:        `(.+)`,
+						TargetLabel:  "__metrics_path__",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__address__", "__meta_kubernetes_service_annotation_prometheus_io_port"},
+						Action:       "replace",
+						Regex:        `([^:]+)(?::\d+)?;(\d+)`,
+						Replacement:  new("$1:$2"),
+						TargetLabel:  "__address__",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},
+						TargetLabel:  "namespace",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name"},
+						TargetLabel:  "job",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+						TargetLabel:  "pod",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: new("shoot"),
+					},
+				},
+			},
+		})
+	}
+	return out
+}
