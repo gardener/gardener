@@ -2615,6 +2615,18 @@ object (keys:string, values:boolean)
 </tr>
 <tr>
 <td>
+<code>candidateDeterminationStrategy</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Strategy is the candidate determination strategy that defines how seeds for shoots that do not<br />specify a seed explicitly are determined. Must be one of "SameRegion" or "MinimalDistance".<br />Defaults to "SameRegion".</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>logLevel</code></br>
 <em>
 string

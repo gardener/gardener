@@ -1413,6 +1413,16 @@ spec:
                         description: Scheduler contains configuration settings for
                           the gardener-scheduler.
                         properties:
+                          candidateDeterminationStrategy:
+                            default: SameRegion
+                            description: |-
+                              Strategy is the candidate determination strategy that defines how seeds for shoots that do not
+                              specify a seed explicitly are determined. Must be one of "SameRegion" or "MinimalDistance".
+                              Defaults to "SameRegion".
+                            enum:
+                            - SameRegion
+                            - MinimalDistance
+                            type: string
                           featureGates:
                             additionalProperties:
                               type: boolean
