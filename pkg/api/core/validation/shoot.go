@@ -2090,6 +2090,9 @@ func validateMonitoring(monitoring *core.Monitoring, fldPath *field.Path) field.
 	if monitoring != nil && monitoring.Alerting != nil {
 		allErrs = append(allErrs, validateAlerting(monitoring.Alerting, fldPath.Child("alerting"))...)
 	}
+	if monitoring != nil {
+		allErrs = append(allErrs, validateAdditionalScrapeNamespaces(monitoring.AdditionalNamespaces, fldPath.Child("additionalNamespaces"))...)
+	}
 	return allErrs
 }
 
@@ -2105,6 +2108,28 @@ func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorL
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("emailReceivers").Index(i), email))
 		} else {
 			emails.Insert(email)
+		}
+	}
+	return allErrs
+}
+
+var forbiddenScrapeNamespaces = sets.New("kube-system", "kube-public", "kube-node-lease")
+
+func validateAdditionalScrapeNamespaces(namespaces []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	seen := sets.New[string]()
+	for i, ns := range namespaces {
+		if msgs := validation.IsDNS1123Label(ns); len(msgs) > 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), ns, strings.Join(msgs, "; ")))
+			continue
+		}
+		if forbiddenScrapeNamespaces.Has(ns) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("namespace %q is not allowed as an additional scrape namespace", ns)))
+		}
+		if seen.Has(ns) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), ns))
+		} else {
+			seen.Insert(ns)
 		}
 	}
 	return allErrs

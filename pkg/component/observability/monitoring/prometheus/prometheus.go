@@ -103,11 +103,26 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 	}
 
 	if p.values.RestrictToNamespace {
-		obj.Spec.ServiceMonitorNamespaceSelector = nil
-		obj.Spec.PodMonitorNamespaceSelector = nil
-		obj.Spec.ProbeNamespaceSelector = nil
-		obj.Spec.ScrapeConfigNamespaceSelector = nil
-		obj.Spec.RuleNamespaceSelector = nil
+		if len(p.values.AdditionalScrapeNamespaces) > 0 {
+			nsSelector := &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      "kubernetes.io/metadata.name",
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   append([]string{p.namespace}, p.values.AdditionalScrapeNamespaces...),
+				}},
+			}
+			obj.Spec.ServiceMonitorNamespaceSelector = nsSelector
+			obj.Spec.PodMonitorNamespaceSelector = nsSelector
+			obj.Spec.ProbeNamespaceSelector = nsSelector
+			obj.Spec.ScrapeConfigNamespaceSelector = nsSelector
+			obj.Spec.RuleNamespaceSelector = nsSelector
+		} else {
+			obj.Spec.ServiceMonitorNamespaceSelector = nil
+			obj.Spec.PodMonitorNamespaceSelector = nil
+			obj.Spec.ProbeNamespaceSelector = nil
+			obj.Spec.ScrapeConfigNamespaceSelector = nil
+			obj.Spec.RuleNamespaceSelector = nil
+		}
 	}
 
 	if p.values.Ingress != nil {

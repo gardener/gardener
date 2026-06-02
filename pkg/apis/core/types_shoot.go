@@ -1287,6 +1287,9 @@ type MaintenanceTimeWindow struct {
 type Monitoring struct {
 	// Alerting contains information about the alerting configuration for the shoot cluster.
 	Alerting *Alerting
+	// AdditionalNamespaces is a list of additional namespaces in the seed cluster whose pods and services should
+	// have their metrics scraped by the shoot's Prometheus instance.
+	AdditionalNamespaces []string
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).

@@ -1686,6 +1686,12 @@ type Monitoring struct {
 	// Alerting contains information about the alerting configuration for the shoot cluster.
 	// +optional
 	Alerting *Alerting `json:"alerting,omitempty" protobuf:"bytes,1,opt,name=alerting"`
+	// AdditionalNamespaces is a list of additional namespaces in the seed cluster whose pods and services should
+	// have their metrics scraped by the shoot's Prometheus instance. By default, only the shoot's control plane
+	// namespace is scraped. This allows shoot owners to extend metric collection to workloads deployed alongside
+	// the control plane (e.g. in dedicated addon namespaces).
+	// +optional
+	AdditionalNamespaces []string `json:"additionalNamespaces,omitempty" protobuf:"bytes,2,rep,name=additionalNamespaces"`
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).

@@ -3948,6 +3948,11 @@ func (in *Monitoring) DeepCopyInto(out *Monitoring) {
 		*out = new(Alerting)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.AdditionalNamespaces != nil {
+		in, out := &in.AdditionalNamespaces, &out.AdditionalNamespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

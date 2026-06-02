@@ -130,6 +130,10 @@ type Values struct {
 	AdditionalAlertRelabelConfigs []monitoringv1.RelabelConfig
 	// RestrictToNamespace controls whether the Prometheus instance should only scrape its targets in its own namespace.
 	RestrictToNamespace bool
+	// AdditionalScrapeNamespaces is a list of additional namespaces to include in the namespace selectors for
+	// ServiceMonitors, PodMonitors, Probes, ScrapeConfigs, and PrometheusRules. Only effective when RestrictToNamespace
+	// is true. The Prometheus instance's own namespace is always included.
+	AdditionalScrapeNamespaces []string
 	// ResourceRequests defines the initial resource requests
 	ResourceRequests *corev1.ResourceList
 	// HealthCheckBy is the value of the health-check-by label for the Prometheus resource.

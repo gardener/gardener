@@ -5590,6 +5590,7 @@ func Convert_core_MemorySwapConfiguration_To_v1beta1_MemorySwapConfiguration(in 
 
 func autoConvert_v1beta1_Monitoring_To_core_Monitoring(in *Monitoring, out *core.Monitoring, s conversion.Scope) error {
 	out.Alerting = (*core.Alerting)(unsafe.Pointer(in.Alerting))
+	out.AdditionalNamespaces = *(*[]string)(unsafe.Pointer(&in.AdditionalNamespaces))
 	return nil
 }
 
@@ -5600,6 +5601,7 @@ func Convert_v1beta1_Monitoring_To_core_Monitoring(in *Monitoring, out *core.Mon
 
 func autoConvert_core_Monitoring_To_v1beta1_Monitoring(in *core.Monitoring, out *Monitoring, s conversion.Scope) error {
 	out.Alerting = (*Alerting)(unsafe.Pointer(in.Alerting))
+	out.AdditionalNamespaces = *(*[]string)(unsafe.Pointer(&in.AdditionalNamespaces))
 	return nil
 }
 

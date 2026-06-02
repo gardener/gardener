@@ -156,6 +156,10 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		},
 	}
 
+	if monitoring := b.Shoot.GetInfo().Spec.Monitoring; monitoring != nil && len(monitoring.AdditionalNamespaces) > 0 {
+		values.AdditionalScrapeNamespaces = monitoring.AdditionalNamespaces
+	}
+
 	if b.Shoot.WantsAlertmanager {
 		values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &prometheus.Alertmanager{Name: "alertmanager-shoot"})
 
