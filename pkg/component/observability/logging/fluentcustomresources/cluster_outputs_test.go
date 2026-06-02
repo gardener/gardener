@@ -132,7 +132,7 @@ DQueDir                   /var/fluentbit/dque
 DQueName                  garden
 Origin                    garden
 HostnameValue             ${NODE_NAME}
-FallbackToTagWhenMetadataIsMissing false`,
+FallbackToTagWhenMetadataIsMissing true`,
 						},
 					},
 				},

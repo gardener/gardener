@@ -234,7 +234,7 @@ DQueDir                   ` + dqueDir + `
 DQueName                  ` + dqueNameGarden + `
 Origin                    ` + originGarden + `
 HostnameValue             ${NODE_NAME}
-FallbackToTagWhenMetadataIsMissing false`,
+FallbackToTagWhenMetadataIsMissing true`,
 				},
 			},
 		}
