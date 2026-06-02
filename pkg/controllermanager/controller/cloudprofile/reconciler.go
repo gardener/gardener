@@ -46,50 +46,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
-	// no Shoots, Seeds and other NamespacedCloudProfiles are assigned to the CloudProfile anymore.
-	// If this is the case then the controller will remove the finalizers from the CloudProfile so that it can be garbage collected.
 	if cloudProfile.DeletionTimestamp != nil {
-		if !sets.New(cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
-			return reconcile.Result{}, nil
-		}
-
-		namespacedCloudProfileList, err := controllerutils.GetNamespacedCloudProfilesReferencingCloudProfile(ctx, r.Client, cloudProfile.Name)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		if len(namespacedCloudProfileList.Items) != 0 {
-			var associatedNamespacedCloudProfiles []string
-			for _, namespacedCloudProfile := range namespacedCloudProfileList.Items {
-				associatedNamespacedCloudProfiles = append(associatedNamespacedCloudProfiles, fmt.Sprintf("%s/%s", namespacedCloudProfile.Namespace, namespacedCloudProfile.Name))
-			}
-			message := fmt.Sprintf("Cannot delete CloudProfile, because the following NamespacedCloudProfiles are still referencing it: %+v", associatedNamespacedCloudProfiles)
-			r.Recorder.Eventf(cloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
-			return reconcile.Result{}, errors.New(message)
-		}
-		log.Info("No NamespacedCloudProfiles are referencing the CloudProfile")
-
-		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, cloudProfile)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		if len(associatedShoots) == 0 {
-			log.Info("No Shoots are referencing the CloudProfile, deletion accepted")
-
-			if controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
-				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-				}
-			}
-
-			return reconcile.Result{}, nil
-		}
-
-		message := fmt.Sprintf("Cannot delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.Recorder.Eventf(cloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
-		return reconcile.Result{}, errors.New(message)
+		return r.delete(ctx, cloudProfile)
 	}
 
 	if !controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
@@ -99,8 +57,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	err := r.patchCloudProfileStatusVersions(ctx, cloudProfile)
-	if err != nil {
+	if err := r.patchCloudProfileStatusVersions(ctx, cloudProfile); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to patch CloudProfile status versions: %w", err)
 	}
 
@@ -109,12 +66,56 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}, nil
 }
 
-// patchCloudProfileStatusVersions generate the cloudProfile status from the given cloudProfile spec.
-func (r *Reconciler) patchCloudProfileStatusVersions(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) error {
-	if cloudProfile == nil {
-		return nil
+// delete deletes the CloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
+// no Shoots, Seeds, or other NamespacedCloudProfiles are assigned to the CloudProfile anymore.
+// If this is the case, the controller will remove the finalizers from the CloudProfile so that it can be garbage collected.
+func (r *Reconciler) delete(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
+	if !sets.New(cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+		return reconcile.Result{}, nil
 	}
 
+	namespacedCloudProfileList, err := controllerutils.GetNamespacedCloudProfilesReferencingCloudProfile(ctx, r.Client, cloudProfile.Name)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if len(namespacedCloudProfileList.Items) != 0 {
+		var associatedNamespacedCloudProfiles []string
+		for _, namespacedCloudProfile := range namespacedCloudProfileList.Items {
+			associatedNamespacedCloudProfiles = append(associatedNamespacedCloudProfiles, fmt.Sprintf("%s/%s", namespacedCloudProfile.Namespace, namespacedCloudProfile.Name))
+		}
+		message := fmt.Sprintf("Cannot delete CloudProfile, because the following NamespacedCloudProfiles are still referencing it: %+v", associatedNamespacedCloudProfiles)
+		r.Recorder.Eventf(cloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
+		return reconcile.Result{}, errors.New(message)
+	}
+	log.Info("No NamespacedCloudProfiles are referencing the CloudProfile")
+
+	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, cloudProfile)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if len(associatedShoots) == 0 {
+		log.Info("No Shoots are referencing the CloudProfile, deletion accepted")
+
+		if controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+
+		return reconcile.Result{}, nil
+	}
+
+	message := fmt.Sprintf("Cannot delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
+	r.Recorder.Eventf(cloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, message)
+	return reconcile.Result{}, errors.New(message)
+}
+
+// patchCloudProfileStatusVersions generate the cloudProfile status from the given cloudProfile spec.
+func (r *Reconciler) patchCloudProfileStatusVersions(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) error {
 	patch := client.MergeFrom(cloudProfile.DeepCopy())
 	cloudProfile.Status.Kubernetes = nil
 	cloudProfile.Status.MachineImages = nil
