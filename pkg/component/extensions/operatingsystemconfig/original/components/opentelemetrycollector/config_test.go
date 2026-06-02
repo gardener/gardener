@@ -297,14 +297,11 @@ users:
 
 			otelHealthCheckUnit := extensionsv1alpha1.Unit{
 				Name:    UnitNameHealthCheck,
-				Command: new(extensionsv1alpha1.CommandStart),
 				Enable:  new(true),
 				Content: new(`[Unit]
 Description=Health check for opentelemetry-collector.service
 After=opentelemetry-collector.service
 Requisite=opentelemetry-collector.service
-[Install]
-WantedBy=multi-user.target
 [Service]
 Type=oneshot
 ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart opentelemetry-collector.service'
