@@ -1415,11 +1415,17 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	// In a garden-as-seed setup the gardenlet skips deploying the fluent-operator custom resources
 	// (see reconciler_reconcile.go: SkipIf: seedIsGarden), so the operator must provision both the
 	// static and the dynamic ClusterOutputs itself. The shape of the dynamic output (OTLP vs vali)
-	// is selected internally by GetDynamicClusterOutput based on the OpenTelemetryCollector feature
+	// is selected internally by getDynamicClusterOutput based on the OpenTelemetryCollector feature
 	// gate, so it can be appended unconditionally.
+	//
+	// The dynamic ClusterOutput uses the operator-specific variant with SeedType=noop: on the garden
+	// runtime cluster the static ClusterOutput already ships every kubernetes.* record matching this
+	// output's filter, so the gardener-plugin's seedClient fallback (used when DynamicHostRegex
+	// doesn't match the record's namespace) would otherwise duplicate every garden runtime container
+	// record into the garden OpenTelemetry Collector.
 	outputs := []*fluentbitv1alpha2.ClusterOutput{
 		fluentcustomresources.GetStaticClusterOutput(customResourcesLabels),
-		fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels),
+		fluentcustomresources.GetDynamicClusterOutputForOperator(customResourcesLabels),
 	}
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
