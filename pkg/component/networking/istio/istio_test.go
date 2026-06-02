@@ -291,9 +291,9 @@ var _ = Describe("istiod", func() {
 		igwAnnotations = map[string]string{"foo": "bar"}
 		labels = map[string]string{"foo": "bar"}
 		networkLabels = map[string]string{"to-target": "allowed"}
-		expectAPIServerTLSTermination = false
+		expectAPIServerTLSTermination = true
 		expectVPARecreateMode = false
-		expectedCPURequests = "300m"
+		expectedCPURequests = "1"
 		expectedMinReplicas = 2
 		expectedMaxReplicas = 9
 
@@ -785,11 +785,11 @@ var _ = Describe("istiod", func() {
 			})
 		})
 
-		Context("With IstioTLSTermination feature gate enabled", func() {
+		Context("With IstioTLSTermination feature gate disabled", func() {
 			BeforeEach(func() {
-				expectAPIServerTLSTermination = true
-				expectedCPURequests = "1"
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
+				expectAPIServerTLSTermination = false
+				expectedCPURequests = "300m"
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, false))
 			})
 
 			It("should successfully deploy all resources", func() {
@@ -799,8 +799,7 @@ var _ = Describe("istiod", func() {
 
 		Context("With IstioTLSTermination feature gate disabled but with shoots still using the feature", func() {
 			BeforeEach(func() {
-				expectAPIServerTLSTermination = true
-				expectedCPURequests = "1"
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, false))
 
 				envoyFilter := istionetworkingv1alpha3.EnvoyFilter{
 					ObjectMeta: metav1.ObjectMeta{

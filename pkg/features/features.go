@@ -31,6 +31,7 @@ const (
 	// It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.
 	// owner: @oliver-goetz
 	// alpha: v1.114.0
+	// beta: v1.144.0
 	IstioTLSTermination featuregate.Feature = "IstioTLSTermination"
 
 	// CloudProfileCapabilities enables the usage of capabilities in the CloudProfile. Capabilities are used to create a relation between
@@ -167,7 +168,7 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:          {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:             {Default: false, PreRelease: featuregate.Alpha},
-	IstioTLSTermination:            {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:            {Default: true, PreRelease: featuregate.Beta},
 	CloudProfileCapabilities:       {Default: false, PreRelease: featuregate.Alpha},
 	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},

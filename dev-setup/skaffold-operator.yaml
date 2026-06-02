@@ -947,7 +947,6 @@ deploy:
           nodeToleration.defaultNotReadyTolerationSeconds: "60"
           nodeToleration.defaultUnreachableTolerationSeconds: "60"
           replicaCount: 2
-          config.featureGates.IstioTLSTermination: true
           config.featureGates.PrometheusHealthChecks: true
           config.featureGates.VictoriaLogsBackend: true
           config.featureGates.DisableNginxIngressInGarden: true

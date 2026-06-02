@@ -12,7 +12,6 @@ spec:
     kind: GardenletConfiguration
     featureGates:
       DefaultSeccompProfile: true
-      IstioTLSTermination: true
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true

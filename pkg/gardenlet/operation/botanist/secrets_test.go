@@ -83,6 +83,7 @@ var _ = Describe("Secrets", func() {
 				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					ControlPlaneNamespace: controlPlaneNamespace,
+					InternalClusterDomain: new("internal.example.com"),
 				},
 			},
 		}
