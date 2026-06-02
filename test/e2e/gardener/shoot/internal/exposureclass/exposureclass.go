@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 )
@@ -24,13 +23,6 @@ import (
 func VerifyExposureClassSwitch(s *ShootContext, waitForReconcileFunc func(s *ShootContext)) {
 	GinkgoHelper()
 	defer GinkgoRecover()
-
-	// TODO: Layer 7 Loadbalancing is currently not working with switching exposure classes
-	// as the aliases for the API server is not updated correctly on the controlplane components (controller-manager, gardener-resource-manager etc.)
-	if val, ok := s.Shoot.Annotations[v1beta1constants.ShootDisableIstioTLSTermination]; !ok || val != "true" {
-		Skip("exposure class switch only works with layer4 loadbalancing")
-		return
-	}
 
 	Describe("switching exposure class", func() {
 		verifyAPIServerAccess := func() {

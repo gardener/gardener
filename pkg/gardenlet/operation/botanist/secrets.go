@@ -13,6 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -312,6 +313,13 @@ func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 		// updated that the control plane pods are restarted and get the updated hosts alias for the kube-apiserver domain.
 		if b.Shoot.GetInfo().Spec.ControlPlane != nil && b.Shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil {
 			contextName += fmt.Sprintf("--failure-tolerance-%s", b.Shoot.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
+		}
+
+		// Add the exposure class name to the context name if set. This ensures that the
+		// generic token kubeconfig changes when a shoot is changing it's exposure class. The generic token kubeconfig is
+		// updated that the control plane pods are restarted and get the updated hosts alias for the kube-apiserver domain.
+		if expClassName := ptr.Deref(b.Shoot.GetInfo().Spec.ExposureClassName, ""); expClassName != "" {
+			contextName += fmt.Sprintf("--exposure-class-%s", expClassName)
 		}
 
 		kubeAPIServerAddress = b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
