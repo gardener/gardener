@@ -1726,6 +1726,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		operatorv1alpha1.SecretNameCARuntime,
 		component.ClusterTypeSeed,
 		true,
+		features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 	)
 }
 
