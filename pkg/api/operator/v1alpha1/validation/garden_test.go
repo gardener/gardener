@@ -23,6 +23,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/validation"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -2480,6 +2481,47 @@ var _ = Describe("Validation Tests", func() {
 							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
+							}))))
+						})
+					})
+
+					Context("CandidateDeterminationStrategy", func() {
+						It("should accept a nil strategy (default)", func() {
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{}
+
+							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+							}))))
+						})
+
+						It("should accept SameRegion", func() {
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
+								Strategy: ptr.To("SameRegion"),
+							}
+
+							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+							}))))
+						})
+
+						It("should accept MinimalDistance", func() {
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
+								Strategy: ptr.To("MinimalDistance"),
+							}
+
+							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+							}))))
+						})
+
+						It("should reject an unknown value", func() {
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
+								Strategy: ptr.To("Foo"),
+							}
+
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeNotSupported),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
 							}))))
 						})
 					})

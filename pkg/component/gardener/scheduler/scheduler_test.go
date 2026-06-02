@@ -386,7 +386,7 @@ var _ = Describe("GardenerScheduler", func() {
 					serviceRuntime,
 					serviceMonitor,
 					vpa,
-					deployment(namespace, "gardener-scheduler-config-3cf6616e", values),
+					deployment(namespace, configMap(namespace, values).Name, values),
 					podDisruptionBudget,
 				}
 
@@ -428,6 +428,56 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualShootAccessSecret)).To(Succeed())
 				accessSecret.ResourceVersion = "1"
 				Expect(actualShootAccessSecret).To(Equal(accessSecret))
+			})
+		})
+
+		Context("CandidateDeterminationStrategy", func() {
+			BeforeEach(func() {
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceNameRuntime,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceNameVirtual,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+			})
+
+			It("should default to SameRegion when unset", func() {
+				Expect(values.Strategy).To(BeEmpty())
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+
+				expectedConfigMap := configMap(namespace, values)
+				Expect(managedResourceRuntime).To(BeAssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
+
+				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
+
+				renderedYAML, ok := expectedConfigMap.Data["schedulerconfiguration.yaml"]
+				Expect(ok).To(BeTrue())
+				Expect(renderedYAML).To(ContainSubstring("candidateDeterminationStrategy: SameRegion"))
+			})
+
+			It("should honour MinimalDistance when set", func() {
+				values.Strategy = schedulerconfigv1alpha1.MinimalDistance
+				deployer = New(fakeClient, namespace, fakeSecretManager, values)
+
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+
+				expectedConfigMap := configMap(namespace, values)
+				renderedYAML, ok := expectedConfigMap.Data["schedulerconfiguration.yaml"]
+				Expect(ok).To(BeTrue())
+				Expect(renderedYAML).To(ContainSubstring("candidateDeterminationStrategy: MinimalDistance"))
 			})
 		})
 	})
@@ -716,6 +766,11 @@ var (
 )
 
 func configMap(namespace string, testValues Values) *corev1.ConfigMap {
+	strategy := testValues.Strategy
+	if strategy == "" {
+		strategy = schedulerconfigv1alpha1.Default
+	}
+
 	schedulerConfig := &schedulerconfigv1alpha1.SchedulerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
@@ -743,7 +798,7 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 		},
 		Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
 			Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
-				Strategy: "MinimalDistance",
+				Strategy: strategy,
 			},
 		},
 		FeatureGates: testValues.FeatureGates,
