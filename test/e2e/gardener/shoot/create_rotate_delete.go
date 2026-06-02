@@ -435,6 +435,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Context("Shoot with workers", Label("basic"), func() {
 			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
 				var s *ShootContext
+
 				BeforeTestSetup(func() {
 					shoot := DefaultShoot("e2e-rotate")
 
@@ -455,9 +456,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
-				var (
-					s *ShootContext
-				)
+				var s *ShootContext
+
 				BeforeTestSetup(func() {
 					shoot := DefaultShoot("e2e-rot-noroll")
 

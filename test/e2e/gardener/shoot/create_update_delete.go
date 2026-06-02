@@ -181,15 +181,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
 					}
 
-					if !withInPlaceUpdatePools {
+					if !withInPlaceUpdatePools || worker.UpdateStrategy == nil {
 						continue
 					}
 
-					switch worker.Name {
-					case "auto":
+					switch *worker.UpdateStrategy {
+					case gardencorev1beta1.AutoInPlaceUpdate:
 						s.Log.Info("Updating worker pool machine image version", "pool", worker.Name, "version", "2.0.0")
 						s.Shoot.Spec.Provider.Workers[i].Machine.Image.Version = new("2.0.0")
-					case "manual":
+					case gardencorev1beta1.ManualInPlaceUpdate:
 						s.Log.Info("Updating worker pool Kubelet config", "pool", worker.Name)
 						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
 							CPUManagerPolicy: new("static"),
