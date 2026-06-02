@@ -839,7 +839,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 	}
 
 	var output *fluentbitv1alpha2.ClusterOutput
-	if gardenlethelper.IsValiEnabled(&r.Config) {
+	if gardenlethelper.IsValiEnabled(&r.Config) || features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		output = fluentcustomresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource})
 	}
 
