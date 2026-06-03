@@ -9,6 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -358,6 +360,165 @@ func validateExtensionTests(test func() field.ErrorList, extension func() *opera
 					"Field": Equal("spec.deployment.admission.virtualCluster.helm.ociRepository"),
 				})),
 			))
+		})
+	})
+
+	Context("Resources", func() {
+		It("should allow Secret and ConfigMap references", func() {
+			extension().Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "my-secret"}},
+				{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "my-config"}},
+			}
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should reject duplicate names", func() {
+			extension().Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "my-secret"}},
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "my-config"}},
+			}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("spec.deployment.resources[1].name"),
+			}))))
+		})
+
+		It("should reject unsupported kind", func() {
+			extension().Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "x", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Pod", Name: "anything"}},
+			}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.deployment.resources[0].resourceRef"),
+			}))))
+		})
+
+		It("should reject non-alphanumeric resource names", func() {
+			extension().Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "my-creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "my-secret"}},
+			}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.deployment.resources[0].name"),
+				"Detail": ContainSubstring("alphanumeric"),
+			}))))
+		})
+
+		It("should reject unsupported apiVersion", func() {
+			extension().Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "x", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "apps/v1", Kind: "Secret", Name: "my-secret"}},
+			}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.deployment.resources[0].resourceRef"),
+			}))))
+		})
+	})
+
+	Context("Values templates", func() {
+		BeforeEach(func() {
+			extension().Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "creds-secret"}},
+				{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo-secret"}},
+				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "bar-cm"}},
+			}
+		})
+
+		It("should accept a valid resource template reference in extension values", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.creds.data.token }}"}`)}
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should accept a valid resource template reference without surrounding spaces", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{.resources.creds.data.token}}"}`)}
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should accept multiple valid resource template references", func() {
+			extension().Spec.Deployment.ExtensionDeployment.RuntimeClusterValues = &apiextensionsv1.JSON{Raw: []byte(`{"a":"{{ .resources.foo.data.x }}","b":"{{ .resources.bar.data.y }}"}`)}
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should accept a valid resource template reference in admission values", func() {
+			extension().Spec.Deployment.AdmissionDeployment = &operatorv1alpha1.AdmissionDeploymentSpec{
+				RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+					Helm: &operatorv1alpha1.ExtensionHelm{
+						OCIRepository: &gardencorev1.OCIRepository{Ref: new("example.com/admission:v1.0.0")},
+					},
+				},
+				Values: &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.creds.data.token }}"}`)},
+			}
+			Expect(test()).To(BeEmpty())
+		})
+
+		It("should reject a template with non-alphanumeric resource name", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.my-creds.data.token }}"}`)}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.deployment.extension.values"),
+			}))))
+		})
+
+		It("should reject a template with non-alphanumeric data key", func() {
+			extension().Spec.Deployment.ExtensionDeployment.RuntimeClusterValues = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.creds.data.my-token }}"}`)}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.deployment.extension.runtimeClusterValues"),
+			}))))
+		})
+
+		It("should reject a template that does not reference resources", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .other.thing }}"}`)}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.deployment.extension.values"),
+			}))))
+		})
+
+		It("should reject a template that uses whitespace trim markers", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{- .resources.creds.data.token -}}"}`)}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.deployment.extension.values"),
+			}))))
+		})
+
+		It("should reject a template with extra path segments", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.creds.data.token.extra }}"}`)}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.deployment.extension.values"),
+			}))))
+		})
+
+		It("should report all invalid templates", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"a":"{{ .resources.creds.data.token }}","b":"{{ .other }}","c":"{{ .resources.bad-name.data.k }}"}`)}
+			Expect(test()).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.deployment.extension.values"),
+					"BadValue": Equal("{{ .other }}"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.deployment.extension.values"),
+					"BadValue": Equal("{{ .resources.bad-name.data.k }}"),
+				})),
+			))
+		})
+
+		It("should reject a template referencing an undeclared resource name", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.undeclared.data.token }}"}`)}
+			Expect(test()).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.deployment.extension.values"),
+				"Detail": ContainSubstring(`template references resource "undeclared" which is not declared in the resources list`),
+			}))))
+		})
+
+		It("should accept values without any template expressions", func() {
+			extension().Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{Raw: []byte(`{"x":"plain string","y":42}`)}
+			Expect(test()).To(BeEmpty())
 		})
 	})
 }

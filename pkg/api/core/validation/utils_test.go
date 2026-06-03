@@ -336,6 +336,203 @@ var _ = Describe("Utils tests", func() {
 		})
 	})
 
+	Describe("#ValidateAlphanumericResourceNames", func() {
+		var fldPath *field.Path
+
+		BeforeEach(func() {
+			fldPath = field.NewPath("resources")
+		})
+
+		It("should accept alphanumeric names", func() {
+			resources := []core.NamedResourceReference{
+				{Name: "creds"},
+				{Name: "Cfg42"},
+				{Name: "abc123"},
+			}
+			Expect(ValidateAlphanumericResourceNames(resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should reject names containing hyphens", func() {
+			resources := []core.NamedResourceReference{
+				{Name: "my-creds"},
+			}
+			Expect(ValidateAlphanumericResourceNames(resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("resources[0].name"),
+				"BadValue": Equal("my-creds"),
+				"Detail":   ContainSubstring("alphanumeric"),
+			}))))
+		})
+
+		It("should reject names containing underscores or dots", func() {
+			resources := []core.NamedResourceReference{
+				{Name: "my_creds"},
+				{Name: "my.creds"},
+			}
+			Expect(ValidateAlphanumericResourceNames(resources, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("resources[0].name"),
+					"BadValue": Equal("my_creds"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("resources[1].name"),
+					"BadValue": Equal("my.creds"),
+				})),
+			))
+		})
+
+		It("should reject empty names", func() {
+			resources := []core.NamedResourceReference{
+				{Name: ""},
+			}
+			Expect(ValidateAlphanumericResourceNames(resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("resources[0].name"),
+				"BadValue": Equal(""),
+				"Detail":   ContainSubstring("alphanumeric"),
+			}))))
+		})
+
+		It("should accept an empty resource list", func() {
+			Expect(ValidateAlphanumericResourceNames(nil, fldPath)).To(BeEmpty())
+		})
+	})
+
+	Describe("#ValidateValuesTemplates", func() {
+		var (
+			fldPath   *field.Path
+			resources []core.NamedResourceReference
+		)
+
+		BeforeEach(func() {
+			fldPath = field.NewPath("values")
+			resources = []core.NamedResourceReference{
+				{Name: "creds"},
+				{Name: "foo"},
+				{Name: "bar"},
+			}
+		})
+
+		It("should accept values without any template expressions", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"plain string","y":42}`), resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should accept nil and empty raw values", func() {
+			Expect(ValidateValuesTemplates(nil, resources, fldPath)).To(BeEmpty())
+			Expect(ValidateValuesTemplates([]byte{}, resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should accept a valid resource template reference", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.creds.data.token }}"}`), resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should accept a valid resource template reference without surrounding spaces", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{.resources.creds.data.token}}"}`), resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should accept multiple valid resource template references", func() {
+			raw := []byte(`{"a":"{{ .resources.foo.data.x }}","b":"{{ .resources.bar.data.y }}"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should reject a template with non-alphanumeric resource name", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.my-creds.data.token }}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{ .resources.my-creds.data.token }}"),
+			}))))
+		})
+
+		It("should reject a template with non-alphanumeric data key", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.creds.data.my-token }}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{ .resources.creds.data.my-token }}"),
+			}))))
+		})
+
+		It("should reject a template that does not reference resources", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .other.thing }}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{ .other.thing }}"),
+			}))))
+		})
+
+		It("should reject a template that uses whitespace trim markers", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{- .resources.creds.data.token -}}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{- .resources.creds.data.token -}}"),
+			}))))
+		})
+
+		It("should reject a template with extra path segments", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.creds.data.token.extra }}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{ .resources.creds.data.token.extra }}"),
+			}))))
+		})
+
+		It("should reject control flow templates as separate invalid expressions", func() {
+			raw := []byte(`{"x":"{{ if .x }}{{ .y }}{{ end }}"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("{{ if .x }}"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("{{ .y }}"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("{{ end }}"),
+				})),
+			))
+		})
+
+		It("should report all invalid templates and ignore valid ones", func() {
+			raw := []byte(`{"a":"{{ .resources.creds.data.token }}","b":"{{ .other }}","c":"{{ .resources.bad-name.data.k }}"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("{{ .other }}"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("{{ .resources.bad-name.data.k }}"),
+				})),
+			))
+		})
+
+		It("should reject a template referencing a resource name that is not declared", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.undeclared.data.token }}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{ .resources.undeclared.data.token }}"),
+				"Detail":   ContainSubstring(`template references resource "undeclared" which is not declared in the resources list`),
+			}))))
+		})
+
+		It("should reject all template references when the resources list is empty", func() {
+			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.creds.data.token }}"}`), nil, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("values"),
+				"BadValue": Equal("{{ .resources.creds.data.token }}"),
+				"Detail":   ContainSubstring(`template references resource "creds" which is not declared in the resources list`),
+			}))))
+		})
+	})
+
 	DescribeTable("#ValidateCredentialsRef",
 		func(ref corev1.ObjectReference, matcher gomegatypes.GomegaMatcher) {
 			Expect(ValidateCredentialsRef(ref, field.NewPath("credentialsRef"))).To(matcher)

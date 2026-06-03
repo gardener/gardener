@@ -31,8 +31,11 @@ func ValidateControllerDeployment(controllerDeployment *core.ControllerDeploymen
 		isBuiltInType = true
 		deploymentType = "helm"
 
-		allErrs = append(allErrs, ValidateHelmControllerDeployment(controllerDeployment.Helm, field.NewPath("helm"))...)
+		allErrs = append(allErrs, ValidateHelmControllerDeployment(controllerDeployment.Helm, controllerDeployment.Resources, field.NewPath("helm"))...)
 	}
+
+	allErrs = append(allErrs, ValidateResources(controllerDeployment.Resources, field.NewPath("resources"), false)...)
+	allErrs = append(allErrs, ValidateAlphanumericResourceNames(controllerDeployment.Resources, field.NewPath("resources"))...)
 
 	if isBuiltInType {
 		// a built-in type is configured: type and providerConfig must be empty
@@ -58,7 +61,7 @@ func ValidateControllerDeploymentUpdate(new, _ *core.ControllerDeployment) field
 }
 
 // ValidateHelmControllerDeployment validates Helm controller deployment configs.
-func ValidateHelmControllerDeployment(helmControllerDeployment *core.HelmControllerDeployment, fldPath *field.Path) field.ErrorList {
+func ValidateHelmControllerDeployment(helmControllerDeployment *core.HelmControllerDeployment, resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// XOR: either one or the other must be set.
@@ -67,6 +70,9 @@ func ValidateHelmControllerDeployment(helmControllerDeployment *core.HelmControl
 	}
 
 	allErrs = append(allErrs, ValidateOCIRepository(helmControllerDeployment.OCIRepository, fldPath.Child("ociRepository"))...)
+	if helmControllerDeployment.Values != nil {
+		allErrs = append(allErrs, ValidateValuesTemplates(helmControllerDeployment.Values.Raw, resources, fldPath.Child("values"))...)
+	}
 
 	return allErrs
 }

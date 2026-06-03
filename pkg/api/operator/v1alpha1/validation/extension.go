@@ -9,6 +9,7 @@ import (
 
 	gardencorevalidation "github.com/gardener/gardener/pkg/api/core/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
@@ -32,6 +33,22 @@ func validateExtensionSpec(spec operatorv1alpha1.ExtensionSpec, fldPath *field.P
 	return allErrs
 }
 
+func validateResourceReferences(resources []gardencorev1.NamedResourceReference, fldPath *field.Path) ([]gardencore.NamedResourceReference, field.ErrorList) {
+	coreResources := make([]gardencore.NamedResourceReference, 0, len(resources))
+	for i, resource := range resources {
+		coreResource := &gardencore.NamedResourceReference{}
+		if err := gardenCoreScheme.Convert(&resource, coreResource, nil); err != nil {
+			return nil, field.ErrorList{field.InternalError(fldPath.Index(i), err)}
+		}
+		coreResources = append(coreResources, *coreResource)
+	}
+
+	allErrs := gardencorevalidation.ValidateResources(coreResources, fldPath, false)
+	allErrs = append(allErrs, gardencorevalidation.ValidateAlphanumericResourceNames(coreResources, fldPath)...)
+
+	return coreResources, allErrs
+}
+
 func validateDeployment(deployment *operatorv1alpha1.Deployment, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -42,13 +59,15 @@ func validateDeployment(deployment *operatorv1alpha1.Deployment, fldPath *field.
 		return append(allErrs, field.Required(fldPath, "at least one of extension or admission must be specified"))
 	}
 
-	allErrs = append(allErrs, validateExtensionDeployment(deployment.ExtensionDeployment, fldPath.Child("extension"))...)
-	allErrs = append(allErrs, validateAdmissionDeployment(deployment.AdmissionDeployment, fldPath.Child("admission"))...)
+	coreResources, resourceErrs := validateResourceReferences(deployment.Resources, fldPath.Child("resources"))
+	allErrs = append(allErrs, validateExtensionDeployment(deployment.ExtensionDeployment, coreResources, fldPath.Child("extension"))...)
+	allErrs = append(allErrs, validateAdmissionDeployment(deployment.AdmissionDeployment, coreResources, fldPath.Child("admission"))...)
+	allErrs = append(allErrs, resourceErrs...)
 
 	return allErrs
 }
 
-func validateExtensionDeployment(deployment *operatorv1alpha1.ExtensionDeploymentSpec, fldPath *field.Path) field.ErrorList {
+func validateExtensionDeployment(deployment *operatorv1alpha1.ExtensionDeploymentSpec, resources []gardencore.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if deployment == nil {
@@ -56,11 +75,17 @@ func validateExtensionDeployment(deployment *operatorv1alpha1.ExtensionDeploymen
 	}
 
 	allErrs = append(allErrs, validateHelmDeployment(deployment.Helm, fldPath.Child("helm"))...)
+	if deployment.Values != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateValuesTemplates(deployment.Values.Raw, resources, fldPath.Child("values"))...)
+	}
+	if deployment.RuntimeClusterValues != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateValuesTemplates(deployment.RuntimeClusterValues.Raw, resources, fldPath.Child("runtimeClusterValues"))...)
+	}
 
 	return allErrs
 }
 
-func validateAdmissionDeployment(deployment *operatorv1alpha1.AdmissionDeploymentSpec, fldPath *field.Path) field.ErrorList {
+func validateAdmissionDeployment(deployment *operatorv1alpha1.AdmissionDeploymentSpec, resources []gardencore.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if deployment == nil {
@@ -77,6 +102,10 @@ func validateAdmissionDeployment(deployment *operatorv1alpha1.AdmissionDeploymen
 
 	if deployment.VirtualCluster != nil {
 		allErrs = append(allErrs, validateHelmDeployment(deployment.VirtualCluster.Helm, fldPath.Child("virtualCluster", "helm"))...)
+	}
+
+	if deployment.Values != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateValuesTemplates(deployment.Values.Raw, resources, fldPath.Child("values"))...)
 	}
 
 	return allErrs
