@@ -104,10 +104,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			verifyViewerKubeconfigShootAccess(s)
 
+			if withInPlaceUpdatePools {
+				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
+			}
+
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				if withInPlaceUpdatePools {
-					inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
-				}
 				verifyWorkerNodeLabels(s)
 
 				It("Verify reported CIDRs", func(ctx SpecContext) {
@@ -181,11 +182,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
 					}
 
-					if !withInPlaceUpdatePools || worker.UpdateStrategy == nil {
+					if !withInPlaceUpdatePools {
 						continue
 					}
 
-					switch *worker.UpdateStrategy {
+					switch ptr.Deref(worker.UpdateStrategy, "") {
 					case gardencorev1beta1.AutoInPlaceUpdate:
 						s.Log.Info("Updating worker pool machine image version", "pool", worker.Name, "version", "2.0.0")
 						s.Shoot.Spec.Provider.Workers[i].Machine.Image.Version = new("2.0.0")
@@ -221,19 +222,20 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
-				if withInPlaceUpdatePools {
-					It("should compare the node names after the test", func(ctx SpecContext) {
-						totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
-						s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
+			}
 
-						nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
-						s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
+			if withInPlaceUpdatePools {
+				It("should compare the node names after the test", func(ctx SpecContext) {
+					totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
+					s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
 
-						Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
-					}, SpecTimeout(2*time.Minute))
+					nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+					s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
 
-					inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
-				}
+					Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
+				}, SpecTimeout(2*time.Minute))
+
+				inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
 			}
 
 			ItShouldAnnotateShoot(s, map[string]string{

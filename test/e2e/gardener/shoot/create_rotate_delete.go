@@ -304,7 +304,7 @@ func testManualWorkersRollout(s *ShootContext) {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(s *ShootContext, withoutWorkersRollout, workersRollout bool) {
+		test := func(s *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -392,7 +392,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
+			if withInPlaceUpdatePools {
 				It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
 					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
 				}, SpecTimeout(2*time.Minute))
@@ -401,27 +401,27 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if !withoutWorkersRollout {
 				// test rotation for every rotation type
-				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, !v1beta1helper.IsWorkerless(s.Shoot))
+				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, withInPlaceUpdatePools)
 			} else {
-				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, !v1beta1helper.IsWorkerless(s.Shoot))
+				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, withInPlaceUpdatePools)
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				// renew shoot clients after rotation
 				ItShouldInitializeShootClient(s)
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			}
 
-				if !v1beta1helper.IsWorkerless(s.Shoot) {
-					It("should compare the node names after the test", func(ctx SpecContext) {
-						totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
-						s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
+			if withInPlaceUpdatePools {
+				It("should compare the node names after the test", func(ctx SpecContext) {
+					totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
+					s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
 
-						nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
-						s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
+					nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+					s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
 
-						Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
-					}, SpecTimeout(2*time.Minute))
-				}
+					Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
+				}, SpecTimeout(2*time.Minute))
 			}
 
 			if workersRollout {
@@ -452,7 +452,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, false, false)
+				test(s, false, false, true)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
@@ -478,12 +478,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, true, true)
+				test(s, true, true, true)
 			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false)
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
 		})
 	})
 })
