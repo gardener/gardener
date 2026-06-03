@@ -154,9 +154,9 @@ func rewriteEncryptedData(
 		// Use a per-List timeout so that a hung TCP connection to the shoot kube-apiserver
 		// (e.g. due to transient IPv6 connectivity issues) surfaces as a retryable error
 		// instead of blocking for the entire parent-context deadline.
-		listCtx, listCancel := context.WithTimeout(ctx, time.Minute)
+		listCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
 		err := c.List(listCtx, objList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)})
-		listCancel()
 		if err != nil {
 			return err
 		}
