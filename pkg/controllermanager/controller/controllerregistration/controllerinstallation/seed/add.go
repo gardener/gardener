@@ -6,8 +6,10 @@ package seed
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +49,11 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 		}
 	)
 
+	resourceReferencePredicate, err := controllerinstallation.ResourceReferenceObjectPredicate()
+	if err != nil {
+		return fmt.Errorf("unable to create resource reference predicate: %v", err)
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -84,6 +91,16 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 			&gardencorev1beta1.Shoot{},
 			handler.EnqueueRequestsFromMapFunc(MapShootToSeed(log, r)),
 			builder.WithPredicates(controllerinstallation.ShootPredicate(controllerinstallation.SeedKind)),
+		).
+		Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(MapResourceReferenceToAllSeeds(log, r)),
+			builder.WithPredicates(resourceReferencePredicate),
+		).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(MapResourceReferenceToAllSeeds(log, r)),
+			builder.WithPredicates(resourceReferencePredicate),
 		).
 		Complete(r)
 }
@@ -240,5 +257,37 @@ func MapControllerDeploymentToAllSeeds(log logr.Logger, r *controllerinstallatio
 		}
 
 		return nil
+	}
+}
+
+// MapResourceReferenceToAllSeeds returns reconcile.Request objects for the referenced resource of controller deployment.
+func MapResourceReferenceToAllSeeds(log logr.Logger, r *controllerinstallation.Reconciler) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		controllerDeploymentList := &gardencorev1.ControllerDeploymentList{}
+		if err := r.Client.List(ctx, controllerDeploymentList); err != nil {
+			log.Error(err, "Failed to list controller deployments")
+			return nil
+		}
+
+		var kind string
+		switch obj.(type) {
+		case *corev1.ConfigMap:
+			kind = "ConfigMap"
+		case *corev1.Secret:
+			kind = "Secret"
+		}
+
+		mapControllerDeploymentToAllSeedsFunc := MapControllerDeploymentToAllSeeds(log, r)
+
+		var requests []reconcile.Request
+		for _, controllerDeployment := range controllerDeploymentList.Items {
+			for _, resourceRef := range controllerDeployment.Resources {
+				if resourceRef.ResourceRef.Kind == kind && resourceRef.ResourceRef.Name == obj.GetName() {
+					requests = append(requests, mapControllerDeploymentToAllSeedsFunc(ctx, &controllerDeployment)...)
+				}
+			}
+		}
+
+		return requests
 	}
 }

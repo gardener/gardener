@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
 )
 
@@ -711,6 +712,95 @@ var _ = Describe("Add", func() {
 				It("should return false", func() {
 					Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
 				})
+			})
+		})
+	})
+
+	Describe("ResourceReferenceObjectPredicate", func() {
+		var (
+			p   predicate.Predicate
+			obj *corev1.ConfigMap
+		)
+
+		BeforeEach(func() {
+			var err error
+			p, err = ResourceReferenceObjectPredicate()
+			Expect(err).NotTo(HaveOccurred())
+
+			obj = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: v1beta1constants.GardenNamespace,
+					Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference},
+				},
+			}
+		})
+
+		Describe("#Create", func() {
+			It("should return true when label and namespace match", func() {
+				Expect(p.Create(event.CreateEvent{Object: obj})).To(BeTrue())
+			})
+
+			It("should return false when label is missing", func() {
+				obj.Labels = nil
+				Expect(p.Create(event.CreateEvent{Object: obj})).To(BeFalse())
+			})
+
+			It("should return false when label value does not match", func() {
+				obj.Labels[v1beta1constants.GardenRole] = "other"
+				Expect(p.Create(event.CreateEvent{Object: obj})).To(BeFalse())
+			})
+
+			It("should return false when namespace does not match", func() {
+				obj.Namespace = "other-namespace"
+				Expect(p.Create(event.CreateEvent{Object: obj})).To(BeFalse())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return true when label and namespace match", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj})).To(BeTrue())
+			})
+
+			It("should return false when label is missing", func() {
+				obj.Labels = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj})).To(BeFalse())
+			})
+
+			It("should return false when namespace does not match", func() {
+				obj.Namespace = "other-namespace"
+				Expect(p.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj})).To(BeFalse())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return true when label and namespace match", func() {
+				Expect(p.Delete(event.DeleteEvent{Object: obj})).To(BeTrue())
+			})
+
+			It("should return false when label is missing", func() {
+				obj.Labels = nil
+				Expect(p.Delete(event.DeleteEvent{Object: obj})).To(BeFalse())
+			})
+
+			It("should return false when namespace does not match", func() {
+				obj.Namespace = "other-namespace"
+				Expect(p.Delete(event.DeleteEvent{Object: obj})).To(BeFalse())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return true when label and namespace match", func() {
+				Expect(p.Generic(event.GenericEvent{Object: obj})).To(BeTrue())
+			})
+
+			It("should return false when label is missing", func() {
+				obj.Labels = nil
+				Expect(p.Generic(event.GenericEvent{Object: obj})).To(BeFalse())
+			})
+
+			It("should return false when namespace does not match", func() {
+				obj.Namespace = "other-namespace"
+				Expect(p.Generic(event.GenericEvent{Object: obj})).To(BeFalse())
 			})
 		})
 	})
