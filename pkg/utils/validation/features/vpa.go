@@ -12,6 +12,7 @@ import (
 var (
 	// vpaFeatureGates is a set of supported Vertical Pod Autoscaler feature gates
 	vpaFeatureGates = sets.New(
+		"CPUStartupBoost",
 		"InPlace",
 		"InPlaceOrRecreate",
 		"PerVPAConfig",
