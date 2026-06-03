@@ -19,10 +19,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
 
 var _ = Describe("KubeAPIServerExposure", func() {
@@ -65,11 +67,22 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 		botanist.SeedClientSet = fake.NewClientSetBuilder().WithClient(fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()).Build()
 		Expect(botanist.SeedClientSet.Client().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: botanist.Shoot.ControlPlaneNamespace}})).To(Succeed())
+
+		botanist.SecretsManager = fakesecretsmanager.New(botanist.SeedClientSet.Client(), botanist.Shoot.ControlPlaneNamespace)
 	})
 
 	Describe("#setAPIServerServiceClusterIPs", func() {
 		BeforeEach(func() {
 			botanist.Shoot.InternalClusterDomain = ptr.To("internal.foo.bar")
+
+			By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
+			for _, name := range []string{
+				v1beta1constants.SecretNameCACluster,
+				v1beta1constants.SecretNameCAClient,
+				apiserver.SecretNameServerCert + "-current",
+			} {
+				Expect(botanist.SeedClientSet.Client().Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: botanist.Shoot.ControlPlaneNamespace}})).To(Succeed())
+			}
 
 			Expect(botanist.SeedClientSet.Client().Create(context.TODO(), &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
