@@ -296,8 +296,9 @@ users:
 			}
 
 			otelHealthCheckUnit := extensionsv1alpha1.Unit{
-				Name:   UnitNameHealthCheck,
-				Enable: new(true),
+				Name:    UnitNameHealthCheck,
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
 				Content: new(`[Unit]
 Description=Health check for opentelemetry-collector.service
 After=opentelemetry-collector.service
@@ -305,7 +306,7 @@ Requisite=opentelemetry-collector.service
 [Service]
 Type=oneshot
 ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart opentelemetry-collector.service'
-ExecStart=/usr/bin/curl -fsS --max-time 5 http://127.0.0.1:18888/metrics`),
+ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:18888/metrics`),
 			}
 
 			otelTimerUnit := extensionsv1alpha1.Unit{

@@ -125,8 +125,9 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentel
 
 func getOpenTelemetryCollectorHealthCheckUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
-		Name:   UnitNameHealthCheck,
-		Enable: new(true),
+		Name:    UnitNameHealthCheck,
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
 		Content: new(`[Unit]
 Description=Health check for ` + UnitName + `
 After=` + UnitName + `
@@ -134,7 +135,7 @@ Requisite=` + UnitName + `
 [Service]
 Type=oneshot
 ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart ` + UnitName + `'
-ExecStart=/usr/bin/curl -fsS --max-time 5 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics`),
+ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics`),
 	}
 }
 
