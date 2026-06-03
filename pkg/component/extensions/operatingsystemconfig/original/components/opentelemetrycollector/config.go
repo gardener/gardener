@@ -127,7 +127,7 @@ func getOpenTelemetryCollectorHealthCheckUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitNameHealthCheck,
 		Command: new(extensionsv1alpha1.CommandStart),
-		Enable:  new(true),
+		Enable:  new(false),
 		Content: new(`[Unit]
 Description=Health check for ` + UnitName + `
 After=` + UnitName + `
