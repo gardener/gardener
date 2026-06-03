@@ -18,6 +18,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	chartutils "github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -67,7 +68,7 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 		controllerRegistration, controllerDeployment = operator.ControllerRegistrationForExtension(extension)
 	)
 
-	objs := []client.Object{controllerRegistration, controllerDeployment}
+	objs := []client.Object{controllerRegistration}
 	if pullSecretRef := GetExtensionPullSecretRef(extension); pullSecretRef != nil {
 		secret, err := r.createSecretCopy(ctx, extension.Name, pullSecretRef)
 		if err != nil {
@@ -84,6 +85,34 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 		objs = append(objs, secret)
 		controllerDeployment.Helm.OCIRepository.CABundleSecretRef.Name = secret.Name
 	}
+
+	referencedResources := chartutils.ResourceNamesFromValues(extension.Spec.Deployment.ExtensionDeployment.Values)
+	for _, resource := range extension.Spec.Deployment.Resources {
+		if referencedResources.Has(resource.Name) {
+			switch resource.ResourceRef.Kind {
+			case "Secret":
+				secret, err := r.createSecretCopy(ctx, extension.Name, &corev1.LocalObjectReference{Name: resource.ResourceRef.Name})
+				if err != nil {
+					return fmt.Errorf("failed to get create deployment secret: %w", err)
+				}
+				resource.ResourceRef.Name = secret.Name
+				objs = append(objs, secret)
+			case "ConfigMap":
+				configMap, err := r.createConfigMapCopy(ctx, extension.Name, &corev1.LocalObjectReference{Name: resource.ResourceRef.Name})
+				if err != nil {
+					return fmt.Errorf("failed to get create deployment config map: %w", err)
+				}
+				resource.ResourceRef.Name = configMap.Name
+				objs = append(objs, configMap)
+			default:
+				return fmt.Errorf("unsupported resource reference kind %q for resource reference %q", resource.ResourceRef.Kind, resource.Name)
+			}
+
+			controllerDeployment.Resources = append(controllerDeployment.Resources, resource)
+		}
+	}
+
+	objs = append(objs, controllerDeployment)
 
 	data, err := registry.AddAllAndSerialize(objs...)
 	if err != nil {
@@ -103,6 +132,27 @@ func (r *registration) Delete(ctx context.Context, log logr.Logger, extension *o
 	}
 
 	return managedresources.WaitUntilDeleted(ctx, r.runtimeClient, r.gardenNamespace, mrName)
+}
+
+func (r *registration) createConfigMapCopy(ctx context.Context, extensionName string, configMapRef *corev1.LocalObjectReference) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMapRef.Name,
+			Namespace: r.gardenNamespace,
+		},
+	}
+	if err := r.runtimeClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		return nil, fmt.Errorf("failed to get referenced config map: %w", err)
+	}
+
+	configMapCopy := configMap.DeepCopy()
+	configMapCopy.ObjectMeta = metav1.ObjectMeta{
+		Name:      fmt.Sprintf("%s-%s", extensionName, configMapRef.Name),
+		Namespace: v1beta1constants.GardenNamespace,
+		Labels:    configMapCopy.Labels,
+	}
+
+	return configMapCopy, nil
 }
 
 func (r *registration) createSecretCopy(ctx context.Context, extensionName string, secretRef *corev1.LocalObjectReference) (*corev1.Secret, error) {

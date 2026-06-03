@@ -83,6 +83,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		return fmt.Errorf("failed to build secret predicates: %w", err)
 	}
 
+	configMapPredicates, err := r.buildConfigMapPredicates()
+	if err != nil {
+		return fmt.Errorf("failed to build config map predicates: %w", err)
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -107,6 +112,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.MapSecretToExtensions(mgr.GetLogger().WithValues("controller", ControllerName))),
 			builder.WithPredicates(secretPredicates),
 		).
+		Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(r.MapConfigMapToExtensions(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(configMapPredicates),
+		).
 		Complete(r)
 }
 
@@ -125,8 +135,29 @@ func (r *Reconciler) buildSecretPredicates() (predicate.Predicate, error) {
 		return nil, fmt.Errorf("failed creating OCI CA bundle label selector predicate: %w", err)
 	}
 
+	predicateResourceReference, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed creating resource reference label selector predicate: %w", err)
+	}
+
 	return predicate.And(
-		predicate.Or(predicateHelmPullSecret, predicateOCICABundle),
+		predicate.Or(predicateHelmPullSecret, predicateOCICABundle, predicateResourceReference),
+		predicateutils.HasNamespace(r.GardenNamespace),
+	), nil
+}
+
+func (r *Reconciler) buildConfigMapPredicates() (predicate.Predicate, error) {
+	predicateResourceReference, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed creating resource reference label selector predicate: %w", err)
+	}
+
+	return predicate.And(
+		predicateResourceReference,
 		predicateutils.HasNamespace(r.GardenNamespace),
 	), nil
 }
@@ -164,6 +195,40 @@ func (r *Reconciler) MapSecretToExtensions(log logr.Logger) handler.MapFunc {
 				// Helm pull secret and CA bundle secret of extension helm chart are considered,
 				// as they are used by gardenlets and need to be copied to the virtual garden.
 				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ext.Name}})
+			}
+
+			if ext.Spec.Deployment == nil {
+				continue
+			}
+			for _, resourceRef := range ext.Spec.Deployment.Resources {
+				if resourceRef.ResourceRef.Kind == "Secret" && resourceRef.ResourceRef.Name == secret.GetName() {
+					requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ext.Name}})
+				}
+			}
+		}
+
+		return requests
+	}
+}
+
+// MapConfigMapToExtensions returns reconcile.Request objects for the referenced configmaps of extension helm chart.
+func (r *Reconciler) MapConfigMapToExtensions(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, configMap client.Object) []reconcile.Request {
+		extensionList := &operatorv1alpha1.ExtensionList{}
+		if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+			log.Error(err, "Failed to list extensions")
+			return nil
+		}
+
+		var requests []reconcile.Request
+		for _, ext := range extensionList.Items {
+			if ext.Spec.Deployment == nil {
+				continue
+			}
+			for _, resourceRef := range ext.Spec.Deployment.Resources {
+				if resourceRef.ResourceRef.Kind == "ConfigMap" && resourceRef.ResourceRef.Name == configMap.GetName() {
+					requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ext.Name}})
+				}
 			}
 		}
 
