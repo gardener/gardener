@@ -11,7 +11,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
@@ -183,6 +185,96 @@ var _ = Describe("ControllerRegistration", func() {
 					},
 				},
 				expectedSecret,
+			))
+		})
+
+		It("should copy only resource references that appear in extension Helm values and prefix their names", func() {
+			referencedSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "creds-secret",
+					Namespace: gardenNamespace,
+				},
+				Data: map[string][]byte{"token": []byte("super-secret")},
+			}
+			Expect(c.Create(ctx, referencedSecret)).To(Succeed())
+
+			referencedConfigMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cfg-cm",
+					Namespace: gardenNamespace,
+				},
+				Data: map[string]string{"key": "value"},
+			}
+			Expect(c.Create(ctx, referencedConfigMap)).To(Succeed())
+
+			unreferencedSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "unused-secret",
+					Namespace: gardenNamespace,
+				},
+				Data: map[string][]byte{"key": []byte("ignored")},
+			}
+			Expect(c.Create(ctx, unreferencedSecret)).To(Succeed())
+
+			extension.Spec.Deployment.Resources = []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: referencedSecret.Name}},
+				{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: referencedConfigMap.Name}},
+				{Name: "unused", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: unreferencedSecret.Name}},
+			}
+			extension.Spec.Deployment.ExtensionDeployment.Values = &apiextensionsv1.JSON{
+				Raw: []byte(`{"a":"{{ .resources.creds.data.token }}","b":"{{ .resources.cfg.data.key }}"}`),
+			}
+
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
+
+			managedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: "extension-registration-" + extensionName}, managedResource)).To(Succeed())
+
+			expectedSecretCopy := referencedSecret.DeepCopy()
+			expectedSecretCopy.ObjectMeta = metav1.ObjectMeta{
+				Name:      extensionName + "-" + referencedSecret.Name,
+				Namespace: v1beta1constants.GardenNamespace,
+			}
+			expectedConfigMapCopy := referencedConfigMap.DeepCopy()
+			expectedConfigMapCopy.ObjectMeta = metav1.ObjectMeta{
+				Name:      extensionName + "-" + referencedConfigMap.Name,
+				Namespace: v1beta1constants.GardenNamespace,
+			}
+
+			Expect(managedResource).To(consistOf(
+				&gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: extensionName,
+					},
+					Helm: &gardencorev1.HelmControllerDeployment{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Ref: new(ociRef),
+						},
+						Values: extension.Spec.Deployment.ExtensionDeployment.Values,
+					},
+					Resources: []gardencorev1.NamedResourceReference{
+						{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: expectedSecretCopy.Name}},
+						{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: expectedConfigMapCopy.Name}},
+					},
+					InjectGardenKubeconfig: new(true),
+				},
+				&gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: extensionName,
+					},
+					Spec: gardencorev1beta1.ControllerRegistrationSpec{
+						Resources: []gardencorev1beta1.ControllerResource{
+							{Kind: extensionKind},
+						},
+						Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+							DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+								{Name: extensionName},
+							},
+						},
+					},
+				},
+				expectedSecretCopy,
+				expectedConfigMapCopy,
 			))
 		})
 
