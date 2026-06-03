@@ -218,6 +218,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName():              schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName():  schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZonalIngress(ref),
 		v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName():         schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
+		v1beta1.SeedSettingPersistentVolumeClaimAutoscaler{}.OpenAPIModelName():   schema_pkg_apis_core_v1beta1_SeedSettingPersistentVolumeClaimAutoscaler(ref),
 		v1beta1.SeedSettingScheduling{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName():              schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref),
 		v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
@@ -8988,6 +8989,28 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref commo
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingPersistentVolumeClaimAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingPersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster. It is disabled by default, because it's still under active development.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -9157,11 +9180,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref(v1beta1.SeedSettingZoneSelection{}.OpenAPIModelName()),
 						},
 					},
+					"persistentVolumeClaimAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the seed.",
+							Ref:         ref(v1beta1.SeedSettingPersistentVolumeClaimAutoscaler{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName(), v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName(), v1beta1.SeedSettingScheduling{}.OpenAPIModelName(), v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName(), v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName(), v1beta1.SeedSettingZoneSelection{}.OpenAPIModelName()},
+			v1beta1.SeedSettingDependencyWatchdog{}.OpenAPIModelName(), v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName(), v1beta1.SeedSettingPersistentVolumeClaimAutoscaler{}.OpenAPIModelName(), v1beta1.SeedSettingScheduling{}.OpenAPIModelName(), v1beta1.SeedSettingTopologyAwareRouting{}.OpenAPIModelName(), v1beta1.SeedSettingVerticalPodAutoscaler{}.OpenAPIModelName(), v1beta1.SeedSettingZoneSelection{}.OpenAPIModelName()},
 	}
 }
 
