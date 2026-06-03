@@ -51,9 +51,9 @@ import (
 )
 
 var (
-	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
+	//go:embed third_party/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
 	verticalPodAutoscalerCRD []byte
-	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
+	//go:embed third_party/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
 	verticalPodAutoscalerCheckpointCRD []byte
 )
 
