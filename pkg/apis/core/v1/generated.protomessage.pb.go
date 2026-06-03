@@ -15,4 +15,6 @@ func (*ControllerDeploymentList) ProtoMessage() {}
 
 func (*HelmControllerDeployment) ProtoMessage() {}
 
+func (*NamedResourceReference) ProtoMessage() {}
+
 func (*OCIRepository) ProtoMessage() {}

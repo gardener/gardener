@@ -29,6 +29,13 @@ type ControllerDeployment struct {
 	// resources.
 	// +optional
 	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty" protobuf:"varint,3,opt,name=injectGardenKubeconfig"`
+	// Resources is a list of named resource references that can be referenced in the Helm chart values via Go template
+	// syntax (e.g. `{{ .resources.<name>.data.<key> }}`). Only resources of kind `Secret` and `ConfigMap` (apiVersion `v1`)
+	// are supported. The referenced resources must reside in the garden namespace.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Resources []NamedResourceReference `json:"resources,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=resources"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

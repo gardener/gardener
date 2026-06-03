@@ -8,6 +8,7 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.core.v1;
 
+import "k8s.io/api/autoscaling/v1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
@@ -30,6 +31,14 @@ message ControllerDeployment {
   // resources.
   // +optional
   optional bool injectGardenKubeconfig = 3;
+
+  // Resources is a list of named resource references that can be referenced in the Helm chart values via Go template
+  // syntax (e.g. `{{ .resources.<name>.data.<key> }}`). Only resources of kind `Secret` and `ConfigMap` (apiVersion `v1`)
+  // are supported. The referenced resources must reside in the garden namespace.
+  // +optional
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  repeated NamedResourceReference resources = 4;
 }
 
 // ControllerDeploymentList is a collection of ControllerDeployments.
@@ -55,6 +64,15 @@ message HelmControllerDeployment {
   // OCIRepository defines where to pull the chart.
   // +optional
   optional OCIRepository ociRepository = 3;
+}
+
+// NamedResourceReference is a named reference to a resource.
+message NamedResourceReference {
+  // Name of the resource reference.
+  optional string name = 1;
+
+  // ResourceRef is a reference to a resource.
+  optional .k8s.io.api.autoscaling.v1.CrossVersionObjectReference resourceRef = 2;
 }
 
 // OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.

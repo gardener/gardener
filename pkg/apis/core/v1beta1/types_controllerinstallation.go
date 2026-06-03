@@ -54,6 +54,9 @@ type ControllerInstallationSpec struct {
 	// DeploymentRef is used to reference a ControllerDeployment resource.
 	// +optional
 	DeploymentRef *corev1.ObjectReference `json:"deploymentRef,omitempty" protobuf:"bytes,3,opt,name=deploymentRef"`
+	// ResourceRefs is used to reference Resource resources.
+	// +optional
+	ResourceRefs []corev1.ObjectReference `json:"resourceRefs,omitempty" protobuf:"bytes,5,rep,name=resourceRefs"`
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.

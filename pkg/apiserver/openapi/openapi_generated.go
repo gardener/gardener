@@ -41,6 +41,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1.ControllerDeployment{}.OpenAPIModelName():                              schema_pkg_apis_core_v1_ControllerDeployment(ref),
 		v1.ControllerDeploymentList{}.OpenAPIModelName():                          schema_pkg_apis_core_v1_ControllerDeploymentList(ref),
 		v1.HelmControllerDeployment{}.OpenAPIModelName():                          schema_pkg_apis_core_v1_HelmControllerDeployment(ref),
+		v1.NamedResourceReference{}.OpenAPIModelName():                            schema_pkg_apis_core_v1_NamedResourceReference(ref),
 		v1.OCIRepository{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1_OCIRepository(ref),
 		v1beta1.APIServerLogging{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
 		v1beta1.APIServerRequests{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
@@ -930,11 +931,31 @@ func schema_pkg_apis_core_v1_ControllerDeployment(ref common.ReferenceCallback) 
 							Format:      "",
 						},
 					},
+					"resources": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources is a list of named resource references that can be referenced in the Helm chart values via Go template syntax (e.g. `{{ .resources.<name>.data.<key> }}`). Only resources of kind `Secret` and `ConfigMap` (apiVersion `v1`) are supported. The referenced resources must reside in the garden namespace.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref(v1.NamedResourceReference{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1.HelmControllerDeployment{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
+			v1.HelmControllerDeployment{}.OpenAPIModelName(), v1.NamedResourceReference{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
 	}
 }
 
@@ -1020,6 +1041,37 @@ func schema_pkg_apis_core_v1_HelmControllerDeployment(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			v1.OCIRepository{}.OpenAPIModelName(), apiextensionsv1.JSON{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1_NamedResourceReference(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NamedResourceReference is a named reference to a resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the resource reference.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resourceRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ResourceRef is a reference to a resource.",
+							Default:     map[string]interface{}{},
+							Ref:         ref(autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()),
+						},
+					},
+				},
+				Required: []string{"name", "resourceRef"},
+			},
+		},
+		Dependencies: []string{
+			autoscalingv1.CrossVersionObjectReference{}.OpenAPIModelName()},
 	}
 }
 
@@ -3080,6 +3132,20 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 						SchemaProps: spec.SchemaProps{
 							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
 							Ref:         ref(corev1.ObjectReference{}.OpenAPIModelName()),
+						},
+					},
+					"resourceRefs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ResourceRefs is used to reference Resource resources.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref(corev1.ObjectReference{}.OpenAPIModelName()),
+									},
+								},
+							},
 						},
 					},
 				},

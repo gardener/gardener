@@ -3253,6 +3253,7 @@ func autoConvert_core_ControllerDeployment_To_v1beta1_ControllerDeployment(in *c
 	}
 	// WARNING: in.Helm requires manual conversion: does not exist in peer-type
 	out.InjectGardenKubeconfig = (*bool)(unsafe.Pointer(in.InjectGardenKubeconfig))
+	// WARNING: in.Resources requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -3357,6 +3358,7 @@ func autoConvert_v1beta1_ControllerInstallationSpec_To_core_ControllerInstallati
 	out.SeedRef = (*v1.ObjectReference)(unsafe.Pointer(in.SeedRef))
 	out.ShootRef = (*v1.ObjectReference)(unsafe.Pointer(in.ShootRef))
 	out.DeploymentRef = (*v1.ObjectReference)(unsafe.Pointer(in.DeploymentRef))
+	out.ResourceRefs = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.ResourceRefs))
 	return nil
 }
 
@@ -3370,6 +3372,7 @@ func autoConvert_core_ControllerInstallationSpec_To_v1beta1_ControllerInstallati
 	out.SeedRef = (*v1.ObjectReference)(unsafe.Pointer(in.SeedRef))
 	out.ShootRef = (*v1.ObjectReference)(unsafe.Pointer(in.ShootRef))
 	out.DeploymentRef = (*v1.ObjectReference)(unsafe.Pointer(in.DeploymentRef))
+	out.ResourceRefs = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.ResourceRefs))
 	return nil
 }
 
