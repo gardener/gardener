@@ -62,33 +62,33 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					pool3.Name += "3"
 					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(kubernetesSourceVersion)}
 					s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, *pool2, *pool3)
+				}
 
-					if withInPlaceUpdatePools {
-						pool4 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-						pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
-						pool4.Minimum = 2
-						pool4.Maximum = 2
-						pool4.MaxUnavailable = new(intstr.FromInt(1))
-						pool4.MaxSurge = new(intstr.FromInt(0))
+				if withInPlaceUpdatePools {
+					pool4 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+					pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
+					pool4.Minimum = 2
+					pool4.Maximum = 2
+					pool4.MaxUnavailable = new(intstr.FromInt(1))
+					pool4.MaxSurge = new(intstr.FromInt(0))
 
-						pool5 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
-						pool5.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-							Version: new(kubernetesSourceVersion),
-							Kubelet: &gardencorev1beta1.KubeletConfig{
-								CPUManagerPolicy: new("none"),
-								EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-									MemoryAvailable: new("100Mi"),
-									NodeFSAvailable: new("100Mi"),
-								},
+					pool5 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+					pool5.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+						Version: new(kubernetesSourceVersion),
+						Kubelet: &gardencorev1beta1.KubeletConfig{
+							CPUManagerPolicy: new("none"),
+							EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+								MemoryAvailable: new("100Mi"),
+								NodeFSAvailable: new("100Mi"),
 							},
-						}
-
-						pool6 := DefaultWorker("auto-surge", new(gardencorev1beta1.AutoInPlaceUpdate))
-						pool6.MaxSurge = new(intstr.FromInt(1))
-						pool6.MaxUnavailable = new(intstr.FromInt(0))
-
-						s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, pool4, pool5, pool6)
+						},
 					}
+
+					pool6 := DefaultWorker("auto-surge", new(gardencorev1beta1.AutoInPlaceUpdate))
+					pool6.MaxSurge = new(intstr.FromInt(1))
+					pool6.MaxUnavailable = new(intstr.FromInt(0))
+
+					s.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{pool4, pool5, pool6}
 				}
 			})
 
@@ -182,15 +182,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
 					}
 
-					if !withInPlaceUpdatePools {
-						continue
-					}
-
-					switch ptr.Deref(worker.UpdateStrategy, "") {
-					case gardencorev1beta1.AutoInPlaceUpdate:
+					if ptr.Deref(worker.UpdateStrategy, "") == gardencorev1beta1.AutoInPlaceUpdate {
 						s.Log.Info("Updating worker pool machine image version", "pool", worker.Name, "version", "2.0.0")
 						s.Shoot.Spec.Provider.Workers[i].Machine.Image.Version = new("2.0.0")
-					case gardencorev1beta1.ManualInPlaceUpdate:
+					} else if ptr.Deref(worker.UpdateStrategy, "") == gardencorev1beta1.ManualInPlaceUpdate {
 						s.Log.Info("Updating worker pool Kubelet config", "pool", worker.Name)
 						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
 							CPUManagerPolicy: new("static"),
@@ -262,7 +257,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")), true)
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")), false)
+		})
+
+		Context("Shoot with only in-place workers", Label("basic", "in-place"), Ordered, func() {
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-inplace")), true)
 		})
 
 		Context("Shoot with workers and layer 4 load balancing", Ordered, Label("basic"), func() {
