@@ -311,6 +311,57 @@ In order to allow extension controller deployments to get information about the 
 Extension controller deployments can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.
 
+### Referencing Resources in Helm Values
+
+`Extension` and `ControllerDeployment` resources can reference `Secret`s and `ConfigMap`s residing in the `garden` namespace of the cluster where the resource is created.
+The values of the referenced objects can then be templated into the Helm values via Go template expressions of the form `{{ .resources.<name>.data.<key> }}`.
+
+The following references are supported:
+
+- `Extension.spec.deployment.resources` (resolved by `gardener-operator` against the garden runtime cluster). The references can be substituted in `Extension.spec.deployment.extension.values`, `Extension.spec.deployment.extension.runtimeClusterValues`, and `Extension.spec.deployment.admission.values`.
+- `ControllerDeployment.resources` (resolved by `gardenlet` against the virtual garden cluster). The references can be substituted in `ControllerDeployment.helm.values`.
+
+Only `Secret` and `ConfigMap` references with `apiVersion: v1` are supported.
+For `Secret`s the values of `data` are base64-decoded; for `ConfigMap`s the `data` entries are exposed under `data`.
+
+The referenced object must additionally carry the label `gardener.cloud/role: resource-reference` so that the controllers watching them can pick up changes and trigger reconciliations.
+
+Admission validation enforces the following:
+
+- Each `{{ ... }}` template expression in the values must match the form `{{ .resources.<name>.data.<key> }}` with alphanumeric `<name>` and `<key>`. Other Go template constructs (whitespace trim markers, control flow, function calls, additional path segments) are rejected.
+- The referenced `<name>` must be declared in the `resources` list of the same object. Templates referring to undeclared names are rejected at admission time.
+
+Example:
+
+```yaml
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-foo
+spec:
+  deployment:
+    resources:
+    - name: myCredentials
+      resourceRef:
+        apiVersion: v1
+        kind: Secret
+        name: provider-foo-credentials
+    - name: myConfig
+      resourceRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: provider-foo-config
+    extension:
+      values:
+        credentials:
+          username: "{{ .resources.myCredentials.data.username }}"
+          password: "{{ .resources.myCredentials.data.password }}"
+        endpoint: "{{ .resources.myConfig.data.endpoint }}"
+      ...
+```
+
+The referenced `Secret`s and `ConfigMap`s must exist (and carry the `gardener.cloud/role: resource-reference` label) before they can be referenced; missing references and missing data keys cause the reconciliation to fail.
+
 ### Deployment Configuration Options
 
 The `.spec.extension` structure allows to configure a deployment `policy`.
