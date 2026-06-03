@@ -40,6 +40,10 @@ type ControllerDeployment struct {
 	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
 	// resources.
 	InjectGardenKubeconfig *bool
+	// Resources is a list of named resource references that can be referenced in the Helm chart values via Go template
+	// syntax (e.g. `{{ .resources.<name>.data.<key> }}`). Only resources of kind `Secret` and `ConfigMap` (apiVersion `v1`)
+	// are supported. The referenced resources must reside in the garden namespace.
+	Resources []NamedResourceReference
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

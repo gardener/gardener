@@ -25,6 +25,11 @@ func (in HelmControllerDeployment) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in NamedResourceReference) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1.NamedResourceReference"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in OCIRepository) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1.OCIRepository"
 }

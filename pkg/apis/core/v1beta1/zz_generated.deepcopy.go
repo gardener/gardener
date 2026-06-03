@@ -1396,6 +1396,11 @@ func (in *ControllerInstallationSpec) DeepCopyInto(out *ControllerInstallationSp
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
+	if in.ResourceRefs != nil {
+		in, out := &in.ResourceRefs, &out.ResourceRefs
+		*out = make([]v1.ObjectReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

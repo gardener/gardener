@@ -756,6 +756,10 @@ message ControllerInstallationSpec {
   // DeploymentRef is used to reference a ControllerDeployment resource.
   // +optional
   optional .k8s.io.api.core.v1.ObjectReference deploymentRef = 3;
+
+  // ResourceRefs is used to reference Resource resources.
+  // +optional
+  repeated .k8s.io.api.core.v1.ObjectReference resourceRefs = 5;
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.

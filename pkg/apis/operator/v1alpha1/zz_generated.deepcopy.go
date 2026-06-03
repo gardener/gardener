@@ -489,6 +489,11 @@ func (in *Deployment) DeepCopyInto(out *Deployment) {
 		*out = new(AdmissionDeploymentSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]apiscorev1.NamedResourceReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

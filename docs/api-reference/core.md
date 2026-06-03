@@ -2754,6 +2754,18 @@ ControllerInstallationSpec is the specification of a ControllerInstallation.
 <p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resourceRefs</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">ObjectReference</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceRefs is used to reference Resource resources.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

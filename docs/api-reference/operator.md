@@ -1102,6 +1102,18 @@ for installing an extension and/or an admission controller.
 <p>AdmissionDeployment contains the deployment configuration for an admission controller.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+NamedResourceReference array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources is a list of named resource references that can be referenced in the Helm chart values via Go<br />template syntax (e.g. `\{\{ .resources.<name>.data.<key> \}\}`). Only resources of kind `Secret` and `ConfigMap`<br />(apiVersion `v1`) are supported. The referenced resources must reside in the garden namespace.<br />References can be used in `spec.deployment.extension.values`, `spec.deployment.extension.runtimeClusterValues`<br />and `spec.deployment.admission.values`.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

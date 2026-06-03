@@ -50,6 +50,8 @@ type ControllerInstallationSpec struct {
 	ShootRef *corev1.ObjectReference
 	// DeploymentRef is used to reference a ControllerDeployment resource.
 	DeploymentRef *corev1.ObjectReference
+	// ResourceRefs is used to reference Resource resources.
+	ResourceRefs []corev1.ObjectReference
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.
