@@ -208,9 +208,10 @@ var _ = Describe("Reconciler", func() {
 
 	Context("status reconciliation", func() {
 		var (
-			now    time.Time
-			future *metav1.Time
-			past   *metav1.Time
+			now        time.Time
+			past       *metav1.Time
+			future     *metav1.Time
+			moreFuture *metav1.Time
 
 			testStatus = func(wantStatus gardencorev1beta1.CloudProfileStatus) reconcile.Result {
 				Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
@@ -227,39 +228,9 @@ var _ = Describe("Reconciler", func() {
 
 		BeforeEach(func() {
 			now = time.Now()
-			future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 			past = &metav1.Time{Time: now.Add(-24 * time.Hour)}
-		})
-
-		It("should reconcile status of lifecycle classifications and requeue due to upcoming stage", func() {
-			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-				{
-					Version: "1.28.2",
-					Lifecycle: []gardencorev1beta1.LifecycleStage{
-						{
-							Classification: gardencorev1beta1.ClassificationPreview,
-							StartTime:      past,
-						},
-						{
-							Classification: gardencorev1beta1.ClassificationSupported,
-							StartTime:      future,
-						},
-					},
-				},
-			}
-
-			wantStatus := gardencorev1beta1.CloudProfileStatus{
-				Kubernetes: &gardencorev1beta1.KubernetesStatus{
-					Versions: []gardencorev1beta1.ExpirableVersionStatus{
-						{
-							Version:        "1.28.2",
-							Classification: gardencorev1beta1.ClassificationPreview,
-						},
-					},
-				},
-			}
-			result := testStatus(wantStatus)
-			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+			future = &metav1.Time{Time: now.Add(24 * time.Hour)}
+			moreFuture = &metav1.Time{Time: now.Add(48 * time.Hour)}
 		})
 
 		It("should reconcile status of old classifications and requeue due to expiration date", func() {
@@ -295,12 +266,50 @@ var _ = Describe("Reconciler", func() {
 			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
 		})
 
-		It("should reconcile status of lifecycle classifications but not requeue without upcoming stages", func() {
+		It("should reconcile status of lifecycle classifications and requeue due to upcoming stage", func() {
 			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{
 					Version: "1.28.2",
 					Lifecycle: []gardencorev1beta1.LifecycleStage{
-						{Classification: gardencorev1beta1.ClassificationSupported, StartTime: past},
+						{
+							Classification: gardencorev1beta1.ClassificationPreview,
+							StartTime:      past,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationSupported,
+							StartTime:      future,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationDeprecated,
+							StartTime:      moreFuture,
+						},
+					},
+				},
+			}
+
+			wantStatus := gardencorev1beta1.CloudProfileStatus{
+				Kubernetes: &gardencorev1beta1.KubernetesStatus{
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{
+							Version:        "1.28.2",
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+					},
+				},
+			}
+			result := testStatus(wantStatus)
+			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+		})
+
+		It("should reconcile status of lifecycle classifications but not requeue without upcoming stage", func() {
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.28.2",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationSupported,
+							StartTime:      past,
+						},
 					},
 				},
 			}
@@ -311,6 +320,68 @@ var _ = Describe("Reconciler", func() {
 						{
 							Version:        "1.28.2",
 							Classification: gardencorev1beta1.ClassificationSupported,
+						},
+					},
+				},
+			}
+
+			result := testStatus(wantStatus)
+			Expect(result.RequeueAfter).To(BeZero())
+		})
+
+		It("should reconcile status of lifecycle classifications and requeue due to upcoming stage without initial start time", func() {
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.28.2",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationSupported,
+							StartTime:      future,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationPreview,
+							StartTime:      moreFuture,
+						},
+					},
+				},
+			}
+
+			wantStatus := gardencorev1beta1.CloudProfileStatus{
+				Kubernetes: &gardencorev1beta1.KubernetesStatus{
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{
+							Version:        "1.28.2",
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+					},
+				},
+			}
+
+			result := testStatus(wantStatus)
+			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+		})
+
+		It("should reconcile status of lifecycle classifications but not requeue without upcoming stage and initial start time", func() {
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.28.2",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+					},
+				},
+			}
+
+			wantStatus := gardencorev1beta1.CloudProfileStatus{
+				Kubernetes: &gardencorev1beta1.KubernetesStatus{
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{
+							Version:        "1.28.2",
+							Classification: gardencorev1beta1.ClassificationPreview,
 						},
 					},
 				},
