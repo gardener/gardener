@@ -324,9 +324,9 @@ config:
         apiVersion: v1
         clusters:
         - cluster:
-            certificate-authority-data: <dummy>
-            server: <my-garden-cluster-endpoint>
-          name: my-kubernetes-cluster
+            certificate-authority-data: <ca-of-garden-cluster>
+            server: https://<endpoint-of-garden-cluster>
+          name: garden-cluster
         # ...
 
     kubeconfigSecret:
@@ -575,6 +575,158 @@ This way, network connectivity to the cluster in which gardenlet runs is not req
 When you delete this resource, nothing happens: gardenlet remains running with the configuration as before.
 However, self-upgrades are obviously not possible anymore.
 In order to upgrade it, you have to either recreate the `Gardenlet` object, or redeploy the Helm chart.
+
+## Re-Bootstrap
+
+In some cases, the gardenlet's client certificate may expire, for example if the gardenlet crashed or was unavailable for an extended period of time.
+When this happens, the gardenlet cannot communicate with the garden cluster and needs to be re-bootstrapped.
+
+Since Helm charts are typically managed through surrounding automation (e.g., GitOps), performing a short-term bootstrap procedure to fix the gardenlet is usually a one-time action that is performed directly in the cluster without modifying the GitOps-managed configuration.
+
+### Automated Re-Bootstrap Script
+
+For convenience, an automated script is available to perform all re-bootstrap steps:
+
+```bash
+hack/usage/rebootstrap-gardenlet.sh \
+  --garden-kubeconfig ~/.kube/garden.yaml \
+  --seed-kubeconfig ~/.kube/seed.yaml \
+  --seed-name my-seed
+```
+
+For more options and help, run:
+```bash
+hack/usage/rebootstrap-gardenlet.sh --help
+```
+
+### Manual Re-Bootstrap Steps
+
+If you prefer to perform the re-bootstrap manually or need to understand the individual steps, follow these steps:
+
+### 1. Create a Bootstrap Token
+
+Create a new bootstrap token secret in the garden cluster:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bootstrap-token-<token-id>
+  namespace: kube-system
+type: bootstrap.kubernetes.io/token
+stringData:
+  description: "Bootstrap token for gardenlet rebootstrap"
+  token-id: <6-characters>
+  token-secret: <16-characters>
+  usage-bootstrap-authentication: "true"
+  usage-bootstrap-signing: "true"
+```
+
+### 2. Create a Bootstrap Kubeconfig Secret
+
+Create a bootstrap kubeconfig using the newly created token.
+A practical approach is to use the existing garden kubeconfig and replace the expired client certificate with the bootstrap token.
+
+Create a new secret in the seed cluster containing the bootstrap kubeconfig:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gardenlet-bootstrap-kubeconfig
+  namespace: garden
+type: Opaque
+data:
+  kubeconfig: <base64-encoded-bootstrap-kubeconfig>
+```
+
+The bootstrap kubeconfig should look like this:
+
+```yaml
+apiVersion: v1
+kind: Config
+current-context: gardenlet-bootstrap@default
+clusters:
+- cluster:
+    certificate-authority-data: <ca-of-garden-cluster>
+    server: https://<endpoint-of-garden-cluster>
+  name: garden-cluster
+contexts:
+- context:
+    cluster: garden-cluster
+    user: gardenlet-bootstrap
+  name: gardenlet-bootstrap@default
+users:
+- name: gardenlet-bootstrap
+  user:
+    token: <token-id>.<token-secret>
+```
+
+### 3. Delete the Expired Kubeconfig Secret
+
+Delete the secret containing the expired kubeconfig from the seed cluster:
+
+```bash
+kubectl -n garden delete secret gardenlet-kubeconfig
+```
+
+### 4. Update the `GardenletConfiguration`
+
+> [!NOTE]
+> Usually the `GardenletConfiguration` is stored in an immutable `ConfigMap`, which means a new `ConfigMap` must be created and the gardenlet `Deployment` must be updated to reference the new `ConfigMap`.
+
+Update the `gardenClientConnection` section to reference the bootstrap kubeconfig:
+
+```yaml
+gardenClientConnection:
+  bootstrapKubeconfig:
+    name: gardenlet-bootstrap-kubeconfig
+    namespace: garden
+  kubeconfigSecret:
+    name: gardenlet-kubeconfig
+    namespace: garden
+```
+
+### 5. Wait for the bootstrap to complete
+
+Wait for the changes to roll out:
+
+```bash
+kubectl -n garden rollout status deployment gardenlet --timeout=5m
+```
+
+Watch the gardenlet logs to verify that the bootstrap process completes successfully:
+
+```bash
+kubectl -n garden logs -f deployment/gardenlet
+```
+
+### 6. Verify Bootstrap Success
+
+After the gardenlet restarts, verify that:
+
+1. A new `gardenlet-kubeconfig` secret has been created with a valid certificate:
+   ```bash
+   kubectl -n garden get secret gardenlet-kubeconfig
+   ```
+
+2. The bootstrap secret `gardenlet-bootstrap-kubeconfig` has been deleted automatically:
+   ```bash
+   kubectl -n garden get secret gardenlet-bootstrap-kubeconfig
+   ```
+
+3. The `Seed` resource in the garden cluster shows healthy conditions:
+   ```bash
+   kubectl get seed <seed-name> -o json | jq .status.conditions
+   ```
+
+### 7. Delete the Bootstrap Token Secret
+
+Once the re-bootstrap is complete and the gardenlet is functioning normally, the bootstrap token in the garden cluster can be deleted:
+
+```bash
+kubectl -n kube-system delete secret bootstrap-token-<token-id>
+```
 
 ## Related Links
 
