@@ -688,6 +688,58 @@ func ValidateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
+var (
+	// alphanumericResourceNameRegexp validates that a NamedResourceReference's name only contains alphanumeric characters.
+	alphanumericResourceNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	// templateExpressionRegexp matches any Go template expression (`{{ ... }}`) in raw values.
+	templateExpressionRegexp = regexp.MustCompile(`\{\{[^{}]*\}\}`)
+	// resourceReferenceRegexp validates the only allowed template form: `{{ .resources.<name>.data.<key> }}`
+	// where <name> and <key> are alphanumeric and surrounding whitespace is optional. The first capture group
+	// extracts <name> so callers can verify it against the declared resources list.
+	resourceReferenceRegexp = regexp.MustCompile(`^\{\{\s*\.resources\.([a-zA-Z0-9]+)\.data\.[a-zA-Z0-9]+\s*\}\}$`)
+)
+
+// ValidateAlphanumericResourceNames ensures the resource names are alphanumeric. An empty name also fails this check
+// (in addition to the Required error from ValidateResources) because there is no way to create a reference to an
+// empty name.
+func ValidateAlphanumericResourceNames(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, resource := range resources {
+		if !alphanumericResourceNameRegexp.MatchString(resource.Name) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("name"), resource.Name, "name must be alphanumeric"))
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateValuesTemplates rejects any Go template expression in the raw values that does not match
+// `{{ .resources.<name>.data.<key> }}` (alphanumeric name and key, optional surrounding whitespace).
+// In addition, it ensures every referenced <name> is declared in the given resources list.
+func ValidateValuesTemplates(rawValues []byte, resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	declaredNames := sets.New[string]()
+	for _, resource := range resources {
+		declaredNames.Insert(resource.Name)
+	}
+
+	for _, match := range templateExpressionRegexp.FindAll(rawValues, -1) {
+		submatches := resourceReferenceRegexp.FindSubmatch(match)
+		if submatches == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, string(match), `template must match pattern "{{ .resources.<name>.data.<key> }}" with alphanumeric <name> and <key>`))
+			continue
+		}
+		name := string(submatches[1])
+		if !declaredNames.Has(name) {
+			allErrs = append(allErrs, field.Invalid(fldPath, string(match), fmt.Sprintf("template references resource %q which is not declared in the resources list", name)))
+		}
+	}
+
+	return allErrs
+}
+
 // ValidateCredentialsRef ensures that a resource of GVK v1.Secret, core.gardener.cloud/v1beta1.InternalSecret, or
 // security.gardener.cloud/v1alpha1.WorkloadIdentity is referred, and its name and namespace are properly set.
 func ValidateCredentialsRef(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
