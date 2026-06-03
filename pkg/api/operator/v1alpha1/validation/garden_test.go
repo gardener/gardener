@@ -1321,7 +1321,7 @@ var _ = Describe("Validation Tests", func() {
 
 				It("should allow known feature gates", func() {
 					garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
-						"InPlaceOrRecreate": true,
+						"PerVPAConfig": true,
 					}
 					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})

@@ -14,7 +14,6 @@ var (
 	vpaFeatureGates = sets.New(
 		"CPUStartupBoost",
 		"InPlace",
-		"InPlaceOrRecreate",
 		"PerVPAConfig",
 	)
 )

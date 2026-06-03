@@ -22,7 +22,7 @@ var _ = Describe("vpaFeatureGates", func() {
 				Expect(errList).To(matcher)
 			},
 			Entry("empty list", nil, BeEmpty()),
-			Entry("supported feature gate", map[string]bool{"InPlaceOrRecreate": true}, BeEmpty()),
+			Entry("supported feature gate", map[string]bool{"PerVPAConfig": true}, BeEmpty()),
 			Entry("unsupported feature gate", map[string]bool{"Foo": true}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal(field.NewPath("Foo").String()),

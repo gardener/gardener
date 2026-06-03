@@ -1592,7 +1592,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 				It("should allow supported feature gates", func() {
 					seed.Spec.Settings.VerticalPodAutoscaler.FeatureGates = map[string]bool{
-						"InPlaceOrRecreate": true,
+						"PerVPAConfig": true,
 					}
 					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
