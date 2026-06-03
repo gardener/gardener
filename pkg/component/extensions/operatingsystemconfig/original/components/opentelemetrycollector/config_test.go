@@ -317,7 +317,7 @@ Description=Run opentelemetry-collector-healthcheck.service every 5 minutes to v
 [Install]
 WantedBy=timers.target
 [Timer]
-OnBootSec=2min
+OnBootSec=15min
 OnUnitActiveSec=5min
 AccuracySec=1min
 Unit=opentelemetry-collector-healthcheck.service`),

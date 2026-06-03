@@ -148,7 +148,7 @@ Description=Run ` + UnitNameHealthCheck + ` every 5 minutes to validate that ` +
 [Install]
 WantedBy=timers.target
 [Timer]
-OnBootSec=2min
+OnBootSec=15min
 OnUnitActiveSec=5min
 AccuracySec=1min
 Unit=` + UnitNameHealthCheck),
