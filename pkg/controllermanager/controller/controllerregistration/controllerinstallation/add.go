@@ -5,13 +5,18 @@
 package controllerinstallation
 
 import (
+	"fmt"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // BackupBucketPredicate returns true for all BackupBucket events. For updates, it only returns true when there is a
@@ -204,4 +209,20 @@ func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool 
 		return old.Type != nil
 	}
 	return !ptr.Equal(old.Type, new.Type)
+}
+
+// ResourceReferenceObjectPredicate returns true for objects in garden namespace labeled with
+// gardener.cloud/role=resource-reference.
+func ResourceReferenceObjectPredicate() (predicate.Predicate, error) {
+	predicateResourceReference, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed creating resource reference label selector predicate: %w", err)
+	}
+
+	return predicate.And(
+		predicateResourceReference,
+		predicateutils.HasNamespace(v1beta1constants.GardenNamespace),
+	), nil
 }
