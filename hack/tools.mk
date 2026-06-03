@@ -65,7 +65,7 @@ GOIMPORTSREVISER_VERSION ?= v3.12.6
 # renovate: datasource=github-releases depName=helm/helm
 HELM_VERSION ?= v4.2.0
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-KIND_VERSION ?= v0.31.0
+KIND_VERSION ?= v0.32.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.36.1
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize\/(?<version>.*)$
