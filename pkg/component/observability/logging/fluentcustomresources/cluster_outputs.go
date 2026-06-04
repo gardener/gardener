@@ -31,9 +31,6 @@ const (
 	// Endpoints
 	endpointOTelCollector = "opentelemetry-collector-collector.garden.svc:4317"
 
-	// Plugin seed types
-	seedTypeOTLPGRPC = "otlp_grpc"
-
 	// Match patterns
 	matchJournald   = "journald.*"
 	matchSystemd    = "systemd.*"
@@ -103,7 +100,7 @@ func GetDefaultClusterOutput(labels map[string]string) *fluentbitv1alpha2.Cluste
 				CustomPlugin: &custom.CustomPlugin{
 					Config: `Name ` + pluginNameGardener + `
 Match                     ` + matchSystemd + `
-SeedType                  ` + seedTypeOTLPGRPC + `
+SeedType                  otlp_grpc
 LogLevel                  error
 Endpoint                  ` + endpointOTelCollector + `
 Insecure                  true
@@ -157,7 +154,7 @@ func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.Cluste
 Match                     ` + matchKubernetes + `
 LogLevel                  error
 Retry_Limit               10
-SeedType                  ` + seedTypeOTLPGRPC + `
+SeedType                  otlp_grpc
 ShootType                 otlp_grpc
 Endpoint                  ` + endpointOTelCollector + `
 Insecure                  true
@@ -238,7 +235,7 @@ func GetStaticClusterOutput(labels map[string]string) *fluentbitv1alpha2.Cluster
 				CustomPlugin: &custom.CustomPlugin{
 					Config: `Name ` + pluginNameGardener + `
 Match                     ` + matchKubernetes + `
-SeedType                  ` + seedTypeOTLPGRPC + `
+SeedType                  otlp_grpc
 LogLevel                  error
 Endpoint                  ` + endpointOTelCollector + `
 Insecure                  true
