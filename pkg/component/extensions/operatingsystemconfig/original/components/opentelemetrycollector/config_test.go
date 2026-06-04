@@ -96,9 +96,6 @@ extensions:
   health_check:
     endpoint: 0.0.0.0:13133
     path: /healthz
-  # TODO(iypetrov): Enable after Vali is removed  
-  # pprof:
-  #   endpoint: 0.0.0.0:1777
 
 receivers:
   journald/journal:
