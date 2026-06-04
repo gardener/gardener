@@ -24,6 +24,7 @@ import (
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -118,6 +119,13 @@ func getIssuersFromShoot(shoot *gardencore.Shoot) []string {
 	issuers = append(issuers, gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)...)
 	if issuer := gardencorehelper.GetShootServiceAccountConfigIssuer(shoot.Spec.Kubernetes.KubeAPIServer); issuer != nil {
 		issuers = append(issuers, *issuer)
+	}
+
+	for _, addr := range shoot.Status.AdvertisedAddresses {
+		if addr.Name == v1beta1constants.AdvertisedAddressServiceAccountIssuer {
+			issuers = append(issuers, addr.URL)
+			break
+		}
 	}
 
 	return issuers
