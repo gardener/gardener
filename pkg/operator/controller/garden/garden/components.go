@@ -1419,13 +1419,18 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	// namespace records, seed-system pods). The static ClusterOutput is intentionally skipped — it
 	// would match the same kubernetes.* records and duplicate every garden runtime container log
 	// into the garden OpenTelemetry Collector.
+	output := fluentcustomresources.GetStaticClusterOutput(customResourcesLabels)
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
+	}
+
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		true,
 		"-garden",
 		logging.GardenCentralLoggingConfigurations,
-		fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels),
+		output,
 	)
 }
 
