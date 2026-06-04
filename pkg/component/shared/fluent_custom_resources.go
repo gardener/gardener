@@ -13,14 +13,13 @@ import (
 )
 
 // NewFluentOperatorCustomResources instantiates a new `Fluent Operator Custom Resources` component.
-// Any number of ClusterOutputs may be passed; nil entries are skipped.
 func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
 	enabled bool,
 	suffix string,
 	centralLoggingConfigurations []component.CentralLoggingConfiguration,
-	extraOutputs ...*fluentbitv1alpha2.ClusterOutput,
+	output *fluentbitv1alpha2.ClusterOutput,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -52,10 +51,8 @@ func NewFluentOperatorCustomResources(
 		}
 	}
 
-	for _, o := range extraOutputs {
-		if o != nil {
-			outputs = append(outputs, o)
-		}
+	if output != nil {
+		outputs = append(outputs, output)
 	}
 
 	deployer = fluentcustomresources.New(
