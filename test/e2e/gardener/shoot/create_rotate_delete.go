@@ -7,7 +7,6 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -305,7 +304,7 @@ func testManualWorkersRollout(s *ShootContext) {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate, workersRollout bool) {
+		test := func(s *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -313,7 +312,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
-			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout && !inPlaceUpdate {
+			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout {
 				testCredentialRotation(s, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootContext: s}}, nil, v1beta1constants.ShootOperationRotateSSHKeypair, "", false)
 			}
 
@@ -387,13 +386,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 			}
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout && !inPlaceUpdate {
+			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout {
 				shootVerifiers = append(shootVerifiers, &rotation.SSHKeypairVerifier{ShootContext: s})
 			}
 
 			var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 
-			if inPlaceUpdate {
+			if withInPlaceUpdatePools {
 				It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
 					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
 				}, SpecTimeout(2*time.Minute))
@@ -402,27 +401,27 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if !withoutWorkersRollout {
 				// test rotation for every rotation type
-				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, inPlaceUpdate)
+				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, withInPlaceUpdatePools)
 			} else {
-				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, inPlaceUpdate)
+				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers, withInPlaceUpdatePools)
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				// renew shoot clients after rotation
 				ItShouldInitializeShootClient(s)
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			}
 
-				if inPlaceUpdate {
-					It("should compare the node names after the test", func(ctx SpecContext) {
-						totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
-						s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
+			if withInPlaceUpdatePools {
+				It("should compare the node names after the test", func(ctx SpecContext) {
+					totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
+					s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
 
-						nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
-						s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
+					nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+					s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
 
-						Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
-					}, SpecTimeout(2*time.Minute))
-				}
+					Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
+				}, SpecTimeout(2*time.Minute))
 			}
 
 			if workersRollout {
@@ -435,13 +434,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		Context("Shoot with workers", Label("basic"), func() {
 			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
-				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false, false, false)
-			})
-
-			Context("with workers rollout, in-place update strategy", Label("with-workers-rollout", "in-place"), Ordered, func() {
 				var s *ShootContext
+
 				BeforeTestSetup(func() {
-					shoot := DefaultShoot("e2e-rot-ip")
+					shoot := DefaultShoot("e2e-rotate")
 
 					worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
 					worker1.Minimum = 2
@@ -451,68 +447,38 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 					worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
-					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{worker1, worker2}
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
 
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				// Skip the test for IPv6 single-stack Shoot as it is extremely flaky (success rate < 30%).
-				//
-				// TODO(shafeeqes, acumino, ary1992): Debug and fix the flaky test for ipv6.
-				if os.Getenv("IPFAMILY") == "ipv6" {
-					s.Log.Info("Skip the flaky credentials rotation with in-place update strategy e2e test for ipv6")
-					return
-				}
-
-				test(s, false, true, false)
+				test(s, false, false, true)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
 				var s *ShootContext
+
 				BeforeTestSetup(func() {
-					shoot := DefaultShoot("e2e-rotate")
-					shoot.Name = "e2e-rot-noroll"
-					// Add a second worker pool when worker rollout should not be performed such that we can make proper
+					shoot := DefaultShoot("e2e-rot-noroll")
+
+					worker2 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+					worker2.Minimum = 2
+					worker2.Maximum = 2
+					worker2.MaxUnavailable = new(intstr.FromInt(1))
+					worker2.MaxSurge = new(intstr.FromInt(0))
+
+					worker3 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker2, worker3)
+
+					// Add an extra worker pool when worker rollout should not be performed such that we can make proper
 					// assertions of the shoot status
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-2", nil))
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-nr", nil))
 
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, true, false, true)
-			})
-
-			Context("without workers rollout, in-place update strategy", Label("without-workers-rollout", "in-place"), Ordered, func() {
-				var s *ShootContext
-				BeforeTestSetup(func() {
-					shoot := DefaultShoot("e2e-rot-nr-ip")
-
-					worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-					worker1.Minimum = 2
-					worker1.Maximum = 2
-					worker1.MaxUnavailable = new(intstr.FromInt(1))
-					worker1.MaxSurge = new(intstr.FromInt(0))
-
-					worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
-
-					// Add a third worker pool when worker rollout should not be performed such that we can make proper
-					// assertions of the shoot status
-					worker3 := DefaultWorker("rolling", nil)
-
-					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{worker1, worker2, worker3}
-
-					s = NewTestContext().ForShoot(shoot)
-				})
-
-				// Skip the test for IPv6 single-stack Shoot as it is extremely flaky (success rate < 30%).
-				//
-				// TODO(shafeeqes, acumino, ary1992): Debug and fix the flaky test for ipv6.
-				if os.Getenv("IPFAMILY") == "ipv6" {
-					s.Log.Info("Skip the flaky credentials rotation with in-place update strategy e2e test for ipv6")
-					return
-				}
-
-				test(s, true, true, false)
+				test(s, true, true, true)
 			})
 		})
 
