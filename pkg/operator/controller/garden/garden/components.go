@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -1413,27 +1412,20 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 	// In a garden-as-seed setup the gardenlet skips deploying the fluent-operator custom resources
-	// (see reconciler_reconcile.go: SkipIf: seedIsGarden), so the operator must provision both the
-	// static and the dynamic ClusterOutputs itself. The shape of the dynamic output (OTLP vs vali)
-	// is selected internally by getDynamicClusterOutput based on the OpenTelemetryCollector feature
-	// gate, so it can be appended unconditionally.
-	//
-	// The dynamic ClusterOutput uses the operator-specific variant with SeedType=noop: on the garden
-	// runtime cluster the static ClusterOutput already ships every kubernetes.* record matching this
-	// output's filter, so the gardener-plugin's seedClient fallback (used when DynamicHostRegex
-	// doesn't match the record's namespace) would otherwise duplicate every garden runtime container
-	// record into the garden OpenTelemetry Collector.
-	outputs := []*fluentbitv1alpha2.ClusterOutput{
-		fluentcustomresources.GetStaticClusterOutput(customResourcesLabels),
-		fluentcustomresources.GetDynamicClusterOutputForOperator(customResourcesLabels),
-	}
+	// (see reconciler_reconcile.go: SkipIf: seedIsGarden), so the operator must provision the
+	// dynamic ClusterOutput itself. We deploy only the dynamic ClusterOutput (with the default
+	// SeedType=otlp_grpc): it ships shoot-namespace records via DynamicHostRegex and falls back to
+	// the local OpenTelemetry Collector via the seedClient route for everything else (garden-
+	// namespace records, seed-system pods). The static ClusterOutput is intentionally skipped — it
+	// would match the same kubernetes.* records and duplicate every garden runtime container log
+	// into the garden OpenTelemetry Collector.
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		true,
 		"-garden",
 		logging.GardenCentralLoggingConfigurations,
-		outputs...,
+		fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels),
 	)
 }
 

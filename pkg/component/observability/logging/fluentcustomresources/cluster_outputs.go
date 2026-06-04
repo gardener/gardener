@@ -33,7 +33,6 @@ const (
 
 	// Plugin seed types
 	seedTypeOTLPGRPC = "otlp_grpc"
-	seedTypeNOOP     = "noop"
 
 	// Match patterns
 	matchJournald   = "journald.*"
@@ -138,27 +137,14 @@ QueueName ` + queueNameSeedJournald + `
 	}
 }
 
-// GetDynamicClusterOutput returns the dynamic fluent-bit-to-vali output used by the Fluent Operator
-// on a seed cluster (gardenlet path). On a seed there is no static ClusterOutput, so the
-// gardener-plugin's seedClient fallback is the route for non-`shoot-*` records (seed-system pods in
-// the `garden` namespace) — keep SeedType as otlp_grpc.
+// GetDynamicClusterOutput returns the dynamic fluent-bit-to-vali output used by the Fluent Operator.
+// On the gardenlet path (a seed without a co-located garden) there is no static ClusterOutput, so
+// the gardener-plugin's seedClient fallback is the route for non-`shoot-*` records (seed-system
+// pods in the `garden` namespace). On the operator path (garden runtime, including the seedIsGarden
+// scenario) this is the only ClusterOutput deployed for kubernetes.* records — the static
+// ClusterOutput is intentionally skipped there to avoid log duplication, and the seedClient
+// fallback ships garden-namespace records to the local OpenTelemetry Collector.
 func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
-	return getDynamicClusterOutput(labels, seedTypeOTLPGRPC)
-}
-
-// GetDynamicClusterOutputForOperator returns the dynamic fluent-bit-to-vali output used by the
-// Fluent Operator on the garden runtime cluster (gardener-operator path). It is identical to
-// GetDynamicClusterOutput except SeedType is `noop`: on the garden runtime cluster the static
-// ClusterOutput already ships every kubernetes.* record matching this output's filter, so the
-// gardener-plugin's seedClient fallback (used when DynamicHostRegex doesn't match the record's
-// namespace) would otherwise duplicate every garden runtime container record into the garden
-// OpenTelemetry Collector. The OTLP-off variant is unaffected (its underlying gardenervali plugin
-// already filters by `gardener.cloud/role:shoot` namespace label, so no fallback occurs).
-func GetDynamicClusterOutputForOperator(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
-	return getDynamicClusterOutput(labels, seedTypeNOOP)
-}
-
-func getDynamicClusterOutput(labels map[string]string, seedType string) *fluentbitv1alpha2.ClusterOutput {
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		return &fluentbitv1alpha2.ClusterOutput{
 			ObjectMeta: metav1.ObjectMeta{
@@ -171,7 +157,7 @@ func getDynamicClusterOutput(labels map[string]string, seedType string) *fluentb
 Match                     ` + matchKubernetes + `
 LogLevel                  error
 Retry_Limit               10
-SeedType                  ` + seedType + `
+SeedType                  ` + seedTypeOTLPGRPC + `
 ShootType                 otlp_grpc
 Endpoint                  ` + endpointOTelCollector + `
 Insecure                  true
@@ -208,7 +194,7 @@ TagKey                    tag`,
 
 	// Legacy vali variant (OpenTelemetryCollector feature gate off): the gardenervali plugin filters
 	// records by the `gardener.cloud/role:shoot` namespace label before any seedClient fallback can
-	// run, so the seedType parameter is irrelevant on this branch.
+	// run.
 	return &fluentbitv1alpha2.ClusterOutput{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   outputNameVali,
