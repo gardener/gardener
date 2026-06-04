@@ -12,7 +12,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -528,6 +530,120 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Expect(testClient.Update(ctx, controllerDeployment)).To(Succeed())
 
 				test()
+			})
+		})
+
+		When("resource references are configured", func() {
+			var (
+				referencedSecret    *corev1.Secret
+				referencedConfigMap *corev1.ConfigMap
+			)
+
+			BeforeEach(func() {
+				referencedSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "ref-secret-",
+						Namespace:    gardenNamespace.Name,
+						Labels: map[string]string{
+							testID:                      testRunID,
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+						},
+					},
+					Data: map[string][]byte{
+						"token": []byte("s3cret-t0ken"),
+					},
+				}
+				Expect(testClient.Create(ctx, referencedSecret)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, referencedSecret))).To(Succeed())
+				})
+
+				referencedConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "ref-config-",
+						Namespace:    gardenNamespace.Name,
+						Labels: map[string]string{
+							testID:                      testRunID,
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+						},
+					},
+					Data: map[string]string{
+						"endpoint": "https://example.com",
+					},
+				}
+				Expect(testClient.Create(ctx, referencedConfigMap)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, referencedConfigMap))).To(Succeed())
+				})
+
+				controllerDeployment.Helm.Values = &apiextensionsv1.JSON{
+					Raw: []byte(`{"auth":{"token":"{{ .resources.creds.data.token }}"},"endpoint":"{{ .resources.cfg.data.endpoint }}"}`),
+				}
+				controllerDeployment.Resources = []gardencorev1.NamedResourceReference{
+					{
+						Name: "creds",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       referencedSecret.Name,
+						},
+					},
+					{
+						Name: "cfg",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       referencedConfigMap.Name,
+						},
+					},
+				}
+			})
+
+			It("should resolve resource references and substitute the templates in the chart values", func() {
+				By("Ensure references were resolved and substituted")
+				values := make(map[string]any)
+				Eventually(func(g Gomega) {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+					configMap := &corev1.ConfigMap{}
+					g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+					g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+					g.Expect(values).To(HaveKeyWithValue("auth", HaveKeyWithValue("token", "s3cret-t0ken")))
+					g.Expect(values).To(HaveKeyWithValue("endpoint", "https://example.com"))
+				}).Should(Succeed())
+
+				By("Ensure conditions are maintained correctly")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+				)
+			})
+
+			It("should fail reconciliation when a referenced resource does not exist", func() {
+				By("Delete referenced Secret to make resolution fail")
+				Expect(testClient.Delete(ctx, referencedSecret)).To(Succeed())
+
+				By("Retrigger reconciliation")
+				Eventually(func() error {
+					patch := client.MergeFrom(controllerInstallation.DeepCopy())
+					controllerInstallation.Spec.DeploymentRef.ResourceVersion = "reconcile-again"
+					return testClient.Patch(ctx, controllerInstallation, patch)
+				}).Should(Succeed())
+
+				By("Ensure Valid condition reports invalid resource references")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourceReferencesInvalid")),
+				)
 			})
 		})
 

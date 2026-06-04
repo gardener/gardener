@@ -372,6 +372,25 @@ var _ = Describe("Extension controller tests", func() {
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), managedResourceRegistrationFoo)).To(Succeed())
 
+		By("Verify resource reference copy is included in the extension registration ManagedResource")
+		registrationContains := NewManagedResourceContainsObjectsMatcher(testClient)
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), managedResourceRegistrationFoo)).To(Succeed())
+			g.Expect(managedResourceRegistrationFoo).To(registrationContains(
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "provider-foo-extension-cfg",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels: map[string]string{
+							testID:                      testRunID,
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+						},
+					},
+					Data: map[string]string{"endpoint": "https://example.com"},
+				},
+			))
+		}).Should(Succeed())
+
 		By("Validate that extensions are not deployed in runtime cluster yet")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())

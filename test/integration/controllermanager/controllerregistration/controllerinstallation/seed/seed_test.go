@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -1497,6 +1498,189 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 					g.Expect(controllerInstallationList.Items).To(BeEmpty())
 				}).Should(Succeed())
 			})
+		})
+	})
+
+	Context("ControllerDeployment with resource references", func() {
+		var (
+			gardenNamespace        *corev1.Namespace
+			referencedSecret       *corev1.Secret
+			referencedConfigMap    *corev1.ConfigMap
+			controllerDeployment   *gardencorev1.ControllerDeployment
+			controllerRegistration *gardencorev1beta1.ControllerRegistration
+		)
+
+		BeforeEach(func() {
+			gardenNamespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1beta1constants.GardenNamespace,
+				},
+			}
+			By("Ensure garden namespace exists")
+			Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+			referencedSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ref-secret-",
+					Namespace:    v1beta1constants.GardenNamespace,
+					Labels: map[string]string{
+						testID:                      testRunID,
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+					},
+				},
+				Data: map[string][]byte{"token": []byte("s3cret")},
+			}
+			By("Create referenced Secret")
+			Expect(testClient.Create(ctx, referencedSecret)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, referencedSecret))).To(Succeed())
+			})
+
+			referencedConfigMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ref-configmap-",
+					Namespace:    v1beta1constants.GardenNamespace,
+					Labels: map[string]string{
+						testID:                      testRunID,
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+					},
+				},
+				Data: map[string]string{"endpoint": "https://example.com"},
+			}
+			By("Create referenced ConfigMap")
+			Expect(testClient.Create(ctx, referencedConfigMap)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, referencedConfigMap))).To(Succeed())
+			})
+
+			controllerDeployment = &gardencorev1.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ctrldeploy-" + testID + "-",
+					Labels:       map[string]string{testID: testRunID},
+				},
+				Helm: &gardencorev1.HelmControllerDeployment{
+					RawChart: []byte("not-a-real-chart"),
+				},
+				Resources: []gardencorev1.NamedResourceReference{
+					{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: referencedSecret.Name}},
+					{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: referencedConfigMap.Name}},
+				},
+			}
+			By("Create ControllerDeployment")
+			Expect(testClient.Create(ctx, controllerDeployment)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeployment))).To(Succeed())
+			})
+
+			policy := gardencorev1beta1.ControllerDeploymentPolicyAlways
+			controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "ctrlreg-" + testID + "-",
+					Labels:       map[string]string{testID: testRunID},
+				},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+						Policy:         &policy,
+						DeploymentRefs: []gardencorev1beta1.DeploymentRef{{Name: controllerDeployment.Name}},
+					},
+				},
+			}
+			By("Create ControllerRegistration")
+			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistration))).To(Succeed())
+
+				By("Wait until manager has observed ControllerRegistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+		})
+
+		It("should write ResourceRefs to the ControllerInstallation based on the ControllerDeployment Resources", func() {
+			By("Expect ControllerInstallation to be created with ResourceRefs")
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: controllerRegistration.Name,
+					core.SeedRefName:         seed.Name,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+
+				ci := controllerInstallationList.Items[0]
+				g.Expect(ci.Spec.DeploymentRef).NotTo(BeNil())
+				g.Expect(ci.Spec.DeploymentRef.Name).To(Equal(controllerDeployment.Name))
+				g.Expect(ci.Spec.ResourceRefs).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Kind":      Equal("Secret"),
+						"Name":      Equal(referencedSecret.Name),
+						"Namespace": Equal(v1beta1constants.GardenNamespace),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Kind":      Equal("ConfigMap"),
+						"Name":      Equal(referencedConfigMap.Name),
+						"Namespace": Equal(v1beta1constants.GardenNamespace),
+					}),
+				))
+
+				var secretRefVersion, configMapRefVersion string
+				for _, ref := range ci.Spec.ResourceRefs {
+					switch ref.Kind {
+					case "Secret":
+						secretRefVersion = ref.ResourceVersion
+					case "ConfigMap":
+						configMapRefVersion = ref.ResourceVersion
+					}
+				}
+
+				updatedSecret := &corev1.Secret{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(referencedSecret), updatedSecret)).To(Succeed())
+				g.Expect(secretRefVersion).To(Equal(updatedSecret.ResourceVersion))
+
+				updatedConfigMap := &corev1.ConfigMap{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(referencedConfigMap), updatedConfigMap)).To(Succeed())
+				g.Expect(configMapRefVersion).To(Equal(updatedConfigMap.ResourceVersion))
+			}).Should(Succeed())
+		})
+
+		It("should update ResourceRefs.ResourceVersion when a referenced resource changes", func() {
+			By("Wait for ControllerInstallation to be created")
+			var initialCI *gardencorev1beta1.ControllerInstallation
+			Eventually(func(g Gomega) {
+				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
+					core.RegistrationRefName: controllerRegistration.Name,
+					core.SeedRefName:         seed.Name,
+				})).To(Succeed())
+				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
+				g.Expect(controllerInstallationList.Items[0].Spec.ResourceRefs).To(HaveLen(2))
+				initialCI = controllerInstallationList.Items[0].DeepCopy()
+			}).Should(Succeed())
+
+			var initialSecretRefVersion string
+			for _, ref := range initialCI.Spec.ResourceRefs {
+				if ref.Kind == "Secret" {
+					initialSecretRefVersion = ref.ResourceVersion
+				}
+			}
+			Expect(initialSecretRefVersion).NotTo(BeEmpty())
+
+			By("Update referenced Secret")
+			patch := client.MergeFrom(referencedSecret.DeepCopy())
+			referencedSecret.Data["token"] = []byte("rotated")
+			Expect(testClient.Patch(ctx, referencedSecret, patch)).To(Succeed())
+
+			By("Expect ResourceRefs.ResourceVersion to be updated")
+			Eventually(func(g Gomega) string {
+				ci := &gardencorev1beta1.ControllerInstallation{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(initialCI), ci)).To(Succeed())
+				for _, ref := range ci.Spec.ResourceRefs {
+					if ref.Kind == "Secret" {
+						return ref.ResourceVersion
+					}
+				}
+				return ""
+			}).ShouldNot(Or(BeEmpty(), Equal(initialSecretRefVersion)))
 		})
 	})
 })
