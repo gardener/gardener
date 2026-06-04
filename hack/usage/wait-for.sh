@@ -54,7 +54,7 @@ while [ "${retries}" -lt "${TIMEOUT}" ]; do
   fi
 
   # Check the status of each condition
-  for condition in "${CONDITIONS[@]}"; do
+  for condition in ${CONDITIONS[@]+"${CONDITIONS[@]}"}; do
     if ! echo "${CONDITION_STATES}" | yq -e '.[] | select(.type == "'"${condition}"'").status == "True"' &>/dev/null; then
       ALL_CONDITIONS_TRUE=false
       break
