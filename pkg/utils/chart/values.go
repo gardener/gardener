@@ -7,9 +7,9 @@ package chart
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
-	"regexp"
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,11 +21,9 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	apisutils "github.com/gardener/gardener/pkg/apis/utils"
 	"github.com/gardener/gardener/pkg/utils"
 )
-
-// resourceNameRegex searches for resources referenced via `{{ .resources.<name>.data.<key> }}`.
-var resourceNameRegex = regexp.MustCompile(`\{\{-?\s*\.resources\.(?P<name>[^.\s}]+)\.data\.[^.\s}]+\s*-?\}\}`)
 
 // Resources holds the resolved data for a list of NamedResourceReferences, keyed by reference name.
 type Resources map[string]ResourceData
@@ -96,12 +94,14 @@ func ResolveResources(ctx context.Context, c client.Client, sourceNamespace stri
 	return result, nil
 }
 
-// SubstituteTemplateInValues walks the given values structure and renders any string values as Go templates with the
-// provided resource references as template data. Non-string scalars and keys are left untouched. The resulting
-// structure has the same shape as the input. Templates can reference resolved data via
-// `{{ .resources.<name>.data.<key> }}`.
+// SubstituteTemplateInValues walks the given values structure and renders any string (both map keys and
+// values) as Go templates with the provided resource references as template data. Non-string scalars are
+// left untouched. The resulting structure has the same shape as the input. Templates can reference
+// resolved data via `{{ .resources.<name>.data.<key> }}`.
 func SubstituteTemplateInValues(values map[string]any, resources Resources) (map[string]any, error) {
-	out, err := substituteAny(values, templateData{Resources: resources})
+	out, err := apisutils.WalkStructure(values, func(s string) (any, error) {
+		return renderTemplate(s, templateData{Resources: resources})
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -110,35 +110,6 @@ func SubstituteTemplateInValues(values map[string]any, resources Resources) (map
 		return nil, fmt.Errorf("expected map after template substitution, got %T", out)
 	}
 	return result, nil
-}
-
-func substituteAny(in any, data templateData) (any, error) {
-	switch v := in.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(v))
-		for k, val := range v {
-			res, err := substituteAny(val, data)
-			if err != nil {
-				return nil, err
-			}
-			out[k] = res
-		}
-		return out, nil
-	case []any:
-		out := make([]any, len(v))
-		for i, val := range v {
-			res, err := substituteAny(val, data)
-			if err != nil {
-				return nil, err
-			}
-			out[i] = res
-		}
-		return out, nil
-	case string:
-		return renderTemplate(v, data)
-	default:
-		return v, nil
-	}
 }
 
 func renderTemplate(s string, data templateData) (string, error) {
@@ -160,15 +131,27 @@ func renderTemplate(s string, data templateData) (string, error) {
 }
 
 // ResourceNamesFromValues returns the names of all resources referenced in the given values via template
-// expressions like {{ .resources.<name>.data.<key> }}.
-func ResourceNamesFromValues(values *apiextensionsv1.JSON) sets.Set[string] {
+// expressions like `{{ .resources.<name>.data.<key> }}`. The values are walked structurally, so only references
+// that appear as a complete template expression inside an individual string (map key or value) are recognized.
+func ResourceNamesFromValues(values *apiextensionsv1.JSON) (sets.Set[string], error) {
 	result := sets.New[string]()
-	if values == nil {
-		return result
+	if values == nil || len(values.Raw) == 0 {
+		return result, nil
 	}
-	nameIndex := resourceNameRegex.SubexpIndex("name")
-	for _, match := range resourceNameRegex.FindAllSubmatch(values.Raw, -1) {
-		result.Insert(string(match[nameIndex]))
+
+	var parsed any
+	if err := json.Unmarshal(values.Raw, &parsed); err != nil {
+		return nil, fmt.Errorf("failed to parse values: %w", err)
 	}
-	return result
+
+	nameIndex := v1beta1constants.ResourceReferenceRegexp.SubexpIndex("name")
+	if _, err := apisutils.WalkStructure(parsed, func(s string) (any, error) {
+		for _, match := range v1beta1constants.ResourceReferenceRegexp.FindAllStringSubmatch(s, -1) {
+			result.Insert(match[nameIndex])
+		}
+		return s, nil
+	}); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

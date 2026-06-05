@@ -170,6 +170,38 @@ var _ = Describe("Values", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result["x"]).To(Equal("plain string"))
 		})
+
+		It("should substitute templates in map keys", func() {
+			values := map[string]any{
+				"{{ .resources.creds.data.username }}": "value",
+				"nested": map[string]any{
+					"{{ .resources.creds.data.password }}": 42,
+				},
+			}
+			refs := Resources{
+				"creds": ResourceData{Data: map[string]string{"username": "admin", "password": "s3cret"}},
+			}
+
+			result, err := SubstituteTemplateInValues(values, refs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(map[string]any{
+				"admin":  "value",
+				"nested": map[string]any{"s3cret": 42},
+			}))
+		})
+
+		It("should fail when two map keys collide after template substitution", func() {
+			values := map[string]any{
+				"{{ .resources.creds.data.username }}": "a",
+				"admin":                                "b",
+			}
+			refs := Resources{
+				"creds": ResourceData{Data: map[string]string{"username": "admin"}},
+			}
+
+			_, err := SubstituteTemplateInValues(values, refs)
+			Expect(err).To(MatchError(ContainSubstring("duplicate map key")))
+		})
 	})
 
 	Describe("ResourceNamesFromValues", func() {
@@ -195,6 +227,26 @@ var _ = Describe("Values", func() {
 		It("should deduplicate resource names", func() {
 			values := &apiextensionsv1.JSON{Raw: []byte(`{"a":"{{ .resources.foo.data.x }}","b":"{{ .resources.foo.data.y }}"}`)}
 			Expect(ResourceNamesFromValues(values)).To(Equal(sets.New("foo")))
+		})
+
+		It("should extract resource names from references surrounded by literal text", func() {
+			values := &apiextensionsv1.JSON{Raw: []byte(`{"x":"prefix-{{ .resources.foo.data.x }}-suffix"}`)}
+			Expect(ResourceNamesFromValues(values)).To(Equal(sets.New("foo")))
+		})
+
+		It("should extract resource names from multiple references concatenated within a single value", func() {
+			values := &apiextensionsv1.JSON{Raw: []byte(`{"x":"{{ .resources.foo.data.x }}-{{ .resources.bar.data.y }}"}`)}
+			Expect(ResourceNamesFromValues(values)).To(Equal(sets.New("foo", "bar")))
+		})
+
+		It("should extract resource names from references in map keys", func() {
+			values := &apiextensionsv1.JSON{Raw: []byte(`{"{{ .resources.foo.data.bar }}":42}`)}
+			Expect(ResourceNamesFromValues(values)).To(Equal(sets.New("foo")))
+		})
+
+		It("should not extract resource names from templates split across multiple values", func() {
+			values := &apiextensionsv1.JSON{Raw: []byte(`{"first":"{{ .resources.first.data.","second":"second}}"}`)}
+			Expect(ResourceNamesFromValues(values)).To(Equal(sets.New[string]()))
 		})
 	})
 })

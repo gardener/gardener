@@ -86,7 +86,10 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 		controllerDeployment.Helm.OCIRepository.CABundleSecretRef.Name = secret.Name
 	}
 
-	referencedResources := chartutils.ResourceNamesFromValues(extension.Spec.Deployment.ExtensionDeployment.Values)
+	referencedResources, err := chartutils.ResourceNamesFromValues(extension.Spec.Deployment.ExtensionDeployment.Values)
+	if err != nil {
+		return fmt.Errorf("failed to extract referenced resources from extension values: %w", err)
+	}
 	for _, resource := range extension.Spec.Deployment.Resources {
 		if referencedResources.Has(resource.Name) {
 			switch resource.ResourceRef.Kind {

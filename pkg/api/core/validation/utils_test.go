@@ -437,6 +437,21 @@ var _ = Describe("Utils tests", func() {
 			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(BeEmpty())
 		})
 
+		It("should accept a valid resource template reference surrounded by literal text", func() {
+			raw := []byte(`{"x":"prefix-{{ .resources.creds.data.token }}-suffix"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should accept multiple valid resource template references concatenated within a single value", func() {
+			raw := []byte(`{"x":"{{ .resources.foo.data.x }}-{{ .resources.bar.data.y }}"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(BeEmpty())
+		})
+
+		It("should accept a valid resource template reference used as a map key", func() {
+			raw := []byte(`{"{{ .resources.creds.data.key }}":"value"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(BeEmpty())
+		})
+
 		It("should reject a template with non-alphanumeric resource name", func() {
 			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.my-creds.data.token }}"}`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
@@ -523,12 +538,55 @@ var _ = Describe("Utils tests", func() {
 			}))))
 		})
 
+		It("should reject a template with a stray closing-brace sequence", func() {
+			raw := []byte(`{"x":"{{ .resources.creds.data.token }} }}"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("}}"),
+					"Detail":   ContainSubstring(`stray "}}"`),
+				})),
+			))
+		})
+
+		It("should reject a template with nested opening braces", func() {
+			raw := []byte(`{"x":"{{ {{ .resources.creds.data.token }} }}"}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("{{"),
+					"Detail":   ContainSubstring(`stray "{{"`),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("values"),
+					"BadValue": Equal("}}"),
+					"Detail":   ContainSubstring(`stray "}}"`),
+				})),
+			))
+		})
+
+		It("should not report stray markers from JSON structural braces of nested objects", func() {
+			raw := []byte(`{"webhooks":{"webhookOne":{"externalLabels":{"foo":"bar"}}}}`)
+			Expect(ValidateValuesTemplates(raw, resources, fldPath)).To(BeEmpty())
+		})
+
 		It("should reject all template references when the resources list is empty", func() {
 			Expect(ValidateValuesTemplates([]byte(`{"x":"{{ .resources.creds.data.token }}"}`), nil, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal("values"),
 				"BadValue": Equal("{{ .resources.creds.data.token }}"),
 				"Detail":   ContainSubstring(`template references resource "creds" which is not declared in the resources list`),
+			}))))
+		})
+
+		It("should return an error when the raw values are not valid JSON", func() {
+			Expect(ValidateValuesTemplates([]byte(`not json`), resources, fldPath)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("values"),
+				"Detail": ContainSubstring("failed to parse values as JSON"),
 			}))))
 		})
 	})
