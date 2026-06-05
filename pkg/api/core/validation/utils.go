@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"regexp"
@@ -30,6 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	apisutils "github.com/gardener/gardener/pkg/apis/utils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
@@ -693,10 +695,6 @@ var (
 	alphanumericResourceNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	// templateExpressionRegexp matches any Go template expression (`{{ ... }}`) in raw values.
 	templateExpressionRegexp = regexp.MustCompile(`\{\{[^{}]*\}\}`)
-	// resourceReferenceRegexp validates the only allowed template form: `{{ .resources.<name>.data.<key> }}`
-	// where <name> and <key> are alphanumeric and surrounding whitespace is optional. The first capture group
-	// extracts <name> so callers can verify it against the declared resources list.
-	resourceReferenceRegexp = regexp.MustCompile(`^\{\{\s*\.resources\.([a-zA-Z0-9]+)\.data\.[a-zA-Z0-9]+\s*\}\}$`)
 )
 
 // ValidateAlphanumericResourceNames ensures the resource names are alphanumeric. An empty name also fails this check
@@ -720,21 +718,46 @@ func ValidateAlphanumericResourceNames(resources []core.NamedResourceReference, 
 func ValidateValuesTemplates(rawValues []byte, resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if len(rawValues) == 0 {
+		return allErrs
+	}
+
+	var parsedValues any
+	if err := json.Unmarshal(rawValues, &parsedValues); err != nil {
+		return append(allErrs, field.Invalid(fldPath, string(rawValues), fmt.Sprintf("failed to parse values as JSON: %v", err)))
+	}
+
 	declaredNames := sets.New[string]()
 	for _, resource := range resources {
 		declaredNames.Insert(resource.Name)
 	}
 
-	for _, match := range templateExpressionRegexp.FindAll(rawValues, -1) {
-		submatches := resourceReferenceRegexp.FindSubmatch(match)
-		if submatches == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, string(match), `template must match pattern "{{ .resources.<name>.data.<key> }}" with alphanumeric <name> and <key>`))
-			continue
+	nameIndex := v1beta1constants.ResourceReferenceRegexp.SubexpIndex("name")
+	if _, err := apisutils.WalkStructure(parsedValues, func(s string) (any, error) {
+		for _, match := range templateExpressionRegexp.FindAllString(s, -1) {
+			submatches := v1beta1constants.ResourceReferenceRegexp.FindStringSubmatch(match)
+			if submatches == nil || len(submatches[0]) != len(match) {
+				allErrs = append(allErrs, field.Invalid(fldPath, match, `template must match pattern "{{ .resources.<name>.data.<key> }}" with alphanumeric <name> and <key>`))
+				continue
+			}
+			name := submatches[nameIndex]
+			if !declaredNames.Has(name) {
+				allErrs = append(allErrs, field.Invalid(fldPath, match, fmt.Sprintf("template references resource %q which is not declared in the resources list", name)))
+			}
 		}
-		name := string(submatches[1])
-		if !declaredNames.Has(name) {
-			allErrs = append(allErrs, field.Invalid(fldPath, string(match), fmt.Sprintf("template references resource %q which is not declared in the resources list", name)))
+
+		// Detect stray "{{" or "}}" outside of recognized template expressions to catch malformed templates
+		// such as `{{ ... }} }}` or `{{ {{ ... }} }}` that the regex above does not match as a single block.
+		stripped := templateExpressionRegexp.ReplaceAllString(s, "")
+		if strings.Contains(stripped, "{{") {
+			allErrs = append(allErrs, field.Invalid(fldPath, "{{", `stray "{{" that does not start a valid template expression`))
 		}
+		if strings.Contains(stripped, "}}") {
+			allErrs = append(allErrs, field.Invalid(fldPath, "}}", `stray "}}" that does not end a valid template expression`))
+		}
+		return s, nil
+	}); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, string(rawValues), fmt.Sprintf("failed to walk values: %v", err)))
 	}
 
 	return allErrs
