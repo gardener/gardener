@@ -282,6 +282,7 @@ spec:
     #   featureGates:
     #     SomeGardenerFeature: true
     #   logLevel: info # either {debug,info,error}
+    #   strategy: SameRegion # either {SameRegion,MinimalDistance}
       gardenerDashboard: {}
     #   logLevel: info # either {trace,debug,info,warn,error}
     #   enableTokenLogin: true
