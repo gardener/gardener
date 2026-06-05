@@ -71,6 +71,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.35.5
 	k8s.io/apimachinery v0.35.5
 	k8s.io/apiserver v0.35.5
+	// TODO(ialidzhikov): Update k8s.io/autoscaler/vertical-pod-autoscaler to v1.7.0 once https://github.com/gardener/gardener/issues/14734 is resolved.
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.6.0
 	k8s.io/cli-runtime v0.35.5
 	k8s.io/client-go v0.35.5

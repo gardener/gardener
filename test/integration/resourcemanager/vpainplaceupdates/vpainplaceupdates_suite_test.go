@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 			MutatingWebhooks: getMutatingWebhookConfigurations(testNamespaceName),
 		},
 		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "..", "pkg", "component", "autoscaling", "vpa", "templates", "crd-autoscaling.k8s.io_verticalpodautoscalers.yaml")},
+			Paths: []string{filepath.Join("..", "..", "..", "..", "pkg", "component", "autoscaling", "vpa", "third_party", "crd-autoscaling.k8s.io_verticalpodautoscalers.yaml")},
 		},
 		ErrorIfCRDPathMissing: true,
 	}

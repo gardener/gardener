@@ -4627,7 +4627,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
 						MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
 						MemoryAggregationIntervalCount:           new(int64(42)),
-						FeatureGates:                             map[string]bool{"InPlaceOrRecreate": true},
+						FeatureGates:                             map[string]bool{"PerVPAConfig": true},
 						MaxAllowed: map[corev1.ResourceName]resource.Quantity{
 							"cpu":    resource.MustParse("8"),
 							"memory": resource.MustParse("32Gi"),
