@@ -46,11 +46,6 @@ func init() {
 }
 
 func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error) {
-	strategy := g.values.Strategy
-	if strategy == "" {
-		strategy = schedulerconfigv1alpha1.Default
-	}
-
 	schedulerConfig := &schedulerconfigv1alpha1.SchedulerConfiguration{
 		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			QPS:        100,
@@ -70,7 +65,7 @@ func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error
 		},
 		Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
 			Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
-				Strategy: strategy,
+				Strategy: g.values.Strategy,
 			},
 		},
 		FeatureGates: g.values.FeatureGates,

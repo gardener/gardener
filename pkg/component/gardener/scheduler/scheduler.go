@@ -49,7 +49,7 @@ type Values struct {
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 	// Strategy is the candidate determination strategy used to assign a seed to shoots.
-	// Defaults to SameRegion when empty.
+	// If empty, the scheduler binary's defaulting will apply.
 	Strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy
 }
 

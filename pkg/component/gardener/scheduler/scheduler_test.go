@@ -452,7 +452,7 @@ var _ = Describe("GardenerScheduler", func() {
 				})).To(Succeed())
 			})
 
-			It("should default to SameRegion when unset", func() {
+			It("should not default the strategy when unset", func() {
 				Expect(values.Strategy).To(BeEmpty())
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
@@ -465,7 +465,8 @@ var _ = Describe("GardenerScheduler", func() {
 
 				renderedYAML, ok := expectedConfigMap.Data["schedulerconfiguration.yaml"]
 				Expect(ok).To(BeTrue())
-				Expect(renderedYAML).To(ContainSubstring("candidateDeterminationStrategy: SameRegion"))
+				Expect(renderedYAML).NotTo(ContainSubstring("candidateDeterminationStrategy: SameRegion"))
+				Expect(renderedYAML).NotTo(ContainSubstring("candidateDeterminationStrategy: MinimalDistance"))
 			})
 
 			It("should honour MinimalDistance when set", func() {
@@ -766,11 +767,6 @@ var (
 )
 
 func configMap(namespace string, testValues Values) *corev1.ConfigMap {
-	strategy := testValues.Strategy
-	if strategy == "" {
-		strategy = schedulerconfigv1alpha1.Default
-	}
-
 	schedulerConfig := &schedulerconfigv1alpha1.SchedulerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
@@ -798,7 +794,7 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 		},
 		Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
 			Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
-				Strategy: strategy,
+				Strategy: testValues.Strategy,
 			},
 		},
 		FeatureGates: testValues.FeatureGates,
