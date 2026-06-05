@@ -1413,7 +1413,7 @@ spec:
                         description: Scheduler contains configuration settings for
                           the gardener-scheduler.
                         properties:
-                          candidateDeterminationStrategy:
+                          strategy:
                             default: SameRegion
                             description: |-
                               Strategy is the candidate determination strategy that defines how seeds for shoots that do not

@@ -647,7 +647,7 @@ type GardenerSchedulerConfig struct {
 	// +kubebuilder:validation:Enum=SameRegion;MinimalDistance
 	// +kubebuilder:default=SameRegion
 	// +optional
-	Strategy *string `json:"candidateDeterminationStrategy,omitempty"`
+	Strategy *string `json:"strategy,omitempty"`
 	// LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
 	// Defaults to info.
 	// +kubebuilder:validation:Enum=info;debug;error

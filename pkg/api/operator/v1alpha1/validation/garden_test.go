@@ -2490,7 +2490,7 @@ var _ = Describe("Validation Tests", func() {
 							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{}
 
 							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
 							}))))
 						})
 
@@ -2500,7 +2500,7 @@ var _ = Describe("Validation Tests", func() {
 							}
 
 							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
 							}))))
 						})
 
@@ -2510,7 +2510,7 @@ var _ = Describe("Validation Tests", func() {
 							}
 
 							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
 							}))))
 						})
 
@@ -2521,7 +2521,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeNotSupported),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.candidateDeterminationStrategy"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
 							}))))
 						})
 					})

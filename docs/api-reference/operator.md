@@ -2615,7 +2615,7 @@ object (keys:string, values:boolean)
 </tr>
 <tr>
 <td>
-<code>candidateDeterminationStrategy</code></br>
+<code>strategy</code></br>
 <em>
 string
 </em>

@@ -646,7 +646,7 @@ func validateGardenerSchedulerConfig(config *operatorv1alpha1.GardenerSchedulerC
 		strategy := schedulerconfigv1alpha1.CandidateDeterminationStrategy(*config.Strategy)
 		if !slices.Contains(schedulerconfigv1alpha1.Strategies, strategy) {
 			allErrs = append(allErrs, field.NotSupported(
-				fldPath.Child("candidateDeterminationStrategy"),
+				fldPath.Child("strategy"),
 				*config.Strategy,
 				schedulerconfigv1alpha1.Strategies,
 			))
