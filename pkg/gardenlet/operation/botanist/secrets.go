@@ -127,38 +127,22 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 // restoreSecretFromPersistedData restores a Kubernetes Secret from persisted GardenerResourceData.
 // It handles both formats (with Immutable and Type fields) and (plain map[string][]byte)
 func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Client, objectMeta metav1.ObjectMeta, rawData []byte) error {
-	var newSecretInfo shootstate.SecretState
-
 	var (
-		secretData map[string][]byte
-		immutable  *bool
 		secretType = corev1.SecretTypeOpaque
+		secretInfo shootstate.SecretState
 	)
-
-	if err := json.Unmarshal(rawData, &newSecretInfo); err != nil || newSecretInfo.Data == nil {
-		// TODO(tobschli): Remove this fallback after v1.143 has been released, as ShootStates will be reconciled and use the new format.
-		// plain map[string][]byte
-		if err := json.Unmarshal(rawData, &secretData); err != nil {
-			return fmt.Errorf("failed unmarshalling secret data for secret %s: neither new nor old format matched: %w", objectMeta.Name, err)
-		}
-
-		if objectMeta.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
-			secret := secretsmanager.Secret(objectMeta, secretData)
-			return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
-		}
-	} else {
-		secretData = newSecretInfo.Data
-		immutable = newSecretInfo.Immutable
-		if newSecretInfo.Type != "" {
-			secretType = newSecretInfo.Type
-		}
+	if err := json.Unmarshal(rawData, &secretInfo); err != nil || secretInfo.Data == nil {
+		return fmt.Errorf("failed to restore secret from PersistedData: %w", err)
+	}
+	if secretInfo.Type != "" {
+		secretType = secretInfo.Type
 	}
 
 	secret := &corev1.Secret{
 		ObjectMeta: objectMeta,
 		Type:       secretType,
-		Data:       secretData,
-		Immutable:  immutable,
+		Data:       secretInfo.Data,
+		Immutable:  secretInfo.Immutable,
 	}
 
 	return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))

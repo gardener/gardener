@@ -29,7 +29,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
+	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -453,73 +453,52 @@ var _ = Describe("Secrets", func() {
 								Name:   "ca",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("ca")},
+								Data:   runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("ca")}, Immutable: new(true)})},
 							},
 							{
 								Name:   "ca-client",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("ca-client")},
+								Data:   runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("ca-client")}, Immutable: new(true)})},
 							},
 							{
 								Name:   "ca-etcd",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("ca-etcd")},
+								Data:   runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("ca-etcd")}, Immutable: new(true)})},
 							},
 							{
 								Name:   "non-ca-secret",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
-								Data:   runtime.RawExtension{Raw: rawData("non-ca-secret")},
+								Data:   runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{}, Immutable: new(true)})},
 							},
 							{
 								Name:   "extension-foo-secret",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"},
-								Data:   runtime.RawExtension{Raw: rawData("extension-foo-secret")},
+								Data:   runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("extension-foo-secret")}, Immutable: new(true)})},
 							},
 							{
 								Name: "secret-without-labels",
 								Type: "secret",
-								Data: runtime.RawExtension{Raw: rawData("secret-without-labels")},
+								Data: runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("secret-without-labels")}})},
 							},
 							{
 								Name:   "new-format-secret",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "test"},
-								Data: runtime.RawExtension{
-									Raw: rawData("new-format-secret", struct {
-										Immutable *bool
-										Type      corev1.SecretType
-									}{
-										Immutable: new(true),
-										Type:      corev1.SecretTypeOpaque,
-									})},
+								Data:   runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("new-format-secret")}, Immutable: new(true), Type: corev1.SecretTypeOpaque})},
 							},
 							{
 								Name: "new-format-mutable-secret",
 								Type: "secret",
-								Data: runtime.RawExtension{
-									Raw: rawData("new-format-mutable-secret", struct {
-										Immutable *bool
-										Type      corev1.SecretType
-									}{
-										Immutable: new(false),
-										Type:      corev1.SecretTypeOpaque,
-									})},
+								Data: runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("new-format-mutable-secret")}, Immutable: new(false), Type: corev1.SecretTypeOpaque})},
 							},
 							{
 								Name: "new-format-tls-secret",
 								Type: "secret",
-								Data: runtime.RawExtension{
-									Raw: rawData("new-format-tls-secret", struct {
-										Immutable *bool
-										Type      corev1.SecretType
-									}{
-										Immutable: new(true),
-										Type:      corev1.SecretTypeTLS,
-									})},
+								Data: runtime.RawExtension{Raw: rawData(shootstate.SecretState{Data: map[string][]byte{"data-for": []byte("new-format-tls-secret")}, Immutable: new(true), Type: corev1.SecretTypeTLS})},
 							},
 							{
 								Name: "some-other-data",
@@ -551,7 +530,7 @@ var _ = Describe("Secrets", func() {
 				Expect(secret.Immutable).To(PointTo(BeTrue()))
 				Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity}))
-				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
+				Expect(secret.Data).To(BeEmpty())
 
 				By("Verify external secrets got restored")
 				Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "extension-foo-secret"}, secret)).To(Succeed())
@@ -611,27 +590,7 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 	}
 }
 
-func rawData(value string, opts ...struct {
-	Immutable *bool
-	Type      corev1.SecretType
-}) []byte {
-	if len(opts) == 0 {
-		return []byte(`{"data-for":"` + utils.EncodeBase64([]byte(value)) + `"}`)
-	}
-
-	o := opts[0]
-
-	type newFormat struct {
-		Data      map[string][]byte `json:"data"`
-		Immutable *bool             `json:"immutable,omitempty"`
-		Type      corev1.SecretType `json:"type,omitempty"`
-	}
-
-	b, _ := json.Marshal(newFormat{
-		Data:      map[string][]byte{"data-for": []byte(value)},
-		Immutable: o.Immutable,
-		Type:      o.Type,
-	})
-
+func rawData(state shootstate.SecretState) []byte {
+	b, _ := json.Marshal(state)
 	return b
 }
