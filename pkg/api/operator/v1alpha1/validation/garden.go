@@ -30,7 +30,6 @@ import (
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/api/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
-	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -641,17 +640,6 @@ func validateGardenerSchedulerConfig(config *operatorv1alpha1.GardenerSchedulerC
 	}
 
 	allErrs = append(allErrs, validateGardenerFeatureGates(config.FeatureGates, fldPath.Child("featureGates"))...)
-
-	if config.Strategy != nil {
-		strategy := schedulerconfigv1alpha1.CandidateDeterminationStrategy(*config.Strategy)
-		if !slices.Contains(schedulerconfigv1alpha1.Strategies, strategy) {
-			allErrs = append(allErrs, field.NotSupported(
-				fldPath.Child("strategy"),
-				*config.Strategy,
-				schedulerconfigv1alpha1.Strategies,
-			))
-		}
-	}
 
 	return allErrs
 }

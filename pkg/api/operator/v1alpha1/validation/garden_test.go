@@ -9,10 +9,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/validation"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -27,6 +23,11 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
+
+	. "github.com/gardener/gardener/pkg/api/operator/v1alpha1/validation"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var _ = Describe("Validation Tests", func() {
@@ -2479,47 +2480,6 @@ var _ = Describe("Validation Tests", func() {
 							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
-							}))))
-						})
-					})
-
-					Context("CandidateDeterminationStrategy", func() {
-						It("should accept a nil strategy (default)", func() {
-							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{}
-
-							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
-							}))))
-						})
-
-						It("should accept SameRegion", func() {
-							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
-								Strategy: new("SameRegion"),
-							}
-
-							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
-							}))))
-						})
-
-						It("should accept MinimalDistance", func() {
-							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
-								Strategy: new("MinimalDistance"),
-							}
-
-							Expect(ValidateGarden(garden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
-							}))))
-						})
-
-						It("should reject an unknown value", func() {
-							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
-								Strategy: new("Foo"),
-							}
-
-							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":  Equal(field.ErrorTypeNotSupported),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.strategy"),
 							}))))
 						})
 					})
