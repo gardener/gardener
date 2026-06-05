@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -83,7 +82,7 @@ func itShouldChangeEncryptionProviderAndVerify(s *ShootContext, providerType gar
 		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 			s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 				Provider: gardencorev1beta1.EncryptionProvider{
-					Type: ptr.To(providerType),
+					Type: new(providerType),
 				},
 			}
 		})).Should(Succeed())
