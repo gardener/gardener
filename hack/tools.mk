@@ -77,7 +77,7 @@ PROTOC_VERSION ?= v35.0
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 SKAFFOLD_VERSION ?= v2.21.0
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION ?= v4.53.2
+YQ_VERSION ?= v4.53.3
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
 VGOPATH_VERSION ?= v0.1.10
 # renovate: datasource=github-releases depName=crate-ci/typos
