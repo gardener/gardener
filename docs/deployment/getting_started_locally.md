@@ -179,7 +179,7 @@ Since the [ko](https://skaffold.dev/docs/builders/builder-types/ko/) builder is 
 
 ## Creating a `Shoot` Cluster
 
-> ![NOTE]
+> [!NOTE]
 > The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 You can wait for the `Seed` to be ready by running:
