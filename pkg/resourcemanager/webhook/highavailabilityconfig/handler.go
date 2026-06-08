@@ -17,7 +17,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -237,27 +236,6 @@ func (h *Handler) handleStatefulSet(
 
 func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
 	switch req.Kind.Version {
-	case autoscalingv2beta1.SchemeGroupVersion.Version:
-		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{}
-		if err := h.Decoder.Decode(req, hpa); err != nil {
-			return nil, err
-		}
-
-		log := h.Logger.WithValues("hpa", kubernetesutils.ObjectKeyForCreateWebhooks(hpa, req))
-
-		if err := mutateAutoscalingReplicas(
-			log,
-			failureToleranceType,
-			hpa,
-			func() *int32 { return hpa.Spec.MinReplicas },
-			func(n *int32) { hpa.Spec.MinReplicas = n },
-			func() int32 { return hpa.Spec.MaxReplicas },
-			func(n int32) { hpa.Spec.MaxReplicas = n },
-		); err != nil {
-			return nil, err
-		}
-
-		return hpa, nil
 	case autoscalingv2.SchemeGroupVersion.Version:
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{}
 		if err := h.Decoder.Decode(req, hpa); err != nil {
