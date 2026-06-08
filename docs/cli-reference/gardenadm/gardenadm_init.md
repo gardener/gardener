@@ -23,11 +23,12 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a
 ### Options
 
 ```
-  -d, --config-dir string    Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
-  -h, --help                 help for init
-      --use-bootstrap-etcd   If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This can be useful for testing purposes to save time.
-      --use-host-network     If set, gardener-resource-manager and extensions continue to run in host network instead of getting redeployed into the pod network after bootstrapping. This can be useful for testing purposes to save time.
-  -z, --zone string          Availability zone for the new node. Required if the control plane worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.
+      --backup-data-path string   Local path on the node where the etcd backup data is stored. Expected structure: <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2
+  -d, --config-dir string         Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
+  -h, --help                      help for init
+      --use-bootstrap-etcd        If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This can be useful for testing purposes to save time.
+      --use-host-network          If set, gardener-resource-manager and extensions continue to run in host network instead of getting redeployed into the pod network after bootstrapping. This can be useful for testing purposes to save time.
+  -z, --zone string               Availability zone for the new node. Required if the control plane worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.
 ```
 
 ### Options inherited from parent commands
