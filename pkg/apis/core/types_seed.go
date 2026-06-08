@@ -221,6 +221,8 @@ type SeedSettings struct {
 	LoadBalancerServices *SeedSettingLoadBalancerServices
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
+	// PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the seed.
+	PersistentVolumeClaimAutoscaler *SeedSettingPersistentVolumeClaimAutoscaler
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
 	DependencyWatchdog *SeedSettingDependencyWatchdog
 	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
@@ -348,6 +350,13 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// The VerticalPodAutoscaler-level maximum allowed takes precedence over the global maximum allowed.
 	// For more information, see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/examples.md#specifying-global-maximum-allowed-resources-to-prevent-pods-from-being-unschedulable.
 	MaxAllowed corev1.ResourceList
+}
+
+// SeedSettingPersistentVolumeClaimAutoscaler controls the pvc-autoscaler settings for the seed.
+type SeedSettingPersistentVolumeClaimAutoscaler struct {
+	// Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster. It
+	// is disabled by default.
+	Enabled bool
 }
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
