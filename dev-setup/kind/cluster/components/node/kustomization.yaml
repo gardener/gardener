@@ -49,7 +49,7 @@ patches:
         apiServer:
           extraArgs:
             feature-gates: "MutatingAdmissionPolicy=true"
-            runtime-config: "admissionregistration.k8s.io/v1alpha1=true,admissionregistration.k8s.io/v1beta1=true"
+            runtime-config: "admissionregistration.k8s.io/v1beta1=true"
         controllerManager:
           extraArgs:
             # TODO(LucaBernstein): Remove once kind uses a Kubernetes version that includes the fix for
