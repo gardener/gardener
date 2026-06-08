@@ -28,7 +28,6 @@ import (
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -411,7 +410,6 @@ var _ = Describe("Constraints", func() {
 		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
 
 		withoutSelectorsTables(schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"))
-		withoutSelectorsTables(schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"))
 		withoutSelectorsTables(schedulingv1beta1.SchemeGroupVersion.WithResource("priorityclasses"))
 
 		withoutSelectorsTables(schema.GroupVersionResource{
