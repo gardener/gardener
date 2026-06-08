@@ -90,23 +90,16 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 }
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
-func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV2, additionalDataInPlace []string) (string, error) {
+func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData, additionalDataInPlace []string) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
 		return WorkerPoolHashInPlace(pool, cluster, additionalDataInPlace...)
 	}
 
 	if pool.NodeAgentSecretName == nil {
-		return "", fmt.Errorf("missing node-agent secret name for worker pool %v", pool.Name)
+		return "", fmt.Errorf("missing node-agent secret name for worker pool %q", pool.Name)
 	}
 
-	return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
-}
-
-// WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
-func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (string, error) {
-	data := []string{nodeAgentSecretName}
-
-	data = append(data, additionalData...)
+	data := append([]string{*pool.NodeAgentSecretName}, additionalData...)
 
 	var result strings.Builder
 	for _, v := range data {
@@ -121,7 +114,7 @@ func WorkerPoolHashInPlace(pool extensionsv1alpha1.WorkerPool, cluster *extensio
 	data := []string{}
 
 	if pool.NodeAgentSecretName == nil {
-		return "", fmt.Errorf("missing node-agent secret name for worker pool %v", pool.Name)
+		return "", fmt.Errorf("missing node-agent secret name for worker pool %q", pool.Name)
 	}
 	data = append(data, *pool.NodeAgentSecretName)
 

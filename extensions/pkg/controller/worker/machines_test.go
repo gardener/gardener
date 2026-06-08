@@ -71,11 +71,11 @@ var _ = Describe("Machines", func() {
 		)
 	})
 
-	Describe("#WorkerPoolHashV2", func() {
+	Describe("#WorkerPoolHash", func() {
 		var (
 			p                     extensionsv1alpha1.WorkerPool
 			hash                  string
-			additionalDataV2      []string
+			additionalData        []string
 			additionalDataInPlace []string
 		)
 
@@ -84,17 +84,17 @@ var _ = Describe("Machines", func() {
 			p = extensionsv1alpha1.WorkerPool{
 				NodeAgentSecretName: &nodeAgentSecretName,
 			}
-			additionalDataV2 = []string{"sample"}
+			additionalData = []string{"sample"}
 			additionalDataInPlace = []string{"sample"}
 
 			var err error
-			hash, err = WorkerPoolHash(p, nil, additionalDataV2, additionalDataInPlace)
+			hash, err = WorkerPoolHash(p, nil, additionalData, additionalDataInPlace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, nil, additionalDataV2, additionalDataInPlace)
+				actual, err := WorkerPoolHash(p, nil, additionalData, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -142,13 +142,13 @@ var _ = Describe("Machines", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, nil, additionalDataV2, additionalDataInPlace)
+				actual, err := WorkerPoolHash(p, nil, additionalData, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
 			})
 
 			It("when changing additional data", func() {
-				additionalDataV2 = []string{"test"}
+				additionalData = []string{"test"}
 			})
 
 			It("when changing nodeAgentSecretName", func() {
@@ -164,7 +164,7 @@ var _ = Describe("Machines", func() {
 			hash                        string
 			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
 			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
-			additionalDataV2            []string
+			additionalData              []string
 			additionalDataInPlace       []string
 		)
 
@@ -208,17 +208,17 @@ var _ = Describe("Machines", func() {
 				NodeAgentSecretName: &nodeAgentSecretName,
 				UpdateStrategy:      new(gardencorev1beta1.AutoInPlaceUpdate),
 			}
-			additionalDataV2 = []string{"sample"}
+			additionalData = []string{"sample"}
 			additionalDataInPlace = []string{"sample"}
 
 			var err error
-			hash, err = WorkerPoolHash(p, c, additionalDataV2, additionalDataInPlace)
+			hash, err = WorkerPoolHash(p, c, additionalData, additionalDataInPlace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, c, additionalDataV2, additionalDataInPlace)
+				actual, err := WorkerPoolHash(p, c, additionalData, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -252,7 +252,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing additional data for V2", func() {
-				additionalDataV2 = []string{"test"}
+				additionalData = []string{"test"}
 			})
 
 			It("when changing machine type", func() {
@@ -262,7 +262,7 @@ var _ = Describe("Machines", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, c, additionalDataV2, additionalDataInPlace)
+				actual, err := WorkerPoolHash(p, c, additionalData, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
 			})
@@ -292,7 +292,7 @@ var _ = Describe("Machines", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.DeepCopy()
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = nil
-				hash, err = WorkerPoolHash(p, c, additionalDataV2, additionalDataInPlace)
+				hash, err = WorkerPoolHash(p, c, additionalData, additionalDataInPlace)
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
@@ -307,7 +307,7 @@ var _ = Describe("Machines", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.DeepCopy()
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = nil
-				hash, err = WorkerPoolHash(p, c, additionalDataV2, additionalDataInPlace)
+				hash, err = WorkerPoolHash(p, c, additionalData, additionalDataInPlace)
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
