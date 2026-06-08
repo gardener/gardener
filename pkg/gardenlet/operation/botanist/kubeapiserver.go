@@ -27,8 +27,8 @@ import (
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 

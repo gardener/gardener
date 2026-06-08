@@ -233,7 +233,9 @@ var _ = Describe("Handler", func() {
 			configMap.Data = map[string]string{"config.yaml": "foo"}
 			Expect(fakeClient.Update(ctx, configMap)).To(Succeed())
 
-			handler.AdmitConfig = func(_ context.Context, _ string, _ []*core.Shoot) (int32, error) { return 1337, fmt.Errorf("fake error") }
+			handler.AdmitConfig = func(_ context.Context, _ string, _ []*core.Shoot) (int32, error) {
+				return 1337, fmt.Errorf("fake error")
+			}
 
 			response := handler.Handle(ctx, request)
 			Expect(response.Allowed).To(BeFalse())
@@ -362,7 +364,9 @@ var _ = Describe("Handler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			request.OldObject.Raw = rawConfigMap
 
-			handler.AdmitConfig = func(_ context.Context, _ string, _ []*core.Shoot) (int32, error) { return 1337, fmt.Errorf("fake error") }
+			handler.AdmitConfig = func(_ context.Context, _ string, _ []*core.Shoot) (int32, error) {
+				return 1337, fmt.Errorf("fake error")
+			}
 
 			response := handler.Handle(ctx, request)
 			Expect(response.Allowed).To(BeFalse())
