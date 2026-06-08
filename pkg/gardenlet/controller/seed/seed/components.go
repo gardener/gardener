@@ -28,6 +28,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
@@ -89,6 +90,7 @@ type components struct {
 	persesCRD        component.DeployWaiter
 	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
+	pvcautoscalerCRD component.DeployWaiter
 
 	backupBucket            component.DeployWaiter
 	clusterIdentity         component.DeployWaiter
@@ -183,6 +185,13 @@ func (r *Reconciler) instantiateComponents(
 	c.victoriaCRD, err = victoriaoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
+	}
+	c.pvcautoscalerCRD, err = pvcautoscaler.NewCRDs(r.SeedClientSet.Client())
+	if err != nil {
+		return
+	}
+	if !pvcAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
+		c.pvcautoscalerCRD = component.OpDestroyAndWait(c.pvcautoscalerCRD)
 	}
 
 	// seed system components
