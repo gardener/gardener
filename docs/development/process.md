@@ -38,7 +38,7 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.152  | Week 38-39 | September 14, 2026     | September 27, 2026 | [@ary1992](https://github.com/ary1992)                       |
  v1.153  | Week 40-41 | September 28, 2026     | October 11, 2026   | [@ScheererJ](https://github.com/ScheererJ)                   |
  v1.154  | Week 42-43 | October 12, 2026       | October 25, 2026   | [@oliver-goetz](https://github.com/oliver-goetz)             |
- v1.155  | Week 44-45 | October 26, 2026       | November 8, 2026   | [@tobschli](https://github.com/tobschli)                     |
+ v1.155  | Week 44-45 | October 26, 2026       | November 8, 2026   | [@LucaBernstein](https://github.com/LucaBernstein)           |
  v1.156  | Week 46-47 | November 9, 2026       | November 22, 2026  | [@plkokanov](https://github.com/plkokanov)                   |
  v1.157  | Week 48-49 | November 23, 2026      | December 6, 2026   | [@rfranzke](https://github.com/rfranzke)                     |
  v1.158  | Week 50-53 | December 7, 2026       | January 3, 2027    | [@shafeeqes](https://github.com/shafeeqes)                   |
