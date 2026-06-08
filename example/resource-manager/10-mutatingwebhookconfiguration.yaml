@@ -121,7 +121,6 @@ webhooks:
   - apiGroups:
     - autoscaling
     apiVersions:
-    - v2beta1
     - v2
     operations:
     - CREATE

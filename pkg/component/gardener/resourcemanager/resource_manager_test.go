@@ -1012,7 +1012,7 @@ var _ = Describe("ResourceManager", func() {
 						{
 							Rule: admissionregistrationv1.Rule{
 								APIGroups:   []string{"autoscaling"},
-								APIVersions: []string{"v2beta1", "v2"},
+								APIVersions: []string{"v2"},
 								Resources:   []string{"horizontalpodautoscalers"},
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
@@ -1356,7 +1356,6 @@ webhooks:
   - apiGroups:
     - autoscaling
     apiVersions:
-    - v2beta1
     - v2
     operations:
     - CREATE
