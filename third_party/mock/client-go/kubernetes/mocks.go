@@ -28,8 +28,6 @@ import (
 	v1beta12 "k8s.io/client-go/kubernetes/typed/authorization/v1beta1"
 	v13 "k8s.io/client-go/kubernetes/typed/autoscaling/v1"
 	v2 "k8s.io/client-go/kubernetes/typed/autoscaling/v2"
-	v2beta1 "k8s.io/client-go/kubernetes/typed/autoscaling/v2beta1"
-	v2beta2 "k8s.io/client-go/kubernetes/typed/autoscaling/v2beta2"
 	v14 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	v1beta13 "k8s.io/client-go/kubernetes/typed/batch/v1beta1"
 	v15 "k8s.io/client-go/kubernetes/typed/certificates/v1"
@@ -63,10 +61,10 @@ import (
 	v1beta114 "k8s.io/client-go/kubernetes/typed/resource/v1beta1"
 	v1beta21 "k8s.io/client-go/kubernetes/typed/resource/v1beta2"
 	v116 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
-	v1alpha15 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
+	v1alpha20 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha2"
 	v1beta115 "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
 	v117 "k8s.io/client-go/kubernetes/typed/storage/v1"
-	v1alpha16 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
+	v1alpha15 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 	v1beta116 "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 	v1beta117 "k8s.io/client-go/kubernetes/typed/storagemigration/v1beta1"
 )
@@ -275,34 +273,6 @@ func (m *MockInterface) AutoscalingV2() v2.AutoscalingV2Interface {
 func (mr *MockInterfaceMockRecorder) AutoscalingV2() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AutoscalingV2", reflect.TypeOf((*MockInterface)(nil).AutoscalingV2))
-}
-
-// AutoscalingV2beta1 mocks base method.
-func (m *MockInterface) AutoscalingV2beta1() v2beta1.AutoscalingV2beta1Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AutoscalingV2beta1")
-	ret0, _ := ret[0].(v2beta1.AutoscalingV2beta1Interface)
-	return ret0
-}
-
-// AutoscalingV2beta1 indicates an expected call of AutoscalingV2beta1.
-func (mr *MockInterfaceMockRecorder) AutoscalingV2beta1() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AutoscalingV2beta1", reflect.TypeOf((*MockInterface)(nil).AutoscalingV2beta1))
-}
-
-// AutoscalingV2beta2 mocks base method.
-func (m *MockInterface) AutoscalingV2beta2() v2beta2.AutoscalingV2beta2Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AutoscalingV2beta2")
-	ret0, _ := ret[0].(v2beta2.AutoscalingV2beta2Interface)
-	return ret0
-}
-
-// AutoscalingV2beta2 indicates an expected call of AutoscalingV2beta2.
-func (mr *MockInterfaceMockRecorder) AutoscalingV2beta2() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AutoscalingV2beta2", reflect.TypeOf((*MockInterface)(nil).AutoscalingV2beta2))
 }
 
 // BatchV1 mocks base method.
@@ -795,18 +765,18 @@ func (mr *MockInterfaceMockRecorder) SchedulingV1() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SchedulingV1", reflect.TypeOf((*MockInterface)(nil).SchedulingV1))
 }
 
-// SchedulingV1alpha1 mocks base method.
-func (m *MockInterface) SchedulingV1alpha1() v1alpha15.SchedulingV1alpha1Interface {
+// SchedulingV1alpha2 mocks base method.
+func (m *MockInterface) SchedulingV1alpha2() v1alpha20.SchedulingV1alpha2Interface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SchedulingV1alpha1")
-	ret0, _ := ret[0].(v1alpha15.SchedulingV1alpha1Interface)
+	ret := m.ctrl.Call(m, "SchedulingV1alpha2")
+	ret0, _ := ret[0].(v1alpha20.SchedulingV1alpha2Interface)
 	return ret0
 }
 
-// SchedulingV1alpha1 indicates an expected call of SchedulingV1alpha1.
-func (mr *MockInterfaceMockRecorder) SchedulingV1alpha1() *gomock.Call {
+// SchedulingV1alpha2 indicates an expected call of SchedulingV1alpha2.
+func (mr *MockInterfaceMockRecorder) SchedulingV1alpha2() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SchedulingV1alpha1", reflect.TypeOf((*MockInterface)(nil).SchedulingV1alpha1))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SchedulingV1alpha2", reflect.TypeOf((*MockInterface)(nil).SchedulingV1alpha2))
 }
 
 // SchedulingV1beta1 mocks base method.
@@ -838,10 +808,10 @@ func (mr *MockInterfaceMockRecorder) StorageV1() *gomock.Call {
 }
 
 // StorageV1alpha1 mocks base method.
-func (m *MockInterface) StorageV1alpha1() v1alpha16.StorageV1alpha1Interface {
+func (m *MockInterface) StorageV1alpha1() v1alpha15.StorageV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StorageV1alpha1")
-	ret0, _ := ret[0].(v1alpha16.StorageV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha15.StorageV1alpha1Interface)
 	return ret0
 }
 
