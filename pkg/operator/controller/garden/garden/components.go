@@ -36,6 +36,7 @@ import (
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/api/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -1280,12 +1281,16 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	values := gardenerscheduler.Values{
 		Image:    image.String(),
 		LogLevel: logger.InfoLevel,
+		Strategy: schedulerconfigv1alpha1.Default,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Scheduler; config != nil {
 		values.FeatureGates = config.FeatureGates
 		if config.LogLevel != nil {
 			values.LogLevel = *config.LogLevel
+		}
+		if config.Strategy != nil {
+			values.Strategy = schedulerconfigv1alpha1.CandidateDeterminationStrategy(*config.Strategy)
 		}
 	}
 

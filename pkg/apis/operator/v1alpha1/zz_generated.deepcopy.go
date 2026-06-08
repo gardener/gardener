@@ -1266,6 +1266,11 @@ func (in *GardenerResourceManagerConfig) DeepCopy() *GardenerResourceManagerConf
 func (in *GardenerSchedulerConfig) DeepCopyInto(out *GardenerSchedulerConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
+	if in.Strategy != nil {
+		in, out := &in.Strategy, &out.Strategy
+		*out = new(string)
+		**out = **in
+	}
 	if in.LogLevel != nil {
 		in, out := &in.LogLevel, &out.LogLevel
 		*out = new(string)

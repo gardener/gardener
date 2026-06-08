@@ -11,6 +11,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -47,6 +48,9 @@ type Values struct {
 	LogLevel string
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
+	// Strategy is the candidate determination strategy used to assign a seed to shoots.
+	// If empty, the scheduler binary's defaulting will apply.
+	Strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy
 }
 
 // New creates a new instance of DeployWaiter for the gardener-scheduler.

@@ -65,7 +65,7 @@ func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error
 		},
 		Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
 			Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
-				Strategy: schedulerconfigv1alpha1.MinimalDistance,
+				Strategy: g.values.Strategy,
 			},
 		},
 		FeatureGates: g.values.FeatureGates,

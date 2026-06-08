@@ -641,6 +641,13 @@ type GardenerResourceManagerConfig struct {
 type GardenerSchedulerConfig struct {
 	gardencorev1beta1.KubernetesConfig `json:",inline"`
 
+	// Strategy is the candidate determination strategy that defines how seeds for shoots that do not
+	// specify a seed explicitly are determined. Must be one of "SameRegion" or "MinimalDistance".
+	// Defaults to "SameRegion".
+	// +kubebuilder:validation:Enum=SameRegion;MinimalDistance
+	// +kubebuilder:default=SameRegion
+	// +optional
+	Strategy *string `json:"strategy,omitempty"`
 	// LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
 	// Defaults to info.
 	// +kubebuilder:validation:Enum=info;debug;error

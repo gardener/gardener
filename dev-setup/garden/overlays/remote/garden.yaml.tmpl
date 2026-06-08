@@ -48,3 +48,6 @@ spec:
           # Enter subdomain of your primary domain e.g. "discovery.my-garden.my-domain.com"
           name: ""
           provider: primary
+      scheduler:
+        # Required for the remote getting-started flow so shoots of different providers can be scheduled to the same seed.
+        strategy: MinimalDistance
