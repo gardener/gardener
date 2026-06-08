@@ -247,6 +247,8 @@ build:
             - pkg/utils/workloadidentity
             - pkg/webhook/configvalidator
             - plugin/pkg
+            - third_party/kube-state-metrics/pkg/customresourcestate
+            - third_party/kube-state-metrics/pkg/metric
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

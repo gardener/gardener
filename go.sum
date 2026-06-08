@@ -353,8 +353,6 @@ github.com/go-test/deep v1.1.1 h1:0r/53hagsehfO4bzD2Pgr/+RgHqhmf+k1Bpse2cTu1U=
 github.com/go-test/deep v1.1.1/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
 github.com/go-viper/mapstructure/v2 v2.5.0 h1:vM5IJoUAy3d7zRSVtIwQgBj7BiWtMPfmPEgAXnvj1Ro=
 github.com/go-viper/mapstructure/v2 v2.5.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
-github.com/gobuffalo/flect v1.0.3 h1:xeWBM2nui+qnVvNM4S3foBhCAL2XgPU+a7FdpelbTq4=
-github.com/gobuffalo/flect v1.0.3/go.mod h1:A5msMlrHtLqh9umBSnvabjsMrCcCpAyzglnDvkbYKHs=
 github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
 github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
 github.com/goccy/go-yaml v1.19.2 h1:PmFC1S6h8ljIz6gMRBopkjP1TVT7xuwrButHID66PoM=
@@ -1099,8 +1097,6 @@ k8s.io/cloud-provider v0.36.2/go.mod h1:mVFXxKcbigdGOUebI2zPvzRLfqstkPtdpVy46sqo
 k8s.io/cluster-bootstrap v0.36.2 h1:WUn8sOrJ5Vu0yHyEM3QT72Ut7SzCk4bd8losb9EN9DA=
 k8s.io/cluster-bootstrap v0.36.2/go.mod h1:X1XIuZE+SLEz9ZCzcmuUoSkwBJvWQ3X+fTJw08MS5Ic=
 k8s.io/code-generator v0.19.0/go.mod h1:moqLn7w0t9cMs4+5CQyxnfA/HV8MF6aAVENF+WZZhgk=
-k8s.io/code-generator v0.36.1 h1:5bHQ7NbBcFFLHcoyo/hgU3m2tQV5RLz2nv4QNDlsbXc=
-k8s.io/code-generator v0.36.1/go.mod h1:oCv8WmrW2RGdcMyvSk1aYbBfSs51ggtSFQr1YNeuAuo=
 k8s.io/component-base v0.36.2 h1:Z0VH80O7Ng0HDZnZj3WRR3urEGa0kTwmO8CwEwjVK1w=
 k8s.io/component-base v0.36.2/go.mod h1:mGfFOA7Gwpdm1VW2cwSQYbiDIlz8GD2WGwH88QSeCyA=
 k8s.io/component-helpers v0.36.2 h1:YsqocS183ThSUw90OXsxkKxIgdQF4qWInwrn6pZdDH8=
@@ -1140,8 +1136,6 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 h1:hSfpvjjTQXQY2
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
 sigs.k8s.io/controller-runtime v0.24.1 h1:miPEwrmirImAvgME1L9qebGHrOnGJoVmVdtOU9fRfo4=
 sigs.k8s.io/controller-runtime v0.24.1/go.mod h1:vFkfY5fGt5xAC/sKb8IBFKgWPNKG9OUG29dR8Y2wImw=
-sigs.k8s.io/controller-tools v0.21.0 h1:KXDQza3bgjlPY6xLR63tI/40gzjhyUAvkCrwzd2/6cs=
-sigs.k8s.io/controller-tools v0.21.0/go.mod h1:DLIypi3Q2+azVAP8jr/mHXJgveYYHFjhnNOUuBJ10JE=
 sigs.k8s.io/gateway-api v1.5.0 h1:duoo14Ky/fJXpjpmyMISE2RTBGnfCg8zICfTYLTnBJA=
 sigs.k8s.io/gateway-api v1.5.0/go.mod h1:GvCETiaMAlLym5CovLxGjS0NysqFk3+Yuq3/rh6QL2o=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=

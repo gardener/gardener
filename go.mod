@@ -77,7 +77,6 @@ require (
 	k8s.io/client-go v0.36.2
 	k8s.io/cloud-provider v0.36.2
 	k8s.io/cluster-bootstrap v0.36.2
-	k8s.io/code-generator v0.36.1
 	k8s.io/component-base v0.36.2
 	k8s.io/component-helpers v0.36.2
 	k8s.io/klog/v2 v2.140.0
@@ -89,7 +88,6 @@ require (
 	k8s.io/pod-security-admission v0.36.2
 	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
 	sigs.k8s.io/controller-runtime v0.24.1
-	sigs.k8s.io/controller-tools v0.21.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -205,7 +203,6 @@ require (
 	github.com/go-openapi/testify/v2 v2.5.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
-	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect

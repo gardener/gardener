@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO(timuthy): Revert this!
+//go:generate ../../../../../../hack/generate-crds.sh -p crd- dashboard.gardener.cloud
 
 package assets
 
