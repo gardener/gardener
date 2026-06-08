@@ -121,8 +121,8 @@ build:
             - pkg/component/autoscaling/pvcautoscaler
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
-            - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
-            - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
+            - pkg/component/autoscaling/vpa/third_party/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
+            - pkg/component/autoscaling/vpa/third_party/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
             - pkg/component/clusteridentity
             - pkg/component/crddeployer
             - pkg/component/etcd/copybackupstask

@@ -17,7 +17,7 @@ else
 # dependency on github.com/gardener/gardener is optional.
 # If other repos don't use it and the project doesn't depend on the package, silence the error to minimize confusion.
 GARDENER_HACK_DIR          := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener 2>/dev/null)/hack
-MODFILE_TOOL_MOD           := -modfile $(GARDENER_HACK_DIR)/tools/mod/go.mod
+MODFILE_TOOL_MOD           := -modfile $(GARDENER_HACK_DIR)/../pkg/internal/tools/go.mod
 endif
 
 SYSTEM_NAME                := $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -112,6 +112,8 @@ tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$
 # Use this function to get the version of a go module from go.mod
 version_gomod = $(shell go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))
 
+# Use this function to copy the tool binary built by Go to the location passed as arg.
+#   E.g., `$(call go_tool_copy,./path/to/tool)` will copy the tool binary built by Go to ./path/to/tool.
 go_tool_copy = $(shell cp $$(go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
 
 # This target cleans up any previous version files for the given tool and creates the given version file.

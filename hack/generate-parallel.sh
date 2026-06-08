@@ -19,7 +19,7 @@ pushd "$PROJECT_ROOT" > /dev/null
 # Helper function to check if package has changed
 package_changed() {
   local package=$1
-  local current_module="$(go mod edit -json | jq -r .Module.Path)"
+  local current_module="$(GOWORK=off go list -m -f '{{ .Path }}')"
 
   # Check if package is external (not from current module)
   if [[ "$package" != "$current_module"/* ]]; then
