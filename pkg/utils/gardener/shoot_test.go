@@ -408,6 +408,14 @@ var _ = Describe("Shoot", func() {
 		Entry("test two", "bar", types.UID("4-5"), "bar--4-5"),
 	)
 
+	DescribeTable("#ComputeManagedServiceAccountIssuerURL",
+		func(hostname, projectName, shootUID, expected string) {
+			Expect(ComputeManagedServiceAccountIssuerURL(hostname, projectName, shootUID)).To(Equal(expected))
+		},
+		Entry("standard inputs", "discovery.example.com", "my-project", "abc-123", "https://discovery.example.com/projects/my-project/shoots/abc-123/issuer"),
+		Entry("custom domain", "custom.issuer.io", "garden-prod", "uid-456", "https://custom.issuer.io/projects/garden-prod/shoots/uid-456/issuer"),
+	)
+
 	DescribeTable("#IsShootProjectConfigMap",
 		func(name, expectedShootName string, expectedOK bool) {
 			shootName, ok := IsShootProjectConfigMap(name)

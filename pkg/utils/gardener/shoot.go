@@ -936,3 +936,9 @@ func CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName string, kubernetesVe
 
 	return utils.ComputeSHA256Hex([]byte(result.String()))[:16], nil
 }
+
+// ComputeManagedServiceAccountIssuerURL computes the managed service account issuer URL for a shoot
+// given the discovery server hostname, the project name, and the shoot UID.
+func ComputeManagedServiceAccountIssuerURL(hostname, projectName, shootUID string) string {
+	return fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", hostname, projectName, shootUID)
+}
