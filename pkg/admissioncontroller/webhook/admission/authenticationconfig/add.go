@@ -5,12 +5,15 @@
 package authenticationconfig
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/apis/apiserver"
@@ -25,6 +28,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -52,6 +56,7 @@ func AddToManager(mgr manager.Manager) error {
 
 // NewHandler returns a new handler for validating authentication configuration.
 func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission.Handler {
+	h := &handler{apiReader: apiReader}
 	return &configvalidator.Handler{
 		APIReader: apiReader,
 		Client:    c,
@@ -63,13 +68,20 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 			return gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
 		SkipValidationOnShootUpdate: func(shoot, oldShoot *gardencore.Shoot) bool {
+			if gardencorehelper.HasManagedIssuer(shoot) != gardencorehelper.HasManagedIssuer(oldShoot) {
+				return false
+			}
 			if !gardencorehelper.IsLegacyAnonymousAuthenticationSet(oldShoot.Spec.Kubernetes.KubeAPIServer) && gardencorehelper.IsLegacyAnonymousAuthenticationSet(shoot.Spec.Kubernetes.KubeAPIServer) {
 				return false // Don't skip validation when the deprecated anonymous authentication is being set.
 			}
 			return sets.New(getIssuersFromShoot(shoot)...).Equal(sets.New(getIssuersFromShoot(oldShoot)...))
 		},
-		AdmitConfig: admitConfig,
+		AdmitConfig: h.admitConfig,
 	}
+}
+
+type handler struct {
+	apiReader client.Reader
 }
 
 var decoder runtime.Decoder
@@ -81,7 +93,7 @@ func init() {
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 }
 
-func admitConfig(authenticationConfigurationRaw string, shoots []*gardencore.Shoot) (int32, error) {
+func (h *handler) admitConfig(ctx context.Context, authenticationConfigurationRaw string, shoots []*gardencore.Shoot) (int32, error) {
 	obj, schemaVersion, err := decoder.Decode([]byte(authenticationConfigurationRaw), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided authentication configuration: %w", err)
@@ -92,7 +104,12 @@ func admitConfig(authenticationConfigurationRaw string, shoots []*gardencore.Sho
 		return http.StatusInternalServerError, fmt.Errorf("failed to cast to authentication configuration type: %v", schemaVersion)
 	}
 
-	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authenticationcel.NewDefaultCompiler(), authenticationConfig, getDisallowedIssuers(shoots)); len(errList) != 0 {
+	disallowedIssuers, err := h.getDisallowedIssuers(ctx, shoots)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authenticationcel.NewDefaultCompiler(), authenticationConfig, disallowedIssuers); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
 	}
 
@@ -105,12 +122,79 @@ func admitConfig(authenticationConfigurationRaw string, shoots []*gardencore.Sho
 	return 0, nil
 }
 
-func getDisallowedIssuers(shoots []*gardencore.Shoot) []string {
+func (h *handler) getDisallowedIssuers(ctx context.Context, shoots []*gardencore.Shoot) ([]string, error) {
 	var disallowedIssuers []string
 	for _, shoot := range shoots {
 		disallowedIssuers = append(disallowedIssuers, getIssuersFromShoot(shoot)...)
 	}
-	return disallowedIssuers
+
+	computedIssuers, err := h.computeManagedIssuers(ctx, shoots)
+	if err != nil {
+		return nil, err
+	}
+	disallowedIssuers = append(disallowedIssuers, computedIssuers...)
+
+	return disallowedIssuers, nil
+}
+
+func (h *handler) computeManagedIssuers(ctx context.Context, shoots []*gardencore.Shoot) ([]string, error) {
+	var managedShoots []*gardencore.Shoot
+	for _, shoot := range shoots {
+		if gardencorehelper.HasManagedIssuer(shoot) && shoot.UID != "" {
+			managedShoots = append(managedShoots, shoot)
+		}
+	}
+
+	if len(managedShoots) == 0 {
+		return nil, nil
+	}
+
+	hostname, err := h.getServiceAccountIssuerHostname(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if hostname == "" {
+		return nil, nil
+	}
+
+	var issuers []string
+	for _, shoot := range managedShoots {
+		projectName, err := h.getProjectName(ctx, shoot.Namespace)
+		if err != nil {
+			return nil, err
+		}
+		if projectName == "" {
+			continue
+		}
+		issuers = append(issuers, gardenerutils.ComputeManagedServiceAccountIssuerURL(hostname, projectName, string(shoot.UID)))
+	}
+
+	return issuers, nil
+}
+
+func (h *handler) getServiceAccountIssuerHostname(ctx context.Context) (string, error) {
+	secretList := &corev1.SecretList{}
+	if err := h.apiReader.List(ctx, secretList,
+		client.InNamespace(v1beta1constants.GardenNamespace),
+		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer},
+	); err != nil {
+		return "", fmt.Errorf("failed to list service account issuer secrets: %w", err)
+	}
+
+	if len(secretList.Items) == 0 {
+		return "", nil
+	}
+
+	return string(secretList.Items[0].Data["hostname"]), nil
+}
+
+func (h *handler) getProjectName(ctx context.Context, namespace string) (string, error) {
+	ns := &corev1.Namespace{}
+	if err := h.apiReader.Get(ctx, types.NamespacedName{Name: namespace}, ns); err != nil {
+		return "", fmt.Errorf("failed to get namespace %s: %w", namespace, err)
+	}
+
+	return ns.Labels[v1beta1constants.ProjectName], nil
 }
 
 func getIssuersFromShoot(shoot *gardencore.Shoot) []string {
@@ -122,9 +206,10 @@ func getIssuersFromShoot(shoot *gardencore.Shoot) []string {
 	}
 
 	for _, addr := range shoot.Status.AdvertisedAddresses {
-		if addr.Name == v1beta1constants.AdvertisedAddressServiceAccountIssuer {
+		switch addr.Name {
+		case v1beta1constants.AdvertisedAddressInternal,
+			v1beta1constants.AdvertisedAddressExternal:
 			issuers = append(issuers, addr.URL)
-			break
 		}
 	}
 

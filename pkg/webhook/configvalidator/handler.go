@@ -63,7 +63,7 @@ type Handler struct {
 	ConfigMapDataKey            string
 	GetConfigMapNameFromShoot   func(shoot *gardencore.Shoot) string
 	SkipValidationOnShootUpdate func(shoot, oldShoot *gardencore.Shoot) bool
-	AdmitConfig                 func(configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
+	AdmitConfig                 func(ctx context.Context, configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
 
 	GetNamespace                func() string
 	GetConfigMapNamesFromGarden func(garden *operatorv1alpha1.Garden) []string
@@ -203,7 +203,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(configMap), err))
 	}
 
-	if errCode, err := h.AdmitConfig(configRaw, []*gardencore.Shoot{shoot}); err != nil {
+	if errCode, err := h.AdmitConfig(ctx, configRaw, []*gardencore.Shoot{shoot}); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
@@ -259,7 +259,7 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
 	}
 
-	if errCode, err := h.AdmitConfig(configRaw, shoots); err != nil {
+	if errCode, err := h.AdmitConfig(ctx, configRaw, shoots); err != nil {
 		return admission.Errored(errCode, err)
 	}
 

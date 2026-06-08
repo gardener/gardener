@@ -5,6 +5,8 @@
 package auditpolicy
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -52,6 +54,6 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 	}
 }
 
-func admitConfig(auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
+func admitConfig(_ context.Context, auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
 	return configvalidator.AdmitAuditPolicy(auditPolicyRaw)
 }
