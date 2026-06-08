@@ -269,7 +269,7 @@ case "$command" in
   self-hosted-shoot|shs)
     shift; cmd_self_hosted_shoot "$@" ;;
   shoot)
-    shift; cmd_shoot "$@" ;;
+    [[ $# -gt 0 ]] && shift; cmd_shoot "$@" ;;
   --help|-h)
     usage 0 ;;
   --*)
