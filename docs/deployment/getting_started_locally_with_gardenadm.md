@@ -320,7 +320,7 @@ make seed-up KUBECONFIG=./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
 
 This deploys a seed gardenlet via a `ManagedSeed` into the self-hosted shoot.
 
-> ![NOTE]
+> [!NOTE]
 > The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 You can wait for the `Seed` to be ready by running:
@@ -340,7 +340,7 @@ Once the `Seed` is ready, you can create shoot clusters on top of it.
 
 ### Creating a (Hosted) `Shoot` Cluster
 
-> ![NOTE]
+> [!NOTE]
 > The following steps assume that you are using the kubeconfig that points to the virtual garden cluster: `export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
 
 In order to create a first (hosted) shoot cluster, just run:
