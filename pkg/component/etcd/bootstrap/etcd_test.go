@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -72,7 +73,7 @@ var _ = Describe("Etcd", func() {
 					Name: "data",
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
-							Path: "/var/lib/etcd-main/data/new.etcd",
+							Path: "/var/lib/etcd-main/data",
 							Type: new(corev1.HostPathDirectoryOrCreate),
 						},
 					},
@@ -83,6 +84,43 @@ var _ = Describe("Etcd", func() {
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-peer-ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-peer-server-tls")}),
 			))
+		})
+
+		It("should create and mount etcd initialize config via ConfigMap", func() {
+			etcd = New(c, namespace, sm, Values{
+				Image: image,
+				Role:  "main",
+				BackupRestore: &backuprestore.Config{
+					EtcdbrctlImage:        "europe-docker.pkg.dev/gardener-project/public/gardener/etcdbrctl:v0.40.0",
+					StoreContainer:        "my-bucket",
+					StorePrefix:           "prefix",
+					BackupBucketsHostPath: "/etc/gardener/local-backupbuckets",
+				},
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(statefulSet), statefulSet)).To(Succeed())
+
+			cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "etcd-bootstrap-main-config", Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
+			Expect(cm.Data).To(HaveKey("etcd.conf.yaml"))
+
+			Expect(statefulSet.Spec.Template.Spec.InitContainers).To(HaveLen(1))
+			Expect(statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts).To(ContainElement(
+				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-conf"), "MountPath": Equal("/var/etcd/config")}),
+			))
+
+			var etcdConfVolume *corev1.Volume
+			for i := range statefulSet.Spec.Template.Spec.Volumes {
+				v := &statefulSet.Spec.Template.Spec.Volumes[i]
+				if v.Name == "etcd-conf" {
+					etcdConfVolume = v
+					break
+				}
+			}
+			Expect(etcdConfVolume).NotTo(BeNil())
+			Expect(etcdConfVolume.VolumeSource.ConfigMap).NotTo(BeNil())
+			Expect(etcdConfVolume.VolumeSource.ConfigMap.Name).To(Equal("etcd-bootstrap-main-config"))
 		})
 	})
 
