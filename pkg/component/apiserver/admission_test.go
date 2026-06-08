@@ -128,8 +128,8 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 				{
 					AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
 						Name: "ValidatingAdmissionWebhook",
-						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
-kind: WebhookAdmission
+						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
 kubeConfigFile: /etc/kubernetes/foobar.yaml
 `)},
 					},
@@ -183,8 +183,8 @@ plugins:
 kind: WebhookAdmissionConfiguration
 kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
 `,
-					"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
-kind: WebhookAdmission
+					"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
 kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
 `,
 					"imagepolicywebhook.yaml": `imagePolicy:
@@ -209,8 +209,8 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 				{
 					AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
 						Name: "ValidatingAdmissionWebhook",
-						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
-kind: WebhookAdmission
+						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
 kubeConfigFile: /etc/kubernetes/foobar.yaml
 `)},
 					},
@@ -258,8 +258,8 @@ plugins:
 kind: WebhookAdmissionConfiguration
 kubeConfigFile: ""
 `,
-					"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
-kind: WebhookAdmission
+					"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
 kubeConfigFile: ""
 `,
 					"imagepolicywebhook.yaml": `imagePolicy:
@@ -333,6 +333,24 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 `,
 				},
 			}))
+		})
+
+		It("should fail when webhook admission plugin config uses the removed apiserver.config.k8s.io/v1alpha1 version", func() {
+			admissionPlugins := []AdmissionPluginConfig{
+				{
+					AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+						Name: "ValidatingAdmissionWebhook",
+						Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+					},
+					Kubeconfig: []byte("foo"),
+				},
+			}
+
+			configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "apiserver-admission-config", Namespace: namespace}}
+			Expect(ReconcileConfigMapAdmission(ctx, fakeClient, configMap, Values{EnabledAdmissionPlugins: admissionPlugins})).To(MatchError(ContainSubstring("cannot decode config for admission plugin ValidatingAdmissionWebhook")))
 		})
 	})
 
