@@ -20,7 +20,6 @@ import (
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	schedulingv1alpha1 "k8s.io/api/scheduling/v1alpha1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -172,7 +171,6 @@ var (
 
 		// Needed as part of /healthz/poststarthook/scheduling/bootstrap-system-priority-classes in kube-apiserver.
 		{GVR: schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},
-		{GVR: schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},
 		{GVR: schedulingv1beta1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},
 	}
 )
