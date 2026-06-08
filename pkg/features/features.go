@@ -69,13 +69,6 @@ const (
 	// alpha: v1.137.0
 	VictoriaLogsBackend featuregate.Feature = "VictoriaLogsBackend"
 
-	// UseUnifiedHTTPProxyPort enables the API server proxy and shoot VPN client to connect to the unified port using the new X-Gardener-Destination header.
-	// owner: @hown3d
-	// alpha: v1.130.0
-	// beta: v1.140.0
-	// GA: v1.144.0
-	UseUnifiedHTTPProxyPort featuregate.Feature = "UseUnifiedHTTPProxyPort"
-
 	// VPAInPlaceUpdates enables the usage of in-place Pod resource updates in the Vertical Pod Autoscaler resources
 	// to perform in-place Pod resource updates.
 	// owner: @vitanovs @ialidzhikov
@@ -173,7 +166,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},
 	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
-	UseUnifiedHTTPProxyPort:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	VPAInPlaceUpdates:              {Default: true, PreRelease: featuregate.Beta},
 	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.Beta},
 	VPNBondingModeRoundRobin:       {Default: false, PreRelease: featuregate.Alpha},
