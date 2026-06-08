@@ -11,9 +11,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	. "github.com/onsi/gomega"
 	"go.yaml.in/yaml/v2"
-	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
 
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	"github.com/gardener/gardener/third_party/kube-state-metrics/pkg/customresourcestate"
 )
 
 // Returns the expected CustomResourceState config and also asserts that the actual value is the same.
