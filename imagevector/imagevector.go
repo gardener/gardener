@@ -12,19 +12,20 @@ import (
 	_ "embed"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
 	//go:embed containers.yaml
-	containersYAML               string
-	containersImageVector        imagevector.ImageVector
+	containersYAML                string
+	containersImageVector         imagevector.ImageVector
 	containersImagePullCredential *imagevector.ImagePullCredential
 
 	//go:embed charts.yaml
-	chartsYAML               string
-	chartsImageVector        imagevector.ImageVector
+	chartsYAML                string
+	chartsImageVector         imagevector.ImageVector
 	chartsImagePullCredential *imagevector.ImagePullCredential
 )
 
@@ -64,16 +65,16 @@ func ChartImagePullCredential() *imagevector.ImagePullCredential {
 
 // AllContainerImagePullCredentials returns all unique image pull credentials (global + per-image) for containers.
 func AllContainerImagePullCredentials() []*imagevector.ImagePullCredential {
-	seen := make(map[string]struct{})
+	seen := sets.New[string]()
 	var result []*imagevector.ImagePullCredential
 
 	addCred := func(cred *imagevector.ImagePullCredential) {
 		if cred == nil {
 			return
 		}
-		key := credentialKey(cred)
-		if _, exists := seen[key]; !exists {
-			seen[key] = struct{}{}
+		key := imagevector.CredentialKey(cred)
+		if !seen.Has(key) {
+			seen.Insert(key)
 			result = append(result, cred)
 		}
 	}
@@ -93,12 +94,4 @@ func ContainerImagePullCredentialForImage(containerImage string) *imagevector.Im
 		return perImage
 	}
 	return containersImagePullCredential
-}
-
-// credentialKey returns a deduplication key for an ImagePullCredential.
-func credentialKey(c *imagevector.ImagePullCredential) string {
-	if c.SecretName != nil {
-		return string(c.Type) + ":" + *c.SecretName
-	}
-	return string(c.Type)
 }

@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/yaml"
 
@@ -467,25 +468,22 @@ func (v ImageVector) ImagePullCredentialForContainerImage(containerImage string)
 
 // AllImagePullCredentials returns all unique per-image pull credentials from the ImageVector.
 func (v ImageVector) AllImagePullCredentials() []*ImagePullCredential {
-	seen := make(map[string]struct{})
+	seen := sets.New[string]()
 	var result []*ImagePullCredential
 	for _, source := range v {
 		if source.ImagePullCredential == nil {
 			continue
 		}
-		key := credentialKey(source.ImagePullCredential)
-		if _, exists := seen[key]; !exists {
-			seen[key] = struct{}{}
+		key := CredentialKey(source.ImagePullCredential)
+		if !seen.Has(key) {
+			seen.Insert(key)
 			result = append(result, source.ImagePullCredential)
 		}
 	}
 	return result
 }
 
-// credentialKey returns a deduplication key for an ImagePullCredential.
-func credentialKey(c *ImagePullCredential) string {
-	if c.SecretName != nil {
-		return string(c.Type) + ":" + *c.SecretName
-	}
-	return string(c.Type)
+// CredentialKey returns a deduplication key for an ImagePullCredential.
+func CredentialKey(c *ImagePullCredential) string {
+	return string(c.Type) + c.SecretName
 }

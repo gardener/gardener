@@ -19,7 +19,7 @@ type ImagePullCredential struct {
 	// SecretName is the name of the dockerconfigjson Secret.
 	// Required when Type is StaticSecret.
 	// +optional
-	SecretName *string `json:"secretName,omitempty" yaml:"secretName,omitempty"`
+	SecretName string `json:"secretName,omitempty" yaml:"secretName,omitempty"`
 }
 
 // ImageSource contains the repository and the tag of a Docker container image. If the respective

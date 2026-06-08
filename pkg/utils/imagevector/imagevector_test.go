@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -387,7 +386,7 @@ images:
 				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
 				Expect(imagePullCredential).To(PointTo(Equal(ImagePullCredential{
 					Type:       ImagePullCredentialTypeStaticSecret,
-					SecretName: ptr.To("my-image-pull-secret"),
+					SecretName: "my-image-pull-secret",
 				})))
 			})
 

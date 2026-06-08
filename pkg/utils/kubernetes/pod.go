@@ -291,8 +291,8 @@ func InjectImagePullSecret(podSpec *corev1.PodSpec) {
 
 	for _, container := range allContainers {
 		cred := imagevector.ContainerImagePullCredentialForImage(container.Image)
-		if cred != nil && cred.Type == "StaticSecret" && cred.SecretName != nil {
-			secretNames.Insert(*cred.SecretName)
+		if cred != nil && cred.Type == "StaticSecret" && cred.SecretName != "" {
+			secretNames.Insert(cred.SecretName)
 		}
 	}
 
