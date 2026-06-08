@@ -35,6 +35,8 @@ const (
 	ContainerImageNameEnvoyProxy = "envoy-proxy"
 	// ContainerImageNameEtcd is a constant for an image in the image vector with name 'etcd'.
 	ContainerImageNameEtcd = "etcd"
+	// ContainerImageNameEtcdBackupRestore is a constant for an image in the image vector with name 'etcd-backup-restore'.
+	ContainerImageNameEtcdBackupRestore = "etcd-backup-restore"
 	// ContainerImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
 	ContainerImageNameEtcdDruid = "etcd-druid"
 	// ContainerImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
