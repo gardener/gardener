@@ -48,6 +48,8 @@ patches:
         kind: ClusterConfiguration
         apiServer:
           extraArgs:
+            # TODO(DobromirNPeev): Remove once kind uses a Kubernetes version 1.36+.
+            # The MutatingAdmissionPolicy feature gate is promoted to GA and enabled by default in Kubernetes 1.36.
             feature-gates: "MutatingAdmissionPolicy=true"
             runtime-config: "admissionregistration.k8s.io/v1beta1=true"
         controllerManager:
