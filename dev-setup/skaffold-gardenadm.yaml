@@ -69,6 +69,7 @@ build:
             - pkg/component
             - pkg/component/apiserver
             - pkg/component/autoscaling/clusterautoscaler
+            - pkg/component/autoscaling/pvcautoscaler
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
             - pkg/component/clusteridentity
@@ -597,6 +598,7 @@ build:
             - pkg/component
             - pkg/component/apiserver
             - pkg/component/autoscaling/clusterautoscaler
+            - pkg/component/autoscaling/pvcautoscaler
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
             - pkg/component/clusteridentity
