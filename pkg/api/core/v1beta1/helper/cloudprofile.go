@@ -23,10 +23,14 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
+func IsUsingLegacyClassifications(version gardencorev1beta1.ExpirableVersion) bool {
+	return len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil)
+}
+
 // CurrentLifecycleClassification returns the current lifecycle classification of the given version.
 // An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
-	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
+	if IsUsingLegacyClassifications(version) {
 		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
 		// Remove once the legacy fields are removed.
 
