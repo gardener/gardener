@@ -91,12 +91,22 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"resource-claim-controller": {RemovedInVersion: "1.31"},
 	},
 	"resource/v1alpha3": {
-		"device-taint-eviction-controller": {AddedInVersion: "1.35"},
-		"resource-claim-controller":        {AddedInVersion: "1.31", RemovedInVersion: "1.32"},
+		"device-taint-eviction-controller":     {AddedInVersion: "1.35", RemovedInVersion: "1.36"},
+		"resource-claim-controller":            {AddedInVersion: "1.31", RemovedInVersion: "1.32"},
+		"resourcepoolstatusrequest-controller": {AddedInVersion: "1.36"},
 	},
 	"resource/v1beta1": {
 		"device-taint-eviction-controller": {AddedInVersion: "1.33", RemovedInVersion: "1.34"},
 		"resource-claim-controller":        {AddedInVersion: "1.32", RemovedInVersion: "1.34"},
+	},
+	"resource/v1beta2": {
+		"device-taint-eviction-controller": {AddedInVersion: "1.36"},
+	},
+	"scheduling/v1alpha2": {
+		"device-taint-eviction-controller": {AddedInVersion: "1.36"},
+		"job-controller":                   {AddedInVersion: "1.36"},
+		"podgroup-protection-controller":   {AddedInVersion: "1.36"},
+		"resourceclaim-controller":         {AddedInVersion: "1.36"},
 	},
 	"storage/v1": {
 		"selinux-warning-controller":                  {AddedInVersion: "1.32"},
@@ -135,6 +145,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"persistentvolume-binder":              {},
 		"persistentvolume-expander":            {},
 		"podgc":                                {},
+		"podgroup-protection-controller":       {AddedInVersion: "1.36"},
 		"pv-protection":                        {},
 		"pvc-protection":                       {},
 		"replicaset":                           {},
