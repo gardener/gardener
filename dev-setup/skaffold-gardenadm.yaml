@@ -74,6 +74,7 @@ build:
             - pkg/component/clusteridentity
             - pkg/component/crddeployer
             - pkg/component/etcd/bootstrap
+            - pkg/component/etcd/bootstrap/backuprestore
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
