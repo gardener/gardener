@@ -135,13 +135,17 @@ Requisite=` + UnitName + `
 [Service]
 Type=oneshot
 ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart ` + UnitName + `'
+# Note: We intentionally curl the /metrics endpoint rather than /healthz.
+# We know that /metrics reliably times out when there are issues such as file descriptor leaks.
+# If we can verify that /healthz behaves the same, we should switch to using it instead,
+# since health checks are typically expected to target /healthz rather than /metrics.
 ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics`),
 	}
 }
 
 func getOpenTelemetryCollectorTimerUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
-		Name:    UnitNameTimer,
+		Name:    UnitNameHealthCheckTimer,
 		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]

@@ -23,8 +23,8 @@ const (
 	// UnitNameHealthCheck is the name of the opentelemetry-collector healthcheck oneshot.
 	UnitNameHealthCheck = "opentelemetry-collector-healthcheck.service"
 
-	// UnitNameTimer is the name of the opentelemetry-collector timer.
-	UnitNameTimer = "opentelemetry-collector.timer"
+	// UnitNameHealthCheckTimer is the name of the opentelemetry-collector timer.
+	UnitNameHealthCheckTimer = "opentelemetry-collector.timer"
 
 	// PathDirectory is the path for the opentelemetry-collector's directory.
 	PathDirectory = "/var/lib/opentelemetry-collector"
