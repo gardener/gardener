@@ -523,6 +523,11 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-0022: Improved Usage of the `ShootState` API](https://github.com/gardener/enhancements/tree/main/geps/0022-improved-shootstate-usage) for all information.
 
+#### ["InPlaceUpdate" Reconciler](../../pkg/gardenlet/controller/shoot/inplaceupdate)
+
+This reconciler is only enabled for self-hosted shoot clusters with unmanaged infrastructure.
+It orchestrates gardenlet-driven in-place node updates for self-hosted shoot clusters with unmanaged infrastructure.
+
 ### ["Status" Reconciler](../../pkg/gardenlet/controller/shoot/status)
 
 This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. A worker pool is removed from `status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate` field in the `Shoot` if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that all the nodes of that worker pool are successfully updated and are no longer pending manual in-place updates.
