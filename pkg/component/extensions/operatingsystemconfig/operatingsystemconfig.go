@@ -229,11 +229,6 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardenc
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
-	// TODO(shafeeqes): Remove this function in gardener v1.146
-	if err := o.deleteHashVersioningSecret(ctx); err != nil {
-		return err
-	}
-
 	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(_ context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		d, err := o.newDeployer(osc, worker, purpose)
 		if err != nil {
@@ -273,14 +268,6 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 	}
 
 	return flow.Parallel(fns...)(ctx)
-}
-
-func (o *operatingSystemConfig) deleteHashVersioningSecret(ctx context.Context) error {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
-	}
-
-	return client.IgnoreNotFound(o.client.Delete(ctx, secret))
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret

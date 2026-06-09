@@ -45,7 +45,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -486,19 +485,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
-			It("should successfully delete the worker-pools-operatingsystemconfig-hashes secret", func() {
-				DeferCleanup(test.WithVars(
-					&OriginalConfigFn, originalConfigFn,
-				))
-
-				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}}
-				Expect(c.Create(ctx, secret)).To(Succeed())
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(BeNotFoundError())
-			})
-
 			It("should successfully deploy all extensions resources", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, fakeClock.Now,
