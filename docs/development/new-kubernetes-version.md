@@ -13,7 +13,7 @@ This document describes the steps needed to perform in order to confidently add 
 
 Version | Expected Release Date | Release Responsibles                                                                         |
 --------|-----------------------|----------------------------------------------------------------------------------------------|
-v1.36   | April ?, 2026         | [@oliver-goetz](https://github.com/oliver-goetz), [@ary1992](https://github.com/ary1992)     |
+v1.36   | April 22, 2026        | [@tobschli](https://github.com/tobschli), [@ary1992](https://github.com/ary1992)             |
 v1.37   | August ?, 2026        | [@acumino](https://github.com/acumino), [@shafeeqes](https://github.com/shafeeqes)           |
 v1.38   | December ?, 2026      | [@ialidzhikov](https://github.com/ialidzhikov), TBD                                          |
 
