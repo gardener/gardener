@@ -47,8 +47,10 @@ import (
 //     Returns true when a daemonset should continue running on a node if a daemonset pod is already
 //     running on that node.
 //
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/controller/daemon/daemon_controller.go#L1275-L1306
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/controller/daemon/daemon_controller.go#L1353-L1377
 // First if block semantically equally changed due to golangci-lint finding QF1001.
+// Last argument of FindMatchingUntoleratedTaint hardcoded to false instead of utilfeature.DefaultFeatureGate.Enabled(features.TaintTolerationComparisonOperators)
+// to avoid importing the k8s internal feature gate package. This is equivalent as the gate defaults to false (alpha since 1.35).
 func NodeShouldRunDaemonPod(logger klog.Logger, node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool) {
 	pod := NewPod(ds, node.Name)
 
@@ -75,7 +77,9 @@ func NodeShouldRunDaemonPod(logger klog.Logger, node *corev1.Node, ds *appsv1.Da
 }
 
 // predicates checks if a DaemonSet's pod can run on a node.
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/controller/daemon/daemon_controller.go#L1318-L1328
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/controller/daemon/daemon_controller.go#L1445-L1453
+// Last argument of FindMatchingUntoleratedTaint hardcoded to false instead of utilfeature.DefaultFeatureGate.Enabled(features.TaintTolerationComparisonOperators)
+// to avoid importing the k8s internal feature gate package. This is equivalent as the gate defaults to false (alpha since 1.35).
 func predicates(logger klog.Logger, pod *corev1.Pod, node *corev1.Node, taints []corev1.Taint) (fitsNodeName, fitsNodeAffinity, fitsTaints bool) {
 	fitsNodeName = len(pod.Spec.NodeName) == 0 || pod.Spec.NodeName == node.Name
 	// Ignore parsing errors for backwards compatibility.
@@ -88,7 +92,7 @@ func predicates(logger klog.Logger, pod *corev1.Pod, node *corev1.Node, taints [
 }
 
 // NewPod creates a new pod
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/controller/daemon/daemon_controller.go#L1330-L1340
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/controller/daemon/daemon_controller.go#L1456-L1467
 func NewPod(ds *appsv1.DaemonSet, nodeName string) *corev1.Pod {
 	newPod := &corev1.Pod{Spec: ds.Spec.Template.Spec, ObjectMeta: ds.Spec.Template.ObjectMeta}
 	newPod.Namespace = ds.Namespace
@@ -101,7 +105,7 @@ func NewPod(ds *appsv1.DaemonSet, nodeName string) *corev1.Pod {
 }
 
 // AddOrUpdateDaemonPodTolerations apply necessary tolerations to DaemonSet Pods, e.g. node.kubernetes.io/not-ready:NoExecute.
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/controller/daemon/util/daemonset_util.go#L47-L102
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/controller/daemon/util/daemonset_util.go#L44-L87
 func AddOrUpdateDaemonPodTolerations(spec *corev1.PodSpec) {
 	// DaemonSet pods shouldn't be deleted by NodeController in case of node problems.
 	// Add infinite toleration for taint notReady:NoExecute here
@@ -160,7 +164,7 @@ func AddOrUpdateDaemonPodTolerations(spec *corev1.PodSpec) {
 
 // AddOrUpdateTolerationInPodSpec tries to add a toleration to the toleration list in PodSpec.
 // Returns true if something was updated, false otherwise.
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/apis/core/v1/helper/helpers.go#L264-L290
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/apis/core/v1/helper/helpers.go#L218-L237
 func AddOrUpdateTolerationInPodSpec(spec *corev1.PodSpec, toleration *corev1.Toleration) bool {
 	podTolerations := spec.Tolerations
 
@@ -189,7 +193,7 @@ func AddOrUpdateTolerationInPodSpec(spec *corev1.PodSpec, toleration *corev1.Tol
 
 // Semantic can do semantic deep equality checks for core objects.
 // Example: apiequality.Semantic.DeepEqual(aPod, aPodWithNonNilButEmptyMaps) == true
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/apis/core/helper/helpers.go#L92-L114
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/apis/core/helper/helpers.go#L98-L111
 // Changed time comparisons changed due to golangci-lint finding QF1009.
 var Semantic = conversion.EqualitiesOrDie(
 	func(a, b resource.Quantity) bool {
