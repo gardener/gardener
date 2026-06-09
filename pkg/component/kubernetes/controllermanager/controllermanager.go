@@ -755,6 +755,11 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		if versionutils.ConstraintK8sGreaterEqual134.Check(k.values.TargetVersion) {
 			controllersToDisable.Insert("podcertificaterequest-cleaner-controller")
 		}
+
+		if versionutils.ConstraintK8sGreaterEqual136.Check(k.values.TargetVersion) {
+			controllersToDisable.Insert("podgroup-protection-controller")
+			controllersToDisable.Insert("resourcepoolstatusrequest-controller")
+		}
 	}
 
 	command = append(command,
