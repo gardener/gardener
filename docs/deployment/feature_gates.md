@@ -225,7 +225,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | NewWorkerPoolHash                            |         | `Removed`    | `1.143` |         |
 | UseUnifiedHTTPProxyPort                      | `false` | `Alpha`      | `1.130` | `1.139` |
 | UseUnifiedHTTPProxyPort                      | `true`  | `Beta`       | `1.140` | `1.143` |
-| UseUnifiedHTTPProxyPort                      | `true`  | `GA`         | `1.144` |         |
+| UseUnifiedHTTPProxyPort                      | `true`  | `GA`         | `1.144` | `1.144` |
 | UseUnifiedHTTPProxyPort                      |         | `Removed`    | `1.145` |         |
 
 ## Using a Feature
