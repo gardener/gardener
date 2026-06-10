@@ -203,8 +203,7 @@ func (h *Health) Check(
 			taskFns = append(taskFns,
 				func(ctx context.Context) error {
 					newNodes, err := h.checkWorkers(ctx, shootClient, *conditions.everyNodeReady, extensionConditionsEveryNodeReady, healthCheckOutdatedThreshold)
-					nodeCondition := v1beta1helper.NewConditionOrError(h.clock, *conditions.everyNodeReady, newNodes, err)
-					conditions.everyNodeReady = &nodeCondition
+					conditions.everyNodeReady = new(v1beta1helper.NewConditionOrError(h.clock, *conditions.everyNodeReady, newNodes, err))
 					return nil
 				})
 		}
@@ -220,8 +219,7 @@ func (h *Health) Check(
 		conditions.apiServerAvailable = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, conditions.apiServerAvailable, "APIServerDown", "Could not reach API server during client initialization.")
 		conditions.systemComponentsHealthy = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, conditions.systemComponentsHealthy, message)
 		if conditions.everyNodeReady != nil {
-			nodeCondition := v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.everyNodeReady, message)
-			conditions.everyNodeReady = &nodeCondition
+			conditions.everyNodeReady = new(v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.everyNodeReady, message))
 		}
 	}
 
@@ -652,20 +650,19 @@ func (h *Health) checkSystemComponents(
 func (h *Health) checkWorkers(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
-	condition gardencorev1beta1.Condition,
+	everyNodeReadyCondition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
+	if exitCondition := h.healthChecker.CheckExtensionCondition(everyNodeReadyCondition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
 
-	if exitCondition, err := h.CheckClusterNodes(ctx, shootClient, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.CheckClusterNodes(ctx, shootClient, everyNodeReadyCondition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
-	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
-	return &c, nil
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, everyNodeReadyCondition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")), nil
 }
 
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
@@ -687,11 +684,8 @@ const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mc
 func (h *Health) CheckClusterNodes(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
-	condition gardencorev1beta1.Condition,
-) (
-	*gardencorev1beta1.Condition,
-	error,
-) {
+	everyNodeReadyCondition gardencorev1beta1.Condition,
+) (*gardencorev1beta1.Condition, error) {
 	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, shootClient.Client())
 	if err != nil {
 		return nil, err
@@ -702,6 +696,21 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
+	// Compute preserved node names from the already-fetched node map.
+	preservedNodeNames := sets.New[string]()
+	for _, nodes := range workerPoolToNodes {
+		for _, node := range nodes {
+			if health.IsNodePreservedFailed(node) {
+				preservedNodeNames.Insert(node.Name)
+			}
+		}
+	}
+
+	// preservedNodeFailure holds the first CheckNodes failure attributable entirely to preserved
+	// nodes. It is buffered rather than returned immediately so that all subsequent checks (lease,
+	// systemd-unit, scaling, expired-lease) still run. A real failure in any of those takes
+	// priority; the preserved failure is only returned if everything else passes.
+	var preservedNodeFailure *gardencorev1beta1.Condition
 	for _, pool := range h.shoot.GetInfo().Spec.Provider.Workers {
 		nodes := workerPoolToNodes[pool.Name]
 
@@ -710,25 +719,34 @@ func (h *Health) CheckClusterNodes(
 			return nil, err
 		}
 
-		if exitCondition := h.healthChecker.CheckNodes(condition, nodes, pool.Name, kubernetesVersion); exitCondition != nil {
-			return exitCondition, nil
+		if exitCondition, isPreserved := h.healthChecker.CheckNodes(everyNodeReadyCondition, nodes, pool.Name, kubernetesVersion, preservedNodeNames); exitCondition != nil {
+			if !isPreserved {
+				return exitCondition, nil
+			}
+			if preservedNodeFailure == nil {
+				preservedNodeFailure = exitCondition
+			}
 		}
 
 		if len(nodes) < int(pool.Minimum) {
-			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", pool.Name, len(nodes), pool.Minimum))
-			return &c, nil
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", pool.Name, len(nodes), pool.Minimum))), nil
 		}
 	}
 
 	if err := botanist.OperatingSystemConfigUpdatedForAllWorkerPools(h.shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
-		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "OperatingSystemConfigOutdated", err.Error())
-		return &c, nil
+		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "OperatingSystemConfigOutdated", err.Error())), nil
 	}
 
 	nodeList := convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
-	// only nodes that are managed by MCM are considered
+	// Only nodes managed by MCM and not belonging to preserved failed machines are considered for
+	// lease, systemd-unit, and node-scaling checks.
 	nodesManagedByMCM := []*corev1.Node{}
+	nodesForExpiredLeaseCheck := corev1.NodeList{}
 	for _, node := range nodeList.Items {
+		if preservedNodeNames.Has(node.Name) {
+			continue
+		}
+		nodesForExpiredLeaseCheck.Items = append(nodesForExpiredLeaseCheck.Items, node)
 		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
 			continue
 		}
@@ -741,13 +759,11 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	if err := CheckNodeAgentLeases(nodesManagedByMCM, leaseList, h.clock); err != nil {
-		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
-		return &c, nil
+		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "NodeAgentUnhealthy", err.Error())), nil
 	}
 
 	if err := CheckSystemdUnitsReady(nodesManagedByMCM); err != nil {
-		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "SystemdUnitsNotReady", err.Error())
-		return &c, nil
+		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "SystemdUnitsNotReady", err.Error())), nil
 	}
 
 	if !h.shoot.IsSelfHosted() || h.shoot.HasManagedInfrastructure() {
@@ -760,7 +776,7 @@ func (h *Health) CheckClusterNodes(
 			if msg == "" {
 				return nil, err
 			}
-			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, msg, err.Error())), nil
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, msg, err.Error())), nil
 		}
 	}
 
@@ -769,13 +785,12 @@ func (h *Health) CheckClusterNodes(
 		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
 			return nil, err
 		}
-
-		if err := CheckForExpiredNodeLeases(nodeList, leaseList, h.clock); err != nil {
-			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "TooManyExpiredNodeLeases", err.Error())), nil
+		if err := CheckForExpiredNodeLeases(&nodesForExpiredLeaseCheck, leaseList, h.clock); err != nil {
+			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "TooManyExpiredNodeLeases", err.Error())), nil
 		}
 	}
 
-	return nil, nil
+	return preservedNodeFailure, nil
 }
 
 // CheckNodeAgentLeases checks if all nodes in the shoot cluster have a corresponding Lease object maintained by gardener-node-agent
@@ -972,22 +987,25 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []
 		}
 	}
 
-	var cordonedNodes int
+	var cordonedNodes, cordonedPreservedNodes int
 	for _, node := range nodeList {
 		if node.Spec.Unschedulable {
 			machine, ok := nodeNameToMachine[node.Name]
 			if !ok {
 				return fmt.Errorf("machine object for cordoned node %q not found", node.Name)
 			}
-			if machine.DeletionTimestamp == nil {
+			if machine.DeletionTimestamp == nil && machine.Status.CurrentStatus.PreserveExpiryTime == nil {
 				return fmt.Errorf("cordoned node %q found but corresponding machine object does not have a deletion timestamp", node.Name)
 			}
 			cordonedNodes++
+			if machine.Status.CurrentStatus.PreserveExpiryTime != nil {
+				cordonedPreservedNodes++
+			}
 		}
 	}
 
 	// If there are still more nodes than desired then report an error.
-	if registeredNodes-cordonedNodes != desiredMachines {
+	if registeredNodes-cordonedNodes != desiredMachines-cordonedPreservedNodes {
 		return fmt.Errorf("too many worker nodes are registered. Exceeding maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
 	}
 
