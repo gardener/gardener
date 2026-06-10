@@ -540,6 +540,15 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 	for _, machineDeployment := range c.machineDeployments {
 		command = append(command, fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment.Minimum, machineDeployment.Maximum, c.namespace, machineDeployment.Name))
 	}
+	// If auto-preservation of machines is active, disable CA's cluster health check by setting maxTotalUnreadyPercentage to 100%.
+	// The isClusterHealthy check disables scaling if more than maxTotalUnreadyPercentage of nodes are not Ready.
+	// Disabling this check allows unscheduled workload from these failed preserved nodes to trigger scale up.
+	for _, workerConfig := range c.workerConfig {
+		if ptr.Deref(workerConfig.AutoPreserveFailedMachineMax, 0) > 0 {
+			command = append(command, "--max-total-unready-percentage=100")
+			break
+		}
+	}
 
 	return command
 }
