@@ -307,17 +307,20 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 	contextName := b.Shoot.ControlPlaneNamespace
 	kubeAPIServerAddress := b.Shoot.ComputeInClusterAPIServerAddress(true)
+
+	// In the case of L7 Loadbalancing for the kube-apiserver control plane pods that use the generic kube config must be restarted
+	// if the istio-ingressgateway that is being used to expose the kube-apiserver is changed.
+	// We trigger a pod rollout by regenerating the secret so the podkubeapiserverloadbalancing webhook
+	// can inject the new host alias for the kube-apiserver domain into the pods.
 	if b.ShootUsesIstioTLSTermination() {
 		// Add the failure tolerance type to the context name if high availability is enabled. This ensures that the
-		// generic token kubeconfig changes when a shoot is upgraded from non-HA to HA. The generic token kubeconfig is
-		// updated that the control plane pods are restarted and get the updated hosts alias for the kube-apiserver domain.
+		// generic token kubeconfig changes when a shoot is upgraded from non-HA to HA.
 		if b.Shoot.GetInfo().Spec.ControlPlane != nil && b.Shoot.GetInfo().Spec.ControlPlane.HighAvailability != nil {
 			contextName += fmt.Sprintf("--failure-tolerance-%s", b.Shoot.GetInfo().Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
 		}
 
 		// Add the exposure class name to the context name if set. This ensures that the
-		// generic token kubeconfig changes when a shoot is changing it's exposure class. The generic token kubeconfig is
-		// updated that the control plane pods are restarted and get the updated hosts alias for the kube-apiserver domain.
+		// generic token kubeconfig changes when a shoot is changing its exposure class.
 		if expClassName := ptr.Deref(b.Shoot.GetInfo().Spec.ExposureClassName, ""); expClassName != "" {
 			contextName += fmt.Sprintf("--exposure-class-%s", expClassName)
 		}
