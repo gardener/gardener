@@ -492,7 +492,7 @@ func validateGardener(dns *operatorv1alpha1.DNSManagement, gardener operatorv1al
 	allErrs = append(allErrs, validateGardenerAdmissionController(gardener.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
-	allErrs = append(allErrs, validateGardenerDashboardConfig(gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
+	allErrs = append(allErrs, validateGardenerDashboardConfig(dns, gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
 	allErrs = append(allErrs, validateGardenerDiscoveryServerConfig(dns, gardener.DiscoveryServer, fldPath.Child("gardenerDiscoveryServer"))...)
 
 	return allErrs
@@ -659,7 +659,7 @@ func validateGardenerFeatureGates(featureGates map[string]bool, fldPath *field.P
 	return allErrs
 }
 
-func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardConfig, kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
+func validateGardenerDashboardConfig(dns *operatorv1alpha1.DNSManagement, config *operatorv1alpha1.GardenerDashboardConfig, kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
@@ -692,6 +692,14 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		if oidc.IssuerURL != nil {
 			allErrs = append(allErrs, gardencorevalidation.ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
 		}
+	}
+
+	if config.Domain != nil {
+		allErrs = append(allErrs, validateDomain(dns, *config.Domain, fldPath.Child("domain"))...)
+	}
+
+	if config.TLSSecretName != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*config.TLSSecretName, fldPath.Child("tlsSecretName"))...)
 	}
 
 	return allErrs

@@ -2568,6 +2568,66 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 
+			Context("Dashboard", func() {
+				It("should accept a valid domain", func() {
+					garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "dashboard.local.gardener.cloud",
+							Provider: new("primary"),
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should reject a domain with a non-existing provider", func() {
+					garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "dashboard.local.gardener.cloud",
+							Provider: new("non-existing"),
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.domain.provider"),
+					}))))
+				})
+
+				It("should reject a domain with a protocol prefix", func() {
+					garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "https://dashboard.local.gardener.cloud",
+							Provider: new("primary"),
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.domain.name"),
+					}))))
+				})
+
+				It("should accept a valid TLS secret name", func() {
+					garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+						TLSSecretName: new("my-tls-secret"),
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should reject a TLS secret name with invalid characters", func() {
+					garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+						TLSSecretName: new("My_secret!"),
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.tlsSecretName"),
+					}))))
+				})
+			})
+
 			Context("DiscoveryServer", func() {
 				It("should accept a valid domain", func() {
 					garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
