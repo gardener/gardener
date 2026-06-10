@@ -803,7 +803,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_add_learner_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_add_learner_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\"}[$__rate_interval])) by (le))",
           "interval": "",
           "legendFormat": "etcd-$role",
           "refId": "A"
@@ -997,7 +997,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_member_remove_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\",pod=~\".*$role-($member)\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_member_remove_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\"}[$__rate_interval])) by (le))",
           "instant": false,
           "interval": "",
           "legendFormat": "etcd-$role",
@@ -1302,7 +1302,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "label_replace(\n  label_replace(\n    rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m]),\n    \"from\", \"$1\", \"pod\", \"(.*)\"\n  ),\n  \"server_id\", \"$1\", \"To\", \"(.*)\"\n)\n* on(job, server_id) group_left(pod)\netcd_server_id{job=\"kube-etcd3-$role\"}",
+          "expr": "label_replace(\n  label_replace(\n    rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[$__rate_interval]),\n    \"from\", \"$1\", \"pod\", \"(.*)\"\n  ),\n  \"server_id\", \"$1\", \"To\", \"(.*)\"\n)\n* on(job, server_id) group_left(pod)\netcd_server_id{job=\"kube-etcd3-$role\"}",
           "interval": "",
           "legendFormat": "{{from}} -> {{pod}}",
           "refId": "A"
@@ -1399,7 +1399,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "label_replace(\n  label_replace(\n    rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[5m]),\n    \"receiver\", \"$1\", \"pod\", \"(.*)\"\n  ),\n  \"server_id\", \"$1\", \"From\", \"(.*)\"\n)\n* on(job, server_id) group_left(pod)\netcd_server_id{job=\"kube-etcd3-$role\"}",
+          "expr": "label_replace(\n  label_replace(\n    rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-($member)\"}[$__rate_interval]),\n    \"receiver\", \"$1\", \"pod\", \"(.*)\"\n  ),\n  \"server_id\", \"$1\", \"From\", \"(.*)\"\n)\n* on(job, server_id) group_left(pod)\netcd_server_id{job=\"kube-etcd3-$role\"}",
           "interval": "",
           "legendFormat": "{{receiver}} <- {{pod}}",
           "refId": "A"
