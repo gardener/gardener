@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	//go:embed assets/crd-persistentvolumeclaimautoscaler.yaml
+	//go:embed assets/crd-autoscaling.gardener.cloud_persistentvolumeclaimautoscalers.yaml
 	persistentVolumeClaimAutoscalerCRD string
 )
 

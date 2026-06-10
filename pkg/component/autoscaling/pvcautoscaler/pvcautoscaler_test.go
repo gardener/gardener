@@ -294,9 +294,7 @@ var _ = Describe("PVCAutoscaler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "pvc-autoscaler-controller-manager-metrics-service",
 				Namespace: namespace,
-				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					"control-plane": "controller-manager",
-				}),
+				Labels:    getLabels(),
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
 				},
@@ -316,9 +314,7 @@ var _ = Describe("PVCAutoscaler", func() {
 						TargetPort: intstr.FromString("metrics"),
 					},
 				},
-				Selector: map[string]string{
-					"control-plane": "controller-manager",
-				},
+				Selector: getLabels(),
 			},
 		}
 
@@ -328,16 +324,13 @@ var _ = Describe("PVCAutoscaler", func() {
 				Namespace: namespace,
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-					"control-plane": "controller-manager",
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: new(int32(2)),
 				Replicas:             new(int32(1)),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
-						"control-plane": "controller-manager",
-					}),
+					MatchLabels: getLabels(),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -345,7 +338,6 @@ var _ = Describe("PVCAutoscaler", func() {
 							v1beta1constants.LabelNetworkPolicyToDNS:                   v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
 							gardenerutils.NetworkPolicyLabel("prometheus-cache", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-							"control-plane": "controller-manager",
 						}),
 					},
 					Spec: corev1.PodSpec{
@@ -443,9 +435,7 @@ var _ = Describe("PVCAutoscaler", func() {
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: new(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
-						"control-plane": "controller-manager",
-					}),
+					MatchLabels: getLabels(),
 				},
 				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},

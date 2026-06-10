@@ -122,7 +122,7 @@ func (p *pvcautoscaler) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
 }
 
-var timeoutWaitForManagedResources = 2 * time.Minute
+const timeoutWaitForManagedResources = 2 * time.Minute
 
 func (p *pvcautoscaler) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
@@ -370,9 +370,7 @@ func (p *pvcautoscaler) service() *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pvc-autoscaler-controller-manager-metrics-service",
 			Namespace: p.namespace,
-			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-				"control-plane": "controller-manager",
-			}),
+			Labels:    getLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -389,9 +387,7 @@ func (p *pvcautoscaler) service() *corev1.Service {
 					TargetPort: intstr.FromString(metricsPortName),
 				},
 			},
-			Selector: map[string]string{
-				"control-plane": "controller-manager",
-			},
+			Selector: getLabels(),
 		},
 	}
 }
@@ -403,16 +399,13 @@ func (p *pvcautoscaler) deployment() *appsv1.Deployment {
 			Namespace: p.namespace,
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-				"control-plane": "controller-manager",
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
 			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             new(int32(1)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
-					"control-plane": "controller-manager",
-				}),
+				MatchLabels: getLabels(),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -420,7 +413,6 @@ func (p *pvcautoscaler) deployment() *appsv1.Deployment {
 						v1beta1constants.LabelNetworkPolicyToDNS:                   v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel("prometheus-cache", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-						"control-plane": "controller-manager",
 					}),
 				},
 				Spec: corev1.PodSpec{
@@ -520,9 +512,7 @@ func (p *pvcautoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: new(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
-					"control-plane": "controller-manager",
-				}),
+				MatchLabels: getLabels(),
 			},
 			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
