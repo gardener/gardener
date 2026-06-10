@@ -19,7 +19,7 @@ import (
 
 // VerifyExposureClassSwitch verifies the switch of exposure class of a shoot cluster.
 // It checks the connectivity to the API server both with exposure class and without exposure class set
-// while waiting that the cluster get's healthy after the exposure class switch.
+// while waiting that the cluster gets healthy after the exposure class switch.
 func VerifyExposureClassSwitch(s *ShootContext, waitForReconcileFunc func(s *ShootContext)) {
 	GinkgoHelper()
 	defer GinkgoRecover()
