@@ -135,8 +135,8 @@ EOF
           echo "Configuring macOS to resolve the local.gardener.cloud zone using the local setup's DNS server"
           ${SUDO}mkdir -p /etc/resolver
           cat <<EOF | ${SUDO}tee /etc/resolver/local.gardener.cloud
-nameserver $dns_ipv6
 nameserver $dns_ip
+nameserver $dns_ipv6
 EOF
         fi
       elif [[ "$OSTYPE" == "linux"* && -f /etc/systemd/resolved.conf ]]; then
