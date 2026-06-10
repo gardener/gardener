@@ -630,7 +630,8 @@ func containConditionsInUnknownStatus(message string, isWorkerless bool) types.G
 			OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
-		), ContainCondition(
+		),
+		ContainCondition(
 			OfType(gardencorev1beta1.ShootSystemComponentsHealthy),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
@@ -638,10 +639,15 @@ func containConditionsInUnknownStatus(message string, isWorkerless bool) types.G
 	)
 
 	if !isWorkerless {
-		expectedLength = 6
+		expectedLength = 7
 		matcher = And(matcher,
 			ContainCondition(
 				OfType(gardencorev1beta1.ShootEveryNodeReady),
+				WithStatus(gardencorev1beta1.ConditionUnknown),
+				WithMessage(message),
+			),
+			ContainCondition(
+				OfType(gardencorev1beta1.ShootNoPreservedFailedMachines),
 				WithStatus(gardencorev1beta1.ConditionUnknown),
 				WithMessage(message),
 			),
