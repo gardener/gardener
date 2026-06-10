@@ -398,6 +398,7 @@ build:
             - pkg/api/core/validation
             - pkg/api/extensions
             - pkg/api/extensions/v1alpha1/helper
+            - pkg/api/indexer
             - pkg/api/operations/validation
             - pkg/api/security/validation
             - pkg/api/seedmanagement/helper
@@ -1027,6 +1028,7 @@ build:
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
             - pkg/api/extensions/v1alpha1/helper
+            - pkg/api/indexer
             - pkg/api/operator/v1alpha1/helper
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -1170,6 +1172,7 @@ build:
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
             - pkg/api/extensions/v1alpha1/helper
+            - pkg/api/indexer
             - pkg/api/operator/v1alpha1/helper
             - pkg/apis/authentication
             - pkg/apis/authentication/install
@@ -1298,6 +1301,7 @@ build:
             - cmd/machine-controller-manager-provider-local
             - pkg/api
             - pkg/api/core/v1beta1/helper
+            - pkg/api/indexer
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1
