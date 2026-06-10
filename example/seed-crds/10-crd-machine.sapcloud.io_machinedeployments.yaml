@@ -67,6 +67,12 @@ spec:
           spec:
             description: Specification of the desired behavior of the MachineDeployment.
             properties:
+              autoPreserveFailedMachineMax:
+                description: |-
+                  The maximum number of failed machines in the machine deployment that can be auto-preserved.
+                  In the gardener context, this number is derived from the AutoPreserveFailedMachineMax set at the worker level, distributed amongst the worker's machine deployments
+                format: int32
+                type: integer
               minReadySeconds:
                 description: |-
                   Minimum number of seconds for which a newly created machine should be ready
@@ -296,6 +302,10 @@ spec:
                         description: MachineInPlaceUpdateTimeout is the timeout after
                           which in-place update is declared failed.
                         type: string
+                      machinePreserveTimeout:
+                        description: MachinePreserveTimeout is the timeout after which
+                          the machine preservation is stopped
+                        type: string
                       maxEvictRetries:
                         description: MaxEvictRetries is the number of retries that
                           will be attempted while draining the node.
@@ -397,9 +407,8 @@ spec:
                                         to a node.
                                       type: string
                                     timeAdded:
-                                      description: |-
-                                        TimeAdded represents the time at which the taint was added.
-                                        It is only written for NoExecute taints.
+                                      description: TimeAdded represents the time at
+                                        which the taint was added.
                                       format: date-time
                                       type: string
                                     value:
@@ -520,6 +529,11 @@ spec:
                 description: The generation observed by the MachineDeployment controller.
                 format: int64
                 type: integer
+              preservedFailedReplicas:
+                description: PreservedFailedReplicas is the number of preserved machines
+                  in Failed phase targeted by this MachineDeployment
+                format: int32
+                type: integer
               readyReplicas:
                 description: Total number of ready machines targeted by this MachineDeployment.
                 format: int32
@@ -533,7 +547,8 @@ spec:
                 description: |-
                   Total number of unavailable machines targeted by this MachineDeployment. This is the total number of
                   machines that are still required for the MachineDeployment to have 100% available capacity. They may
-                  either be machines that are running but not yet available or machines that still have not been created.
+                  either be machines that are running but not yet available, machines that still have not been created, or
+                  machines that are preserved in Failed phase.
                 format: int32
                 type: integer
               updatedReplicas:

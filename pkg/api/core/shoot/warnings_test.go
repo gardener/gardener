@@ -419,6 +419,23 @@ var _ = Describe("Warnings", func() {
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
 		)
+
+		It("should return a warning when kubernetes version is < 1.34 and autoPreserveFailedMachineMax is set to non-zero value", func() {
+			shoot.Spec.Kubernetes.Version = "1.33.5"
+			shoot.Spec.Provider.Workers[0].AutoPreserveFailedMachineMax = new(int32(1))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("preservation of backing machines of unregistered nodes is not supported in clusters with Kubernetes version < v1.34.")))
+		})
+
+		It("should not return a warning when kubernetes version is >= 1.34 and autoPreserveFailedMachineMax is set to non-zero value", func() {
+			shoot.Spec.Kubernetes.Version = "1.34.0"
+			shoot.Spec.Provider.Workers[0].AutoPreserveFailedMachineMax = new(int32(1))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+		})
+
+		It("should not return a warning when kubernetes version is < 1.34 and autoPreserveFailedMachineMax is not set", func() {
+			shoot.Spec.Kubernetes.Version = "1.32.0"
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+		})
 	})
 
 	Describe("#GetKubeAPIServerWarnings", func() {
