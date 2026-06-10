@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -57,16 +57,16 @@ var _ = Describe("PVCAutoscaler", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount      *corev1.ServiceAccount
-		clusterRoles        []*rbacv1.ClusterRole
-		clusterRoleBindings []*rbacv1.ClusterRoleBinding
-		role                *rbacv1.Role
-		roleBinding         *rbacv1.RoleBinding
-		service             *corev1.Service
-		deployment          *appsv1.Deployment
-		pdb                 *policyv1.PodDisruptionBudget
-		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-		serviceMonitor      *monitoringv1.ServiceMonitor
+		serviceAccount     *corev1.ServiceAccount
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		role               *rbacv1.Role
+		roleBinding        *rbacv1.RoleBinding
+		service            *corev1.Service
+		deployment         *appsv1.Deployment
+		pdb                *policyv1.PodDisruptionBudget
+		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceMonitor     *monitoringv1.ServiceMonitor
 	)
 
 	getLabels := func() map[string]string {
@@ -90,166 +90,80 @@ var _ = Describe("PVCAutoscaler", func() {
 			AutomountServiceAccountToken: new(false),
 		}
 
-		clusterRoles = []*rbacv1.ClusterRole{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-autoscaling-persistentvolumeclaimautoscaler-editor-role",
-					Labels: getLabels(),
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers"},
-						Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-					},
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers/status"},
-						Verbs:     []string{"get"},
-					},
-				},
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
+				Labels: getLabels(),
 			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-autoscaling-persistentvolumeclaimautoscaler-viewer-role",
-					Labels: getLabels(),
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"*"},
+					Resources: []string{"*/scale"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers"},
-						Verbs:     []string{"get", "list", "watch"},
-					},
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers/status"},
-						Verbs:     []string{"get"},
-					},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch"},
 				},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-manager-role",
-					Labels: getLabels(),
+				{
+					APIGroups: []string{""},
+					Resources: []string{"persistentvolumeclaims"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"*"},
-						Resources: []string{"*/scale"},
-						Verbs:     []string{"get", "list", "watch"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"events"},
-						Verbs:     []string{"create", "patch"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"persistentvolumeclaims"},
-						Verbs:     []string{"get", "list", "patch", "update", "watch"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"pods"},
-						Verbs:     []string{"get", "list", "watch"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"persistentvolumeclaims/status"},
-						Verbs:     []string{"get"},
-					},
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers"},
-						Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-					},
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers/finalizers"},
-						Verbs:     []string{"update"},
-					},
-					{
-						APIGroups: []string{"autoscaling.gardener.cloud"},
-						Resources: []string{"persistentvolumeclaimautoscalers/status"},
-						Verbs:     []string{"get", "patch", "update"},
-					},
-					{
-						APIGroups: []string{"storage.k8s.io"},
-						Resources: []string{"storageclasses"},
-						Verbs:     []string{"get", "list", "watch"},
-					},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-metrics-reader",
-					Labels: getLabels(),
+				{
+					APIGroups: []string{""},
+					Resources: []string{"persistentvolumeclaims/status"},
+					Verbs:     []string{"get"},
 				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						NonResourceURLs: []string{"/metrics"},
-						Verbs:           []string{"get"},
-					},
+				{
+					APIGroups: []string{"autoscaling.gardener.cloud"},
+					Resources: []string{"persistentvolumeclaimautoscalers"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-proxy-role",
-					Labels: getLabels(),
+				{
+					APIGroups: []string{"autoscaling.gardener.cloud"},
+					Resources: []string{"persistentvolumeclaimautoscalers/finalizers"},
+					Verbs:     []string{"update"},
 				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"authentication.k8s.io"},
-						Resources: []string{"tokenreviews"},
-						Verbs:     []string{"create"},
-					},
-					{
-						APIGroups: []string{"authorization.k8s.io"},
-						Resources: []string{"subjectaccessreviews"},
-						Verbs:     []string{"create"},
-					},
+				{
+					APIGroups: []string{"autoscaling.gardener.cloud"},
+					Resources: []string{"persistentvolumeclaimautoscalers/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"storage.k8s.io"},
+					Resources: []string{"storageclasses"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}
 
-		clusterRoleBindings = []*rbacv1.ClusterRoleBinding{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-manager-rolebinding",
-					Labels: getLabels(),
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     "pvc-autoscaler-manager-role",
-				},
-				Subjects: []rbacv1.Subject{{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      name,
-					Namespace: namespace,
-				}},
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
+				Labels: getLabels(),
 			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "pvc-autoscaler-proxy-rolebinding",
-					Labels: getLabels(),
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     "pvc-autoscaler-proxy-role",
-				},
-				Subjects: []rbacv1.Subject{{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      name,
-					Namespace: namespace,
-				}},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:autoscaling:pvc-autoscaler",
 			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      name,
+				Namespace: namespace,
+			}},
 		}
 
 		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pvc-autoscaler-leader-election-role",
+				Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
@@ -274,7 +188,7 @@ var _ = Describe("PVCAutoscaler", func() {
 
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pvc-autoscaler-leader-election-rolebinding",
+				Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
@@ -286,13 +200,13 @@ var _ = Describe("PVCAutoscaler", func() {
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "Role",
-				Name:     "pvc-autoscaler-leader-election-role",
+				Name:     "gardener.cloud:autoscaling:pvc-autoscaler",
 			},
 		}
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pvc-autoscaler-controller-manager-metrics-service",
+				Name:      name,
 				Namespace: namespace,
 				Labels:    getLabels(),
 				Annotations: map[string]string{
@@ -301,12 +215,6 @@ var _ = Describe("PVCAutoscaler", func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
-					{
-						Name:       "https",
-						Port:       8443,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromString("https"),
-					},
 					{
 						Name:       "metrics",
 						Port:       8080,
@@ -358,22 +266,13 @@ var _ = Describe("PVCAutoscaler", func() {
 									"--health-probe-bind-address=:8081",
 									"--metrics-bind-address=:8080",
 									"--leader-elect",
-									"--interval=30s",
+									"--interval=60s",
 									"--prometheus-address=http://prometheus-cache.garden.svc.cluster.local:80",
 								},
 								Env: []corev1.EnvVar{
 									{
 										Name:  "ENABLE_WEBHOOKS",
 										Value: "false",
-									},
-									{
-										Name: "NAMESPACE",
-										ValueFrom: &corev1.EnvVarSource{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
-											},
-										},
 									},
 								},
 								Ports: []corev1.ContainerPort{
@@ -475,18 +374,11 @@ var _ = Describe("PVCAutoscaler", func() {
 		}
 
 		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: monitoringutils.ConfigObjectMeta(name, namespace, cache.Label),
+			ObjectMeta: monitoringutils.ConfigObjectMeta(name, namespace, seed.Label),
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							Action:      "replace",
-							Replacement: new(name),
-							TargetLabel: "job",
-						},
-					},
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						"pvc_autoscaler_resized_total",
 						"pvc_autoscaler_threshold_reached_total",
@@ -540,6 +432,8 @@ var _ = Describe("PVCAutoscaler", func() {
 
 			expectedObjects := []client.Object{
 				serviceAccount,
+				clusterRole,
+				clusterRoleBinding,
 				role,
 				roleBinding,
 				service,
@@ -547,12 +441,6 @@ var _ = Describe("PVCAutoscaler", func() {
 				pdb,
 				vpa,
 				serviceMonitor,
-			}
-			for _, cr := range clusterRoles {
-				expectedObjects = append(expectedObjects, cr)
-			}
-			for _, crb := range clusterRoleBindings {
-				expectedObjects = append(expectedObjects, crb)
 			}
 			Expect(managedResource).To(consistOf(expectedObjects...))
 
