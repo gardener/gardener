@@ -142,7 +142,7 @@ func (h *health) checkRuntimeComponents(condition gardencorev1beta1.Condition, m
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil &&
 			sets.New("", string(operatorv1alpha1.RuntimeComponentsHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
-	}, nil); exitCondition != nil {
+	}, nil, nil); exitCondition != nil {
 		return exitCondition
 	}
 
@@ -163,7 +163,7 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class == nil ||
 			managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(operatorv1alpha1.VirtualComponentsHealthy)
-	}, nil); exitCondition != nil {
+	}, nil, nil); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -174,7 +174,7 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 func (h *health) checkObservabilityComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource, prometheuses *monitoringv1.PrometheusList) *gardencorev1beta1.Condition {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(operatorv1alpha1.ObservabilityComponentsHealthy)
-	}, nil); exitCondition != nil {
+	}, nil, nil); exitCondition != nil {
 		return exitCondition
 	}
 
