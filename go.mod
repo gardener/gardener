@@ -23,6 +23,7 @@ require (
 	github.com/gardener/dependency-watchdog v1.8.0
 	github.com/gardener/etcd-druid/api v0.36.3
 	github.com/gardener/machine-controller-manager v0.61.3
+	github.com/gardener/pvc-autoscaler v0.2.0
 	github.com/gardener/terminal-controller-manager v0.36.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.3

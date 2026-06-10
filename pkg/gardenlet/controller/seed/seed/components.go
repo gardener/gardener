@@ -90,7 +90,7 @@ type components struct {
 	persesCRD        component.DeployWaiter
 	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
-	pvcautoscalerCRD component.DeployWaiter
+	pvcAutoscalerCRD component.DeployWaiter
 
 	backupBucket            component.DeployWaiter
 	clusterIdentity         component.DeployWaiter
@@ -128,7 +128,7 @@ type components struct {
 	openTelemetryOperator         component.DeployWaiter
 	openTelemetryCollector        component.Deployer
 	victoriaLogs                  component.DeployWaiter
-	pvcautoscaler                 component.DeployWaiter
+	pvcAutoscaler                 component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -187,12 +187,12 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.pvcautoscalerCRD, err = pvcautoscaler.NewCRDs(r.SeedClientSet.Client())
+	c.pvcAutoscalerCRD, err = pvcautoscaler.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
 	}
 	if !pvcAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
-		c.pvcautoscalerCRD = component.OpDestroyAndWait(c.pvcautoscalerCRD)
+		c.pvcAutoscalerCRD = component.OpDestroyAndWait(c.pvcAutoscalerCRD)
 	}
 
 	// seed system components
@@ -309,7 +309,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.pvcautoscaler, err = r.newPVCAutoscaler(seed.GetInfo().Spec.Settings)
+	c.pvcAutoscaler, err = r.newPVCAutoscaler(seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return
 	}

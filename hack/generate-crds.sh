@@ -87,6 +87,9 @@ get_group_package () {
   "opentelemetry.io_v1beta1")
     echo "github.com/gardener/gardener/third_party/open-telemetry/opentelemetry-operator/apis/v1beta1"
     ;;
+  "autoscaling.gardener.cloud")
+    echo "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
+    ;;
   *)
     >&2 echo "unknown group $1"
     return 1
@@ -109,6 +112,7 @@ generate_all_groups () {
   generate_group opentelemetry.io
   generate_group operator.victoriametrics.com_v1
   generate_group operator.victoriametrics.com_v1beta1
+  generate_group autoscaling.gardener.cloud
 }
 
 generate_group () {

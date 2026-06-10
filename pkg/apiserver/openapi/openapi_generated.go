@@ -8998,7 +8998,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingPersistentVolumeClaimAutoscaler(ref
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster. It is disabled by default, because it's still under active development.",
+							Description: "Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",

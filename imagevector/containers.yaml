@@ -859,6 +859,19 @@ images:
     sourceRepository: github.com/gardener/pvc-autoscaler
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/pvc-autoscaler
     tag: "v0.2.0"
+    labels:
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'gardener-operator'
+          confidentiality_requirement: 'low'
+          integrity_requirement: 'high'
+          availability_requirement: 'high'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/pvc-autoscaler-maintainers'
   # Istio
   - name: istio-proxy
     sourceRepository: github.com/istio/istio

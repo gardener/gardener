@@ -453,9 +453,8 @@ type SeedSettingVerticalPodAutoscaler struct {
 // SeedSettingPersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the
 // seed.
 type SeedSettingPersistentVolumeClaimAutoscaler struct {
-	// Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster. It
-	// is disabled by default, because it's still under active development.
-	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=disabled"`
+	// Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster.
+	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 }
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.

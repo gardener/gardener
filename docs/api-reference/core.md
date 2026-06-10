@@ -11010,7 +11010,7 @@ boolean
 </em>
 </td>
 <td>
-<p>Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster. It<br />is disabled by default, because it's still under active development.</p>
+<p>Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster.</p>
 </td>
 </tr>
 

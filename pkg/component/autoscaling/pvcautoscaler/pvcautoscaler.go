@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -89,8 +88,8 @@ func (p *pvcautoscaler) Deploy(ctx context.Context) error {
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(metricsPort)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
+		Port:     new(intstr.FromInt32(metricsPort)),
+		Protocol: new(corev1.ProtocolTCP),
 	}))
 
 	resources := []client.Object{
@@ -152,7 +151,7 @@ func (p *pvcautoscaler) serviceAccount() *corev1.ServiceAccount {
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 	}
 }
 
@@ -408,8 +407,8 @@ func (p *pvcautoscaler) deployment() *appsv1.Deployment {
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: new(int32(2)),
+			Replicas:             new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
 					"control-plane": "controller-manager",
@@ -428,10 +427,10 @@ func (p *pvcautoscaler) deployment() *appsv1.Deployment {
 					ServiceAccountName: serviceAccountName,
 					PriorityClassName:  p.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](65532),
-						RunAsGroup:   ptr.To[int64](65532),
-						FSGroup:      ptr.To[int64](65532),
+						RunAsNonRoot: new(true),
+						RunAsUser:    new(int64(65532)),
+						RunAsGroup:   new(int64(65532)),
+						FSGroup:      new(int64(65532)),
 					},
 					Containers: []corev1.Container{
 						{
@@ -501,7 +500,7 @@ func (p *pvcautoscaler) deployment() *appsv1.Deployment {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
+								AllowPrivilegeEscalation: new(false),
 							},
 						},
 					},
@@ -519,13 +518,13 @@ func (p *pvcautoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable: new(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
 					"control-plane": "controller-manager",
 				}),
 			},
-			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
 }
@@ -544,20 +543,20 @@ func (p *pvcautoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAut
 				Name:       v1beta1constants.DeploymentNamePVCAutoscaler,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeRecreate),
+				UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    name,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
@@ -575,7 +574,7 @@ func (p *pvcautoscaler) serviceMonitor() *monitoringv1.ServiceMonitor {
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: ptr.To(name),
+						Replacement: new(name),
 						TargetLabel: "job",
 					},
 				},

@@ -267,6 +267,8 @@ github.com/gardener/etcd-druid/api v0.36.3 h1:mBhDE/TJmcn2BY8Fscd5SfBSeWvtK4ZBPE
 github.com/gardener/etcd-druid/api v0.36.3/go.mod h1:RwZzKp8K415AS0zg8VoODjBxYepCAUYyLgXnZc1bmbo=
 github.com/gardener/machine-controller-manager v0.61.3 h1:w0JuHCKLmcK7B8E7mx3TvE3e0hSYwikchsMSiMhocqw=
 github.com/gardener/machine-controller-manager v0.61.3/go.mod h1:8eE1qLztrWIbOM71mHSQGaC6Q+pl5lvOyN08qP39D7o=
+github.com/gardener/pvc-autoscaler v0.2.0 h1:OuZCrP0OagXI8W8xfwPSvFbIpfvwVvBIAMhLC9jge64=
+github.com/gardener/pvc-autoscaler v0.2.0/go.mod h1:4LCWPFeX3Fnr8z/WiTWZe1k3OhWp4KaV9QGiBKYXu7g=
 github.com/gardener/terminal-controller-manager v0.36.0 h1:/aeBb+pcV4nVUO/XTVAV7BkCt1mV4Iz12uttXcXqzuw=
 github.com/gardener/terminal-controller-manager v0.36.0/go.mod h1:+55GYqbXlQr9NSqInk3+OocStf9PngPXo4zFm4EPbwg=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
