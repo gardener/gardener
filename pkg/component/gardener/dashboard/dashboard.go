@@ -84,13 +84,13 @@ type OIDCValues struct {
 type IngressValues struct {
 	// Enabled specifies if the ingress resource should be deployed.
 	Enabled bool
-	// Domains is the list of ingress domains.
+	// Domains is the list of hostnames the dashboard is exposed on.
 	Domains []string
+	// TLSSecretName is the name of the TLS secret containing a trusted TLS certificate for the domain.
+	// If not provided, a self-signed certificate will be generated.
+	TLSSecretName *string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
 	IstioIngressGatewayLabels map[string]string
-	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
-	// ingress domains. If not provided, a self-signed server certificate will be created.
-	WildcardCertSecretName *string
 }
 
 // Interface contains function for deploying the gardener-dashboard.

@@ -364,6 +364,109 @@ var _ = Describe("helper", func() {
 		)
 	})
 
+	DescribeTable("#DashboardDomains",
+		func(garden *operatorv1alpha1.Garden, expected []string) {
+			Expect(DashboardDomains(garden)).To(Equal(expected))
+		},
+		Entry("no dashboard config, returns all ingress domains with dashboard prefix", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{
+							{Name: "ingress.example.com"},
+							{Name: "secondary.example.com"},
+						},
+					},
+				},
+			},
+		}, []string{"dashboard.ingress.example.com", "dashboard.secondary.example.com"}),
+		Entry("dashboard config without custom domain, returns all ingress domains with dashboard prefix", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{
+							{Name: "ingress.example.com"},
+							{Name: "secondary.example.com"},
+						},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						Dashboard: &operatorv1alpha1.GardenerDashboardConfig{},
+					},
+				},
+			},
+		}, []string{"dashboard.ingress.example.com", "dashboard.secondary.example.com"}),
+		Entry("dashboard config with custom domain, returns only custom domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{
+							{Name: "ingress.example.com"},
+							{Name: "secondary.example.com"},
+						},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						Dashboard: &operatorv1alpha1.GardenerDashboardConfig{
+							Domain: &operatorv1alpha1.DNSDomain{
+								Name: "custom.dashboard.example.com",
+							},
+						},
+					},
+				},
+			},
+		}, []string{"custom.dashboard.example.com"}),
+	)
+
+	DescribeTable("#PrimaryDashboardDomain",
+		func(garden *operatorv1alpha1.Garden, expected string) {
+			Expect(PrimaryDashboardDomain(garden)).To(Equal(expected))
+		},
+		Entry("no dashboard config, uses first ingress domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+			},
+		}, "dashboard.ingress.example.com"),
+		Entry("dashboard config without custom domain, uses first ingress domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						Dashboard: &operatorv1alpha1.GardenerDashboardConfig{},
+					},
+				},
+			},
+		}, "dashboard.ingress.example.com"),
+		Entry("dashboard config with custom domain, uses custom domain", &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						Dashboard: &operatorv1alpha1.GardenerDashboardConfig{
+							Domain: &operatorv1alpha1.DNSDomain{
+								Name: "custom.dashboard.example.com",
+							},
+						},
+					},
+				},
+			},
+		}, "custom.dashboard.example.com"),
+	)
+
 	DescribeTable("#DiscoveryServerDomain",
 		func(garden *operatorv1alpha1.Garden, expected string) {
 			Expect(DiscoveryServerDomain(garden)).To(Equal(expected))
@@ -565,6 +668,89 @@ var _ = Describe("helper", func() {
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
+					},
+				))
+			})
+		})
+
+		When("the dashboard is configured with an explicit domain", func() {
+			BeforeEach(func() {
+				garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+					Domain: &operatorv1alpha1.DNSDomain{
+						Name:     "dashboard.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				}
+			})
+
+			It("should return the ingress wildcard domains, discovery server domain, and dashboard domain", func() {
+				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.ingress.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.secondary.local.gardener.cloud",
+						Provider: new("secondary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "dashboard.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				))
+			})
+		})
+
+		When("the dashboard domain overlaps with the ingress domains", func() {
+			BeforeEach(func() {
+				garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+					Domain: &operatorv1alpha1.DNSDomain{
+						Name:     "dashboard.ingress.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				}
+			})
+
+			It("should not add the dashboard domain since it is already covered by wildcard", func() {
+				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.ingress.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.secondary.local.gardener.cloud",
+						Provider: new("secondary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				))
+			})
+		})
+
+		When("the dashboard is not configured with an explicit domain", func() {
+			BeforeEach(func() {
+				garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{}
+			})
+
+			It("should only return the ingress wildcard domains and the discovery server domain", func() {
+				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.ingress.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.secondary.local.gardener.cloud",
+						Provider: new("secondary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
 					},
 				))
 			})

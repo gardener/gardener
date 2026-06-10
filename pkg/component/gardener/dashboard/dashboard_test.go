@@ -63,7 +63,7 @@ var _ = Describe("GardenerDashboard", func() {
 		image                 = "gardener-dashboard-image:latest"
 		apiServerURL          = "api.local.gardener.cloud"
 		logLevel              = "debug"
-		ingressValues         = IngressValues{Enabled: true, Domains: []string{"first", "second"}}
+		ingressValues         = IngressValues{Enabled: true, Domains: []string{"dashboard.first", "dashboard.second"}}
 		enableTokenLogin      bool
 		terminal              *TerminalValues
 		oidc                  *OIDCValues
@@ -220,7 +220,7 @@ websocketAllowedOrigins:`)
 
 			for _, domain := range ingressDomains {
 				configRaw.WriteString(`
-  - https://dashboard.` + domain)
+  - https://` + domain)
 			}
 			configRaw.WriteString("\n")
 
@@ -263,7 +263,7 @@ frontend:
 
 				for _, domain := range ingressDomains {
 					configRaw.WriteString(`
-    - https://dashboard.` + domain + `/auth/callback`)
+    - https://` + domain + `/auth/callback`)
 				}
 
 				configRaw.WriteString(`
@@ -687,7 +687,7 @@ frontend:
 						Number:   443,
 						Protocol: "HTTPS",
 					},
-					Hosts: []string{"dashboard.first", "dashboard.second"},
+					Hosts: ingressValues.Domains,
 					Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
 						Mode:           istioapinetworkingv1beta1.ServerTLSSettings_SIMPLE,
 						CredentialName: "some-namespace-gardener-dashboard-gardener-dashboard-tls",
@@ -707,7 +707,7 @@ frontend:
 			Spec: istioapinetworkingv1beta1.VirtualService{
 				ExportTo: []string{"virtual-garden-istio-ingress"},
 				Gateways: []string{"gardener-dashboard"},
-				Hosts:    []string{"dashboard.first", "dashboard.second"},
+				Hosts:    ingressValues.Domains,
 				Http: []*istioapinetworkingv1beta1.HTTPRoute{{
 					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 						{
@@ -1251,6 +1251,20 @@ assets:
 				})
 
 				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				})
+			})
+
+			When("custom domain is configured", func() {
+				BeforeEach(func() {
+					ingressValues = IngressValues{
+						Enabled: true,
+						Domains: []string{"custom.example.com"},
+					}
+				})
+
+				It("should successfully deploy all resources with custom domain", func() {
 					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 				})

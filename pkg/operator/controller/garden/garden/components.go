@@ -1322,9 +1322,9 @@ func (r *Reconciler) newGardenerDashboard(
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
 			Enabled:                   true,
-			Domains:                   domainNames(garden.Spec.RuntimeCluster.Ingress.Domains),
+			Domains:                   helper.DashboardDomains(garden),
+			TLSSecretName:             dashboardTLSSecretName(garden, wildcardCertSecretName),
 			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
-			WildcardCertSecretName:    wildcardCertSecretName,
 		},
 	}
 
@@ -1622,9 +1622,8 @@ func (r *Reconciler) newPrometheusLongTerm(
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (component.DeployWaiter, error) {
 	var (
 		primaryVirtualDNSDomain = garden.Spec.VirtualCluster.DNS.Domains[0].Name
-		primaryIngressDomain    = garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + primaryVirtualDNSDomain + "/healthz")}
-		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + primaryIngressDomain + "/healthz")
+		gardenerDashboardTarget = monitoringv1alpha1.Target("https://" + helper.PrimaryDashboardDomain(garden) + "/healthz")
 		discoveryServerEnabled  = garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil
 	)
 
@@ -1729,14 +1728,6 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 	)
 }
 
-func domainNames(domains []operatorv1alpha1.DNSDomain) []string {
-	names := make([]string, 0, len(domains))
-	for _, domain := range domains {
-		names = append(names, domain.Name)
-	}
-	return names
-}
-
 func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) extension.Interface {
 	newDefaultExtension := func(ext operatorv1alpha1.GardenExtension) extension.Extension {
 		return extension.Extension{
@@ -1795,6 +1786,13 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 
 func discoveryServerTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertSecretName *string) *string {
 	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil && config.TLSSecretName != nil {
+		return config.TLSSecretName
+	}
+	return wildcardCertSecretName
+}
+
+func dashboardTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertSecretName *string) *string {
+	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil && config.TLSSecretName != nil {
 		return config.TLSSecretName
 	}
 	return wildcardCertSecretName
