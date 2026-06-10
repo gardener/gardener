@@ -74,20 +74,20 @@ TYPOS_VERSION ?= v1.47.2
 GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
 
 # tool versions from go.mod
-CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
-GINKGO_VERSION ?= $(call version_gomod,github.com/onsi/ginkgo/v2)
-CRD_REF_DOCS_VERSION ?= $(call version_gomod,github.com/elastic/crd-ref-docs)
-CODE_GENERATOR_VERSION ?= $(call version_gomod,k8s.io/code-generator)
-GOIMPORTS_VERSION ?= $(call version_gomod,golang.org/x/tools)
-GOIMPORTSREVISER_VERSION ?= $(call version_gomod,github.com/incu6us/goimports-reviser/v3)
-GOLANGCI_LINT_VERSION ?= $(call version_gomod,github.com/golangci/golangci-lint/v2)
-GOSEC_VERSION ?= $(call version_gomod,github.com/securego/gosec/v2)
-MOCKGEN_VERSION ?= $(call version_gomod,go.uber.org/mock)
-OPENAPI_GEN_VERSION ?= $(call version_gomod,k8s.io/kube-openapi)
-GOBUILDCACHE_VERSION ?= $(call version_gomod,github.com/saracen/gobuildcache)
-GO_ADD_LICENSE_VERSION ?= $(call version_gomod,github.com/google/addlicense)
-K8S_VERSION ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
+CONTROLLER_GEN_VERSION     ?= $(call version_gomod,sigs.k8s.io/controller-tools)
+GINKGO_VERSION             ?= $(call version_gomod,github.com/onsi/ginkgo/v2)
+CRD_REF_DOCS_VERSION       ?= $(call version_gomod,github.com/elastic/crd-ref-docs)
+CODE_GENERATOR_VERSION     ?= $(call version_gomod,k8s.io/code-generator)
+GOIMPORTS_VERSION          ?= $(call version_gomod,golang.org/x/tools)
+GOIMPORTSREVISER_VERSION   ?= $(call version_gomod,github.com/incu6us/goimports-reviser/v3)
+GOLANGCI_LINT_VERSION      ?= $(call version_gomod,github.com/golangci/golangci-lint/v2)
+GOSEC_VERSION              ?= $(call version_gomod,github.com/securego/gosec/v2)
+MOCKGEN_VERSION            ?= $(call version_gomod,go.uber.org/mock)
+OPENAPI_GEN_VERSION        ?= $(call version_gomod,k8s.io/kube-openapi)
+GOBUILDCACHE_VERSION       ?= $(call version_gomod,github.com/saracen/gobuildcache)
+GO_ADD_LICENSE_VERSION     ?= $(call version_gomod,github.com/google/addlicense)
 CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
+K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools

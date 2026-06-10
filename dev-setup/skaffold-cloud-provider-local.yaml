@@ -39,9 +39,6 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/provider-local/cloud-provider/api/v1alpha1
             - pkg/provider-local/cloud-provider/loadbalancer
-            - pkg/provider-local/cloud-provider/loadbalancer/templates/cds.yaml.tpl
-            - pkg/provider-local/cloud-provider/loadbalancer/templates/envoy.yaml.tpl
-            - pkg/provider-local/cloud-provider/loadbalancer/templates/lds.yaml.tpl
             - pkg/provider-local/cloud-provider/provider
             - pkg/utils
             - pkg/utils/errors
