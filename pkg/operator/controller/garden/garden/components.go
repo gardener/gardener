@@ -17,6 +17,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -86,6 +87,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -329,7 +331,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.fluentOperatorCustomResources, err = r.newFluentCustomResources()
+	c.fluentOperatorCustomResources, err = r.newFluentCustomResources(ctx)
 	if err != nil {
 		return
 	}
@@ -1409,7 +1411,7 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 	)
 }
 
-func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentCustomResources(ctx context.Context) (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 	// In a garden-as-seed setup the gardenlet skips deploying the fluent-operator custom resources
 	// (see reconciler_reconcile.go: SkipIf: seedIsGarden), so the operator must provision the
@@ -1421,7 +1423,21 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	// into the garden OpenTelemetry Collector.
 	output := fluentcustomresources.GetStaticClusterOutput(customResourcesLabels)
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
+		// When this runtime cluster is later promoted to a Seed (garden-as-seed),
+		// the gardenlet installs the extensions.gardener.cloud/v1alpha1.Cluster CRD,
+		// at which point we switch the ClusterOutput from its static form to the
+		// dynamic form (adding DynamicHost* fields). The dynamic form activates the
+		// fluent-bit gardener output plugin's Cluster reconciler, which requires that
+		// CRD; deploying it before the promotion crash-loops fluent-bit. The transition
+		// is picked up automatically via fluent-bit's hot-reload once the operator
+		// re-renders the ClusterOutput on a subsequent reconciliation.
+		gardenIsSeed, err := kubernetesutils.ResourcesExist(ctx, r.RuntimeClientSet.Client(), &extensionsv1alpha1.ClusterList{}, operatorclient.RuntimeScheme)
+		if err != nil && !meta.IsNoMatchError(err) {
+			return nil, err
+		}
+		if gardenIsSeed {
+			output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
+		}
 	}
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
