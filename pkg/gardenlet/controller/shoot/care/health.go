@@ -179,6 +179,15 @@ func (h *Health) Check(
 	// Health checks with dependencies to the Kube-Apiserver.
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if apiServerRunning && err == nil {
+		// noPreservedFailedMachines is non-nil only for shoots with MCM-managed infrastructure.
+		if conditions.noPreservedFailedMachines != nil {
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+			if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+				conditions.noPreservedFailedMachines = new(v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.noPreservedFailedMachines, err.Error()))
+			} else {
+				conditions.noPreservedFailedMachines = h.CheckPreservation(machineDeploymentList, *conditions.noPreservedFailedMachines)
+			}
+		}
 		taskFns = append(taskFns,
 			func(ctx context.Context) error {
 				conditions.apiServerAvailable = h.checkAPIServerAvailability(ctx, shootClient.RESTClient(), conditions.apiServerAvailable)
@@ -982,7 +991,27 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []
 		return fmt.Errorf("too many worker nodes are registered. Exceeding maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
 	}
 
-	return fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(cordonedNodes))
+	drainingNodes := cordonedNodes - cordonedPreservedNodes
+	if drainingNodes == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(drainingNodes))
+}
+
+// CheckPreservation checks whether any MachineDeployments have preserved failed machines
+// and returns the condition accordingly.
+func (h *Health) CheckPreservation(
+	machineDeploymentList *machinev1alpha1.MachineDeploymentList, condition gardencorev1beta1.Condition) *gardencorev1beta1.Condition {
+	var totalPreserved int32
+	for _, mcd := range machineDeploymentList.Items {
+		totalPreserved += mcd.Status.PreservedFailedReplicas
+	}
+	if totalPreserved > 0 {
+		msg := fmt.Sprintf("Cluster has %d preserved failed machine(s).", totalPreserved)
+		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "FailedMachinesPreserved", msg))
+	}
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved."))
 }
 
 func convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes map[string][]corev1.Node) *corev1.NodeList {
@@ -1091,6 +1120,7 @@ type ShootConditions struct {
 	systemComponentsHealthy        gardencorev1beta1.Condition
 	everyNodeReady                 *gardencorev1beta1.Condition
 	backupBucketsReady             *gardencorev1beta1.Condition
+	noPreservedFailedMachines      *gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot conditions as a slice.
@@ -1104,7 +1134,9 @@ func (s ShootConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 	if s.everyNodeReady != nil {
 		conditions = append(conditions, *s.everyNodeReady)
 	}
-
+	if s.noPreservedFailedMachines != nil && s.noPreservedFailedMachines.Status != gardencorev1beta1.ConditionTrue {
+		conditions = append(conditions, *s.noPreservedFailedMachines)
+	}
 	conditions = append(conditions, s.systemComponentsHealthy)
 
 	if s.backupBucketsReady != nil {
@@ -1124,6 +1156,10 @@ func (s ShootConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 
 	if s.everyNodeReady != nil {
 		types = append(types, gardencorev1beta1.ShootEveryNodeReady)
+	}
+
+	if s.noPreservedFailedMachines != nil {
+		types = append(types, gardencorev1beta1.ShootNoPreservedFailedMachines)
 	}
 
 	types = append(types, s.systemComponentsHealthy.Type)
@@ -1146,13 +1182,14 @@ func NewShootConditions(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoot
 	}
 
 	if !v1beta1helper.IsWorkerless(shoot) {
-		nodeCondition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootEveryNodeReady)
-		shootConditions.everyNodeReady = &nodeCondition
+		shootConditions.everyNodeReady = new(v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootEveryNodeReady))
+		if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) || v1beta1helper.HasManagedInfrastructure(shoot) {
+			shootConditions.noPreservedFailedMachines = new(v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.ShootNoPreservedFailedMachines))
+		}
 	}
 
 	if v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
-		backupBucketsCondition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
-		shootConditions.backupBucketsReady = &backupBucketsCondition
+		shootConditions.backupBucketsReady = new(v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady))
 	}
 
 	return shootConditions

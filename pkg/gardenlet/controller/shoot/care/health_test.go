@@ -7,7 +7,10 @@ package care_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"maps"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -22,14 +25,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+	fakerestclient "k8s.io/client-go/rest/fake"
 	"k8s.io/client-go/testing"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
@@ -1238,6 +1247,359 @@ var _ = Describe("health check", func() {
 		})
 	})
 
+	Describe("#CheckPreservation", func() {
+		var (
+			health        *Health
+			preservedCond gardencorev1beta1.Condition
+		)
+
+		BeforeEach(func() {
+			shootObj := &shootpkg.Shoot{
+				ControlPlaneNamespace: controlPlaneNamespace,
+				KubernetesVersion:     kubernetesVersion,
+			}
+			shootObj.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+					},
+				},
+			})
+			seedObj := &seedpkg.Seed{}
+			seedObj.SetInfo(&gardencorev1beta1.Seed{})
+
+			health = NewHealth(
+				logr.Discard(),
+				shootObj,
+				seedObj,
+				fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
+				nil,
+				nil,
+				fakeClock,
+				nil,
+				nil,
+			)
+
+			preservedCond = gardencorev1beta1.Condition{
+				Type:               gardencorev1beta1.ShootNoPreservedFailedMachines,
+				LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+			}
+		})
+
+		It("should set condition to True when no MachineDeployments have preserved failed machines", func() {
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+				Items: []machinev1alpha1.MachineDeployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
+						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+					},
+				},
+			}
+
+			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+
+			Expect(result).NotTo(BeNil())
+			Expect(*result).To(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved."))
+		})
+
+		It("should set condition to False when one MachineDeployment has preserved failed machines", func() {
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+				Items: []machinev1alpha1.MachineDeployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 2},
+					},
+				},
+			}
+
+			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+
+			Expect(result).NotTo(BeNil())
+			Expect(*result).To(beConditionWithStatusAndMsg(
+				gardencorev1beta1.ConditionFalse,
+				"FailedMachinesPreserved",
+				"Cluster has 2 preserved failed machine(s).",
+			))
+		})
+
+		It("should set condition to False when multiple MachineDeployments have preserved failed machines", func() {
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+				Items: []machinev1alpha1.MachineDeployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 1},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
+						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 3},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "deploy-3", Namespace: controlPlaneNamespace},
+						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+					},
+				},
+			}
+
+			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+
+			Expect(result).NotTo(BeNil())
+			Expect(*result).To(beConditionWithStatusAndMsg(
+				gardencorev1beta1.ConditionFalse,
+				"FailedMachinesPreserved",
+				"Cluster has 4 preserved failed machine(s).",
+			))
+		})
+
+		It("should set condition to True when MachineDeploymentList is empty", func() {
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+
+			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+
+			Expect(result).NotTo(BeNil())
+			Expect(*result).To(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved."))
+		})
+	})
+
+	Describe("#checkSystemComponents DaemonSet suppression", func() {
+		// These tests verify that checkSystemComponents suppresses SystemComponentsHealthy=False
+		// when the only unhealthy DaemonSet pods are on preserved-failed-machine nodes.
+
+		var (
+			fakeShootClient client.Client
+
+			makeHealthAndShoot = func(noPreservedStatus gardencorev1beta1.ConditionStatus) (*Health, *gardencorev1beta1.Shoot) {
+				shootInfo := &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						// CredentialsBindingName makes HasManagedInfrastructure return true, which
+						// ensures noPreservedFailedMachines is initialized (required for these tests).
+						// ControlPlane on the worker makes IsSelfHosted return true, which skips the
+						// VPN tunnel check — avoiding the need to import the botanist package just to
+						// stub SetupPortForwarder. This combination is artificial but used as a test fixture.
+						CredentialsBindingName: new("test-binding"),
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{
+								Name:         "worker",
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							}},
+						},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							Type:  gardencorev1beta1.LastOperationTypeReconcile,
+							State: gardencorev1beta1.LastOperationStateSucceeded,
+						},
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   gardencorev1beta1.ShootNoPreservedFailedMachines,
+								Status: noPreservedStatus,
+							},
+						},
+					},
+				}
+				shootObj := &shootpkg.Shoot{
+					ControlPlaneNamespace: controlPlaneNamespace,
+					KubernetesVersion:     kubernetesVersion,
+				}
+				shootObj.SetInfo(shootInfo)
+				seedObj := &seedpkg.Seed{}
+				seedObj.SetInfo(&gardencorev1beta1.Seed{})
+
+				fakeREST := &fakerestclient.RESTClient{
+					NegotiatedSerializer: serializer.NewCodecFactory(kubernetes.ShootScheme).WithoutConversion(),
+					Resp: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader("")),
+					},
+				}
+				h := NewHealth(
+					logr.Discard(),
+					shootObj,
+					seedObj,
+					fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
+					fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build(),
+					func() (kubernetes.Interface, bool, error) {
+						return fakekubernetes.NewClientSetBuilder().WithClient(fakeShootClient).WithRESTClient(fakeREST).Build(), true, nil
+					},
+					fakeClock,
+					&gardenletconfigv1alpha1.GardenletConfiguration{},
+					nil,
+				)
+				return h, shootInfo
+			}
+		)
+
+		BeforeEach(func() {
+			// Seed client: a ManagedResource with ResourcesHealthy=False referencing a DaemonSet.
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-mr", Namespace: controlPlaneNamespace},
+				Spec:       resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: "dummy"}}},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue},
+						{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionFalse, Message: "DaemonSet kube-system/csi-driver is unhealthy"},
+						{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse},
+					},
+					Resources: []resourcesv1alpha1.ObjectReference{
+						{ObjectReference: corev1.ObjectReference{Kind: "DaemonSet", Namespace: "kube-system", Name: "csi-driver"}},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			// Seed client: a MachineDeployment with preserved failed replicas so that
+			// CheckPreservation keeps noPreservedFailedMachines as False (mirrors the shoot status).
+			md := &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker", Namespace: controlPlaneNamespace},
+				Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: 3},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 1},
+			}
+			Expect(fakeClient.Create(ctx, md)).To(Succeed())
+
+			// Shoot client: unhealthy DaemonSet, preserved node, not-ready pod on that node,
+			// and a tunnel pod so the tunnel check does not fail.
+			ds := &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{Name: "csi-driver", Namespace: "kube-system"},
+				Spec: appsv1.DaemonSetSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "csi-driver"}},
+					UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+						Type:          appsv1.RollingUpdateDaemonSetStrategyType,
+						RollingUpdate: &appsv1.RollingUpdateDaemonSet{MaxUnavailable: new(intstr.FromInt32(1))},
+					},
+				},
+				Status: appsv1.DaemonSetStatus{
+					DesiredNumberScheduled: 3,
+					CurrentNumberScheduled: 3,
+					UpdatedNumberScheduled: 3,
+					NumberAvailable:        2,
+					NumberUnavailable:      1,
+				},
+			}
+			tunnelPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot", Namespace: metav1.NamespaceSystem, Labels: map[string]string{"type": "tunnel"}},
+				Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+			}
+			preservedNode := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: "preserved-node"},
+				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+				}},
+			}
+			notReadyPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "csi-driver-preserved", Namespace: "kube-system", Labels: map[string]string{"app": "csi-driver"}},
+				Spec:       corev1.PodSpec{NodeName: "preserved-node"},
+				Status: corev1.PodStatus{Conditions: []corev1.PodCondition{
+					{Type: corev1.PodReady, Status: corev1.ConditionFalse},
+				}},
+			}
+
+			fakeShootClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.ShootScheme).
+				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
+				WithObjects(ds, tunnelPod, preservedNode, notReadyPod).
+				Build()
+		})
+
+		It("suppresses SystemComponentsHealthy=False when all DaemonSet pods failing are on preserved nodes", func() {
+			h, shootInfo := makeHealthAndShoot(gardencorev1beta1.ConditionFalse) // preserved machines exist
+			conditions := NewShootConditions(fakeClock, shootInfo)
+			resultConditions := h.Check(ctx, nil, conditions)
+
+			var systemComponentsCond *gardencorev1beta1.Condition
+			for i := range resultConditions {
+				if resultConditions[i].Type == gardencorev1beta1.ShootSystemComponentsHealthy {
+					systemComponentsCond = &resultConditions[i]
+					break
+				}
+			}
+			Expect(systemComponentsCond).NotTo(BeNil())
+			Expect(systemComponentsCond.Status).To(Equal(gardencorev1beta1.ConditionTrue))
+		})
+
+		It("does not suppress when ShootNoPreservedFailedMachines is True", func() {
+			// Replace the BeforeEach MachineDeployment (PreservedFailedReplicas=1) with one that
+			// has no preserved replicas, so CheckPreservation keeps the condition True.
+			md := &machinev1alpha1.MachineDeployment{ObjectMeta: metav1.ObjectMeta{Name: "worker", Namespace: controlPlaneNamespace}}
+			Expect(fakeClient.Delete(ctx, md)).To(Succeed())
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker", Namespace: controlPlaneNamespace},
+				Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: 3},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+			})).To(Succeed())
+
+			h, shootInfo := makeHealthAndShoot(gardencorev1beta1.ConditionTrue) // no preserved machines
+			conditions := NewShootConditions(fakeClock, shootInfo)
+			resultConditions := h.Check(ctx, nil, conditions)
+
+			var systemComponentsCond *gardencorev1beta1.Condition
+			for i := range resultConditions {
+				if resultConditions[i].Type == gardencorev1beta1.ShootSystemComponentsHealthy {
+					systemComponentsCond = &resultConditions[i]
+					break
+				}
+			}
+			Expect(systemComponentsCond).NotTo(BeNil())
+			Expect(systemComponentsCond.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+		})
+
+		It("does not suppress when the unhealthy pod is on a non-preserved node", func() {
+			// Replace the preserved node with a normal node.
+			normalNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "preserved-node"}} // same name, no condition
+			oneUnavailable := intstr.FromInt32(1)
+			ds := &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{Name: "csi-driver", Namespace: "kube-system"},
+				Spec: appsv1.DaemonSetSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "csi-driver"}},
+					UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+						Type:          appsv1.RollingUpdateDaemonSetStrategyType,
+						RollingUpdate: &appsv1.RollingUpdateDaemonSet{MaxUnavailable: &oneUnavailable},
+					},
+				},
+				Status: appsv1.DaemonSetStatus{
+					DesiredNumberScheduled: 3,
+					CurrentNumberScheduled: 3,
+					UpdatedNumberScheduled: 3,
+					NumberAvailable:        2,
+					NumberUnavailable:      1,
+				},
+			}
+			tunnelPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot", Namespace: metav1.NamespaceSystem, Labels: map[string]string{"type": "tunnel"}},
+				Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+			}
+			notReadyPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "csi-driver-normal", Namespace: "kube-system", Labels: map[string]string{"app": "csi-driver"}},
+				Spec:       corev1.PodSpec{NodeName: "preserved-node"},
+				Status: corev1.PodStatus{Conditions: []corev1.PodCondition{
+					{Type: corev1.PodReady, Status: corev1.ConditionFalse},
+				}},
+			}
+			fakeShootClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.ShootScheme).
+				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
+				WithObjects(ds, tunnelPod, normalNode, notReadyPod).
+				Build()
+
+			h, shootInfo := makeHealthAndShoot(gardencorev1beta1.ConditionFalse)
+			conditions := NewShootConditions(fakeClock, shootInfo)
+			resultConditions := h.Check(ctx, nil, conditions)
+
+			var systemComponentsCond *gardencorev1beta1.Condition
+			for i := range resultConditions {
+				if resultConditions[i].Type == gardencorev1beta1.ShootSystemComponentsHealthy {
+					systemComponentsCond = &resultConditions[i]
+					break
+				}
+			}
+			Expect(systemComponentsCond).NotTo(BeNil())
+			Expect(systemComponentsCond.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+		})
+	})
+
 	Describe("ShootConditions", func() {
 		Describe("#NewShootConditions", func() {
 			It("should initialize all conditions", func() {
@@ -1250,6 +1612,7 @@ var _ = Describe("health check", func() {
 				})
 
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
@@ -1303,6 +1666,30 @@ var _ = Describe("health check", func() {
 					OfType("ControlPlaneHealthy"),
 					OfType("ObservabilityComponentsHealthy"),
 					OfType("EveryNodeReady"),
+					OfType("NoPreservedFailedMachines"),
+					OfType("SystemComponentsHealthy"),
+				))
+			})
+
+			It("should exclude NoPreservedFailedMachines when status is True", func() {
+				conditions := NewShootConditions(fakeClock, &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+						},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						Conditions: []gardencorev1beta1.Condition{
+							{Type: gardencorev1beta1.ShootNoPreservedFailedMachines, Status: gardencorev1beta1.ConditionTrue},
+						},
+					},
+				})
+
+				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
+					OfType("APIServerAvailable"),
+					OfType("ControlPlaneHealthy"),
+					OfType("ObservabilityComponentsHealthy"),
+					OfType("EveryNodeReady"),
 					OfType("SystemComponentsHealthy"),
 				))
 			})
@@ -1323,6 +1710,7 @@ var _ = Describe("health check", func() {
 					gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
 					gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
 					gardencorev1beta1.ConditionType("EveryNodeReady"),
+					gardencorev1beta1.ConditionType("NoPreservedFailedMachines"),
 					gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
 				))
 			})
