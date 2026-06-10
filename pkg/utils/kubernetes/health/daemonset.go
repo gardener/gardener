@@ -100,7 +100,7 @@ func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *
 		return false, nil
 	}
 	// Count not-ready pods on preserved NotReady nodes using the PodNodeName field index.
-	var preservedUnavailable int32
+	var preservedUnavailable int
 	for nodeName := range preservedNodeNames {
 		podList := &corev1.PodList{}
 		if err := c.List(ctx, podList,
@@ -119,8 +119,8 @@ func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *
 			}
 		}
 	}
-	adjusted := ds.Status.NumberUnavailable - preservedUnavailable
-	maxUnavailable := int32(DaemonSetMaxUnavailable(ds))
+	adjusted := int(ds.Status.NumberUnavailable) - preservedUnavailable
+	maxUnavailable := DaemonSetMaxUnavailable(ds)
 	if ds.Status.UpdatedNumberScheduled < ds.Status.DesiredNumberScheduled {
 		// During rollout: tolerance is maxUnavailable.
 		if adjusted > maxUnavailable {
