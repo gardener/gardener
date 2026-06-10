@@ -618,7 +618,7 @@ func (h *Health) checkSystemComponents(
 	if noPreservedFailedMachines != nil && noPreservedFailedMachines.Status == gardencorev1beta1.ConditionFalse {
 		preservedNodeNames, err := health.GetPreservedNodeNames(ctx, shootClient.Client())
 		if err != nil {
-			h.log.Error(err, "failed to list preserved nodes for DaemonSet suppression check")
+			h.log.Error(err, "Failed to list preserved nodes for DaemonSet suppression check")
 		} else {
 			suppressFunc = func(mr *resourcesv1alpha1.ManagedResource) bool {
 				for _, ref := range mr.Status.Resources {
@@ -627,12 +627,12 @@ func (h *Health) checkSystemComponents(
 					}
 					ds := &appsv1.DaemonSet{}
 					if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, ds); err != nil {
-						h.log.Error(err, "failed to get DaemonSet for preserved node suppression check", "namespace", ref.Namespace, "name", ref.Name)
+						h.log.Error(err, "Failed to get DaemonSet for preserved node suppression check", "namespace", ref.Namespace, "name", ref.Name)
 						return false
 					}
 					suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, shootClient.Client(), ds, preservedNodeNames)
 					if err != nil {
-						h.log.Error(err, "failed to check DaemonSet with preserved nodes", "namespace", ref.Namespace, "name", ref.Name)
+						h.log.Error(err, "Failed to check DaemonSet with preserved nodes", "namespace", ref.Namespace, "name", ref.Name)
 						return false
 					}
 					if !suppressed {
