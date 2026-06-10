@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -38,8 +37,8 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 					SNI: &gardenletconfigv1alpha1.SNI{
 						Ingress: &gardenletconfigv1alpha1.SNIIngress{
-							Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
-							ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
+							Namespace:   new(v1beta1constants.DefaultSNIIngressNamespace),
+							ServiceName: new(v1beta1constants.DefaultSNIIngressServiceName),
 							Labels: map[string]string{
 								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
 								"istio":                   "ingressgateway",
@@ -73,7 +72,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 	Describe("#setAPIServerServiceClusterIPs", func() {
 		BeforeEach(func() {
-			botanist.Shoot.InternalClusterDomain = ptr.To("internal.foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("internal.foo.bar")
 
 			By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
 			for _, name := range []string{
@@ -119,7 +118,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		})
 
 		It("should not panic when ExternalClusterDomain is not nil", func() {
-			botanist.Shoot.ExternalClusterDomain = ptr.To("external.foo.bar")
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
 
 			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
 
