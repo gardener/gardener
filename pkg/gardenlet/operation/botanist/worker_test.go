@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -21,6 +22,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -366,6 +368,131 @@ var _ = Describe("Worker", func() {
 			}},
 			BeNil(),
 		),
+		Entry("skip node that is preserved and not ready (Ready=False)",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated",
+					},
+					Labels: map[string]string{
+						"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{Type: v1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+						{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+					},
+				},
+			}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "gardener-node-agent--c63c0",
+				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
+			}},
+			BeNil(),
+		),
+		Entry("skip node that is preserved and not ready (Ready=Unknown)",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated",
+					},
+					Labels: map[string]string{
+						"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{Type: v1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+						{Type: corev1.NodeReady, Status: corev1.ConditionUnknown},
+					},
+				},
+			}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "gardener-node-agent--c63c0",
+				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
+			}},
+			BeNil(),
+		),
+		Entry("do not skip node that is preserved but ready (Ready=True)",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated",
+					},
+					Labels: map[string]string{
+						"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{Type: v1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+						{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+					},
+				},
+			}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "gardener-node-agent--c63c0",
+				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
+			}},
+			MatchError(ContainSubstring("is outdated")),
+		),
+		Entry("do not skip node that is not preserved but not ready",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated",
+					},
+					Labels: map[string]string{
+						"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+					},
+				},
+			}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "gardener-node-agent--c63c0",
+				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
+			}},
+			MatchError(ContainSubstring("is outdated")),
+		),
+		Entry("do not skip node that has Preserved=False and is not ready",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated",
+					},
+					Labels: map[string]string{
+						"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{Type: v1alpha1.NodePreserved, Status: corev1.ConditionFalse},
+						{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+					},
+				},
+			}}},
+			map[string]metav1.ObjectMeta{"pool1": {
+				Name:        "gardener-node-agent--c63c0",
+				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
+			}},
+			MatchError(ContainSubstring("is outdated")),
+		),
+
 		Entry("everything up-to-date",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}, {Name: "pool2"}},
 			map[string][]corev1.Node{

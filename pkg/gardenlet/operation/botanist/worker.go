@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -153,6 +154,12 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 				continue
 			}
 
+			// Skip nodes belonging to preserved machines - these nodes may not get their OSC
+			// updated for an extended period of time and should not block shoot reconciliation.
+			if isNodePreservedAndNotReady(node) {
+				continue
+			}
+
 			if nodeChecksum, ok := node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; !ok {
 				result = multierror.Append(result, fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
 			} else if nodeChecksum != secretChecksum {
@@ -162,6 +169,24 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 	}
 
 	return result
+}
+
+// isNodePreservedAndNotReady checks whether a node belongs to a preserved failed machine by checking the node conditions
+// with Type "Preserved" and Type "Ready".
+func isNodePreservedAndNotReady(node corev1.Node) bool {
+	isPreserved := false
+	isNotReady := false
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == v1alpha1.NodePreserved && condition.Status == corev1.ConditionTrue {
+			isPreserved = true
+		} else if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionFalse || condition.Status == corev1.ConditionUnknown {
+			isNotReady = true
+		}
+		if isPreserved && isNotReady {
+			return true
+		}
+	}
+	return false
 }
 
 func nodeToBeDeleted(node corev1.Node, gardenerNodeAgentSecretName string) bool {
