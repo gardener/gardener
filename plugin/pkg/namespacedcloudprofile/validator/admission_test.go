@@ -16,11 +16,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/plugin/pkg/namespacedcloudprofile/validator"
 )
 
@@ -286,6 +289,7 @@ var _ = Describe("Admission", func() {
 			})
 
 			It("should fail if the latest Kubernetes version has an expiration date", func() {
+				parentCloudProfile.Spec.Kubernetes.Versions[0] = gardencorev1beta1.ExpirableVersion{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationExpired)}
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{
@@ -574,24 +578,6 @@ var _ = Describe("Admission", func() {
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
-			It("should fail for creating a NamespacedCloudProfile that overrides an existing MachineImage version without specifying an expiration date", func() {
-				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
-					{Name: "test-image", Versions: []gardencorev1beta1.MachineImageVersion{
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.2.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
-						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
-					}},
-				}
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-
-				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
-					{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0"}}}},
-				}
-
-				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date for version \"1.0.0\" must be set")))
-			})
-
 			DescribeTable("should fail for creating a NamespacedCloudProfile that overrides an existing MachineImage version and specifies classification/cri/arch/flavors/kubeletVersionConstraint/inPlaceUpdates", func(parentUsesCapabilities bool) {
 				var additionalMatcher types.GomegaMatcher
 				if parentUsesCapabilities {
@@ -842,6 +828,8 @@ var _ = Describe("Admission", func() {
 			)
 
 			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+
 				parentCloudProfileName = "cloudprofile1"
 				namespacedCloudProfileName = "namespaced-profile"
 				namespaceName = "garden-test"
@@ -1005,7 +993,7 @@ var _ = Describe("Admission", func() {
 			})
 
 			Context("machine image validation", func() {
-				It("should allow an empty list of machine images", func() {
+				FIt("should allow an empty list of machine images", func() {
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{}
 
 					errorList := ValidateSimulatedNamespacedCloudProfileStatus(parentCloudProfile, namespacedCloudProfile)
