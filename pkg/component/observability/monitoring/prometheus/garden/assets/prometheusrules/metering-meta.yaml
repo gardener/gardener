@@ -19,11 +19,17 @@ spec:
         *
           0
 
+  # _garden_shoot_info
+
+    - record: _garden_shoot_info
+      expr: |2
+        group (garden_shoot_info) by(shoot_uid, project, name, iaas, region, seed, seed_iaas, seed_region, failure_tolerance, version, cost_object_type, cost_object, cost_object_owner, gardener_version, is_seed, is_workerless, is_hibernated) * 0
+
   # garden_shoot_info:this_month
 
     - record: garden_shoot_info:this_month
       expr: |2
-          (garden_shoot_info + on () group_left (year, month) _year_month2)
+          (_garden_shoot_info + on () group_left (year, month) _year_month2)
         or
           last_over_time(garden_shoot_info:this_month[30m]) + on (year, month) group_left () _year_month2
 
@@ -40,10 +46,10 @@ spec:
           (
               last_over_time(garden_shoot_info:timestamp[30m])
             or ignoring (timestamp)
-              garden_shoot_info + on () group_left (timestamp) _timestamp
+              _garden_shoot_info + on () group_left (timestamp) _timestamp
           )
         and ignoring (timestamp)
-          garden_shoot_info
+          _garden_shoot_info
 
   # garden_shoot_info :timestamp :this_month
 
