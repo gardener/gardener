@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -414,8 +415,22 @@ var _ = Describe("Warnings", func() {
 				&core.DNS{Providers: []core.DNSProvider{{SecretName: nil}}},
 				BeEmpty(),
 			),
+			Entry("should return a warning when secretName matches Secret credentialsRef",
+				&core.DNS{Providers: []core.DNSProvider{{
+					SecretName:     new("secret"),
+					CredentialsRef: dnsSecretCredentialsRef("secret"),
+				}}},
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
 			Entry("should return a warning when secretName is set",
 				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
+			Entry("should return a warning when secretName does not match Secret credentialsRef",
+				&core.DNS{Providers: []core.DNSProvider{{
+					SecretName:     new("secret"),
+					CredentialsRef: dnsSecretCredentialsRef("other-secret"),
+				}}},
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
 		)
@@ -486,8 +501,32 @@ var _ = Describe("Warnings", func() {
 				field.NewPath("spec", "dns"),
 				BeEmpty(),
 			),
+			Entry("should return a warning when secretName matches Secret credentialsRef",
+				&core.DNS{Providers: []core.DNSProvider{{
+					SecretName:     new("secret"),
+					CredentialsRef: dnsSecretCredentialsRef("secret"),
+				}}},
+				field.NewPath("spec", "dns"),
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
 			Entry("should return a warning when secretName is set for a single provider",
 				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
+				field.NewPath("spec", "dns"),
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
+			Entry("should return a warning when secretName does not match Secret credentialsRef",
+				&core.DNS{Providers: []core.DNSProvider{{
+					SecretName:     new("secret"),
+					CredentialsRef: dnsSecretCredentialsRef("other-secret"),
+				}}},
+				field.NewPath("spec", "dns"),
+				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
+			),
+			Entry("should return a warning when secretName is set with WorkloadIdentity credentialsRef",
+				&core.DNS{Providers: []core.DNSProvider{{
+					SecretName:     new("secret"),
+					CredentialsRef: dnsWorkloadIdentityCredentialsRef("identity"),
+				}}},
 				field.NewPath("spec", "dns"),
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
@@ -513,6 +552,26 @@ var _ = Describe("Warnings", func() {
 					Not(ContainElement(ContainSubstring("spec.dns.providers[0].secretName"))),
 				),
 			),
+			Entry("should return warnings for all providers with secretName",
+				&core.DNS{Providers: []core.DNSProvider{
+					{
+						SecretName:     new("synced-secret"),
+						CredentialsRef: dnsSecretCredentialsRef("synced-secret"),
+					},
+					{SecretName: new("secret")},
+					{CredentialsRef: dnsSecretCredentialsRef("credentials-secret")},
+					{
+						SecretName:     new("mismatched-secret"),
+						CredentialsRef: dnsSecretCredentialsRef("other-secret"),
+					},
+				}},
+				field.NewPath("spec", "dns"),
+				ConsistOf(
+					Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead."),
+					Equal("you are setting the spec.dns.providers[1].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[1].credentialsRef instead."),
+					Equal("you are setting the spec.dns.providers[3].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[3].credentialsRef instead."),
+				),
+			),
 			Entry("should use custom field path in warning message",
 				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				field.NewPath("custom", "path"),
@@ -521,3 +580,19 @@ var _ = Describe("Warnings", func() {
 		)
 	})
 })
+
+func dnsSecretCredentialsRef(name string) *autoscalingv1.CrossVersionObjectReference {
+	return &autoscalingv1.CrossVersionObjectReference{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Name:       name,
+	}
+}
+
+func dnsWorkloadIdentityCredentialsRef(name string) *autoscalingv1.CrossVersionObjectReference {
+	return &autoscalingv1.CrossVersionObjectReference{
+		APIVersion: "security.gardener.cloud/v1alpha1",
+		Kind:       "WorkloadIdentity",
+		Name:       name,
+	}
+}
