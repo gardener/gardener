@@ -99,7 +99,7 @@ func (h *health) listPrometheuses(ctx context.Context) (*monitoringv1.Prometheus
 func (h *health) checkSystemComponents(ctx context.Context, condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource, prometheuses *monitoringv1.PrometheusList) *gardencorev1beta1.Condition {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil
-	}, nil); exitCondition != nil {
+	}, nil, nil); exitCondition != nil {
 		return exitCondition
 	}
 

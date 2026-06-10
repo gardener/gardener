@@ -5,13 +5,21 @@
 package health
 
 import (
+	"context"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
 )
 
-func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int {
+// DaemonSetMaxUnavailable returns the maximum number of unavailable pods allowed for a DaemonSet.
+func DaemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int {
 	if daemonSet.Status.DesiredNumberScheduled == 0 || daemonSet.Spec.UpdateStrategy.Type != appsv1.RollingUpdateDaemonSetStrategyType {
 		return 0
 	}
@@ -47,7 +55,7 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 
 	// Check if DaemonSet rollout is ongoing.
 	if daemonSet.Status.UpdatedNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
-		if maxUnavailable := daemonSetMaxUnavailable(daemonSet); int(daemonSet.Status.NumberUnavailable) > maxUnavailable {
+		if maxUnavailable := DaemonSetMaxUnavailable(daemonSet); int(daemonSet.Status.NumberUnavailable) > maxUnavailable {
 			return fmt.Errorf("too many unavailable pods found (%d/%d, only max. %d unavailable pods allowed)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled, maxUnavailable)
 		}
 	} else {
@@ -73,4 +81,56 @@ func IsDaemonSetProgressing(daemonSet *appsv1.DaemonSet) (bool, string) {
 	}
 
 	return false, "DaemonSet is fully rolled out"
+}
+
+// CheckDaemonSetWithPreservedNodes re-evaluates a failing DaemonSet health check by subtracting
+// unavailable pods on preserved-failed nodes.
+// Returns true if the failure is suppressed (attributable entirely to preserved nodes), false otherwise.
+// If NumberAvailable == 0, the failure is never suppressed regardless of preserved nodes.
+func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *appsv1.DaemonSet, preservedNodeNames sets.Set[string]) (bool, error) {
+	// Fast path: already healthy.
+	if err := CheckDaemonSet(ds); err == nil {
+		return false, nil
+	}
+	// Zero availability: real outage, always surface.
+	if ds.Status.NumberAvailable == 0 {
+		return false, nil
+	}
+	if preservedNodeNames.Len() == 0 {
+		return false, nil
+	}
+	// Count not-ready pods on preserved NotReady nodes using the PodNodeName field index.
+	var preservedUnavailable int32
+	for nodeName := range preservedNodeNames {
+		podList := &corev1.PodList{}
+		if err := c.List(ctx, podList,
+			client.InNamespace(ds.Namespace),
+			client.MatchingFields{indexer.PodNodeName: nodeName},
+			client.MatchingLabels(ds.Spec.Selector.MatchLabels),
+		); err != nil {
+			return false, err
+		}
+		for _, pod := range podList.Items {
+			isReady := slices.ContainsFunc(pod.Status.Conditions, func(c corev1.PodCondition) bool {
+				return c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue
+			})
+			if !isReady {
+				preservedUnavailable++
+			}
+		}
+	}
+	adjusted := ds.Status.NumberUnavailable - preservedUnavailable
+	maxUnavailable := int32(DaemonSetMaxUnavailable(ds))
+	if ds.Status.UpdatedNumberScheduled < ds.Status.DesiredNumberScheduled {
+		// During rollout: tolerance is maxUnavailable.
+		if adjusted > maxUnavailable {
+			return false, nil
+		}
+	} else {
+		// Fully rolled out: tolerance is 0.
+		if adjusted > 0 {
+			return false, nil
+		}
+	}
+	return true, nil
 }

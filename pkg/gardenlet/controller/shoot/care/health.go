@@ -194,7 +194,7 @@ func (h *Health) Check(
 				return nil
 			},
 			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, conditions.noPreservedFailedMachines, extensionConditionsSystemComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
 				return nil
 			},
@@ -475,7 +475,7 @@ func (h *Health) checkControlPlane(
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil &&
 			sets.New("", string(gardencorev1beta1.ShootControlPlaneHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
-	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), nil); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -583,7 +583,7 @@ func (h *Health) checkObservabilityComponents(
 
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy)
-	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), nil); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -602,6 +602,7 @@ func (h *Health) checkSystemComponents(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
+	noPreservedFailedMachines *gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
 	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -613,10 +614,40 @@ func (h *Health) checkSystemComponents(
 		return exitCondition, nil
 	}
 
+	var suppressFunc func(*resourcesv1alpha1.ManagedResource) bool
+	if noPreservedFailedMachines != nil && noPreservedFailedMachines.Status == gardencorev1beta1.ConditionFalse {
+		preservedNodeNames, err := health.GetPreservedNodeNames(ctx, shootClient.Client())
+		if err != nil {
+			h.log.Error(err, "failed to list preserved nodes for DaemonSet suppression check")
+		} else {
+			suppressFunc = func(mr *resourcesv1alpha1.ManagedResource) bool {
+				for _, ref := range mr.Status.Resources {
+					if ref.Kind != "DaemonSet" {
+						continue
+					}
+					ds := &appsv1.DaemonSet{}
+					if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, ds); err != nil {
+						h.log.Error(err, "failed to get DaemonSet for preserved node suppression check", "namespace", ref.Namespace, "name", ref.Name)
+						return false
+					}
+					suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, shootClient.Client(), ds, preservedNodeNames)
+					if err != nil {
+						h.log.Error(err, "failed to check DaemonSet with preserved nodes", "namespace", ref.Namespace, "name", ref.Name)
+						return false
+					}
+					if !suppressed {
+						return false
+					}
+				}
+				return true
+			}
+		}
+	}
+
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class == nil ||
 			managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootSystemComponentsHealthy)
-	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), suppressFunc); exitCondition != nil {
 		return exitCondition, nil
 	}
 
