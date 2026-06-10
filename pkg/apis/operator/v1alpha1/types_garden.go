@@ -685,7 +685,22 @@ type GardenerDashboardConfig struct {
 	// Terminal contains configuration for the terminal settings.
 	// +optional
 	Terminal *DashboardTerminal `json:"terminal,omitempty"`
+	// Domain overrides the default ingress domain and optionally the DNS provider for the gardener-dashboard.
+	// If not set, the dashboard is exposed on each configured runtime ingress domain via the
+	// "dashboard.<ingress-domain>" subdomain pattern.
+	// +optional
+	Domain *DNSDomain `json:"domain,omitempty"`
+	// TLSSecretName is the name of a secret (in the garden namespace) containing
+	// a trusted TLS certificate for the domain. If not configured, Gardener falls
+	// back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not
+	// configured it generates a self-signed certificate.
+	// +optional
+	TLSSecretName *string `json:"tlsSecretName,omitempty"`
 	// Ingress contains configuration for the ingress settings.
+	//
+	// Deprecated: This field is deprecated and will be removed in a future version. Use the Domain field for
+	// customizing the ingress domain instead.
+	// TODO(timebertt): remove this field after v1.147.0 has been released.
 	// +optional
 	Ingress *DashboardIngress `json:"ingress,omitempty"`
 	// PropagateCAFromSNI specifies whether to propagate the CA certificate from the kube-apiserver
@@ -778,6 +793,9 @@ type DashboardTerminalContainer struct {
 // DashboardIngress contains configuration for the dashboard ingress resource.
 type DashboardIngress struct {
 	// Enabled controls whether the Dashboard Ingress resource will be deployed to the cluster.
+	//
+	// Deprecated: use the GardenerDashboardConfig.Domain field for customizing the ingress domain instead.
+	// TODO(timebertt): remove this field after v1.147.0 has been released.
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`

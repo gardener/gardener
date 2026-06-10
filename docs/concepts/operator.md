@@ -387,6 +387,11 @@ This section highlights the most prominent fields:
   Enable this when the SNI certificate is signed by a CA that clients do not already trust (e.g. a private CA not distributed to end users).
   Leave disabled when the CA is already in clients' trust stores (e.g. Let's Encrypt or a corporate CA) — this allows the CA to be rotated without requiring users to re-download their kubeconfigs.
   Can only be set when `.spec.virtualCluster.kubernetes.kubeAPIServer.sni` is configured.
+- `domain`: Allows configuring a custom domain (and optionally a DNS provider) for the gardener-dashboard.
+  If set, the dashboard is exposed on this single domain only.
+  If not set, the dashboard is exposed on each configured runtime ingress domain via the `dashboard.<ingress-domain>` subdomain pattern.
+- `tlsSecretName`: Allows specifying the name of a `Secret` in the `garden` namespace containing a trusted TLS certificate for the dashboard domain.
+  If not configured, Gardener falls back to the wildcard certificate (or generates a self-signed certificate if no wildcard certificate is available).
 
 ##### Observability
 
