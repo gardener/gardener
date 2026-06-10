@@ -166,6 +166,42 @@ var _ = Describe("Strategy", func() {
 				strategy.PrepareForCreate(ctx, shoot)
 				Expect(shoot.Spec.DNS.Providers[0].SecretName).To(BeNil())
 			})
+
+			It("should return a secretName warning when secretName was synced to credentialsRef", func() {
+				shoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{Version: "1.34.0"},
+						DNS: &core.DNS{
+							Providers: []core.DNSProvider{{
+								SecretName: new("secret-1"),
+							}},
+						},
+					},
+				}
+
+				strategy.PrepareForCreate(ctx, shoot)
+				Expect(strategy.WarningsOnCreate(ctx, shoot)).To(ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")))
+			})
+
+			It("should not return a secretName warning when credentialsRef was synced to secretName", func() {
+				shoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{Version: "1.34.0"},
+						DNS: &core.DNS{
+							Providers: []core.DNSProvider{{
+								CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "Secret",
+									Name:       "secret-1",
+								},
+							}},
+						},
+					},
+				}
+
+				strategy.PrepareForCreate(ctx, shoot)
+				Expect(strategy.WarningsOnCreate(ctx, shoot)).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
+			})
 		})
 	})
 
@@ -747,6 +783,52 @@ var _ = Describe("Strategy", func() {
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(BeNil())
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+
+			It("should return a secretName warning when secretName was synced to credentialsRef", func() {
+				oldShoot := &core.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{Version: "1.34.0"},
+					},
+				}
+
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{{
+						SecretName: new("secret-1"),
+					}},
+				}
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+				Expect(strategy.WarningsOnUpdate(ctx, newShoot, oldShoot)).To(ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")))
+			})
+
+			It("should not return a secretName warning when credentialsRef was synced to secretName", func() {
+				oldShoot := &core.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{Version: "1.34.0"},
+					},
+				}
+
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{{
+						CredentialsRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "secret-1",
+						},
+					}},
+				}
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+				Expect(strategy.WarningsOnUpdate(ctx, newShoot, oldShoot)).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
 			})
 		})
 	})
