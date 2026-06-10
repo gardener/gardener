@@ -3687,6 +3687,18 @@ integer
 <p>Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>autoPreserveFailedMachineMax</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoPreserveFailedMachineMax is the maximum number of machines in the machine deployment that can be auto-preserved by MCM.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
@@ -5543,6 +5555,18 @@ integer
 <td>
 <em>(Optional)</em>
 <p>UpdateStrategy specifies the machine update strategy for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoPreserveFailedMachineMax</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.<br />This value is distributed across zones like Minimum and Maximum.</p>
 </td>
 </tr>
 

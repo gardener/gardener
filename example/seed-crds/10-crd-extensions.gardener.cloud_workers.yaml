@@ -86,6 +86,12 @@ spec:
                       description: Architecture is the CPU architecture of the worker
                         pool machines and machine image.
                       type: string
+                    autoPreserveFailedMachineMax:
+                      description: |-
+                        AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+                        This value is distributed across zones like Minimum and Maximum.
+                      format: int32
+                      type: integer
                     clusterAutoscaler:
                       description: ClusterAutoscaler contains the cluster autoscaler
                         configurations for the worker pool.
@@ -497,6 +503,14 @@ spec:
                           description: MachineHealthTimeout is the period after which
                             machine is declared failed.
                           type: string
+                        machinePreserveTimeout:
+                          description: |-
+                            MachinePreserveTimeout defines the duration after which machine preservation is disabled.
+                            If preservation is disabled while the machine is in the Failed phase, the machine transitions
+                            to the Terminating phase. For machines in any other phase, disabling preservation does not
+                            alter the current phase, and normal behavior and phase transitions continue as usual.
+                            However, the Cluster Autoscaler (CA) may scale down the machine if required.
+                          type: string
                         maxEvictRetries:
                           description: MaxEvictRetries are the number of eviction
                             retries on a pod after which drain is declared failed,
@@ -853,6 +867,12 @@ spec:
                 items:
                   description: MachineDeployment is a created machine deployment.
                   properties:
+                    autoPreserveFailedMachineMax:
+                      description: AutoPreserveFailedMachineMax is the maximum number
+                        of machines in the machine deployment that can be auto-preserved
+                        by MCM.
+                      format: int32
+                      type: integer
                     maximum:
                       description: Maximum is the maximum number for this machine
                         deployment.
