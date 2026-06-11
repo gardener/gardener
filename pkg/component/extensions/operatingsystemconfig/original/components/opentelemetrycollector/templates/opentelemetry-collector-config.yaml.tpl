@@ -9,6 +9,9 @@ extensions:
     create_directory: true
   bearertokenauth:
     filename: {{ .pathAuthToken }}
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: /healthz
 
 receivers:
   journald/journal:
@@ -132,7 +135,7 @@ service:
       level: INFO
       encoding: json
 
-  extensions: [file_storage, bearertokenauth]
+  extensions: [file_storage, bearertokenauth, health_check]
   pipelines:
     logs/journal:
       receivers: [journald/journal]

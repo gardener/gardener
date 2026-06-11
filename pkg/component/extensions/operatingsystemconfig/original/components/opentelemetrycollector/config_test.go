@@ -93,6 +93,9 @@ extensions:
     create_directory: true
   bearertokenauth:
     filename: /var/lib/opentelemetry-collector/auth-token
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: /healthz
 
 receivers:
   journald/journal:
@@ -216,7 +219,7 @@ service:
       level: INFO
       encoding: json
 
-  extensions: [file_storage, bearertokenauth]
+  extensions: [file_storage, bearertokenauth, health_check]
   pipelines:
     logs/journal:
       receivers: [journald/journal]
@@ -289,7 +292,40 @@ users:
 				"/var/lib/opentelemetry-collector/kubeconfig",
 			}
 
-			expectedUnits := []extensionsv1alpha1.Unit{otelDaemonUnit}
+			otelHealthCheckUnit := extensionsv1alpha1.Unit{
+				Name:    UnitNameHealthCheck,
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(false),
+				Content: new(`[Unit]
+Description=Health check for opentelemetry-collector.service
+After=opentelemetry-collector.service
+Requisite=opentelemetry-collector.service
+[Service]
+Type=oneshot
+ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart opentelemetry-collector.service'
+# Note: We intentionally curl the /metrics endpoint rather than /healthz.
+# We know that /metrics reliably times out when there are issues such as file descriptor leaks.
+# If we can verify that /healthz behaves the same, we should switch to using it instead,
+# since health checks are typically expected to target /healthz rather than /metrics.
+ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:18888/metrics`),
+			}
+
+			otelTimerUnit := extensionsv1alpha1.Unit{
+				Name:    UnitNameHealthCheckTimer,
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
+				Content: new(`[Unit]
+Description=Run opentelemetry-collector-healthcheck.service every 5 minutes to validate that opentelemetry-collector.service is working as expected
+[Install]
+WantedBy=timers.target
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Unit=opentelemetry-collector-healthcheck.service`),
+			}
+
+			expectedUnits := []extensionsv1alpha1.Unit{otelDaemonUnit, otelHealthCheckUnit, otelTimerUnit}
 
 			Expect(units).To(ConsistOf(expectedUnits))
 			Expect(files).To(ConsistOf(expectedFiles))

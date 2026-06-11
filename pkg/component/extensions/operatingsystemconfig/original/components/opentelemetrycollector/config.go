@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strconv"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -119,5 +120,42 @@ ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:up
 ExecStartPre=/bin/sh -c "test -s ` + PathAuthToken + `"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentelemetry-collector --config=` + PathConfig),
 		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
+	}
+}
+
+func getOpenTelemetryCollectorHealthCheckUnit() extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
+		Name:    UnitNameHealthCheck,
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(false),
+		Content: new(`[Unit]
+Description=Health check for ` + UnitName + `
+After=` + UnitName + `
+Requisite=` + UnitName + `
+[Service]
+Type=oneshot
+ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart ` + UnitName + `'
+# Note: We intentionally curl the /metrics endpoint rather than /healthz.
+# We know that /metrics reliably times out when there are issues such as file descriptor leaks.
+# If we can verify that /healthz behaves the same, we should switch to using it instead,
+# since health checks are typically expected to target /healthz rather than /metrics.
+ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics`),
+	}
+}
+
+func getOpenTelemetryCollectorTimerUnit() extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
+		Name:    UnitNameHealthCheckTimer,
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
+Description=Run ` + UnitNameHealthCheck + ` every 5 minutes to validate that ` + UnitName + ` is working as expected
+[Install]
+WantedBy=timers.target
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Unit=` + UnitNameHealthCheck),
 	}
 }

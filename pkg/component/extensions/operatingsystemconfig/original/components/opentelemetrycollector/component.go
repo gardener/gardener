@@ -20,6 +20,12 @@ const (
 	// UnitName is the name of the opentelemetry-collector service.
 	UnitName = "opentelemetry-collector.service"
 
+	// UnitNameHealthCheck is the name of the opentelemetry-collector healthcheck oneshot.
+	UnitNameHealthCheck = "opentelemetry-collector-healthcheck.service"
+
+	// UnitNameHealthCheckTimer is the name of the opentelemetry-collector timer.
+	UnitNameHealthCheckTimer = "opentelemetry-collector-healthcheck.timer"
+
 	// PathDirectory is the path for the opentelemetry-collector's directory.
 	PathDirectory = "/var/lib/opentelemetry-collector"
 	// PathAuthToken is the path for the file containing opentelemetry-collector's authentication that gets
@@ -76,7 +82,12 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, err
 	}
 
-	units = append(units, getOpenTelemetryCollectorUnit())
+	units = append(
+		units,
+		getOpenTelemetryCollectorUnit(),
+		getOpenTelemetryCollectorHealthCheckUnit(),
+		getOpenTelemetryCollectorTimerUnit(),
+	)
 	files = append(files, collectorConfigFile, getOpenTelemetryCollectorCAFile(ctx), extensionsv1alpha1.File{
 		Path:        openTelemetryCollectorBinaryPath,
 		Permissions: new(uint32(0700)),
