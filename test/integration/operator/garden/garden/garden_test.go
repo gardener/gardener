@@ -490,6 +490,7 @@ spec:
 			"persesdatasources.perses.dev",
 			"persesglobaldatasources.perses.dev",
 			// opentelemetry-operator
+			"clusterobservabilities.opentelemetry.io",
 			"instrumentations.opentelemetry.io",
 			"opampbridges.opentelemetry.io",
 			"opentelemetrycollectors.opentelemetry.io",

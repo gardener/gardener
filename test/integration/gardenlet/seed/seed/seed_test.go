@@ -588,6 +588,7 @@ var _ = Describe("Seed controller tests", func() {
 						"instrumentations.opentelemetry.io",
 						"opampbridges.opentelemetry.io",
 						"targetallocators.opentelemetry.io",
+						"clusterobservabilities.opentelemetry.io",
 					}
 				)
 
