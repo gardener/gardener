@@ -134,7 +134,7 @@ This admission controller is defined in the generic API server library (`k8s.io/
 **Type**: Validating. **Enabled by default**: Yes.
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `NamespacedCloudProfile`s.
-It primarily validates if the referenced parent `CloudProfile` exists in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
+It primarily validates if the referenced parent `CloudProfile` exists in the system.
 
 ## `ProjectMutator`
 
