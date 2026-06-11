@@ -42,6 +42,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
@@ -495,6 +496,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
+							{Type: gardencorev1beta1.ShootHasIgnoredManagedResources},
 						},
 					},
 				}
@@ -675,6 +677,53 @@ var _ = Describe("Constraints", func() {
 					))
 				})
 			})
+
+			Context("#HasIgnoredManagedResources", func() {
+				It("should remove the constraint when no ManagedResources exist", func() {
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+					))
+				})
+
+				It("should remove the constraint when a ManagedResource has ignore=false", func() {
+					mr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "foo",
+							Namespace: controlPlaneNamespace,
+							Annotations: map[string]string{
+								resourcesv1alpha1.Ignore: "false",
+							},
+						},
+					}
+					Expect(seedClient.Create(ctx, mr)).To(Succeed())
+
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+					))
+				})
+
+				It("should keep the constraint when ManagedResources are ignored during reconcile", func() {
+					for _, name := range []string{"foo", "bar", "baz"} {
+						mr := &resourcesv1alpha1.ManagedResource{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      name,
+								Namespace: controlPlaneNamespace,
+								Annotations: map[string]string{
+									resourcesv1alpha1.Ignore: "true",
+								},
+							},
+						}
+						Expect(seedClient.Create(ctx, mr)).To(Succeed())
+					}
+
+					Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+						WithStatus(gardencorev1beta1.ConditionProgressing),
+						WithReason("ManagedResourcesIgnored"),
+						WithMessageSubstrings("bar, baz, foo"),
+					))
+				})
+			})
 		})
 
 		Describe("#CheckIfCACertificateValiditiesAcceptable", func() {
@@ -757,6 +806,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -777,6 +827,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -791,6 +842,7 @@ var _ = Describe("Constraints", func() {
 					OfType("CACertificateValiditiesAcceptable"),
 					OfType("CRDsWithProblematicConversionWebhooks"),
 					OfType("ManualInPlaceWorkersUpdated"),
+					OfType("HasIgnoredManagedResources"),
 				))
 			})
 		})
@@ -805,6 +857,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("CACertificateValiditiesAcceptable"),
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
 					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
+					gardencorev1beta1.ConditionType("HasIgnoredManagedResources"),
 				))
 			})
 		})

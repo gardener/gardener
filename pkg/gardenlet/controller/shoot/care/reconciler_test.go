@@ -652,7 +652,7 @@ func containConditionsInUnknownStatus(message string, isWorkerless bool) types.G
 }
 
 func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
-	var expectedLength = 6
+	var expectedLength = 7
 	matcher := And(
 		ContainCondition(
 			OfType(gardencorev1beta1.ShootHibernationPossible),
@@ -676,7 +676,10 @@ func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
-		),
+		), ContainCondition(
+			OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
 	)
 
 	return And(matcher, HaveLen(expectedLength))
