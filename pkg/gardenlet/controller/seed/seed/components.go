@@ -872,7 +872,7 @@ func (r *Reconciler) newPVCAutoscaler(settings *gardencorev1beta1.SeedSettings) 
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		pvcAutoscalerEnabled(settings),
-		v1beta1constants.PriorityClassNameSeedSystem700,
+		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
 
