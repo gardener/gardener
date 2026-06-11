@@ -391,60 +391,68 @@ var _ = Describe("Admission", func() {
 		})
 
 		Describe("machineType", func() {
-			It("should not allow creating a NamespacedCloudProfile that defines a machineType of the parent CloudProfile", func() {
-				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-
-				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{machineTypeCore}
-
-				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(And(
-					ContainSubstring("NamespacedCloudProfile attempts to overwrite parent CloudProfile with machineType"),
-					ContainSubstring("my-machine"),
-				)))
-			})
-
-			It("should allow creating a NamespacedCloudProfile that defines a machineType of the parent CloudProfile if it was added to the NamespacedCloudProfile first", func() {
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-
-				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{machineTypeCore}
-
-				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
-
-				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
-
-				attrs = admission.NewAttributesRecord(namespacedCloudProfile, namespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
-
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
-			})
-
-			It("should allow creating a NamespacedCloudProfile that defines a machineType of the parent CloudProfile if it was added to the NamespacedCloudProfile first but is changed and the parent changes", func() {
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
-
-				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{machineTypeCore}
-
-				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
-
-				oldNamespacedCloudProfile := *namespacedCloudProfile.DeepCopy()
-				machineType.Usable = new(false)
-				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
-
-				attrs = admission.NewAttributesRecord(namespacedCloudProfile, &oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
-
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
-			})
-
 			It("should allow creating a NamespacedCloudProfile that defines a different machineType than the parent CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine", Architecture: new("amd64")}}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow a same-named machineType when the NamespacedCloudProfile is created first and the parent CloudProfile gains the entry afterwards", func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{machineTypeCore}
+
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+
+				parentMachineType := machineType.DeepCopy()
+				parentMachineType.Usable = new(false)
+				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{*parentMachineType}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(parentCloudProfile)).To(Succeed())
+
+				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				namespacedCloudProfile.Generation++
+
+				attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow a same-named machineType when the parent CloudProfile already contains the entry and the NamespacedCloudProfile adds it afterwards with a differing spec", func() {
+				parentMachineType := machineType.DeepCopy()
+				parentMachineType.GPU = resource.MustParse("0")
+				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{*parentMachineType}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{machineTypeCore}
+
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow updates that add or mutate a NamespacedCloudProfile machineType colliding with the parent CloudProfile", func() {
+				parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{machineTypeCore}
+				namespacedCloudProfile.Generation++
+
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+
+				oldNamespacedCloudProfile = namespacedCloudProfile.DeepCopy()
+				namespacedCloudProfile.Spec.MachineTypes[0].Architecture = new("amd64")
+				namespacedCloudProfile.Generation++
+
+				attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})

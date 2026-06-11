@@ -148,9 +148,6 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 		oldNamespacedCloudProfile: oldNamespacedCloudProfile,
 	}
 
-	if err := validationContext.validateMachineTypes(a); err != nil {
-		return err
-	}
 	if err := validationContext.validateKubernetesVersionOverrides(a); err != nil {
 		return err
 	}
@@ -192,37 +189,6 @@ type validationContext struct {
 	parentCloudProfile        *gardencorev1beta1.CloudProfile
 	namespacedCloudProfile    *gardencore.NamespacedCloudProfile
 	oldNamespacedCloudProfile *gardencore.NamespacedCloudProfile
-}
-
-func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
-	if c.namespacedCloudProfile.Spec.MachineTypes == nil || c.parentCloudProfile.Spec.MachineTypes == nil {
-		return nil
-	}
-
-	for _, machineType := range c.namespacedCloudProfile.Spec.MachineTypes {
-		for _, parentMachineType := range c.parentCloudProfile.Spec.MachineTypes {
-			if parentMachineType.Name != machineType.Name {
-				continue
-			}
-			// If a machineType is already present in the NamespacedCloudProfile and just got added to the parent CloudProfile,
-			// it should still be allowed to remain in the NamespacedCloudProfile.
-			if a.GetOperation() == admission.Update && isMachineTypePresentInNamespacedCloudProfile(machineType, c.oldNamespacedCloudProfile) {
-				continue
-			}
-			return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile attempts to overwrite parent CloudProfile with machineType: %+v", machineType))
-		}
-	}
-
-	return nil
-}
-
-func isMachineTypePresentInNamespacedCloudProfile(machineType gardencore.MachineType, cloudProfile *gardencore.NamespacedCloudProfile) bool {
-	for _, cloudProfileMachineType := range cloudProfile.Spec.MachineTypes {
-		if cloudProfileMachineType.Name == machineType.Name {
-			return true
-		}
-	}
-	return false
 }
 
 func (c *validationContext) validateKubernetesVersionOverrides(attr admission.Attributes) error {
