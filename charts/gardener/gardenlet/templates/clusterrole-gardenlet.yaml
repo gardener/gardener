@@ -201,6 +201,7 @@ rules:
   - targetallocators.opentelemetry.io
   - opampbridges.opentelemetry.io
   - instrumentations.opentelemetry.io
+  - clusterobservabilities.opentelemetry.io
   - vlsingles.operator.victoriametrics.com
   verbs:
   - delete

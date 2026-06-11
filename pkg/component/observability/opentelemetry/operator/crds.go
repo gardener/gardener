@@ -22,6 +22,8 @@ var (
 	openTelemetryOpAMPBridgeCRD string
 	//go:embed assets/crd-opentelemetry.io_targetallocators.yaml
 	openTelemetryTargetAllocatorCRD string
+	//go:embed assets/crd-opentelemetry.io_clusterobservabilities.yaml
+	openTelemetryClusterObservabilityCRD string
 )
 
 // NewCRDs can be used to deploy OpenTelemetry Operator CRDs
@@ -31,6 +33,7 @@ func NewCRDs(client client.Client) (component.DeployWaiter, error) {
 		openTelemetryInstrumentationCRD,
 		openTelemetryOpAMPBridgeCRD,
 		openTelemetryTargetAllocatorCRD,
+		openTelemetryClusterObservabilityCRD,
 	}
 
 	return crddeployer.New(client, resources, false)

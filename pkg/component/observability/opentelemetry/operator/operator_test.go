@@ -148,17 +148,17 @@ var _ = Describe("OpenTelemetry Operator", func() {
 				},
 				{
 					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"opampbridges", "targetallocators"},
+					Resources: []string{"clusterobservabilities", "opampbridges", "targetallocators"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
 					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"opampbridges/finalizers"},
+					Resources: []string{"clusterobservabilities/finalizers", "opampbridges/finalizers"},
 					Verbs:     []string{"update"},
 				},
 				{
 					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"opampbridges/status", "opentelemetrycollectors/finalizers", "opentelemetrycollectors/status", "targetallocators/status"},
+					Resources: []string{"clusterobservabilities/status", "opampbridges/status", "opentelemetrycollectors/finalizers", "opentelemetrycollectors/status", "targetallocators/status"},
 					Verbs:     []string{"get", "patch", "update"},
 				},
 				{

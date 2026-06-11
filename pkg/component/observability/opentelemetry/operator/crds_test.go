@@ -53,6 +53,7 @@ var _ = Describe("CRDs", func() {
 		Entry("Instrumentation", "instrumentations.opentelemetry.io"),
 		Entry("OpamBridge", "opampbridges.opentelemetry.io"),
 		Entry("TargetAllocator", "targetallocators.opentelemetry.io"),
+		Entry("ClusterObservability", "clusterobservabilities.opentelemetry.io"),
 	)
 
 	DescribeTable("should re-create CRD if it is deleted",
@@ -67,5 +68,6 @@ var _ = Describe("CRDs", func() {
 		Entry("Instrumentation", "instrumentations.opentelemetry.io"),
 		Entry("OpamBridge", "opampbridges.opentelemetry.io"),
 		Entry("TargetAllocator", "targetallocators.opentelemetry.io"),
+		Entry("ClusterObservability", "clusterobservabilities.opentelemetry.io"),
 	)
 })
