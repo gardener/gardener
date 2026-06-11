@@ -9,3 +9,13 @@ resources:
 
 patches:
 - path: patch-shoot.yaml
+- target:
+    group: core.gardener.cloud
+    version: v1beta1
+    kind: Shoot
+    name: root
+    namespace: garden
+  patch: |-
+    - op: add
+      path: /spec/provider/workers/1/kubernetes/version
+      value: "1.36.0"
