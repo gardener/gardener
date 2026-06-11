@@ -545,6 +545,127 @@ func (r *Reconciler) generateGlobalObservabilityIngressPassword(ctx context.Cont
 	return newSecret, nil
 }
 
+// prepareGlobalMonitoringSecretMigration handles the first phase of migration from the old flow where the source of
+// truth was in the virtual garden (managed by gardener-controller-manager) to the new flow where it lives in the
+// runtime cluster (managed by gardener-operator). It must run before generateGlobalObservabilityIngressPassword.
+//
+// For secrets-manager-managed secrets: creates a temporary secret in the runtime cluster with the old credentials and
+// a use-data-for-name label so that secrets-manager preserves the existing password when generating the new secret.
+// Additionally, it adds the purpose label to the virtual garden secret so that ReplicateGlobalMonitoringSecret stale
+// cleanup can find and remove it after the new replica is created.
+//
+// For human-managed secrets: creates or updates the secret in the runtime cluster using GetAndCreateOrMergePatch
+// with data copied from the virtual garden secret, setting only the role label (no purpose label). Then adds the
+// purpose label to the virtual garden secret for stale cleanup.
+//
+// TODO(vicwicker): Remove after Gardener v1.150 has been released.
+func (r *Reconciler) prepareGlobalMonitoringSecretMigration(ctx context.Context, virtualGardenClient client.Client) error {
+	virtualList := &corev1.SecretList{}
+	if err := virtualGardenClient.List(ctx, virtualList,
+		client.InNamespace(r.GardenNamespace),
+		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring},
+	); err != nil {
+		return fmt.Errorf("failed to list global observability secrets in virtual garden: %w", err)
+	}
+
+	if len(virtualList.Items) > 1 {
+		return fmt.Errorf("found more than one global observability secret in virtual garden")
+	}
+
+	if len(virtualList.Items) == 0 {
+		return nil
+	}
+
+	virtualSecret := &virtualList.Items[0]
+
+	virtualIsReplica := virtualSecret.Labels[v1beta1constants.GardenerPurpose] == gardenerutils.LabelPurposeGlobalMonitoringSecret
+	if !virtualIsReplica {
+		virtualIsManagedSecret := virtualSecret.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager
+		if virtualIsManagedSecret {
+			secretName := "global-" + v1beta1constants.SecretNameObservabilityIngress
+			migrationSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "migrate-" + secretName, Namespace: r.GardenNamespace}}
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), migrationSecret, func() error {
+				metav1.SetMetaDataLabel(&migrationSecret.ObjectMeta, secretsmanager.LabelKeyUseDataForName, secretName)
+				migrationSecret.Data = virtualSecret.Data
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create migration secret for global observability ingress in runtime cluster: %w", err)
+			}
+		} else {
+			runtimeSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: virtualSecret.Name, Namespace: r.GardenNamespace}}
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), runtimeSecret, func() error {
+				for k, v := range virtualSecret.Labels {
+					metav1.SetMetaDataLabel(&runtimeSecret.ObjectMeta, k, v)
+				}
+				metav1.SetMetaDataLabel(&runtimeSecret.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
+				delete(runtimeSecret.Labels, v1beta1constants.GardenerPurpose)
+
+				runtimeSecret.Type = virtualSecret.Type
+				runtimeSecret.Data = virtualSecret.Data
+				runtimeSecret.Immutable = virtualSecret.Immutable
+
+				if _, ok := runtimeSecret.Data[secretsutils.DataKeyAuth]; !ok {
+					credentials, err := utils.CreateBcryptCredentials(virtualSecret.Data[secretsutils.DataKeyUserName], virtualSecret.Data[secretsutils.DataKeyPassword])
+					if err != nil {
+						return err
+					}
+					runtimeSecret.Data[secretsutils.DataKeyAuth] = credentials
+				}
+
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create global monitoring secret in runtime cluster: %w", err)
+			}
+		}
+	}
+
+	// mark the secret in the virtual garden cluster as replica.
+	if virtualSecret.Labels[v1beta1constants.GardenerPurpose] != gardenerutils.LabelPurposeGlobalMonitoringSecret {
+		patch := client.MergeFrom(virtualSecret.DeepCopy())
+		metav1.SetMetaDataLabel(&virtualSecret.ObjectMeta, v1beta1constants.GardenerPurpose, gardenerutils.LabelPurposeGlobalMonitoringSecret)
+		err := virtualGardenClient.Patch(ctx, virtualSecret, patch)
+		if err != nil {
+			return fmt.Errorf("failed to add purpose label to global monitoring secret in virtual garden: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// finalizeGlobalMonitoringSecretMigration cleans up old runtime cluster replicas that were created by the previous
+// flow and the temporary migration secret used to seed secrets-manager with the old credentials.
+// It must run after generateGlobalObservabilityIngressPassword and ReplicateGlobalMonitoringSecret, since the
+// new secret in the runtime cluster uses only the role label (not the purpose label).
+// It only deletes secrets that carry the purpose label but not the role label, to avoid removing gardenlet seed
+// replicas which carry both labels.
+//
+// TODO(vicwicker): Remove after Gardener v1.150 has been released.
+func (r *Reconciler) finalizeGlobalMonitoringSecretMigration(ctx context.Context) error {
+	secretName := "global-" + v1beta1constants.SecretNameObservabilityIngress
+	migrationSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "migrate-" + secretName, Namespace: r.GardenNamespace}}
+	if err := r.RuntimeClientSet.Client().Delete(ctx, migrationSecret); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed to delete migration secret %q from runtime cluster: %w", migrationSecret.Name, err)
+	}
+
+	secretList := &corev1.SecretList{}
+	secretSelector := client.MatchingLabelsSelector{Selector: labels.NewSelector().
+		Add(utils.MustNewRequirement(v1beta1constants.GardenerPurpose, selection.Equals, gardenerutils.LabelPurposeGlobalMonitoringSecret)).
+		Add(utils.MustNewRequirement(v1beta1constants.GardenRole, selection.DoesNotExist))}
+	if err := r.RuntimeClientSet.Client().List(ctx, secretList, client.InNamespace(r.GardenNamespace), secretSelector); err != nil {
+		return fmt.Errorf("failed to list global monitoring secret replicas in runtime cluster: %w", err)
+	}
+
+	for _, s := range secretList.Items {
+		if err := r.RuntimeClientSet.Client().Delete(ctx, s.DeepCopy()); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete stale global monitoring secret replica %q from runtime cluster: %w", s.Name, err)
+		}
+	}
+
+	return nil
+}
+
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing

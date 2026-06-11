@@ -465,6 +465,11 @@ func (r *Reconciler) reconcile(
 		generateAndReplicateGlobalObservabilityIngressPassword = g.Add(flow.Task{
 			Name: "Generating and replicating global observability ingress password",
 			Fn: func(ctx context.Context) error {
+				// TODO(vicwicker): Remove migration after Gardener v1.150 has been released.
+				if err := r.prepareGlobalMonitoringSecretMigration(ctx, virtualClusterClient); err != nil {
+					return err
+				}
+
 				secret, err := r.generateGlobalObservabilityIngressPassword(ctx, secretsManager)
 				if err != nil {
 					return fmt.Errorf("failed to generate global observability ingress secret: %w", err)
@@ -475,6 +480,11 @@ func (r *Reconciler) reconcile(
 				})
 				if err != nil {
 					return fmt.Errorf("failed to replicate global observability ingress secret to virtual garden cluster: %w", err)
+				}
+
+				// TODO(vicwicker): Remove migration after Gardener v1.150 has been released.
+				if err := r.finalizeGlobalMonitoringSecretMigration(ctx); err != nil {
+					return err
 				}
 
 				return nil
