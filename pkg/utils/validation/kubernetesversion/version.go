@@ -23,20 +23,15 @@ var SupportedVersions = []string{
 	"1.36",
 }
 
-// envExperimentalDisableKubernetesVersionCheck holds the name of the environment variable to prevent a crash
+// EnvExperimentalDisableKubernetesVersionCheck holds the name of the environment variable to prevent a crash
 // if the detected k8s version is not in the list of supported k8s versions.
 // This should only be used if you know exactly what you are doing and on your own risk.
-const envExperimentalDisableKubernetesVersionCheck = "EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK"
+const EnvExperimentalDisableKubernetesVersionCheck = "EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK"
 
 // CheckIfSupported checks if the provided version is part of the supported Kubernetes versions list.
 // Experimental: If the environment variable `EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK` is set to "true",
 // the check will be skipped.
 func CheckIfSupported(gitVersion string) error {
-	if os.Getenv(envExperimentalDisableKubernetesVersionCheck) == "true" {
-		logf.Log.Info("Skipping the check if the Kubernetes version is supported because flag is set to true", "flag", envExperimentalDisableKubernetesVersionCheck)
-		return nil
-	}
-
 	for _, supportedVersion := range SupportedVersions {
 		ok, err := versionutils.CompareVersions(gitVersion, "~", supportedVersion)
 		if err != nil {
@@ -46,6 +41,11 @@ func CheckIfSupported(gitVersion string) error {
 		if ok {
 			return nil
 		}
+	}
+
+	if os.Getenv(EnvExperimentalDisableKubernetesVersionCheck) == "true" {
+		logf.Log.Info("Proceeding with unsupported Kubernetes version (version check disabled via flag)", "version", gitVersion, "flag", EnvExperimentalDisableKubernetesVersionCheck)
+		return nil
 	}
 
 	return fmt.Errorf("unsupported kubernetes version %q", gitVersion)
