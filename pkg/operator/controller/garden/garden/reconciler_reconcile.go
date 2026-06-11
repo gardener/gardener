@@ -1125,7 +1125,9 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		globalMonitoringSecret := &secretList.Items[0]
 
 		log.Info("Replicating global monitoring secret to garden namespace in runtime cluster", "secret", client.ObjectKeyFromObject(globalMonitoringSecret))
-		globalMonitoringSecretRuntime, err = gardenerutils.ReplicateGlobalMonitoringSecret(ctx, r.RuntimeClientSet.Client(), "global-", r.GardenNamespace, globalMonitoringSecret)
+		globalMonitoringSecretRuntime, err = gardenerutils.ReplicateGlobalMonitoringSecret(ctx, r.RuntimeClientSet.Client(), globalMonitoringSecret, r.GardenNamespace, func(name string) string {
+			return "global-" + name
+		})
 		if err != nil {
 			return err
 		}

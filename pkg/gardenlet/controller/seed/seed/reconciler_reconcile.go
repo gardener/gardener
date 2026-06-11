@@ -163,7 +163,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	log.Info("Replicating global monitoring secret to garden namespace in seed", "secret", client.ObjectKeyFromObject(globalMonitoringSecretGarden))
-	globalMonitoringSecretSeed, err := gardenerutils.ReplicateGlobalMonitoringSecret(ctx, r.SeedClientSet.Client(), "seed-", r.GardenNamespace, globalMonitoringSecretGarden)
+	globalMonitoringSecretSeed, err := gardenerutils.ReplicateGlobalMonitoringSecret(ctx, r.SeedClientSet.Client(), globalMonitoringSecretGarden, r.GardenNamespace, func(name string) string {
+		return "seed-" + name
+	})
 	if err != nil {
 		return err
 	}

@@ -82,7 +82,6 @@ var _ = Describe("Secrets", func() {
 			ctx        = context.Background()
 			fakeClient client.Client
 
-			prefix                 = "prefix"
 			namespace              = "namespace"
 			globalMonitoringSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -113,7 +112,9 @@ var _ = Describe("Secrets", func() {
 				Expect(bcrypt.CompareHashAndPassword([]byte(hashedPassword), secret.Data["password"])).To(Succeed())
 			}
 
-			secret, err := ReplicateGlobalMonitoringSecret(ctx, fakeClient, prefix, namespace, globalMonitoringSecret)
+			secret, err := ReplicateGlobalMonitoringSecret(ctx, fakeClient, globalMonitoringSecret, namespace, func(name string) string {
+				return "prefix-" + name
+			})
 			Expect(err).NotTo(HaveOccurred())
 			assertions(secret)
 

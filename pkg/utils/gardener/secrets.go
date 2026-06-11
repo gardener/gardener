@@ -58,10 +58,10 @@ func FetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.
 // secrets.
 const LabelPurposeGlobalMonitoringSecret = "global-monitoring-secret-replica"
 
-// ReplicateGlobalMonitoringSecret replicates the global monitoring secret into the given namespace and prefixes it with
-// the given prefix.
-func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, prefix, namespace string, globalMonitoringSecret *corev1.Secret) (*corev1.Secret, error) {
-	globalMonitoringSecretReplica := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: prefix + globalMonitoringSecret.Name, Namespace: namespace}}
+// ReplicateGlobalMonitoringSecret replicates the global monitoring secret into the given namespace with a
+// transformed name. The replicaName function receives the source secret name and returns the desired replica name.
+func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, globalMonitoringSecret *corev1.Secret, replicaNamespace string, replicaName func(string) string) (*corev1.Secret, error) {
+	globalMonitoringSecretReplica := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: replicaName(globalMonitoringSecret.Name), Namespace: replicaNamespace}}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, globalMonitoringSecretReplica, func() error {
 		metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, v1beta1constants.GardenerPurpose, LabelPurposeGlobalMonitoringSecret)
 
