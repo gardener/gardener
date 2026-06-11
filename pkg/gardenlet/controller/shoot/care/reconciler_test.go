@@ -680,6 +680,7 @@ func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
+		),		
 	)
 
 	return And(matcher, HaveLen(expectedLength))
