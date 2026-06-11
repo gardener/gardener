@@ -4,6 +4,41 @@ metadata:
   name: root
   namespace: garden
 spec:
+  # TODO(acumino): Uncomment this once the shoot reconciler is enabled in the gardenlet for self-hosted shoots.
+  # provider:
+  #   workers:
+  #   - name: control-plane
+  #     controlPlane:
+  #       backup:
+  #         provider: local
+  #         credentialsRef:
+  #           apiVersion: v1
+  #           kind: Secret
+  #           name: backup-local
+  #           namespace: garden
+  #     machine:
+  #       type: local
+  #       image:
+  #         name: local
+  #     minimum: 1
+  #     maximum: 1
+  #     updateStrategy: AutoInPlaceUpdate
+  #     kubernetes:
+  #       # One minor below the shoot-level version so the e2e in-place update test can bump it.
+  #       version: "1.34.3"
+  #   - name: worker
+  #     machine:
+  #       type: local
+  #       image:
+  #         name: local
+  #     minimum: 1
+  #     maximum: 2
+  #     systemComponents:
+  #       allow: true
+  #     kubernetes:
+  #       kubelet:
+  #         maxPods: 250
+  #     updateStrategy: AutoInPlaceUpdate
   networking:
     # Must be within 172.18.0.0/24 (range of kind Docker network), generally same settings as used in a kind cluster
     nodes: 172.18.0.0/24
