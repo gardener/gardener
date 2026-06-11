@@ -18,7 +18,6 @@ func RegisterFeatureGates() {
 		features.IstioTLSTermination,
 		features.DoNotCopyBackupCredentials,
 		features.VictoriaLogsBackend,
-		features.UseUnifiedHTTPProxyPort,
 		features.VPAInPlaceUpdates,
 		features.PrometheusHealthChecks,
 		features.RemoveVali,
