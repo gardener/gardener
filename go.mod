@@ -51,7 +51,6 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/texttheater/golang-levenshtein v1.0.1
-	go.opentelemetry.io/contrib/otelconf v0.24.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
