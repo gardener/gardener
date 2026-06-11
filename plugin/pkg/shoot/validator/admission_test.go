@@ -2298,21 +2298,6 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("should reject because shoot pods network is missing", func() {
-				shoot.Spec.Networking.Pods = nil
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Validate(ctx, attrs, nil)
-
-				Expect(err).To(BeForbiddenError())
-			})
-
 			It("should not reject because shoot pods network is nil (workerless Shoot)", func() {
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.Networking.Pods = nil
@@ -2327,40 +2312,6 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should reject because shoot services network is missing", func() {
-				shoot.Spec.Networking.Services = nil
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Validate(ctx, attrs, nil)
-
-				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("services is required, spec.networking.services")))
-			})
-
-			It("should reject because shoot services network is nil (workerless Shoot)", func() {
-				shoot.Spec.Provider.Workers = nil
-				shoot.Spec.Networking.Services = nil
-
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Validate(ctx, attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("services is required, spec.networking.services")))
-
 			})
 
 			It("should reject because shoot services network is nil (workerless Shoot, Ipv6)", func() {
@@ -2553,49 +2504,153 @@ var _ = Describe("validator", func() {
 				Expect(err).To(Not(HaveOccurred()))
 			})
 
-			It("should reject because the shoot service and the shoot node networks intersect", func() {
-				shoot.Spec.Networking.Services = shoot.Spec.Networking.Nodes
+			Context("with and without seed", func() {
+				var shootWithoutSeed core.Shoot
 
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				BeforeEach(func() {
+					shootWithoutSeed = *shootBase.DeepCopy()
+					shootWithoutSeed.Spec.SeedName = nil
+				})
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Validate(ctx, attrs, nil)
+				Describe("shoot pods network is missing", func() {
+					testFunc := func(s core.Shoot, errorMatcher types.GomegaMatcher) {
+						s.Spec.Networking.Pods = nil
 
-				Expect(err).To(BeForbiddenError())
-			})
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 
-			It("should reject because the shoot pod and the shoot node networks intersect", func() {
-				shoot.Spec.Networking.Pods = shoot.Spec.Networking.Nodes
+						attrs := admission.NewAttributesRecord(&s, nil, core.Kind("Shoot").WithVersion("version"), s.Namespace, s.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Validate(ctx, attrs, nil)
 
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+						Expect(err).To(errorMatcher)
+					}
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Validate(ctx, attrs, nil)
+					It("should reject with seed set", func() {
+						testFunc(shoot, BeForbiddenError())
+					})
+					It("should not reject without seed set", func() {
+						testFunc(shootWithoutSeed, Succeed())
+					})
+				})
 
-				Expect(err).To(BeForbiddenError())
-			})
+				Describe("shoot services network is missing", func() {
+					testFunc := func(s core.Shoot, errorMatcher types.GomegaMatcher) {
+						s.Spec.Networking.Services = nil
 
-			It("should reject because the shoot pod and the shoot service networks intersect", func() {
-				shoot.Spec.Networking.Pods = shoot.Spec.Networking.Services
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&s, nil, core.Kind("Shoot").WithVersion("version"), s.Namespace, s.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Validate(ctx, attrs, nil)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Validate(ctx, attrs, nil)
+						Expect(err).To(errorMatcher)
+					}
+					It("should reject with seed set", func() {
+						testFunc(shoot, And(BeForbiddenError(), MatchError(ContainSubstring("services is required"))))
+					})
+					It("should not reject without seed set", func() {
+						testFunc(shootWithoutSeed, Succeed())
+					})
+				})
 
-				Expect(err).To(BeForbiddenError())
+				Describe("shoot services network is nil (workerless Shoot)", func() {
+					testFunc := func(s core.Shoot, errorMatcher types.GomegaMatcher) {
+						s.Spec.Provider.Workers = nil
+						s.Spec.Networking.Services = nil
+
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&s, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Validate(ctx, attrs, nil)
+
+						Expect(err).To(errorMatcher)
+					}
+					It("should reject with seed set", func() {
+						testFunc(shoot, And(BeForbiddenError(), MatchError(ContainSubstring("services is required"))))
+					})
+					It("should not reject without seed set", func() {
+						testFunc(shootWithoutSeed, Succeed())
+					})
+				})
+				Describe("shoot service and the shoot node networks intersect", func() {
+					testFunc := func(s core.Shoot) {
+						s.Spec.Networking.Services = s.Spec.Networking.Nodes
+
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&s, nil, core.Kind("Shoot").WithVersion("version"), s.Namespace, s.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Validate(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					}
+					It("should reject with seed set", func() {
+						testFunc(shoot)
+					})
+					It("should reject without seed set", func() {
+						testFunc(shootWithoutSeed)
+					})
+				})
+
+				Describe("shoot pod and the shoot node networks intersect", func() {
+					testFunc := func(s core.Shoot) {
+						s.Spec.Networking.Pods = s.Spec.Networking.Nodes
+
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&s, nil, core.Kind("Shoot").WithVersion("version"), s.Namespace, s.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Validate(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					}
+					It("should reject with seed set", func() {
+						testFunc(shoot)
+					})
+					It("should reject without seed set", func() {
+						testFunc(shootWithoutSeed)
+					})
+				})
+
+				Describe("shoot pod and shoot service networks intersect", func() {
+					testFunc := func(s core.Shoot) {
+						s.Spec.Networking.Pods = s.Spec.Networking.Services
+
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&s, nil, core.Kind("Shoot").WithVersion("version"), s.Namespace, s.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Validate(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					}
+
+					It("should reject with seed set", func() {
+						testFunc(shoot)
+					})
+					It("should reject without seed set", func() {
+						testFunc(shootWithoutSeed)
+					})
+				})
 			})
 		})
 
