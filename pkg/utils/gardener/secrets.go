@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"slices"
 
@@ -60,9 +61,11 @@ const LabelPurposeGlobalMonitoringSecret = "global-monitoring-secret-replica"
 
 // ReplicateGlobalMonitoringSecret replicates the global monitoring secret into the given namespace with a
 // transformed name. The replicaName function receives the source secret name and returns the desired replica name.
+// Staled replicas are deleted.
 func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, globalMonitoringSecret *corev1.Secret, replicaNamespace string, replicaName func(string) string) (*corev1.Secret, error) {
 	globalMonitoringSecretReplica := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: replicaName(globalMonitoringSecret.Name), Namespace: replicaNamespace}}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, globalMonitoringSecretReplica, func() error {
+		metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
 		metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, v1beta1constants.GardenerPurpose, LabelPurposeGlobalMonitoringSecret)
 
 		globalMonitoringSecretReplica.Type = globalMonitoringSecret.Type
@@ -79,7 +82,35 @@ func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, globa
 
 		return nil
 	})
-	return globalMonitoringSecretReplica, err
+	if err != nil {
+		return nil, err
+	}
+
+	if err := deleteStaleGlobalMonitoringSecretReplicas(ctx, c, globalMonitoringSecretReplica); err != nil {
+		return nil, err
+	}
+
+	return globalMonitoringSecretReplica, nil
+}
+
+func deleteStaleGlobalMonitoringSecretReplicas(ctx context.Context, c client.Client, currentReplica *corev1.Secret) error {
+	secretList := &corev1.SecretList{}
+	if err := c.List(ctx, secretList,
+		client.InNamespace(currentReplica.Namespace),
+		client.MatchingLabels{v1beta1constants.GardenerPurpose: LabelPurposeGlobalMonitoringSecret},
+	); err != nil {
+		return fmt.Errorf("failed to list global observability secret replicas: %w", err)
+	}
+
+	for _, s := range secretList.Items {
+		if s.Name != currentReplica.Name {
+			if err := c.Delete(ctx, s.DeepCopy()); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("failed to delete stale global observability secret replica %q: %w", s.Name, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 var injectionScheme = kubernetes.SeedScheme

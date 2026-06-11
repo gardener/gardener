@@ -130,7 +130,6 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 	log.Info("Adding garden bootstrapper to manager")
 	if err := mgr.Add(&bootstrappers.Bootstrapper{
 		Log:        log.WithName("bootstrap"),
-		Client:     mgr.GetClient(),
 		RESTConfig: mgr.GetConfig(),
 	}); err != nil {
 		return fmt.Errorf("failed adding garden cluster bootstrapper to manager: %w", err)
