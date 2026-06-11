@@ -616,7 +616,6 @@ func authorize(ctx context.Context, a admission.Attributes, auth authorizer.Auth
 		Verb:            "update",
 		ResourceRequest: true,
 	})
-
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not authorize update request for shoot binding subresource: %+v", err.Error()))
 	}
@@ -830,6 +829,16 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 		return nil
 	}
 
+	if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+		// validate network disjointedness within shoot network
+		allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
+			path,
+			c.shoot.Spec.Networking.Nodes,
+			c.shoot.Spec.Networking.Pods,
+			c.shoot.Spec.Networking.Services,
+		)...)
+	}
+
 	if c.seed != nil {
 		if c.shoot.Spec.Networking.Pods == nil && !workerless &&
 			slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
@@ -843,15 +852,6 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 		}
 
 		if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
-			// validate network disjointedness within shoot network
-			allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
-				path,
-				c.shoot.Spec.Networking.Nodes,
-				c.shoot.Spec.Networking.Pods,
-				c.shoot.Spec.Networking.Services,
-				workerless,
-			)...)
-
 			// validate network disjointedness with seed networks if shoot is being (re)scheduled
 			if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
 				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
@@ -884,7 +884,6 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 			}
 		}
 	}
-
 	return allErrs
 }
 
