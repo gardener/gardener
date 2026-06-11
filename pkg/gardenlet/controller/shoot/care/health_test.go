@@ -499,6 +499,87 @@ var _ = Describe("health check", func() {
 				int32(0),
 				[]coordinationv1.Lease{},
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeAgentUnhealthy", fmt.Sprintf("gardener-node-agent is not running on node %q", nodeName)))),
+			Entry("only preserved-failed node is unhealthy — returns preserved failure",
+				kubernetesVersion,
+				[]corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "preserved-node",
+							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()},
+							Annotations: map[string]string{
+								nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: cloudConfigSecretChecksum1,
+							},
+						},
+						Status: corev1.NodeStatus{
+							NodeInfo: corev1.NodeSystemInfo{KubeletVersion: kubernetesVersion.Original()},
+							Conditions: []corev1.NodeCondition{
+								{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+								{Type: corev1.NodeReady, Status: corev1.ConditionFalse, Reason: "KubeletNotReady"},
+							},
+						},
+					},
+				},
+				[]gardencorev1beta1.Worker{{Name: workerPoolName1, Maximum: 10, Minimum: 1}},
+				map[string]metav1.ObjectMeta{
+					workerPoolName1: {
+						Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
+						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
+					},
+				},
+				int32(0),
+				[]coordinationv1.Lease{},
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", "node and backing machine preserved by MCM"))),
+			Entry("unpreserved failure takes priority over preserved failure",
+				kubernetesVersion,
+				[]corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "preserved-node",
+							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()},
+							Annotations: map[string]string{
+								nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: cloudConfigSecretChecksum1,
+							},
+						},
+						Status: corev1.NodeStatus{
+							NodeInfo: corev1.NodeSystemInfo{KubeletVersion: kubernetesVersion.Original()},
+							Conditions: []corev1.NodeCondition{
+								{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+								{Type: corev1.NodeReady, Status: corev1.ConditionFalse, Reason: "KubeletNotReady"},
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "unpreserved-node",
+							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()},
+							Annotations: map[string]string{
+								nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: cloudConfigSecretChecksum1,
+							},
+						},
+						Status: corev1.NodeStatus{
+							NodeInfo: corev1.NodeSystemInfo{KubeletVersion: kubernetesVersion.Original()},
+							Conditions: []corev1.NodeCondition{
+								{Type: corev1.NodeReady, Status: corev1.ConditionFalse, Reason: "KubeletNotReady"},
+							},
+						},
+					},
+				},
+				[]gardencorev1beta1.Worker{{Name: workerPoolName1, Maximum: 10, Minimum: 2}},
+				map[string]metav1.ObjectMeta{
+					workerPoolName1: {
+						Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
+						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
+					},
+				},
+				int32(2),
+				[]coordinationv1.Lease{},
+				PointTo(And(
+					beConditionWithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("NodeUnhealthy"),
+					WithMessageSubstrings(`Node "unpreserved-node"`),
+				))),
 		)
 	})
 
@@ -964,6 +1045,141 @@ var _ = Describe("health check", func() {
 					Expect(fakeClient.Delete(ctx, &machine)).To(Succeed())
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingDown"))
+				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
+			})
+
+			It("should not report a scale-down error when a preserved failed node is included in the node list and registered nodes equal desired machines", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								GenerateName: "obj-",
+								Namespace:    controlPlaneNamespace,
+								Labels:       map[string]string{"node": "preserved-node"},
+							},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{
+									Phase: machinev1alpha1.MachineFailed,
+									PreserveExpiryTime: &metav1.Time{
+										Time: time.Now().Add(10 * time.Minute),
+									},
+								},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(3)},
+						},
+					},
+				}
+				nodeList := []*corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+						}},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node-2"},
+						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+						}},
+					},
+					{
+						// preserved failed node — cordoned by MCM, included in nodesForScalingCheck
+						ObjectMeta: metav1.ObjectMeta{Name: "preserved-node"},
+						Spec:       corev1.NodeSpec{Unschedulable: true},
+						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+							{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						}},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal(""))
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should report draining for an unpreserved cordoned node even when a preserved cordoned node is also present", func() {
+				var (
+					preservedNodeName   = "preserved-node"
+					unpreservedNodeName = "draining-node"
+				)
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:         "preserved-machine",
+								GenerateName: "obj-",
+								Namespace:    controlPlaneNamespace,
+								Labels:       map[string]string{"node": preservedNodeName},
+							},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{
+									Phase: machinev1alpha1.MachineFailed,
+									PreserveExpiryTime: &metav1.Time{
+										Time: time.Now().Add(10 * time.Minute),
+									},
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:         "draining-machine",
+								GenerateName: "obj-",
+								Namespace:    controlPlaneNamespace,
+								Labels:       map[string]string{"node": unpreservedNodeName},
+								Finalizers:   []string{"in-deletion"},
+							},
+						},
+					},
+				}
+				for i := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machineList.Items[i])).To(Succeed())
+				}
+				Expect(fakeClient.Delete(ctx, &machineList.Items[1])).To(Succeed())
+
+				// MCD scaled down to 2: 1 running + 1 preserved. The unpreserved node is draining (registeredNodes=3 > desiredMachines=2).
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(2)},
+						},
+					},
+				}
+				nodeList := []*corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+						}},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: preservedNodeName},
+						Spec:       corev1.NodeSpec{Unschedulable: true},
+						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+							{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						}},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: unpreservedNodeName},
+						Spec:       corev1.NodeSpec{Unschedulable: true},
+						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+						}},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingDown"))
 				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
 			})
