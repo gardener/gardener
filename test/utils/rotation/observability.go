@@ -21,12 +21,14 @@ import (
 
 // ObservabilityVerifier verifies the observability credentials rotation.
 type ObservabilityVerifier struct {
-	GetObservabilitySecretFunc func(context.Context) (*corev1.Secret, error)
-	GetObservabilityEndpoint   func(*corev1.Secret) string
-	GetObservabilityRotation   func() *gardencorev1beta1.ObservabilityRotation
+	GetObservabilitySecretFunc    func(context.Context) (*corev1.Secret, error)
+	GetObservabilityEndpoint      func(*corev1.Secret) string
+	GetObservabilityRotation      func() *gardencorev1beta1.ObservabilityRotation
+	GetGlobalMonitoringSecretFunc func(context.Context) (*corev1.Secret, error)
 
-	observabilityEndpoint string
-	oldKeypairData        map[string][]byte
+	observabilityEndpoint       string
+	oldKeypairData              map[string][]byte
+	oldGlobalMonitoringPassword []byte
 }
 
 // Before is called before the rotation is started.
@@ -50,6 +52,16 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
+
+	if v.GetGlobalMonitoringSecretFunc != nil {
+		By("Verify old global monitoring secret")
+		Eventually(func(g Gomega) {
+			secret, err := v.GetGlobalMonitoringSecretFunc(ctx)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(secret.Data).To(HaveKeyWithValue("password", Not(BeEmpty())))
+			v.oldGlobalMonitoringPassword = secret.Data["password"]
+		}).Should(Succeed(), "global monitoring secret should be present")
+	}
 }
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
@@ -96,6 +108,15 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(response.StatusCode).To(Equal(http.StatusOK))
 	}).Should(Succeed())
+
+	if v.GetGlobalMonitoringSecretFunc != nil {
+		By("Verify global monitoring secret received a new password")
+		Eventually(func(g Gomega) {
+			secret, err := v.GetGlobalMonitoringSecretFunc(ctx)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(secret.Data).To(HaveKeyWithValue("password", Not(Equal(v.oldGlobalMonitoringPassword))))
+		}).Should(Succeed(), "global monitoring secret should have been rotated")
+	}
 }
 
 // observability credentials rotation is completed after one reconciliation (there is no second phase)

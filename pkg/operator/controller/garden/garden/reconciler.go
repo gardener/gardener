@@ -789,6 +789,7 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 
 		if gardenStatus.Credentials.Rotation.Observability != nil && gardenStatus.Credentials.Rotation.Observability.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameObservabilityIngress] = gardenStatus.Credentials.Rotation.Observability.LastInitiationTime.Time
+			rotation["global-"+v1beta1constants.SecretNameObservabilityIngress] = gardenStatus.Credentials.Rotation.Observability.LastInitiationTime.Time
 		}
 
 		if gardenStatus.Credentials.Rotation.WorkloadIdentityKey != nil && gardenStatus.Credentials.Rotation.WorkloadIdentityKey.LastInitiationTime != nil {

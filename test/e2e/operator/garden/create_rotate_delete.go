@@ -65,6 +65,22 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
 					return s.Garden.Status.Credentials.Rotation.Observability
 				},
+				GetGlobalMonitoringSecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
+					secretList := &corev1.SecretList{}
+					if err := s.GardenClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{
+						"managed-by":       "secrets-manager",
+						"manager-identity": "gardener-operator",
+						"name":             "global-observability-ingress",
+					}); err != nil {
+						return nil, err
+					}
+
+					if length := len(secretList.Items); length != 1 {
+						return nil, fmt.Errorf("expect exactly one global monitoring secret, found %d", length)
+					}
+
+					return &secretList.Items[0], nil
+				},
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
 				GetETCDSecretNamespace: func() string {
