@@ -432,7 +432,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf:       seedIsGarden,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying PVC autoscaler",
+			Name:         "Deploying PVC Autoscaler",
 			Fn:           c.pvcAutoscaler.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})

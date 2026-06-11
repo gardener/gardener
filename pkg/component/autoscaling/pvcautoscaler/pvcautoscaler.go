@@ -51,7 +51,7 @@ type Values struct {
 	PriorityClassName string
 }
 
-type pvcautoscaler struct {
+type pvcAutoscaler struct {
 	client    client.Client
 	namespace string
 	values    Values
@@ -63,14 +63,14 @@ func NewPVCAutoscaler(
 	namespace string,
 	values Values,
 ) component.DeployWaiter {
-	return &pvcautoscaler{
+	return &pvcAutoscaler{
 		client:    client,
 		namespace: namespace,
 		values:    values,
 	}
 }
 
-func (p *pvcautoscaler) Deploy(ctx context.Context) error {
+func (p *pvcAutoscaler) Deploy(ctx context.Context) error {
 	var (
 		registry           = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		serviceAccount     = p.serviceAccount()
@@ -108,20 +108,20 @@ func (p *pvcautoscaler) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName, false, serializedResources)
 }
 
-func (p *pvcautoscaler) Destroy(ctx context.Context) error {
+func (p *pvcAutoscaler) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
 }
 
 const timeoutWaitForManagedResources = 2 * time.Minute
 
-func (p *pvcautoscaler) Wait(ctx context.Context) error {
+func (p *pvcAutoscaler) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
 	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
 }
 
-func (p *pvcautoscaler) WaitCleanup(ctx context.Context) error {
+func (p *pvcAutoscaler) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
@@ -134,7 +134,7 @@ func getLabels() map[string]string {
 	}
 }
 
-func (p *pvcautoscaler) serviceAccount() *corev1.ServiceAccount {
+func (p *pvcAutoscaler) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
@@ -145,7 +145,7 @@ func (p *pvcautoscaler) serviceAccount() *corev1.ServiceAccount {
 	}
 }
 
-func (p *pvcautoscaler) clusterRole() *rbacv1.ClusterRole {
+func (p *pvcAutoscaler) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
@@ -201,7 +201,7 @@ func (p *pvcautoscaler) clusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-func (p *pvcautoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
+func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
@@ -220,7 +220,7 @@ func (p *pvcautoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func (p *pvcautoscaler) role() *rbacv1.Role {
+func (p *pvcAutoscaler) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
@@ -228,11 +228,6 @@ func (p *pvcautoscaler) role() *rbacv1.Role {
 			Labels:    getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"configmaps"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-			},
 			{
 				APIGroups: []string{"coordination.k8s.io"},
 				Resources: []string{"leases"},
@@ -247,7 +242,7 @@ func (p *pvcautoscaler) role() *rbacv1.Role {
 	}
 }
 
-func (p *pvcautoscaler) roleBinding() *rbacv1.RoleBinding {
+func (p *pvcAutoscaler) roleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
@@ -269,7 +264,7 @@ func (p *pvcautoscaler) roleBinding() *rbacv1.RoleBinding {
 	}
 }
 
-func (p *pvcautoscaler) service() *corev1.Service {
+func (p *pvcAutoscaler) service() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -290,7 +285,7 @@ func (p *pvcautoscaler) service() *corev1.Service {
 	}
 }
 
-func (p *pvcautoscaler) deployment() *appsv1.Deployment {
+func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v1beta1constants.DeploymentNamePVCAutoscaler,
@@ -391,7 +386,7 @@ func (p *pvcautoscaler) deployment() *appsv1.Deployment {
 	}
 }
 
-func (p *pvcautoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
+func (p *pvcAutoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -408,7 +403,7 @@ func (p *pvcautoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	}
 }
 
-func (p *pvcautoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
+func (p *pvcAutoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -443,7 +438,7 @@ func (p *pvcautoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAut
 	}
 }
 
-func (p *pvcautoscaler) serviceMonitor() *monitoringv1.ServiceMonitor {
+func (p *pvcAutoscaler) serviceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: monitoringutils.ConfigObjectMeta(name, p.namespace, seed.Label),
 		Spec: monitoringv1.ServiceMonitorSpec{

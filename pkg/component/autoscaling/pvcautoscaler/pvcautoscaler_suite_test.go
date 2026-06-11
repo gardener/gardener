@@ -13,5 +13,5 @@ import (
 
 func TestPVCAutoscaler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component PVC Autoscaler Suite")
+	RunSpecs(t, "Component Autoscaling PVC Autoscaler Suite")
 }
