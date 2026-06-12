@@ -1431,11 +1431,11 @@ func (r *Reconciler) newFluentCustomResources(ctx context.Context) (component.De
 		// CRD; deploying it before the promotion crash-loops fluent-bit. The transition
 		// is picked up automatically via fluent-bit's hot-reload once the operator
 		// re-renders the ClusterOutput on a subsequent reconciliation.
-		gardenIsSeed, err := kubernetesutils.ResourcesExist(ctx, r.RuntimeClientSet.Client(), &extensionsv1alpha1.ClusterList{}, operatorclient.RuntimeScheme)
+		clusterResourcesExist, err := kubernetesutils.ResourcesExist(ctx, r.RuntimeClientSet.Client(), &extensionsv1alpha1.ClusterList{}, operatorclient.RuntimeScheme)
 		if err != nil && !meta.IsNoMatchError(err) {
 			return nil, err
 		}
-		if gardenIsSeed {
+		if clusterResourcesExist {
 			output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
 		}
 	}
