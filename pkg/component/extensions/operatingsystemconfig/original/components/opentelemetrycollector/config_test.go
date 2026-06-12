@@ -335,7 +335,7 @@ Description=Monitor the auth-token file for required for opentelemetry-collector
 WantedBy=multi-user.target
 [Path]
 Unit=` + UnitName + `
-PathChanged=` + PathAuthToken),
+PathExists=` + PathAuthToken),
 				FilePaths: []string{
 					"/var/lib/opentelemetry-collector/config/config",
 					"/var/lib/opentelemetry-collector/ca.crt",

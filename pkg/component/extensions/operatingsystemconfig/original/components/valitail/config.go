@@ -123,7 +123,7 @@ Description=Monitor the auth-token file for required for valitail
 WantedBy=multi-user.target
 [Path]
 Unit=` + UnitName + `
-PathChanged=` + PathAuthToken),
+PathExists=` + PathAuthToken),
 		FilePaths: []string{PathConfig, PathCACert, valitailBinaryPath},
 	}
 }
