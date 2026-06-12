@@ -86,7 +86,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 func getValitailUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: new(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStop),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=valitail daemon
@@ -108,6 +108,22 @@ EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStartPre=/bin/sh -c "test -s ` + PathAuthToken + `"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/valitail -config.file=` + PathConfig),
+		FilePaths: []string{PathConfig, PathCACert, valitailBinaryPath},
+	}
+}
+
+func getValitailPathAuthTokenUnit() extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
+		Name:    "valitail-auth-token.path",
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
+Description=Monitor the auth-token file for required for valitail
+[Install]
+WantedBy=multi-user.target
+[Path]
+Unit=` + UnitName + `
+PathChanged=` + PathAuthToken),
 		FilePaths: []string{PathConfig, PathCACert, valitailBinaryPath},
 	}
 }

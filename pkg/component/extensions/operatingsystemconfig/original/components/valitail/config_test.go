@@ -73,7 +73,7 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 
 				valitailDaemonUnit := extensionsv1alpha1.Unit{
 					Name:    UnitName,
-					Command: new(extensionsv1alpha1.CommandStart),
+					Command: new(extensionsv1alpha1.CommandStop),
 					Enable:  new(true),
 					Content: new(unitContent),
 				}
@@ -256,7 +256,25 @@ scrape_configs:
 				expectedFiles = append(expectedFiles, valitailBinaryFile)
 				valitailDaemonUnit.FilePaths = append(valitailDaemonUnit.FilePaths, "/opt/bin/valitail")
 
-				expectedUnits := []extensionsv1alpha1.Unit{valitailDaemonUnit}
+				valitailAuthTokenPathUnit := extensionsv1alpha1.Unit{
+					Name:    "valitail-auth-token.path",
+					Command: new(extensionsv1alpha1.CommandStart),
+					Enable:  new(true),
+					Content: new(`[Unit]
+Description=Monitor the auth-token file for required for valitail
+[Install]
+WantedBy=multi-user.target
+[Path]
+Unit=` + UnitName + `
+PathChanged=` + PathAuthToken),
+					FilePaths: []string{
+						"/var/lib/valitail/config/config",
+						"/var/lib/valitail/ca.crt",
+						"/opt/bin/valitail",
+					},
+				}
+
+				expectedUnits := []extensionsv1alpha1.Unit{valitailDaemonUnit, valitailAuthTokenPathUnit}
 
 				Expect(units).To(ConsistOf(expectedUnits))
 				Expect(files).To(ConsistOf(expectedFiles))

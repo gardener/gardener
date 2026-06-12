@@ -51,7 +51,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			return nil, nil, err
 		}
 
-		units = append(units, getValitailUnit())
+		units = append(units, getValitailUnit(), getValitailPathAuthTokenUnit())
 		files = append(files, valitailConfigFile, getValitailCAFile(ctx), extensionsv1alpha1.File{
 			Path:        valitailBinaryPath,
 			Permissions: new(uint32(0755)),
