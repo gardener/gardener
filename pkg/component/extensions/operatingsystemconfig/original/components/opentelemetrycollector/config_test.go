@@ -71,7 +71,7 @@ ExecStart=/opt/bin/opentelemetry-collector --config=` + PathConfig
 
 			otelDaemonUnit := extensionsv1alpha1.Unit{
 				Name:    UnitName,
-				Command: new(extensionsv1alpha1.CommandStart),
+				Command: new(extensionsv1alpha1.CommandStop),
 				Enable:  new(true),
 				Content: new(unitContent),
 			}
@@ -325,7 +325,26 @@ AccuracySec=1min
 Unit=opentelemetry-collector-healthcheck.service`),
 			}
 
-			expectedUnits := []extensionsv1alpha1.Unit{otelDaemonUnit, otelHealthCheckUnit, otelTimerUnit}
+			otelAuthTokenPathUnit := extensionsv1alpha1.Unit{
+				Name:    "opentelemetry-collector-auth-token.path",
+				Command: new(extensionsv1alpha1.CommandStart),
+				Enable:  new(true),
+				Content: new(`[Unit]
+Description=Monitor the auth-token file for required for opentelemetry-collector
+[Install]
+WantedBy=multi-user.target
+[Path]
+Unit=` + UnitName + `
+PathChanged=` + PathAuthToken),
+				FilePaths: []string{
+					"/var/lib/opentelemetry-collector/config/config",
+					"/var/lib/opentelemetry-collector/ca.crt",
+					"/opt/bin/opentelemetry-collector",
+					"/var/lib/opentelemetry-collector/kubeconfig",
+				},
+			}
+
+			expectedUnits := []extensionsv1alpha1.Unit{otelDaemonUnit, otelAuthTokenPathUnit, otelHealthCheckUnit, otelTimerUnit}
 
 			Expect(units).To(ConsistOf(expectedUnits))
 			Expect(files).To(ConsistOf(expectedFiles))

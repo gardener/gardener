@@ -96,7 +96,7 @@ func getOpenTelemetryCollectorCAFile(ctx components.Context) extensionsv1alpha1.
 func getOpenTelemetryCollectorUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: new(extensionsv1alpha1.CommandStart),
+		Command: new(extensionsv1alpha1.CommandStop),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=opentelemetry-collector daemon
@@ -119,6 +119,22 @@ Environment=KUBECONFIG=` + openTelemetryCollectorKubeconfigPath + `
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:]) GOMEMLIMIT=` + goMemLimit + `"
 ExecStartPre=/bin/sh -c "test -s ` + PathAuthToken + `"
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/opentelemetry-collector --config=` + PathConfig),
+		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
+	}
+}
+
+func getOpenTelemetryCollectorPathAuthTokenUnit() extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
+		Name:    UnitNameAuthToken,
+		Command: new(extensionsv1alpha1.CommandStart),
+		Enable:  new(true),
+		Content: new(`[Unit]
+Description=Monitor the auth-token file for required for opentelemetry-collector
+[Install]
+WantedBy=multi-user.target
+[Path]
+Unit=` + UnitName + `
+PathChanged=` + PathAuthToken + ``),
 		FilePaths: []string{PathConfig, PathCACert, openTelemetryCollectorBinaryPath, openTelemetryCollectorKubeconfigPath},
 	}
 }

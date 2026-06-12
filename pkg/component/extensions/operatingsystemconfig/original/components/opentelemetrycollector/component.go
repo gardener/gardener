@@ -26,6 +26,9 @@ const (
 	// UnitNameHealthCheckTimer is the name of the opentelemetry-collector timer.
 	UnitNameHealthCheckTimer = "opentelemetry-collector-healthcheck.timer"
 
+	// UnitNameAuthToken is the opentelemetry-collector checker that ensures the auth-token file exists before startup.
+	UnitNameAuthToken = "opentelemetry-collector-auth-token.path"
+
 	// PathDirectory is the path for the opentelemetry-collector's directory.
 	PathDirectory = "/var/lib/opentelemetry-collector"
 	// PathAuthToken is the path for the file containing opentelemetry-collector's authentication that gets
@@ -85,6 +88,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	units = append(
 		units,
 		getOpenTelemetryCollectorUnit(),
+		getOpenTelemetryCollectorPathAuthTokenUnit(),
 		getOpenTelemetryCollectorHealthCheckUnit(),
 		getOpenTelemetryCollectorTimerUnit(),
 	)
