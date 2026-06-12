@@ -200,24 +200,43 @@ var (
 	volumeTypeKeyFunc              = func(t gardencorev1beta1.VolumeType) string { return t.Name }
 )
 
+// mergeExpirableVersions merges one parent ExpirableVersion with a NamespacedCloudProfile override.
+// Old classification and ExpirationDate fields are first migrated to lifecycle classifications so
+// old classifications can be merged with lifecycle classifications from parent data.
 func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
 	migratedBase := migrateVersionToLifecycles(base)
 	migratedOverride := migrateVersionToLifecycles(override)
 
-	overrideIsUsingLegacyClassifications := v1beta1helper.IsUsingLegacyClassifications(override)
+	allowAdditionalLifecycleClassifications := v1beta1helper.IsUsingLegacyClassifications(override)
+
+	if allowAdditionalLifecycleClassifications && override.Classification != nil {
+		migratedBase.Lifecycle = removeImplicitLaterLifecycleClassifications(migratedBase.Lifecycle, migratedOverride.Lifecycle[0].Classification)
+	}
 
 	migratedBase.Lifecycle = mergeDeep(
 		migratedBase.Lifecycle,
 		migratedOverride.Lifecycle,
 		classificationLifecycleKeyFunc,
 		mergeClassificationLifecycles,
-		overrideIsUsingLegacyClassifications,
+		allowAdditionalLifecycleClassifications,
 	)
 
 	slices.SortFunc(migratedBase.Lifecycle, compareLifecycleStages)
 	adjustLifecycleStartTimes(migratedBase.Lifecycle, migratedOverride.Lifecycle)
 
 	return migratedBase
+}
+
+// removeImplicitLaterLifecycleClassifications removes implicit no-start lifecycle classifications that are later than the
+// old classification override. Without this, an old classification such as preview
+// would be immediately superseded by the parent default supported stage during migration.
+func removeImplicitLaterLifecycleClassifications(stages []gardencorev1beta1.LifecycleStage, classification gardencorev1beta1.VersionClassification) []gardencorev1beta1.LifecycleStage {
+	classificationStage := gardencorev1beta1.LifecycleStage{Classification: classification}
+	return slices.DeleteFunc(stages, func(stage gardencorev1beta1.LifecycleStage) bool {
+		isImplicitStage := stage.StartTime == nil
+		isLaterStage := compareLifecycleStages(stage, classificationStage) > 0
+		return isImplicitStage && isLaterStage
+	})
 }
 
 func adjustLifecycleStartTimes(base, override []gardencorev1beta1.LifecycleStage) {
