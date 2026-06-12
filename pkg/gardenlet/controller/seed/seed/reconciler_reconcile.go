@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -41,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -62,25 +64,31 @@ func (r *Reconciler) reconcile(
 	}
 
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-	if err := r.checkMinimumK8SVersion(r.SeedClientSet.Version()); err != nil {
+	if err := r.checkMinimumK8SVersion(r.SeedClientSet.Version(), log); err != nil {
 		return err
 	}
 
 	return r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot, seedIsSelfHostedShoot)
 }
 
-func (r *Reconciler) checkMinimumK8SVersion(version string) error {
+func (r *Reconciler) checkMinimumK8SVersion(version string, log logr.Logger) error {
 	const minKubernetesVersion = "1.32"
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minKubernetesVersion)
 	if err != nil {
 		return err
 	}
-	if !seedVersionOK {
-		return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minKubernetesVersion)
+
+	if seedVersionOK {
+		return nil
 	}
 
-	return nil
+	if os.Getenv(kubernetesversion.EnvExperimentalDisableKubernetesVersionCheck) == "true" {
+		log.Info("Proceeding with unsupported Kubernetes version (version check disabled via flag)", "version", version, "flag", kubernetesversion.EnvExperimentalDisableKubernetesVersionCheck)
+		return nil
+	}
+
+	return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s, but is %s", minKubernetesVersion, version)
 }
 
 func (r *Reconciler) runReconcileSeedFlow(
