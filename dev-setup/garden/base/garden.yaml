@@ -55,7 +55,6 @@ spec:
       clusterIdentity: gardener-local
       gardenerAPIServer:
         featureGates:
-          CloudProfileCapabilities: true
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
           DisableNginxIngressInShoot: true

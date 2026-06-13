@@ -39,6 +39,7 @@ const (
 	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operations.
 	// owner: @roncossek
 	// alpha: v1.117.0
+	// beta: v1.145.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 
 	// VersionClassificationLifecycle enables the features introduced by GEP-0032,
@@ -162,7 +163,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:          {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:             {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:            {Default: true, PreRelease: featuregate.Beta},
-	CloudProfileCapabilities:       {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:       {Default: true, PreRelease: featuregate.Beta},
 	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},
 	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
