@@ -50,6 +50,8 @@ spec:
         {{- if .Values.leaderElection.enable }}
         - --leader-election=false
         {{- end }}
+        - --log-level={{ .Values.logLevel | default "info"  }}
+        - --log-format={{ .Values.logFormat | default "json"  }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

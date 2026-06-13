@@ -30,3 +30,6 @@ leaderElection:
   enable: true
 highAvailability:
   enable: true
+
+logLevel: info
+logFormat: json

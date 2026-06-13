@@ -1,0 +1,32 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+spec:
+  deployment:
+    extension:
+      runtimeClusterValues:
+        logLevel: "{{ .resources.logLevels.data.extension }}"
+      values:
+        logLevel: "{{ .resources.logLevels.data.extension }}"
+        imageVectorOverwrite:
+          images:
+          - name: "{{ .resources.imageNames.data.cloudcontrollermanager }}"
+            ref: local-skaffold/cloud-controller-manager-local
+          - name: "{{ .resources.imageNames.data.machinecontrollermanager }}"
+            ref: local-skaffold/machine-controller-manager-provider-local
+      injectGardenKubeconfig: true
+    admission:
+      values:
+        logLevel: "{{ .resources.logLevels.data.admission }}"
+    resources:
+      - name: imageNames
+        resourceRef:
+          apiVersion: v1
+          kind: Secret
+          name: provider-local-image-names
+      - name: logLevels
+        resourceRef:
+          apiVersion: v1
+          kind: ConfigMap
+          name: provider-local-log-levels
