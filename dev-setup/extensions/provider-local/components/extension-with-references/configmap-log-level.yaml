@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: provider-local-log-levels
+  namespace: garden
+  labels:
+    gardener.cloud/role: resource-reference
+data:
+  extension: "debug"
+  admission: "debug"

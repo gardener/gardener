@@ -3,3 +3,4 @@ kind: Kustomization
 
 components:
 - ../../components/extension
+- ../../components/extension-with-references
