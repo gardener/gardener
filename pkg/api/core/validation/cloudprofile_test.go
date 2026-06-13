@@ -2337,6 +2337,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate provided capabilities with disabled feature gate", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, false))
+
 					cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
 						{Name: "architecture", Values: []string{"amd64"}},
 					}
