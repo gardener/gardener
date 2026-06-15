@@ -57,7 +57,7 @@ Let's have a look into the following example:
 
 ```yaml
   hibernation:
-    enabled: false # Initial deployment of Shoot is in awaked state
+    enabled: false
     schedules:
     - start: "0 20 * * *" # Start hibernation every day at 8PM
       end: "0 6 * * *"    # Stop hibernation every day at 6AM
