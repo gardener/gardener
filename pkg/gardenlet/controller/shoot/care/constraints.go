@@ -121,7 +121,7 @@ func (c *Constraint) constraintsChecks(
 	} else {
 		constraints.hasIgnoredManagedResources = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hasIgnoredManagedResources, status, reason, message)
 	}
-	
+
 	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
 		return shootHibernatedConstraints(c.clock, constraints.ConvertToSlice()...)
 	}
