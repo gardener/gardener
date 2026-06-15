@@ -49,8 +49,11 @@ const (
 func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
-		// During hibernation, this condition will always be True, so we can skip it
-		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated {
+		// During hibernation, these conditions are either not applicable or already computed before
+		// the hibernation guard, so we preserve their current value.
+		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated ||
+			cond.Type == gardencorev1beta1.ShootHasIgnoredManagedResources {
+			hibernationConditions = append(hibernationConditions, cond)
 			continue
 		}
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
@@ -110,6 +113,15 @@ func (c *Constraint) constraintsChecks(
 	ctx context.Context,
 	constraints ShootConstraints,
 ) []gardencorev1beta1.Condition {
+	// Check whether any ManagedResources in the shoot's control plane namespace have been annotated with
+	// resources.gardener.cloud/ignore=true, which disables their reconciliation.
+	status, reason, message, err := c.checkIfManagedResourcesAreIgnored(ctx)
+	if err != nil {
+		constraints.hasIgnoredManagedResources = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.hasIgnoredManagedResources, err)
+	} else {
+		constraints.hasIgnoredManagedResources = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hasIgnoredManagedResources, status, reason, message)
+	}
+	
 	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
 		return shootHibernatedConstraints(c.clock, constraints.ConvertToSlice()...)
 	}
