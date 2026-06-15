@@ -3,13 +3,6 @@ FROM kindest/node:v1.35.5@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619e
 RUN apt-get update -yq && \
     apt-get install -yq --no-install-recommends wget apparmor apparmor-utils jq openssh-server sudo logrotate
 
-# TODO(LucaBernstein): kindest/node:v1.35.1 ships containerd v2.2.1 which has a broken `ctr images mount` command
-# (https://github.com/containerd/containerd/issues/12549, fixed in v2.2.2). Override with v2.2.2 until a new
-# kindest/node image is available that includes the fix.
-RUN arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" && \
-    wget -qO- "https://github.com/containerd/containerd/releases/download/v2.2.2/containerd-2.2.2-linux-${arch}.tar.gz" | \
-    tar -xz -C /usr/local/bin --strip-components=1 bin/containerd bin/ctr
-
 # remove kind's kubelet unit
 RUN rm -f /etc/systemd/system/kubelet.service && \
     rm -rf /etc/systemd/system/kubelet.service.d/
