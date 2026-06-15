@@ -621,22 +621,45 @@ func (h *Health) checkSystemComponents(
 			h.log.Error(err, "Failed to list preserved nodes for DaemonSet suppression check")
 		} else {
 			suppressFunc = func(mr *resourcesv1alpha1.ManagedResource) bool {
+				// For each resource in the MR: non-workload kinds (RBAC, ConfigMaps, etc.) are
+				// skipped; workload kinds (Deployment, StatefulSet) are checked directly for
+				// health and cause suppression to be rejected if unhealthy; DaemonSets are
+				// checked with the preserved-node-aware check so that failures attributable
+				// entirely to preserved unhealthy nodes do not block suppression.
 				for _, ref := range mr.Status.Resources {
-					if ref.Kind != "DaemonSet" {
-						continue
-					}
-					ds := &appsv1.DaemonSet{}
-					if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, ds); err != nil {
-						h.log.Error(err, "Failed to get DaemonSet for preserved node suppression check", "namespace", ref.Namespace, "name", ref.Name)
-						return false
-					}
-					suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, shootClient.Client(), ds, preservedNodeNames)
-					if err != nil {
-						h.log.Error(err, "Failed to check DaemonSet with preserved nodes", "namespace", ref.Namespace, "name", ref.Name)
-						return false
-					}
-					if !suppressed {
-						return false
+					switch ref.Kind {
+					case "DaemonSet":
+						ds := &appsv1.DaemonSet{}
+						if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, ds); err != nil {
+							h.log.Error(err, "Failed to get DaemonSet for preserved node suppression check", "namespace", ref.Namespace, "name", ref.Name)
+							return false
+						}
+						suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, shootClient.Client(), ds, preservedNodeNames)
+						if err != nil {
+							h.log.Error(err, "Failed to check DaemonSet with preserved nodes", "namespace", ref.Namespace, "name", ref.Name)
+							return false
+						}
+						if !suppressed {
+							return false
+						}
+					case "Deployment":
+						deploy := &appsv1.Deployment{}
+						if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, deploy); err != nil {
+							h.log.Error(err, "Failed to get Deployment for suppression check", "namespace", ref.Namespace, "name", ref.Name)
+							return false
+						}
+						if err := health.CheckDeployment(deploy); err != nil {
+							return false
+						}
+					case "StatefulSet":
+						sts := &appsv1.StatefulSet{}
+						if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, sts); err != nil {
+							h.log.Error(err, "Failed to get StatefulSet for suppression check", "namespace", ref.Namespace, "name", ref.Name)
+							return false
+						}
+						if err := health.CheckStatefulSet(sts); err != nil {
+							return false
+						}
 					}
 				}
 				return true

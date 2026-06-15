@@ -11,6 +11,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,14 +100,18 @@ func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *
 	if preservedNodeNames.Len() == 0 {
 		return false, nil
 	}
-	// Count not-ready pods on preserved NotReady nodes using the PodNodeName field index.
+	// Count not-ready pods on preserved unhealthy nodes using the PodNodeName field index.
+	selector, err := metav1.LabelSelectorAsSelector(ds.Spec.Selector)
+	if err != nil {
+		return false, err
+	}
 	var preservedUnavailable int
 	for nodeName := range preservedNodeNames {
 		podList := &corev1.PodList{}
 		if err := c.List(ctx, podList,
 			client.InNamespace(ds.Namespace),
 			client.MatchingFields{indexer.PodNodeName: nodeName},
-			client.MatchingLabels(ds.Spec.Selector.MatchLabels),
+			client.MatchingLabelsSelector{Selector: selector},
 		); err != nil {
 			return false, err
 		}
