@@ -71,8 +71,6 @@ type Deployment struct {
 	// References can be used in `spec.deployment.extension.values`, `spec.deployment.extension.runtimeClusterValues`
 	// and `spec.deployment.admission.values`.
 	// +optional
-	// +patchMergeKey=name
-	// +patchStrategy=merge
 	Resources []gardencorev1.NamedResourceReference `json:"resources,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
@@ -138,8 +136,6 @@ type ExtensionStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions represents the latest available observations of an Extension's current state.
-	// +patchMergeKey=type
-	// +patchStrategy=merge
 	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// ProviderStatus contains type-specific status.
