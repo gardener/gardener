@@ -283,7 +283,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"autoscaling.gardener.cloud"},
-				Resources: []string{"persistentvolumeclaimautoscalers.autoscaling.gardener.cloud"},
+				Resources: []string{"persistentvolumeclaimautoscalers"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
