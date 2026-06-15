@@ -169,40 +169,66 @@ var kubeletConfigProblemRegex = regexp.MustCompile(`(?i)(KubeletHasInsufficientM
 func (h *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string, workerGroupKubernetesVersion *semver.Version, preservedNodeNames sets.Set[string]) (*gardencorev1beta1.Condition, bool) {
 	var firstPreservedFailure *gardencorev1beta1.Condition
 
+	// handleFailure buffers the condition for preserved nodes (only the first failure is
+	// kept) and signals an immediate return for non-preserved nodes.
+	// Returns (condition, shouldReturn).
+	handleFailure := func(isPreserved bool, c gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, bool) {
+		if isPreserved {
+			if firstPreservedFailure == nil {
+				firstPreservedFailure = &c
+			}
+			return nil, false
+		}
+		return &c, true
+	}
+
 	for _, node := range nodes {
+		isNodePreserved := preservedNodeNames.Has(node.Name)
+		var messageSuffix string
+		if isNodePreserved {
+			messageSuffix = " (node and backing machine preserved by MCM)"
+		}
+
 		if err := health.CheckNode(&node); err != nil {
-			message := fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", node.Name, workerGroupName, err)
-			if preservedNodeNames.Has(node.Name) {
-				if firstPreservedFailure == nil {
-					msg := message + " (node and backing machine preserved by MCM)"
-					if kubeletConfigProblemRegex.MatchString(err.Error()) {
-						firstPreservedFailure = new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "NodeUnhealthy", msg, gardencorev1beta1.ErrorConfigurationProblem))
-					} else {
-						firstPreservedFailure = new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "NodeUnhealthy", msg))
-					}
-				}
-				continue
-			}
-
+			var errorCodes []gardencorev1beta1.ErrorCode
 			if kubeletConfigProblemRegex.MatchString(err.Error()) {
-				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "NodeUnhealthy", message, gardencorev1beta1.ErrorConfigurationProblem)), false
+				errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 			}
-
-			return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "NodeUnhealthy", message)), false
+			message := fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", node.Name, workerGroupName, err) + messageSuffix
+			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "NodeUnhealthy", message, errorCodes...)
+			if exitCondition, shouldReturn := handleFailure(isNodePreserved, c); shouldReturn {
+				return exitCondition, false
+			}
+			continue
 		}
 
 		sameMajorMinor, err := semver.NewConstraint("~ " + node.Status.NodeInfo.KubeletVersion)
 		if err != nil {
-			return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", node.Name, err))), false
+			message := fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", node.Name, err) + messageSuffix
+			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", message)
+			if exitCondition, shouldReturn := handleFailure(isNodePreserved, c); shouldReturn {
+				return exitCondition, false
+			}
+			continue
 		}
+
 		if sameMajorMinor.Check(workerGroupKubernetesVersion) {
 			equal, err := semver.NewConstraint("= " + node.Status.NodeInfo.KubeletVersion)
 			if err != nil {
-				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", node.Name, err))), false
+				message := fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", node.Name, err) + messageSuffix
+				c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", message)
+				if exitCondition, shouldReturn := handleFailure(isNodePreserved, c); shouldReturn {
+					return exitCondition, false
+				}
+				continue
 			}
 
 			if !equal.Check(workerGroupKubernetesVersion) {
-				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", node.Name, node.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()))), false
+				message := fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", node.Name, node.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()) + messageSuffix
+				c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "KubeletVersionMismatch", message)
+				if exitCondition, shouldReturn := handleFailure(isNodePreserved, c); shouldReturn {
+					return exitCondition, false
+				}
 			}
 		}
 	}
