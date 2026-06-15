@@ -431,6 +431,8 @@ spec:
       emailReceivers:
       - john.doe@example.com
 # hibernation:
+#   # enabled controls the immediate desired hibernation state. Setting it to true triggers immediate hibernation;
+#   # false (or omitting it) triggers immediate wake-up. The schedule below works by toggling this field. 
 #   enabled: false
 #   schedules:
 #   - start: "0 20 * * *" # Start hibernation every day at 8PM

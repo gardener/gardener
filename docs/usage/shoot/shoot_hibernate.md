@@ -33,7 +33,7 @@ To scale up everything where it was before hibernation, Gardener doesn’t delet
 
 ## Hibernate Your Cluster Manually
 
-The `.spec.hibernation.enabled` field specifies whether the cluster needs to be hibernated or not. If the field is set to `true`, the cluster's desired state is to be hibernated. If it is set to `false` or not specified at all, the cluster's desired state is to be awakened.
+The `.spec.hibernation.enabled` field controls the **immediate** desired hibernation state of the cluster. Setting it to `true` triggers an immediate hibernation. Setting it to `false` or leaving it unset means the cluster's desired state is to be awakened.
 
 To hibernate your cluster, you can run the following `kubectl` command:
 ```
@@ -51,11 +51,13 @@ $ kubectl patch shoot -n $NAMESPACE $SHOOT_NAME -p '{"spec":{"hibernation":{"ena
 
 You can specify a hibernation schedule to automatically hibernate/wake up a cluster.
 
+The schedule controller works by **toggling** `.spec.hibernation.enabled` to `true` or `false` based on the cron expressions you define. This means `schedules` and `enabled` interact with each other — `enabled` is not an on/off switch for the schedule feature.
+
 Let's have a look into the following example:
 
 ```yaml
   hibernation:
-    enabled: false
+    enabled: false # Initial deployment of Shoot is in awaked state
     schedules:
     - start: "0 20 * * *" # Start hibernation every day at 8PM
       end: "0 6 * * *"    # Stop hibernation every day at 6AM
