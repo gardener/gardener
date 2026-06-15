@@ -36,6 +36,11 @@ profiles:
         flags:
           apply:
             - --server-side
+  - name: single-node
+    patches:
+      - op: add
+        path: /manifests/kustomize/paths/-
+        value: dev-setup/gardenconfig/components/exposureclasses
 ---
 apiVersion: skaffold/v4beta12
 kind: Config

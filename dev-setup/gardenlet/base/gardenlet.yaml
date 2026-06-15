@@ -17,8 +17,6 @@ spec:
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true
       DisableNginxIngressInSeed: true
-    exposureClassHandlers:
-      - name: local
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
