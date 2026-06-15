@@ -6,6 +6,7 @@ linters:
     - embeddedstructfieldcheck
     - exptostd
     - depguard
+    - forbidigo
     - ginkgolinter
     - gocritic
     - importas
@@ -29,6 +30,10 @@ linters:
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.
       forbid-mutex: true
+    forbidigo:
+      forbid:
+        - pattern: ^ptr\.To$
+          msg: "ptr.To shall no longer be used, please use the built-in new(T) instead. See https://github.com/gardener/gardener/pull/14872."
     gocritic:
       disable-all: true
       enabled-checks:
