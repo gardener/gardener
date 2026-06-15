@@ -72,16 +72,16 @@ func GetPreservedNodeNames(ctx context.Context, c client.Client) (sets.Set[strin
 	}
 	preserved := sets.New[string]()
 	for _, node := range nodeList.Items {
-		if IsNodePreservedFailed(node) {
+		if IsNodePreservedAndUnhealthy(node) {
 			preserved.Insert(node.Name)
 		}
 	}
 	return preserved, nil
 }
 
-// IsNodePreservedFailed reports whether a node belongs to a preserved failed machine: it must have
+// IsNodePreservedAndUnhealthy reports whether a node belongs to a preserved failed machine: it must have
 // NodePreserved == True and NodeReady == False or Unknown.
-func IsNodePreservedFailed(node corev1.Node) bool {
+func IsNodePreservedAndUnhealthy(node corev1.Node) bool {
 	isPreserved := false
 	isNotReady := false
 	for _, condition := range node.Status.Conditions {

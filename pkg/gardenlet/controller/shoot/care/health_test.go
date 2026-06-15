@@ -499,7 +499,7 @@ var _ = Describe("health check", func() {
 				int32(0),
 				[]coordinationv1.Lease{},
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeAgentUnhealthy", fmt.Sprintf("gardener-node-agent is not running on node %q", nodeName)))),
-			Entry("only preserved-failed node is unhealthy — returns preserved failure",
+			Entry("only preserved node is unhealthy — returns preserved failure",
 				kubernetesVersion,
 				[]corev1.Node{
 					{
@@ -1049,7 +1049,7 @@ var _ = Describe("health check", func() {
 				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
 			})
 
-			It("should not report a scale-down error when a preserved failed node is included in the node list and registered nodes equal desired machines", func() {
+			It("should not report a scale-down error when a preserved unhealthy node is included in the node list and registered nodes equal desired machines", func() {
 				machineList := &machinev1alpha1.MachineList{
 					Items: []machinev1alpha1.Machine{
 						{
@@ -1094,7 +1094,7 @@ var _ = Describe("health check", func() {
 						}},
 					},
 					{
-						// preserved failed node — cordoned by MCM, included in nodesForScalingCheck
+						// preserved unhealthy node — cordoned by MCM, included in nodesForScalingCheck
 						ObjectMeta: metav1.ObjectMeta{Name: "preserved-node"},
 						Spec:       corev1.NodeSpec{Unschedulable: true},
 						Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
@@ -1582,7 +1582,7 @@ var _ = Describe("health check", func() {
 
 	Describe("#checkSystemComponents DaemonSet suppression", func() {
 		// These tests verify that checkSystemComponents suppresses SystemComponentsHealthy=False
-		// when the only unhealthy DaemonSet pods are on preserved-failed-machine nodes.
+		// when the only unhealthy DaemonSet pods are on preserved unhealthy nodes.
 
 		var (
 			fakeShootClient client.Client
