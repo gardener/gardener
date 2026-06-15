@@ -247,7 +247,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf: seedIsGarden,
 		})
 		deployPVCAutoscalerCRDs = g.Add(flow.Task{
-			Name: "Deploy PVCAutoscaler-related custom resource definitions",
+			Name: "Deploy PVC Autoscaler-related custom resource definitions",
 			Fn:   component.OpWait(c.pvcAutoscalerCRD).Deploy,
 		})
 		syncPointCRDs = flow.NewTaskIDs(
