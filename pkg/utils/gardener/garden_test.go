@@ -222,7 +222,7 @@ var _ = Describe("Garden", func() {
 	Describe("#DefaultGardenerGVKsForEncryption", func() {
 		It("should return all default GroupVersionKinds", func() {
 			Expect(DefaultGardenerGVKsForEncryption()).To(ConsistOf(
-				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "ControllerDeployment"},
+				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1", Kind: "ControllerDeployment"},
 				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "ControllerRegistration"},
 				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "InternalSecret"},
 				schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "ShootState"},
