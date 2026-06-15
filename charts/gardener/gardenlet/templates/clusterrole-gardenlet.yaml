@@ -249,7 +249,7 @@ rules:
 - apiGroups:
   - autoscaling.gardener.cloud
   resources:
-  - persistentvolumeclaimautoscalers.autoscaling.gardener.cloud
+  - persistentvolumeclaimautoscalers
   verbs:
   - create
   - delete

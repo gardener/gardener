@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate ../../../../../hack/generate-crds.sh -p crd- --allow-dangerous-types autoscaling.gardener.cloud
+//go:generate ../../../../../hack/generate-crds.sh -p crd- autoscaling.gardener.cloud
 
 package assets
 
