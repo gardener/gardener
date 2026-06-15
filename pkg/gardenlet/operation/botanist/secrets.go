@@ -308,8 +308,8 @@ func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 	contextName := b.Shoot.ControlPlaneNamespace
 	kubeAPIServerAddress := b.Shoot.ComputeInClusterAPIServerAddress(true)
 
-	// In the case of L7 Loadbalancing for the kube-apiserver control plane pods that use the generic kube config must be restarted
-	// if the istio-ingressgateway that is being used to expose the kube-apiserver is changed.
+	// In the case of L7 Loadbalancing, the control plane pods using the generic kubeconfig must be restarted
+	// if the istio-ingressgateway of the shoot is changed.
 	// We trigger a pod rollout by regenerating the secret so the podkubeapiserverloadbalancing webhook
 	// can inject the new host alias for the kube-apiserver domain into the pods.
 	if b.ShootUsesIstioTLSTermination() {
