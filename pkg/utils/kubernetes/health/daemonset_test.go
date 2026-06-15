@@ -170,9 +170,9 @@ var _ = Describe("DaemonSet", func() {
 			}
 		})
 
-		preservedNode := func(name string) *corev1.Node {
+		preservedNode := func() *corev1.Node {
 			return &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{Name: name},
+				ObjectMeta: metav1.ObjectMeta{Name: "node-preserved"},
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
@@ -216,16 +216,24 @@ var _ = Describe("DaemonSet", func() {
 			Expect(suppressed).To(BeFalse())
 		})
 
-		It("returns false when NumberAvailable is zero (real outage)", func() {
+		It("returns true when NumberAvailable is zero but all unavailable pods are on preserved nodes", func() {
 			ds.Status.NumberAvailable = 0
-			ds.Status.NumberUnavailable = 3
+			ds.Status.NumberUnavailable = 1
 
-			c := fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+			c := fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.ShootScheme).
+				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
+				WithObjects(
+					preservedNode(),
+					notReadyPod("ds-pod-preserved", "node-preserved"),
+				).
+				Build()
+
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
 			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeFalse())
+			Expect(suppressed).To(BeTrue())
 		})
 
 		It("returns false when no preserved nodes exist", func() {
@@ -247,7 +255,7 @@ var _ = Describe("DaemonSet", func() {
 				WithScheme(kubernetes.ShootScheme).
 				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
 				WithObjects(
-					preservedNode("node-preserved"),
+					preservedNode(),
 					notReadyPod("ds-pod-preserved", "node-preserved"),
 				).
 				Build()
@@ -267,7 +275,7 @@ var _ = Describe("DaemonSet", func() {
 				WithScheme(kubernetes.ShootScheme).
 				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
 				WithObjects(
-					preservedNode("node-preserved"),
+					preservedNode(),
 					normalNode("node-normal"),
 					notReadyPod("ds-pod-preserved", "node-preserved"),
 					notReadyPod("ds-pod-normal", "node-normal"),
@@ -281,14 +289,21 @@ var _ = Describe("DaemonSet", func() {
 			Expect(suppressed).To(BeFalse())
 		})
 
-		It("returns false when adjusted unavailable count still exceeds maxUnavailable during rollout", func() {
-			// 2 unavailable, 1 on preserved node, maxUnavailable=1 → adjusted=1 which equals maxUnavailable, so suppressed
-			// But if adjusted > maxUnavailable it should NOT be suppressed
+		It("returns false when nonPreservedUnavailable count still exceeds maxUnavailable during rollout", func() {
+			// Rollout in progress: 3 unavailable, 1 on preserved node → nonPreservedUnavailable=2 which exceeds maxUnavailable=1 → not suppressed.
 			ds.Status.UpdatedNumberScheduled = 2 // rollout in progress
 			ds.Status.NumberUnavailable = 3
 			ds.Status.NumberAvailable = 0
-			// NumberAvailable=0 → early exit, not suppressed
-			c := fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+
+			c := fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.ShootScheme).
+				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
+				WithObjects(
+					preservedNode(),
+					notReadyPod("ds-pod-preserved", "node-preserved"),
+				).
+				Build()
+
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
 			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
@@ -298,7 +313,7 @@ var _ = Describe("DaemonSet", func() {
 
 		It("returns true when adjusted unavailable count is within maxUnavailable during rollout", func() {
 			// Rollout in progress: 2 unavailable exceeds maxUnavailable=1, but 1 of the unavailable
-			// pods is on a preserved node → adjusted=1, which does not exceed maxUnavailable=1 → suppressed.
+			// pods is on a preserved node → nonPreservedUnavailable=1, which does not exceed maxUnavailable=1 → suppressed.
 			ds.Status.UpdatedNumberScheduled = 2 // rollout in progress
 			ds.Status.NumberUnavailable = 2
 			ds.Status.NumberAvailable = 1
@@ -307,7 +322,7 @@ var _ = Describe("DaemonSet", func() {
 				WithScheme(kubernetes.ShootScheme).
 				WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
 				WithObjects(
-					preservedNode("node-preserved"),
+					preservedNode(),
 					notReadyPod("ds-pod-preserved", "node-preserved"),
 				).
 				Build()

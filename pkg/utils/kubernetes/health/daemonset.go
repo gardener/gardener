@@ -87,14 +87,9 @@ func IsDaemonSetProgressing(daemonSet *appsv1.DaemonSet) (bool, string) {
 // CheckDaemonSetWithPreservedNodes re-evaluates a failing DaemonSet health check by subtracting
 // unavailable pods on preserved unhealthy nodes.
 // Returns true if the failure is suppressed (attributable entirely to preserved nodes), false otherwise.
-// If NumberAvailable == 0, the failure is never suppressed regardless of preserved nodes.
 func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *appsv1.DaemonSet, preservedNodeNames sets.Set[string]) (bool, error) {
 	// Fast path: already healthy.
 	if err := CheckDaemonSet(ds); err == nil {
-		return false, nil
-	}
-	// Zero availability: real outage, always surface.
-	if ds.Status.NumberAvailable == 0 {
 		return false, nil
 	}
 	if preservedNodeNames.Len() == 0 {
