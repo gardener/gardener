@@ -24,6 +24,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -425,7 +426,7 @@ func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string) *re
 // DefaultGardenerGVKsForEncryption returns the list of [schema.GroupVersionKind] served by Gardener API Server which are encrypted by default.
 func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
 	return []schema.GroupVersionKind{
-		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeployment"),
+		gardencorev1.SchemeGroupVersion.WithKind("ControllerDeployment"),
 		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistration"),
 		gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret"),
 		gardencorev1beta1.SchemeGroupVersion.WithKind("ShootState"),
@@ -435,7 +436,7 @@ func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
 // DefaultGardenerGroupResourcesForEncryption returns the list of [schema.GroupResource] served by Gardener API Server which are encrypted by default.
 func DefaultGardenerGroupResourcesForEncryption() []schema.GroupResource {
 	return []schema.GroupResource{
-		gardencorev1beta1.Resource("controllerdeployments"),
+		gardencorev1.Resource("controllerdeployments"),
 		gardencorev1beta1.Resource("controllerregistrations"),
 		gardencorev1beta1.Resource("internalsecrets"),
 		gardencorev1beta1.Resource("shootstates"),
@@ -445,7 +446,7 @@ func DefaultGardenerGroupResourcesForEncryption() []schema.GroupResource {
 // DefaultGardenerResourcesForEncryption returns the list of resources served by Gardener API Server which are encrypted by default.
 func DefaultGardenerResourcesForEncryption() sets.Set[string] {
 	return sets.New(
-		gardencorev1beta1.Resource("controllerdeployments").String(),
+		gardencorev1.Resource("controllerdeployments").String(),
 		gardencorev1beta1.Resource("controllerregistrations").String(),
 		gardencorev1beta1.Resource("internalsecrets").String(),
 		gardencorev1beta1.Resource("shootstates").String(),
