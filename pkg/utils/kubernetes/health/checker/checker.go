@@ -163,17 +163,16 @@ func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 var kubeletConfigProblemRegex = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
 
 // CheckNodes checks whether the given nodes are ready and the version in the node status is of the same major-minor as given in 'workerGroupKubernetesVersion'.
-// It returns the failed condition and whether the failure is attributable entirely to preserved nodes (i.e. nodes whose backing machine is preserved by MCM).
-// When the second return value is true, the caller may choose to continue checking other conditions rather than returning early,
+// It returns the failed condition and a bool indicating whether the failure is attributable entirely to preserved nodes (i.e. nodes whose backing machine is preserved by MCM).
+// If the bool is true, the caller may choose to continue checking other conditions rather than returning early,
 // since the failure is expected and other checks may surface more actionable problems.
-// A nil preservedNodeNames set disables preservation awareness (identical to the previous single-return behaviour).
 func (h *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string, workerGroupKubernetesVersion *semver.Version, preservedNodeNames sets.Set[string]) (*gardencorev1beta1.Condition, bool) {
 	var firstPreservedFailure *gardencorev1beta1.Condition
 
-	for _, object := range nodes {
-		if err := health.CheckNode(&object); err != nil {
-			message := fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
-			if preservedNodeNames.Has(object.Name) {
+	for _, node := range nodes {
+		if err := health.CheckNode(&node); err != nil {
+			message := fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", node.Name, workerGroupName, err)
+			if preservedNodeNames.Has(node.Name) {
 				if firstPreservedFailure == nil {
 					msg := message + " (node and backing machine preserved by MCM)"
 					if kubeletConfigProblemRegex.MatchString(err.Error()) {
@@ -192,18 +191,18 @@ func (h *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes 
 			return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "NodeUnhealthy", message)), false
 		}
 
-		sameMajorMinor, err := semver.NewConstraint("~ " + object.Status.NodeInfo.KubeletVersion)
+		sameMajorMinor, err := semver.NewConstraint("~ " + node.Status.NodeInfo.KubeletVersion)
 		if err != nil {
-			return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", object.Name, err))), false
+			return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", node.Name, err))), false
 		}
 		if sameMajorMinor.Check(workerGroupKubernetesVersion) {
-			equal, err := semver.NewConstraint("= " + object.Status.NodeInfo.KubeletVersion)
+			equal, err := semver.NewConstraint("= " + node.Status.NodeInfo.KubeletVersion)
 			if err != nil {
-				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", object.Name, err))), false
+				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", node.Name, err))), false
 			}
 
 			if !equal.Check(workerGroupKubernetesVersion) {
-				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", object.Name, object.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()))), false
+				return new(v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", node.Name, node.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()))), false
 			}
 		}
 	}
@@ -236,7 +235,7 @@ func resourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration)
 // CheckManagedResources checks multiple ManagedResources in case the provided filter func returns true. If their state
 // indicates issues then this is reflected in the state of the provided condition. If there are no issues, nil is
 // returned. If suppressFunc is non-nil, it is called when a ManagedResource fails its health check — if it returns
-// true the failure is suppressed and iteration continues to the next ManagedResource.
+// true the failure is suppressed and the next ManagedResource is checked.
 func (h *HealthChecker) CheckManagedResources(
 	condition gardencorev1beta1.Condition,
 	managedResources []resourcesv1alpha1.ManagedResource,

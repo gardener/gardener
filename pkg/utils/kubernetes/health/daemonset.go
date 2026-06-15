@@ -18,8 +18,8 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 )
 
-// DaemonSetMaxUnavailable returns the maximum number of unavailable pods allowed for a DaemonSet.
-func DaemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int {
+// daemonSetMaxUnavailable returns the maximum number of unavailable pods allowed for a DaemonSet.
+func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int {
 	if daemonSet.Status.DesiredNumberScheduled == 0 || daemonSet.Spec.UpdateStrategy.Type != appsv1.RollingUpdateDaemonSetStrategyType {
 		return 0
 	}
@@ -55,7 +55,7 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 
 	// Check if DaemonSet rollout is ongoing.
 	if daemonSet.Status.UpdatedNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
-		if maxUnavailable := DaemonSetMaxUnavailable(daemonSet); int(daemonSet.Status.NumberUnavailable) > maxUnavailable {
+		if maxUnavailable := daemonSetMaxUnavailable(daemonSet); int(daemonSet.Status.NumberUnavailable) > maxUnavailable {
 			return fmt.Errorf("too many unavailable pods found (%d/%d, only max. %d unavailable pods allowed)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled, maxUnavailable)
 		}
 	} else {
@@ -84,7 +84,7 @@ func IsDaemonSetProgressing(daemonSet *appsv1.DaemonSet) (bool, string) {
 }
 
 // CheckDaemonSetWithPreservedNodes re-evaluates a failing DaemonSet health check by subtracting
-// unavailable pods on preserved-failed nodes.
+// unavailable pods on preserved unhealthy nodes.
 // Returns true if the failure is suppressed (attributable entirely to preserved nodes), false otherwise.
 // If NumberAvailable == 0, the failure is never suppressed regardless of preserved nodes.
 func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *appsv1.DaemonSet, preservedNodeNames sets.Set[string]) (bool, error) {
@@ -119,16 +119,16 @@ func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *
 			}
 		}
 	}
-	adjusted := int(ds.Status.NumberUnavailable) - preservedUnavailable
-	maxUnavailable := DaemonSetMaxUnavailable(ds)
+	nonPreservedUnavailable := int(ds.Status.NumberUnavailable) - preservedUnavailable
+	maxUnavailable := daemonSetMaxUnavailable(ds)
 	if ds.Status.UpdatedNumberScheduled < ds.Status.DesiredNumberScheduled {
 		// During rollout: tolerance is maxUnavailable.
-		if adjusted > maxUnavailable {
+		if nonPreservedUnavailable > maxUnavailable {
 			return false, nil
 		}
 	} else {
 		// Fully rolled out: tolerance is 0.
-		if adjusted > 0 {
+		if nonPreservedUnavailable > 0 {
 			return false, nil
 		}
 	}

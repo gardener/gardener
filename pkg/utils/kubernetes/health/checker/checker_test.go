@@ -1015,7 +1015,7 @@ var _ = Describe("HealthChecker", func() {
 			Expect(isPreserved).To(BeFalse())
 		})
 
-		It("returns False with original message when node is unhealthy and preservedNodeNames is nil", func() {
+		It("returns false with original message when node is unhealthy and preservedNodeNames is nil", func() {
 			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-unpreserved")}, "worker", kubernetesVersion, nil)
 			Expect(result).NotTo(BeNil())
 			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
@@ -1024,7 +1024,7 @@ var _ = Describe("HealthChecker", func() {
 			Expect(isPreserved).To(BeFalse())
 		})
 
-		It("returns False with preservation suffix when the unhealthy node is preserved", func() {
+		It("returns false with preservation suffix when the unhealthy node is preserved", func() {
 			preserved := sets.New("node-preserved")
 			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-preserved")}, "worker", kubernetesVersion, preserved)
 			Expect(result).NotTo(BeNil())
@@ -1033,7 +1033,7 @@ var _ = Describe("HealthChecker", func() {
 			Expect(isPreserved).To(BeTrue())
 		})
 
-		It("returns False with original message when the unhealthy node is not preserved", func() {
+		It("returns false with original message when the unhealthy node is not preserved", func() {
 			preserved := sets.New("other-node")
 			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-unpreserved")}, "worker", kubernetesVersion, preserved)
 			Expect(result).NotTo(BeNil())

@@ -678,6 +678,8 @@ func (h *Health) checkSystemComponents(
 
 // checkWorkers checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
+// Note: Preserved nodes may be exempted from some of the checks since they are intentionally
+// preserved in the Unknown/NotReady state, and actionable issues in the rest of the nodes should not be masked by the preserved ones.
 func (h *Health) checkWorkers(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
@@ -712,6 +714,16 @@ const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mc
 
 // CheckClusterNodes checks whether cluster nodes are healthy and within the desired range.
 // Additional checks are executed in the provider extension.
+//
+// Preserved unhealthy nodes are handled specially to avoid masking actionable issues:
+//   - If ALL unhealthy nodes are preserved, the CheckNodes failure is buffered and only returned
+//     once all subsequent checks pass. This surfaces the preserved-node condition without hiding real problems.
+//   - If ANY unhealthy node is NOT preserved, the failure is returned immediately, as it
+//     represents an issue that requires attention.
+//   - Preserved nodes are excluded from the node-agent lease, systemd-unit, and expired-lease
+//     checks, but are included in the node-scaling checks (so that cordoned preserved nodes are
+//     still accounted for in scale-down calculations).
+//   - When there are no preserved nodes, the first CheckNodes failure is returned immediately.
 func (h *Health) CheckClusterNodes(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
@@ -731,7 +743,7 @@ func (h *Health) CheckClusterNodes(
 	preservedNodeNames := sets.New[string]()
 	for _, nodes := range workerPoolToNodes {
 		for _, node := range nodes {
-			if health.IsNodePreservedFailed(node) {
+			if health.IsNodePreservedAndUnhealthy(node) {
 				preservedNodeNames.Insert(node.Name)
 			}
 		}
@@ -769,24 +781,25 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	nodeList := convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
-	// unpreservedNodesManagedByMCM: MCM-managed, non-preserved — used for lease and systemd-unit checks.
-	// nodesForScalingCheck: MCM-managed including preserved — used for node-scaling checks so that
+
+	// allNodesManagedByMCM: MCM-managed including preserved — used for node-scaling checks so that
 	// checkNodesScalingDown can correctly account for cordoned-preserved nodes.
-	// nodesForExpiredLeaseCheck: all non-preserved nodes — used for expired-lease check.
-	unpreservedNodesManagedByMCM := []*corev1.Node{}
-	nodesForExpiredLeaseCheck := corev1.NodeList{}
-	nodesForScalingCheck := []*corev1.Node{}
+	// nonPreservedNodesManagedByMCM: MCM-managed, non-preserved — used for lease and systemd-unit checks.
+	// allNonPreservedNodes: all non-preserved nodes — used for expired-lease check.
+	allNodesManagedByMCM := []*corev1.Node{}
+	nonPreservedNodesManagedByMCM := []*corev1.Node{}
+	allNonPreservedNodes := corev1.NodeList{}
 	for _, node := range nodeList.Items {
 		if !preservedNodeNames.Has(node.Name) {
-			nodesForExpiredLeaseCheck.Items = append(nodesForExpiredLeaseCheck.Items, node)
+			allNonPreservedNodes.Items = append(allNonPreservedNodes.Items, node)
 		}
 		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
 			continue
 		}
 		if !preservedNodeNames.Has(node.Name) {
-			unpreservedNodesManagedByMCM = append(unpreservedNodesManagedByMCM, &node)
+			nonPreservedNodesManagedByMCM = append(nonPreservedNodesManagedByMCM, &node)
 		}
-		nodesForScalingCheck = append(nodesForScalingCheck, &node)
+		allNodesManagedByMCM = append(allNodesManagedByMCM, &node)
 	}
 
 	leaseList := &coordinationv1.LeaseList{}
@@ -794,11 +807,11 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	if err := CheckNodeAgentLeases(unpreservedNodesManagedByMCM, leaseList, h.clock); err != nil {
+	if err := CheckNodeAgentLeases(nonPreservedNodesManagedByMCM, leaseList, h.clock); err != nil {
 		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "NodeAgentUnhealthy", err.Error())), nil
 	}
 
-	if err := CheckSystemdUnitsReady(unpreservedNodesManagedByMCM); err != nil {
+	if err := CheckSystemdUnitsReady(nonPreservedNodesManagedByMCM); err != nil {
 		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "SystemdUnitsNotReady", err.Error())), nil
 	}
 
@@ -808,7 +821,7 @@ func (h *Health) CheckClusterNodes(
 			return nil, err
 		}
 
-		if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), nodesForScalingCheck, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
+		if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), allNodesManagedByMCM, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
 			if msg == "" {
 				return nil, err
 			}
@@ -821,7 +834,7 @@ func (h *Health) CheckClusterNodes(
 		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
 			return nil, err
 		}
-		if err := CheckForExpiredNodeLeases(&nodesForExpiredLeaseCheck, leaseList, h.clock); err != nil {
+		if err := CheckForExpiredNodeLeases(&allNonPreservedNodes, leaseList, h.clock); err != nil {
 			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "TooManyExpiredNodeLeases", err.Error())), nil
 		}
 	}
@@ -1010,9 +1023,7 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 			pendingMachines++
 		default:
 			// undesired machine phase
-			if machine.Status.CurrentStatus.PreserveExpiryTime == nil {
-				erroneousMachines++
-			}
+			erroneousMachines++
 		}
 	}
 
@@ -1026,7 +1037,7 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 	return fmt.Errorf("%s provisioning and should join the cluster soon", cosmeticMachineMessage(pendingMachines))
 }
 
-func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []*corev1.Node, registeredNodes, desiredMachines int) error {
+func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []*corev1.Node, registeredNodesCount, desiredMachines int) error {
 	// Check if all nodes that are cordoned map to machines with a deletion timestamp. This might be the case during
 	// a rolling update.
 	nodeNameToMachine := map[string]machinev1alpha1.Machine{}
@@ -1036,7 +1047,7 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []
 		}
 	}
 
-	var cordonedNodes, cordonedPreservedNodes int
+	var cordonedNodesCount, cordonedPreservedNodesCount int
 	for _, node := range nodeList {
 		if node.Spec.Unschedulable {
 			machine, ok := nodeNameToMachine[node.Name]
@@ -1044,26 +1055,26 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []
 				return fmt.Errorf("machine object for cordoned node %q not found", node.Name)
 			}
 			if machine.DeletionTimestamp == nil && machine.Status.CurrentStatus.PreserveExpiryTime == nil {
-				return fmt.Errorf("cordoned node %q found but corresponding machine object does not have a deletion timestamp", node.Name)
+				return fmt.Errorf("cordoned non-preserved node %q found but corresponding machine object does not have a deletion timestamp", node.Name)
 			}
-			cordonedNodes++
+			cordonedNodesCount++
 			if machine.Status.CurrentStatus.PreserveExpiryTime != nil {
-				cordonedPreservedNodes++
+				cordonedPreservedNodesCount++
 			}
 		}
 	}
+	drainingNodesCount := cordonedNodesCount - cordonedPreservedNodesCount
 
 	// If there are still more nodes than desired then report an error.
-	if registeredNodes-cordonedNodes != desiredMachines-cordonedPreservedNodes {
-		return fmt.Errorf("too many worker nodes are registered. Exceeding maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
+	if registeredNodesCount-drainingNodesCount > desiredMachines {
+		return fmt.Errorf("too many worker nodes are registered. Exceeding maximum desired machine count (%d/%d)", registeredNodesCount, desiredMachines)
 	}
 
-	drainingNodes := cordonedNodes - cordonedPreservedNodes
-	if drainingNodes == 0 {
+	if drainingNodesCount == 0 {
 		return nil
 	}
 
-	return fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(drainingNodes))
+	return fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(drainingNodesCount))
 }
 
 // CheckPreservation checks whether any MachineDeployments have preserved failed machines
