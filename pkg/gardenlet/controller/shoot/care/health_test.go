@@ -522,7 +522,7 @@ var _ = Describe("health check", func() {
 				[]gardencorev1beta1.Worker{{Name: workerPoolName1, Maximum: 10, Minimum: 1}},
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
-						Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+						Name:        operatingsystemconfig.Key(kubernetesVersion, nil, &gardencorev1beta1.Worker{Name: workerPoolName1}, false, nil, nil),
 						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					},
@@ -568,7 +568,7 @@ var _ = Describe("health check", func() {
 				[]gardencorev1beta1.Worker{{Name: workerPoolName1, Maximum: 10, Minimum: 2}},
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
-						Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+						Name:        operatingsystemconfig.Key(kubernetesVersion, nil, &gardencorev1beta1.Worker{Name: workerPoolName1}, false, nil, nil),
 						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					},
@@ -1503,37 +1503,31 @@ var _ = Describe("health check", func() {
 		})
 
 		It("should set condition to True when no MachineDeployments have preserved failed machines", func() {
-			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
-				Items: []machinev1alpha1.MachineDeployment{
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
-						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
-						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
-					},
-				},
-			}
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+			})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+			})).To(Succeed())
 
-			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+			result, err := health.CheckPreservation(ctx, preservedCond)
 
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result).NotTo(BeNil())
 			Expect(*result).To(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved."))
 		})
 
 		It("should set condition to False when one MachineDeployment has preserved failed machines", func() {
-			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
-				Items: []machinev1alpha1.MachineDeployment{
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
-						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 2},
-					},
-				},
-			}
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 2},
+			})).To(Succeed())
 
-			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+			result, err := health.CheckPreservation(ctx, preservedCond)
 
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result).NotTo(BeNil())
 			Expect(*result).To(beConditionWithStatusAndMsg(
 				gardencorev1beta1.ConditionFalse,
@@ -1543,25 +1537,22 @@ var _ = Describe("health check", func() {
 		})
 
 		It("should set condition to False when multiple MachineDeployments have preserved failed machines", func() {
-			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
-				Items: []machinev1alpha1.MachineDeployment{
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
-						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 1},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
-						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 3},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "deploy-3", Namespace: controlPlaneNamespace},
-						Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
-					},
-				},
-			}
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 1},
+			})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 3},
+			})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "deploy-3", Namespace: controlPlaneNamespace},
+				Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+			})).To(Succeed())
 
-			result := health.CheckPreservation(machineDeploymentList, preservedCond)
+			result, err := health.CheckPreservation(ctx, preservedCond)
 
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result).NotTo(BeNil())
 			Expect(*result).To(beConditionWithStatusAndMsg(
 				gardencorev1beta1.ConditionFalse,
@@ -1571,10 +1562,9 @@ var _ = Describe("health check", func() {
 		})
 
 		It("should set condition to True when MachineDeploymentList is empty", func() {
-			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+			result, err := health.CheckPreservation(ctx, preservedCond)
 
-			result := health.CheckPreservation(machineDeploymentList, preservedCond)
-
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result).NotTo(BeNil())
 			Expect(*result).To(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved."))
 		})
