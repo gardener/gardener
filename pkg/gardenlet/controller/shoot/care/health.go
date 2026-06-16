@@ -898,9 +898,15 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		}
 	}
 
-	if readyAndSchedulableNodes < desiredMachines {
+	if registeredNodes < desiredMachines {
 		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
 			return "NodesScalingUp", err
+		}
+	}
+
+	if readyAndSchedulableNodes < desiredMachines {
+		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
+			return "NodesRollOutScalingUp", err
 		}
 	}
 
