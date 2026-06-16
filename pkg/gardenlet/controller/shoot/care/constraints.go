@@ -137,15 +137,6 @@ func (c *Constraint) constraintsChecks(
 	status, reason, message = c.checkIfManualInPlaceWorkersUpdated()
 	constraints.manualInPlaceWorkersUpdated = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.manualInPlaceWorkersUpdated, status, reason, message)
 
-	// Check whether any ManagedResources in the shoot's control plane namespace have been annotated with
-	// resources.gardener.cloud/ignore=true, which disables their reconciliation.
-	status, reason, message, err = c.checkIfManagedResourcesAreIgnored(ctx)
-	if err != nil {
-		constraints.hasIgnoredManagedResources = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.hasIgnoredManagedResources, err)
-	} else {
-		constraints.hasIgnoredManagedResources = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hasIgnoredManagedResources, status, reason, message)
-	}
-
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
 	shootClient, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
