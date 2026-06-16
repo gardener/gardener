@@ -1589,6 +1589,11 @@ func (in *ControllerResource) DeepCopyInto(out *ControllerResource) {
 		*out = make([]ClusterType, len(*in))
 		copy(*out, *in)
 	}
+	if in.ContinuousEndpointUpdate != nil {
+		in, out := &in.ContinuousEndpointUpdate, &out.ContinuousEndpointUpdate
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

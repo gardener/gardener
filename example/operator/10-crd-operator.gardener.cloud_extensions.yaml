@@ -368,6 +368,11 @@ spec:
                         description: ClusterType defines the type of cluster.
                         type: string
                       type: array
+                    continuousEndpointUpdate:
+                      description: |-
+                        ContinuousEndpointUpdate indicates whether the extension requires the SelfHostedShootExposure endpoints to be continuously
+                        updated with healthy/valid control plane endpoints.
+                      type: boolean
                     kind:
                       description: Kind is the resource kind, for example "OperatingSystemConfig".
                       type: string

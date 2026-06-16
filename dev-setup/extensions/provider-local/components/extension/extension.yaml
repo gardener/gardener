@@ -37,3 +37,4 @@ spec:
     type: local
   - kind: SelfHostedShootExposure
     type: local
+    continuousEndpointUpdate: true

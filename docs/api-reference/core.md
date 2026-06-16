@@ -3081,6 +3081,18 @@ boolean
 <p>ClusterCompatibility defines the compatibility of this resource with different cluster types.<br />If compatibility is not specified, it will be defaulted to 'shoot'.<br />This field can only be set for resources of kind "Extension".</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>continuousEndpointUpdate</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ContinuousEndpointUpdate indicates whether the extension requires the SelfHostedShootExposure endpoints to be continuously<br />updated with healthy/valid control plane endpoints.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
