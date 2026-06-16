@@ -7,10 +7,10 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"slices"
+
+	corev1 "k8s.io/api/core/v1"
 
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 )
@@ -25,7 +25,7 @@ func (b *GardenadmBotanist) DeployBootstrapDNSRecord(ctx context.Context) error 
 		return err
 	}
 
-	machineAddr, err := PreferredAddress(machine.Status.Addresses)
+	machineAddr, err := PreferredNodeAddress(machine.Status.Addresses)
 	if err != nil {
 		return fmt.Errorf("failed getting preferred address for machine %q: %w", machine.Name, err)
 	}
@@ -57,82 +57,15 @@ func (b *GardenadmBotanist) RestoreExternalDNSRecord(ctx context.Context) error 
 }
 
 func (b *GardenadmBotanist) externalDNSRecordValues(ctx context.Context) ([]string, extensionsv1alpha1.DNSRecordType, error) {
+	ipFamilies := b.Shoot.GetInfo().Spec.Networking.IPFamilies
+
 	if b.Shoot.HasExtensionExposure() {
-		return b.extensionExposureDNSRecordValues()
+		return extensionsv1alpha1helper.DNSValuesFromIngress(b.Shoot.Components.Extensions.SelfHostedShootExposure.Ingress, ipFamilies)
 	}
-	return b.nodeAddressDNSRecordValues(ctx)
-}
 
-func (b *GardenadmBotanist) extensionExposureDNSRecordValues() ([]string, extensionsv1alpha1.DNSRecordType, error) {
-	ingress := b.Shoot.Components.Extensions.SelfHostedShootExposure.Ingress
-	if len(ingress) == 0 {
-		return nil, "", fmt.Errorf("SelfHostedShootExposure has no ingress yet")
-	}
-	// Prefer IPs over hostnames
-	var ips, hostnames []string
-	for _, i := range ingress {
-		if i.IP != "" {
-			ips = append(ips, i.IP)
-			continue
-		}
-		if i.Hostname != "" {
-			hostnames = append(hostnames, i.Hostname)
-		}
-	}
-	switch {
-	case len(ips) > 0:
-		filtered, recordType, ok := filterByIPFamily(ips, b.Shoot.GetInfo().Spec.Networking.IPFamilies)
-		if !ok {
-			return nil, "", fmt.Errorf("SelfHostedShootExposure ingress IPs %v do not match any configured IP family", ips)
-		}
-		return filtered, recordType, nil
-	case len(hostnames) > 0:
-		return hostnames, extensionsv1alpha1.DNSRecordTypeCNAME, nil
-	default:
-		return nil, "", fmt.Errorf("SelfHostedShootExposure ingress has neither IP(s) nor hostname(s)")
-	}
-}
-
-func (b *GardenadmBotanist) nodeAddressDNSRecordValues(ctx context.Context) ([]string, extensionsv1alpha1.DNSRecordType, error) {
 	nodes, err := b.ListControlPlaneNodes(ctx)
 	if err != nil {
 		return nil, "", err
 	}
-
-	addresses := make([]string, 0, len(nodes))
-	for _, node := range nodes {
-		addr, err := PreferredAddress(node.Status.Addresses)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed getting preferred address for node %q: %w", node.Name, err)
-		}
-		addresses = append(addresses, addr)
-	}
-
-	filtered, recordType, ok := filterByIPFamily(addresses, b.Shoot.GetInfo().Spec.Networking.IPFamilies)
-	if !ok {
-		return nil, "", fmt.Errorf("control plane node addresses %v do not match any configured IP family", addresses)
-	}
-	return filtered, recordType, nil
-}
-
-// filterByIPFamily returns the subset of addresses matching the first IP family in ipFamilies that has at least one
-// match, along with its DNS record type. The bool is false if no family matches.
-func filterByIPFamily(addresses []string, ipFamilies []gardencorev1beta1.IPFamily) ([]string, extensionsv1alpha1.DNSRecordType, bool) {
-	for _, family := range ipFamilies {
-		recordType := ipFamilyToDNSRecordType(family)
-		filtered := slices.DeleteFunc(slices.Clone(addresses), func(addr string) bool {
-			return extensionsv1alpha1helper.GetDNSRecordType(addr) != recordType
-		})
-		if len(filtered) > 0 {
-			return filtered, recordType, true
-		}
-	}
-	return nil, "", false
-}
-
-func ipFamilyToDNSRecordType(family gardencorev1beta1.IPFamily) extensionsv1alpha1.DNSRecordType {
-	if family == gardencorev1beta1.IPFamilyIPv6 {
-		return extensionsv1alpha1.DNSRecordTypeAAAA
-	}
-	return extensionsv1alpha1.DNSRecordTypeA
+	return extensionsv1alpha1helper.DNSValuesFromNodes(nodes, ipFamilies, corev1.NodeInternalIP, corev1.NodeExternalIP)
 }

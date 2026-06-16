@@ -36,10 +36,11 @@ func (b *GardenadmBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machi
 	return &b.controlPlaneMachines[index], nil
 }
 
-// addressTypePreference when retrieving the SSH Address of a node/machine. Higher value means higher priority.
+// addressTypePreference when picking a node/machine address. Higher value means higher priority.
 // Unknown address types have the lowest priority (0).
 var addressTypePreference = map[corev1.NodeAddressType]int{
-	// internal names have priority, as we jump via a bastion host
+	// internal names have priority: they are reachable from within the cluster network even when nodes have no
+	// externally routable addresses (and for SSH we jump via a bastion host)
 	corev1.NodeInternalIP:  5,
 	corev1.NodeInternalDNS: 4,
 	corev1.NodeExternalIP:  3,
@@ -48,9 +49,9 @@ var addressTypePreference = map[corev1.NodeAddressType]int{
 	corev1.NodeHostName: 1,
 }
 
-// PreferredAddress returns the preferred address of the given node/machine addresses based on addressTypePreference.
-// If the node/machine has no addresses, an error is returned.
-func PreferredAddress(addresses []corev1.NodeAddress) (string, error) {
+// PreferredNodeAddress returns the preferred address of the given node/machine addresses based on
+// addressTypePreference (prefer internal and IP to external and DNS). Returns an error if no addresses are given.
+func PreferredNodeAddress(addresses []corev1.NodeAddress) (string, error) {
 	if len(addresses) == 0 {
 		return "", fmt.Errorf("no addresses found in status")
 	}

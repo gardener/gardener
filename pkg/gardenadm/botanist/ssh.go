@@ -34,7 +34,7 @@ func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) er
 		return err
 	}
 
-	machineAddr, err := PreferredAddress(machine.Status.Addresses)
+	machineAddr, err := PreferredNodeAddress(machine.Status.Addresses)
 	if err != nil {
 		return fmt.Errorf("failed getting preferred address for machine %q: %w", machine.Name, err)
 	}
