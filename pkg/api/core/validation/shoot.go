@@ -2434,9 +2434,8 @@ func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineCon
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
 		}
 	}
-	if mcmOptions.MachinePreserveTimeout != nil {
-		allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachinePreserveTimeout, fldPath.Child("machinePreserveTimeout"))...)
-	}
+
+	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachinePreserveTimeout, fldPath.Child("machinePreserveTimeout"))...)
 
 	return allErrs
 }

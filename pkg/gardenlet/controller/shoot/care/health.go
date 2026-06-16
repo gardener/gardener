@@ -181,11 +181,9 @@ func (h *Health) Check(
 	if apiServerRunning && err == nil {
 		// noPreservedFailedMachines is non-nil only for shoots with MCM-managed infrastructure.
 		if conditions.noPreservedFailedMachines != nil {
-			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
-			if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+			conditions.noPreservedFailedMachines, err = h.CheckPreservation(ctx, *conditions.noPreservedFailedMachines)
+			if err != nil {
 				conditions.noPreservedFailedMachines = new(v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, *conditions.noPreservedFailedMachines, err.Error()))
-			} else {
-				conditions.noPreservedFailedMachines = h.CheckPreservation(machineDeploymentList, *conditions.noPreservedFailedMachines)
 			}
 		}
 		taskFns = append(taskFns,
@@ -1100,19 +1098,23 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList []
 	return fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(drainingNodesCount))
 }
 
-// CheckPreservation checks whether any MachineDeployments have preserved failed machines
+// CheckPreservation checks whether any MachineDeployment has preserved failed machines
 // and returns the condition accordingly.
-func (h *Health) CheckPreservation(
-	machineDeploymentList *machinev1alpha1.MachineDeploymentList, condition gardencorev1beta1.Condition) *gardencorev1beta1.Condition {
+func (h *Health) CheckPreservation(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	var totalPreserved int32
+	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+	err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace))
+	if err != nil {
+		return &condition, err
+	}
 	for _, mcd := range machineDeploymentList.Items {
 		totalPreserved += mcd.Status.PreservedFailedReplicas
 	}
 	if totalPreserved > 0 {
 		msg := fmt.Sprintf("Cluster has %d preserved failed machine(s).", totalPreserved)
-		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "FailedMachinesPreserved", msg))
+		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "FailedMachinesPreserved", msg)), nil
 	}
-	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved."))
+	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved.")), nil
 }
 
 func convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes map[string][]corev1.Node) *corev1.NodeList {
