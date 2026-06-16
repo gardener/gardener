@@ -180,6 +180,8 @@ func (h *Health) Check(
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if apiServerRunning && err == nil {
 		// noPreservedFailedMachines is non-nil only for shoots with MCM-managed infrastructure.
+		// Must run synchronously before the parallel taskFns below, because checkSystemComponents
+		// reads noPreservedFailedMachines to decide whether to enable DaemonSet suppression.
 		if conditions.noPreservedFailedMachines != nil {
 			conditions.noPreservedFailedMachines, err = h.CheckPreservation(ctx, *conditions.noPreservedFailedMachines)
 			if err != nil {
@@ -619,11 +621,12 @@ func (h *Health) checkSystemComponents(
 			h.log.Error(err, "Failed to list preserved nodes for DaemonSet suppression check")
 		} else {
 			suppressFunc = func(mr *resourcesv1alpha1.ManagedResource) bool {
-				// For each resource in the MR: non-workload kinds (RBAC, ConfigMaps, etc.) are
-				// skipped; workload kinds (Deployment, StatefulSet) are checked directly for
-				// health and cause suppression to be rejected if unhealthy; DaemonSets are
-				// checked with the preserved-node-aware check so that failures attributable
-				// entirely to preserved unhealthy nodes do not block suppression.
+				// For each resource in the MR: DaemonSets are checked with the preserved-node-aware
+				// check so that failures attributable entirely to preserved unhealthy nodes do not
+				// block suppression; Deployment and StatefulSet are checked directly and reject
+				// suppression if unhealthy; any other kind (Service, ConfigMap, RBAC, etc.) also
+				// rejects suppression — if an unknown resource kind caused the MR failure, it
+				// cannot be attributed to preserved nodes.
 				for _, ref := range mr.Status.Resources {
 					switch ref.Kind {
 					case "DaemonSet":
@@ -658,6 +661,8 @@ func (h *Health) checkSystemComponents(
 						if err := health.CheckStatefulSet(sts); err != nil {
 							return false
 						}
+					default:
+						return false
 					}
 				}
 				return true
