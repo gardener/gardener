@@ -2272,7 +2272,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 		autoPreserveFailedMachineMax := *worker.AutoPreserveFailedMachineMax
 		if autoPreserveFailedMachineMax < 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be negative"))
-		} else if helper.SystemComponentsAllowed(&worker) && autoPreserveFailedMachineMax > (worker.Maximum-1) {
+		} else if helper.SystemComponentsAllowed(&worker) && worker.Maximum > 0 && (autoPreserveFailedMachineMax > (worker.Maximum - 1)) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"))
 		} else if autoPreserveFailedMachineMax > (worker.Maximum) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum value"))
