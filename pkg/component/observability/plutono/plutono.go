@@ -32,6 +32,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -868,7 +869,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: credentialsSecretName}),
+		utils.MergeStringMaps(getLabels(), istiobasicauthserver.BasicAuthLabels(p.values.IsGardenCluster, credentialsSecretName)),
 		[]string{p.values.IstioIngressGatewayNamespace},
 		[]string{p.values.IngressHost},
 		gatewayName,

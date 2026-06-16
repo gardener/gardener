@@ -570,6 +570,13 @@ metadata:
 					secretName = `observability-ingress-users`
 				}
 				out += secretName + `
+    reference.gardener.cloud/basic-auth-server-name: `
+				if values.IsGardenCluster {
+					out += `virtual-garden-istio-basic-auth-server`
+				} else {
+					out += `istio-basic-auth-server`
+				}
+				out += `
   name: `
 				if values.IsGardenCluster {
 					out += `virtual-garden-plutono-garden`

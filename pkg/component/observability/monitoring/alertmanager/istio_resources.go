@@ -17,6 +17,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -87,7 +88,7 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: a.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(a.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: a.values.ExternalExposure.AuthSecretName}),
+		utils.MergeStringMaps(a.getLabels(), istiobasicauthserver.BasicAuthLabels(a.values.ExternalExposure.IsGardenCluster, a.values.ExternalExposure.AuthSecretName)),
 		[]string{a.values.ExternalExposure.IstioIngressGatewayNamespace},
 		[]string{a.values.ExternalExposure.Host},
 		gatewayName,
