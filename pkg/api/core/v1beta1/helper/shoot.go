@@ -622,11 +622,38 @@ func HasManagedInfrastructure(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil
 }
 
+// ControlPlaneExposureForShoot returns the control plane exposure configuration for the shoot,
+// or nil if the shoot is not self-hosted or the control plane worker pool is not configured with an exposure.
+func ControlPlaneExposureForShoot(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.Exposure {
+	pool := ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)
+	if pool == nil || pool.ControlPlane == nil {
+		return nil
+	}
+	return pool.ControlPlane.Exposure
+}
+
 // HasExtensionExposure returns true if the shoot's control plane is configured to use a
 // SelfHostedShootExposure extension object to expose the API server.
 func HasExtensionExposure(shoot *gardencorev1beta1.Shoot) bool {
-	pool := ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)
-	return pool != nil && pool.ControlPlane.Exposure != nil && pool.ControlPlane.Exposure.Extension != nil
+	exposure := ControlPlaneExposureForShoot(shoot)
+	return exposure != nil && exposure.Extension != nil
+}
+
+// HasDNSExposure returns true if the shoot's control plane is configured to be exposed directly via DNS, i.e. the
+// external DNSRecord points at the control-plane node addresses without an exposure extension in between.
+func HasDNSExposure(shoot *gardencorev1beta1.Shoot) bool {
+	exposure := ControlPlaneExposureForShoot(shoot)
+	return exposure != nil && exposure.DNS != nil
+}
+
+// SelfHostedShootExposureExtensionType returns the exposure extension type configured for the shoot,
+// defaulting to the provider type when it is not configured.
+func SelfHostedShootExposureExtensionType(shoot *gardencorev1beta1.Shoot) string {
+	exposure := ControlPlaneExposureForShoot(shoot)
+	if exposure == nil || exposure.Extension == nil {
+		return shoot.Spec.Provider.Type
+	}
+	return ptr.Deref(exposure.Extension.Type, shoot.Spec.Provider.Type)
 }
 
 // ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is self-hosted.

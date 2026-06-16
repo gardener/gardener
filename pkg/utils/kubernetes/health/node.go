@@ -6,6 +6,7 @@ package health
 
 import (
 	"context"
+	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -95,4 +96,11 @@ func IsNodePreservedAndUnhealthy(node corev1.Node) bool {
 		}
 	}
 	return false
+}
+
+// FilterHealthyNodes returns the subset of nodes that are considered healthy according to CheckNode.
+func FilterHealthyNodes(nodes []corev1.Node) []corev1.Node {
+	return slices.DeleteFunc(slices.Clone(nodes), func(node corev1.Node) bool {
+		return CheckNode(&node) != nil
+	})
 }

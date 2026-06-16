@@ -720,8 +720,10 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 				requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
 			}
 		}
-		if pool.ControlPlane != nil && pool.ControlPlane.Exposure != nil {
-			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.SelfHostedShootExposureResource, *pool.ControlPlane.Exposure.Extension.Type))
+		if pool.ControlPlane != nil && pool.ControlPlane.Exposure != nil && pool.ControlPlane.Exposure.Extension != nil {
+			// Exposure.Extension.Type is optional and defaults to .spec.provider.type, so resolve it via the helper
+			// rather than dereferencing it directly (which would panic when the type is not set).
+			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.SelfHostedShootExposureResource, v1beta1helper.SelfHostedShootExposureExtensionType(shoot)))
 		}
 	}
 

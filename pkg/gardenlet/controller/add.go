@@ -135,7 +135,7 @@ func AddToManager(
 		}
 	}
 
-	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, healthManager, seedName(cfg)); err != nil {
+	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, healthManager, seedName(cfg), selfHostedShoot); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 
