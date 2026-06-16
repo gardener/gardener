@@ -5,6 +5,8 @@
 package health
 
 import (
+	"slices"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -56,4 +58,11 @@ func CheckNode(node *corev1.Node) error {
 	}
 
 	return nil
+}
+
+// FilterHealthyNodes returns the subset of nodes that are considered healthy according to CheckNode.
+func FilterHealthyNodes(nodes []corev1.Node) []corev1.Node {
+	return slices.DeleteFunc(slices.Clone(nodes), func(node corev1.Node) bool {
+		return CheckNode(&node) != nil
+	})
 }

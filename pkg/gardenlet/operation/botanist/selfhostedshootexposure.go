@@ -12,9 +12,9 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	extensionsselfhostedshootexposure "github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DefaultSelfHostedShootExposure creates the default deployer for the SelfHostedShootExposure resource.
@@ -58,16 +58,9 @@ func (b *Botanist) DeploySelfHostedShootExposure(ctx context.Context) error {
 		return fmt.Errorf("failed listing control plane nodes: %w", err)
 	}
 
-	endpoints := make([]extensionsv1alpha1.ControlPlaneEndpoint, 0, len(nodes))
-	for _, node := range nodes {
-		if len(node.Status.Addresses) == 0 {
-			return fmt.Errorf("node %q has no addresses", node.Name)
-		}
-		nodeCopy := node.DeepCopy()
-		endpoints = append(endpoints, extensionsv1alpha1.ControlPlaneEndpoint{
-			NodeName:  nodeCopy.Name,
-			Addresses: nodeCopy.Status.Addresses,
-		})
+	endpoints, err := gardenerutils.ControlPlaneEndpointsFromNodes(nodes)
+	if err != nil {
+		return err
 	}
 
 	b.Shoot.Components.Extensions.SelfHostedShootExposure.Values.Endpoints = endpoints

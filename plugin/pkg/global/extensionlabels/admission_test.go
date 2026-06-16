@@ -492,6 +492,17 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(shoot.ObjectMeta.Labels).To(HaveKeyWithValue("selfhostedshootexposure.extensions.gardener.cloud/"+providerType, "true"))
 		})
 
+		It("should not add a self-hosted shoot exposure label for DNS-based exposure", func() {
+			shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+				Exposure: &core.Exposure{DNS: &core.DNSExposure{}},
+			}
+
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("Shoot").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+			Expect(shoot.ObjectMeta.Labels).NotTo(HaveKey(HavePrefix("selfhostedshootexposure.extensions.gardener.cloud/")))
+		})
+
 		Context("Workerless Shoot", func() {
 			BeforeEach(func() {
 				shoot = &core.Shoot{
