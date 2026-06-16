@@ -96,6 +96,20 @@ var _ = Describe("DNSRecord", func() {
 		b.Shoot.SetInfo(shoot)
 	}
 
+	// healthyControlPlaneNode returns a control-plane Node that passes health.CheckNode with the given addresses.
+	healthyControlPlaneNode := func(name string, addresses ...corev1.NodeAddress) *corev1.Node {
+		return &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
+			},
+			Status: corev1.NodeStatus{
+				Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}},
+				Addresses:  addresses,
+			},
+		}
+	}
+
 	Describe("#RestoreExternalDNSRecord", func() {
 		It("should fail if there are no control plane nodes", func(ctx SpecContext) {
 			node := &corev1.Node{
@@ -111,98 +125,64 @@ var _ = Describe("DNSRecord", func() {
 			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("no control plane nodes found"))
 		})
 
-		It("should fail if the control plane node doesn't have any addresses", func(ctx SpecContext) {
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controlPlaneWorkerPoolName + "-1",
-					Labels: map[string]string{
-						"node-role.kubernetes.io/control-plane": "",
-					},
-				},
-			}
+		It("should fail if a control plane node has no addresses", func(ctx SpecContext) {
+			node := healthyControlPlaneNode(controlPlaneWorkerPoolName + "-1")
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("no addresses found in status")))
+			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("has no addresses")))
 		})
 
-		It("should fail if no node addresses match any configured IP family", func(ctx SpecContext) {
+		It("should fail if no node address matches the configured IP family", func(ctx SpecContext) {
 			shoot := b.Shoot.GetInfo()
 			shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 			b.Shoot.SetInfo(shoot)
 
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controlPlaneWorkerPoolName + "-1",
-					Labels: map[string]string{
-						"node-role.kubernetes.io/control-plane": "",
-					},
-				},
-				Status: corev1.NodeStatus{
-					Addresses: []corev1.NodeAddress{{
-						Type:    corev1.NodeInternalIP,
-						Address: "10.0.0.1",
-					}},
-				},
-			}
+			node := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"})
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("do not match any configured IP family")))
+			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("configured IP family")))
 		})
 
-		It("should set the correct values and restore the DNSRecord", func(ctx SpecContext) {
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controlPlaneWorkerPoolName + "-1",
-					Labels: map[string]string{
-						"node-role.kubernetes.io/control-plane": "",
-					},
-				},
-				Status: corev1.NodeStatus{
-					Addresses: []corev1.NodeAddress{{
-						Type:    corev1.NodeInternalIP,
-						Address: "10.0.0.1",
-					}},
-				},
-			}
+		It("should set the preferred (internal first) addresses and restore the DNSRecord", func(ctx SpecContext) {
+			// The internal address is preferred so the record stays resolvable within the cluster network even when
+			// the nodes have no externally routable addresses.
+			node1 := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1",
+				corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"},
+				corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
+			)
+			node2 := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-2", corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.5"})
 
-			node2 := node.DeepCopy()
-			node2.Name = controlPlaneWorkerPoolName + "-2"
-			node2.Status.Addresses[0].Address = "10.0.0.2"
-
-			Expect(fakeClient.Create(ctx, node)).To(Succeed())
+			Expect(fakeClient.Create(ctx, node1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, node2)).To(Succeed())
 
 			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
-			externalDNSRecord.EXPECT().SetValues([]string{node.Status.Addresses[0].Address, node2.Status.Addresses[0].Address})
+			externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1", "1.2.3.5"})
 			externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
 			externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
 			Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
 		})
 
-		It("should filter dual-stack node addresses to the first IP family", func(ctx SpecContext) {
+		It("should include unhealthy control plane nodes (restore is a one-shot at bootstrap)", func(ctx SpecContext) {
+			node := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"})
+			node.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}
+			Expect(fakeClient.Create(ctx, node)).To(Succeed())
+
+			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
+			externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+			externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
+
+			Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+		})
+
+		It("should filter dual-stack addresses to the first IP family", func(ctx SpecContext) {
 			shoot := b.Shoot.GetInfo()
 			shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}
 			b.Shoot.SetInfo(shoot)
 
-			node1 := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   controlPlaneWorkerPoolName + "-1",
-					Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
-				},
-				Status: corev1.NodeStatus{
-					Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}},
-				},
-			}
-			node2 := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   controlPlaneWorkerPoolName + "-2",
-					Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
-				},
-				Status: corev1.NodeStatus{
-					Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "fd12::1"}},
-				},
-			}
+			node1 := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"})
+			node2 := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-2", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "fd12::1"})
 			Expect(fakeClient.Create(ctx, node1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, node2)).To(Succeed())
 
@@ -220,13 +200,13 @@ var _ = Describe("DNSRecord", func() {
 			})
 
 			It("should fail if SelfHostedShootExposure has no ingress yet", func(ctx SpecContext) {
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("SelfHostedShootExposure has no ingress yet"))
+				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("exposure has no ingress yet"))
 			})
 
 			It("should fail if all ingress entries have neither IP nor hostname", func(ctx SpecContext) {
 				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{{IP: "", Hostname: ""}}
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("SelfHostedShootExposure ingress has neither IP(s) nor hostname(s)"))
+				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("neither IPs nor hostnames")))
 			})
 
 			It("should use IPs when available", func(ctx SpecContext) {
@@ -305,7 +285,7 @@ var _ = Describe("DNSRecord", func() {
 					{IP: "10.0.0.1"},
 				}
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("do not match any configured IP family")))
+				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("configured IP family")))
 			})
 		})
 	})
