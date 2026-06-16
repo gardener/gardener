@@ -5,10 +5,7 @@
 package managedinfra
 
 import (
-	"context"
-	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -45,23 +42,16 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		const (
 			shootName   = "root"
 			technicalID = "shoot--garden--" + shootName
-			localPort   = 6443
 		)
 
 		var (
 			session *gexec.Session
 
 			kubeconfigOutputFile string
-
-			portForwardCtx    context.Context
-			cancelPortForward context.CancelFunc
 		)
 
 		BeforeAll(func() {
 			DeferCleanup(test.WithTempFile("", "kubeconfig", nil, &kubeconfigOutputFile))
-
-			portForwardCtx, cancelPortForward = context.WithCancel(context.Background())
-			DeferCleanup(func() { cancelPortForward() })
 		})
 
 		AfterAll(func(ctx SpecContext) {
@@ -197,7 +187,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig", Namespace: technicalID}}
 			Eventually(ctx, Object(kubeconfigSecret)).Should(HaveField("Data", HaveKey("kubeconfig")))
 
-			kubeconfig = strings.ReplaceAll(string(kubeconfigSecret.Data["kubeconfig"]), "api.root.garden.external.local.gardener.cloud", fmt.Sprintf("localhost:%d", localPort))
+			kubeconfig = string(kubeconfigSecret.Data["kubeconfig"])
 		}, SpecTimeout(time.Minute))
 
 		var (
@@ -206,20 +196,12 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		)
 
 		It("should connect to the shoot", func(ctx SpecContext) {
-			By("Forward port to control plane machine pod")
-			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), technicalID, machinePodName(ctx, technicalID, 0), localPort, 443)
-			Expect(err).NotTo(HaveOccurred())
-
-			go func() {
-				if err := fw.ForwardPorts(); err != nil {
-					Fail("Error forwarding ports: " + err.Error())
-				}
-			}()
-
-			Eventually(fw.Ready()).Should(BeClosed())
-
 			By("Create client set")
-			Eventually(func() error {
+			// The control plane is exposed via the SelfHostedShootExposure LoadBalancer (provisioned by
+			// cloud-controller-manager-local), so the kubeconfig's server address is reachable directly from the
+			// host and we can connect without port-forwarding to the machine pod.
+			Eventually(ctx, func() error {
+				var err error
 				shootClientSet, err = kubernetes.NewClientFromBytes([]byte(kubeconfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 					kubernetes.WithDisabledCachedClient(),
