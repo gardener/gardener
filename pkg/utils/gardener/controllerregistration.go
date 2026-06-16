@@ -5,14 +5,43 @@
 package gardener
 
 import (
+	"context"
 	"slices"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
+
+// GetControllerRegistrationsForInstallations returns the distinct ControllerRegistrations referenced by the given
+// ControllerInstallations, fetched by name (a global List is not permitted for a self-hosted shoot's gardenlet, RBAC).
+func GetControllerRegistrationsForInstallations(ctx context.Context, reader client.Reader, controllerInstallations *gardencorev1beta1.ControllerInstallationList) (*gardencorev1beta1.ControllerRegistrationList, error) {
+	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
+	seen := sets.New[string]()
+
+	for _, controllerInstallation := range controllerInstallations.Items {
+		name := controllerInstallation.Spec.RegistrationRef.Name
+		if seen.Has(name) {
+			continue
+		}
+		seen.Insert(name)
+
+		controllerRegistration := gardencorev1beta1.ControllerRegistration{}
+		if err := reader.Get(ctx, client.ObjectKey{Name: name}, &controllerRegistration); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
+		controllerRegistrations.Items = append(controllerRegistrations.Items, controllerRegistration)
+	}
+
+	return controllerRegistrations, nil
+}
 
 func extensionEnabledForCluster(clusterType gardencorev1beta1.ClusterType, resource gardencorev1beta1.ControllerResource, disabledExtensions sets.Set[string]) bool {
 	return resource.Kind == extensionsv1alpha1.ExtensionResource &&
