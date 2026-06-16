@@ -6,3 +6,4 @@ resources:
 
 components:
 - ../../components/kubeconfigs/seed-local
+- ../../components/exposureclasshandler
