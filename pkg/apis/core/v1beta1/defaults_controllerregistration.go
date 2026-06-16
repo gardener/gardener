@@ -29,6 +29,10 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 			obj.Lifecycle = &ControllerResourceLifecycle{}
 		}
 	}
+
+	if obj.Kind == "SelfHostedShootExposure" && obj.ContinuousEndpointUpdate == nil {
+		obj.ContinuousEndpointUpdate = new(true)
+	}
 }
 
 // SetDefaults_ControllerResourceLifecycle sets default values for ControllerResourceLifecycle objects.

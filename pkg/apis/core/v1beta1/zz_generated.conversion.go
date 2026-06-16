@@ -3508,6 +3508,7 @@ func autoConvert_v1beta1_ControllerResource_To_core_ControllerResource(in *Contr
 	out.WorkerlessSupported = (*bool)(unsafe.Pointer(in.WorkerlessSupported))
 	out.AutoEnable = *(*[]core.ClusterType)(unsafe.Pointer(&in.AutoEnable))
 	out.ClusterCompatibility = *(*[]core.ClusterType)(unsafe.Pointer(&in.ClusterCompatibility))
+	out.ContinuousEndpointUpdate = (*bool)(unsafe.Pointer(in.ContinuousEndpointUpdate))
 	return nil
 }
 
@@ -3525,6 +3526,7 @@ func autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.
 	out.WorkerlessSupported = (*bool)(unsafe.Pointer(in.WorkerlessSupported))
 	out.AutoEnable = *(*[]ClusterType)(unsafe.Pointer(&in.AutoEnable))
 	out.ClusterCompatibility = *(*[]ClusterType)(unsafe.Pointer(&in.ClusterCompatibility))
+	out.ContinuousEndpointUpdate = (*bool)(unsafe.Pointer(in.ContinuousEndpointUpdate))
 	return nil
 }
 

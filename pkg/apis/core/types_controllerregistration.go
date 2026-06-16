@@ -84,6 +84,9 @@ type ControllerResource struct {
 	// If compatibility is not specified, it will be defaulted to 'shoot'.
 	// This field can only be set for resources of kind "Extension".
 	ClusterCompatibility []ClusterType
+	// ContinuousEndpointUpdate indicates whether the extension requires the SelfHostedShootExposure endpoints to be continuously
+	// updated with healthy/valid control plane endpoints.
+	ContinuousEndpointUpdate *bool
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

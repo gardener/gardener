@@ -51,4 +51,59 @@ var _ = Describe("Helper", func() {
 			false,
 		),
 	)
+
+	DescribeTable("#ContinuousEndpointUpdateEnabled",
+		func(registrations []gardencorev1beta1.ControllerRegistration, extensionType string, expected bool) {
+			Expect(ContinuousEndpointUpdateEnabled(registrations, extensionType)).To(Equal(expected))
+		},
+		Entry("no registrations defaults to true (not-yet-synced must not silently disable)",
+			nil,
+			"local",
+			true,
+		),
+		Entry("no matching registration defaults to true",
+			[]gardencorev1beta1.ControllerRegistration{{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "foo", Type: "bar"},
+					},
+				},
+			}},
+			"local",
+			true,
+		),
+		Entry("matching registration with field unset defaults to true",
+			[]gardencorev1beta1.ControllerRegistration{{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "SelfHostedShootExposure", Type: "local"},
+					},
+				},
+			}},
+			"local",
+			true,
+		),
+		Entry("matching registration with field explicitly set to false",
+			[]gardencorev1beta1.ControllerRegistration{{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "SelfHostedShootExposure", Type: "local", ContinuousEndpointUpdate: new(false)},
+					},
+				},
+			}},
+			"local",
+			false,
+		),
+		Entry("type lookup is case-insensitive",
+			[]gardencorev1beta1.ControllerRegistration{{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "SelfHostedShootExposure", Type: "Local", ContinuousEndpointUpdate: new(false)},
+					},
+				},
+			}},
+			"local",
+			false,
+		),
+	)
 })

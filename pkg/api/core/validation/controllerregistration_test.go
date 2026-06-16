@@ -347,6 +347,40 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
+		It("should allow setting continuousEndpointUpdate for kind SelfHostedShootExposure", func() {
+			resources = []core.ControllerResource{{
+				Kind:                     extensionsv1alpha1.SelfHostedShootExposureResource,
+				Type:                     "arbitrary",
+				ContinuousEndpointUpdate: new(true),
+			}}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		DescribeTable("should forbid setting continuousEndpointUpdate for invalid kind",
+			func(kind string) {
+				resources = []core.ControllerResource{{
+					Kind:                     kind,
+					Type:                     "arbitrary",
+					ContinuousEndpointUpdate: new(true),
+				}}
+
+				errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("resources[0].continuousEndpointUpdate"),
+				}))))
+			},
+
+			Entry("Extension", extensionsv1alpha1.ExtensionResource),
+			Entry("OperatingSystemConfig", extensionsv1alpha1.OperatingSystemConfigResource),
+			Entry("Infrastructure", extensionsv1alpha1.InfrastructureResource),
+			Entry("Worker", extensionsv1alpha1.WorkerResource),
+		)
+
 		It("should allow setting valid autoEnable modes", func() {
 			resources[0].Kind = "Extension"
 			resources[0].AutoEnable = []core.ClusterType{core.ClusterTypeShoot, core.ClusterTypeSeed}
