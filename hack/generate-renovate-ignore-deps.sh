@@ -80,7 +80,7 @@ for local_dep in "${local_dependencies[@]}"; do
   done
 done
 
-echo "☯️  Found ${#common_dependencies[@]} common dependencies."
+echo "☯️ Found ${#common_dependencies[@]} common dependencies."
 
 # Build a JSON array string from the common dependencies.
 ignore_deps=$(printf ',"%s"' "${common_dependencies[@]}")  # prepend comma to each element
@@ -91,21 +91,41 @@ ignore_deps="[${ignore_deps:1}]"                           # remove leading comm
 #   matchPackageNames: [ // GENERATOR-PIN
 array_open="${ARRAY_KEY}: \[${NEEDLE:+ ${NEEDLE}}"
 
-# Detect indentation: look at the line after the array opening and use its leading spaces.
-# Falls back to 8 spaces if no existing entries are found.
-indent=$(grep -A1 "$array_open" "$RENOVATE_CONFIG" | tail -1 | sed 's/\(^[[:space:]]*\).*/\1/' | head -1)
-if [[ -z "$indent" || "$indent" == *$'\t'* ]]; then
-  indent="        "  # default: 8 spaces (fits inside a packageRules block)
+# Verify the target array exists and capture its line indentation.
+if ! grep -qP "[[:space:]]*${array_open}" "$RENOVATE_CONFIG"; then
+  echo "❌  Key not found in '$RENOVATE_CONFIG': '${array_open}'. Add the array manually first." >&2
+  exit 1
 fi
+array_line=$(grep -P "[[:space:]]*${array_open}" "$RENOVATE_CONFIG" | head -1)
+array_line_indent=$(echo "$array_line" | sed 's/\(^[[:space:]]*\).*/\1/')
 
-# Escape forward slashes in the pattern for use in sed address ranges.
+# Expand one-liner (e.g. `ignoreDeps: [],`) into multi-line form so the replacement below works.
+# Matches the array opening followed immediately by `]` (with optional trailing comma).
 array_open_escaped="${array_open//\//\\/}"
+sed -i -E "s/(${array_line_indent}${array_open_escaped})\](,?)$/\1\n${array_line_indent}]\2/" "$RENOVATE_CONFIG"
+
+# Detect indentation of array entries: look at the line after the array opening and use its leading spaces.
+# Falls back to 8 spaces if no existing entries are found (i.e. the next line is the closing `]`).
+# Also detect quote style from the existing entry; default to single quotes (JSON5 convention).
+next_line=$(grep -A1 "$array_open" "$RENOVATE_CONFIG" | tail -1 || true)
+quote="'"
+if [[ "$next_line" =~ ^[[:space:]]*\] ]]; then
+  indent="        "  # default: 8 spaces (fits inside a packageRules block)
+else
+  indent=$(echo "$next_line" | sed 's/\(^[[:space:]]*\).*/\1/')
+  if [[ -z "$indent" || "$indent" == *$'\t'* ]]; then
+    indent="        "
+  fi
+  if [[ "$next_line" =~ ^[[:space:]]*\" ]]; then
+    quote='"'
+  fi
+fi
 
 # Format each dependency on its own indented line with a trailing comma, then replace the
 # contents of the array delimited by the array opening line in the renovate config.
 echo "$ignore_deps" | yq -o json '.[]' \
-  | sed "s/^/${indent}/; s/$/,/" \
+  | sed "s/\"/${quote}/g; s/^/${indent}/; s/$/,/" \
   | sed -i \
-      -e "/  ${array_open_escaped}/,  /\]/{//!d;}" \
-      -e "/  ${array_open_escaped}/r /dev/stdin" \
+      -e "/${array_line_indent}${array_open_escaped}/,/${array_line_indent}\]/{//!d;}" \
+      -e "/${array_line_indent}${array_open_escaped}/r /dev/stdin" \
       "$RENOVATE_CONFIG"
