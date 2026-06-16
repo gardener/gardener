@@ -98,6 +98,7 @@ type Interface interface {
 	SetDNSServers([]string)
 	SetIPFamilies([]gardencorev1beta1.IPFamily)
 	SetShootClientSet(kubernetes.Interface)
+	SetWorkerPoolNames([]string)
 }
 
 // Values is a set of configuration values for the node-local-dns component.
@@ -124,6 +125,10 @@ type Values struct {
 	Log logr.Logger
 	// Workers is the group of workers for which node-local-dns is deployed.
 	Workers []gardencorev1beta1.Worker
+	// WorkerPoolNames is the set of worker pool names for which DaemonSets shall be rendered. It is computed by the
+	// botanist and may include pool names that are no longer in the shoot spec but for which nodes still exist (e.g.
+	// after a worker pool rename), so that the corresponding DaemonSets are kept around until the old nodes are gone.
+	WorkerPoolNames []string
 	// KubeProxyConfig is the kube-proxy configuration for the shoot.
 	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
 	// CustomDNSServerInNodeLocalDNS indicates whether server block support is enabled for node-local-dns.
@@ -206,7 +211,7 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := registry.AddAllAndSerialize(n.computePoolResourcesData(serviceAccount, configMap, service)...)
+	data, err := registry.AddAllAndSerialize(n.computePoolResourcesData(serviceAccount, configMap, service, n.values.WorkerPoolNames)...)
 	if err != nil {
 		return err
 	}
@@ -381,6 +386,10 @@ func (n *nodeLocalDNS) SetIPFamilies(ipfamilies []gardencorev1beta1.IPFamily) {
 
 func (n *nodeLocalDNS) SetShootClientSet(set kubernetes.Interface) {
 	n.values.ShootClient = set.Client()
+}
+
+func (n *nodeLocalDNS) SetWorkerPoolNames(names []string) {
+	n.values.WorkerPoolNames = names
 }
 
 func (n *nodeLocalDNS) getIPVSAddress() (ipvsAddress string) {

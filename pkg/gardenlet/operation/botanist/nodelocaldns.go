@@ -11,6 +11,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -79,6 +81,11 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetShootClientSet(b.ShootClientSet)
 	if b.Shoot.NodeLocalDNSEnabled {
+		poolNames, err := b.computeWorkerPoolNamesForNodeLocalDNS(ctx)
+		if err != nil {
+			return err
+		}
+		b.Shoot.Components.SystemComponents.NodeLocalDNS.SetWorkerPoolNames(poolNames)
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}
 
@@ -124,6 +131,33 @@ func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error)
 	return kubernetesutils.ResourcesExist(ctx, b.ShootClientSet.Client(), &corev1.NodeList{}, b.ShootClientSet.Client().Scheme(), client.MatchingLabels{
 		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
 	})
+}
+
+// computeWorkerPoolNamesForNodeLocalDNS returns the configured worker pool names augmented by names of pools that no
+// longer appear in the shoot spec but for which nodes still exist (e.g. after a worker pool has been renamed). This
+// ensures that the corresponding node-local-dns DaemonSets are kept around until the old nodes have been drained,
+// preventing DNS outages on those nodes.
+func (b *Botanist) computeWorkerPoolNamesForNodeLocalDNS(ctx context.Context) ([]string, error) {
+	pools := sets.New[string]()
+	for _, w := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		pools.Insert(w.Name)
+	}
+
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := b.ShootClientSet.Client().List(ctx, nodeList); err != nil {
+		return nil, fmt.Errorf("failed to list nodes for stale worker pool detection: %w", err)
+	}
+
+	for _, node := range nodeList.Items {
+		poolName, ok := node.Labels[v1beta1constants.LabelWorkerPool]
+		if !ok || poolName == "" {
+			continue
+		}
+		pools.Insert(poolName)
+	}
+
+	return sets.List(pools), nil
 }
 
 // hasKubernetesVersionsBelowAndAbove134 checks if there are worker pools with Kubernetes versions below 1.34 and others with versions 1.34 or above.

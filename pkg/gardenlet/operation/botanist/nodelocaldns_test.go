@@ -119,6 +119,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		It("should fail when the deploy function fails", func() {
 			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
+			nodelocaldns.EXPECT().SetWorkerPoolNames([]string{"worker-aaaa"})
 			nodelocaldns.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(MatchError(fakeErr))
@@ -126,10 +127,35 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		It("should successfully deploy when enabled", func() {
 			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
+			nodelocaldns.EXPECT().SetWorkerPoolNames([]string{"worker-aaaa"})
 			nodelocaldns.EXPECT().Deploy(ctx)
 
 			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
 		})
+
+		It("should include worker pool names of stale nodes (e.g. after a pool rename)", func() {
+			oldNode := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "old-node",
+					Labels: map[string]string{v1beta1constants.LabelWorkerPool: "worker-old"},
+				},
+			}
+			newNode := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "new-node",
+					Labels: map[string]string{v1beta1constants.LabelWorkerPool: "worker-aaaa"},
+				},
+			}
+			Expect(shootClient.Create(ctx, oldNode)).To(Succeed())
+			Expect(shootClient.Create(ctx, newNode)).To(Succeed())
+
+			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
+			nodelocaldns.EXPECT().SetWorkerPoolNames([]string{"worker-aaaa", "worker-old"})
+			nodelocaldns.EXPECT().Deploy(ctx)
+
+			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+		})
+
 		It("should successfully deploy when enabled with ipfamily IPv6", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -145,6 +171,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				},
 			})
 			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6})
+			nodelocaldns.EXPECT().SetWorkerPoolNames([]string{})
 			nodelocaldns.EXPECT().Deploy(ctx)
 
 			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())

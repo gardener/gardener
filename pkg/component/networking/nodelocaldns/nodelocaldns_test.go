@@ -236,6 +236,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					Name: "worker-aaaa",
 				},
 			},
+			WorkerPoolNames:               []string{"worker-aaaa"},
 			CustomDNSServerInNodeLocalDNS: true,
 		}
 
