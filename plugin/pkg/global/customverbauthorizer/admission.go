@@ -304,15 +304,15 @@ func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rb
 		return false
 	}
 
-	var oldHumanUsers, newHumanUsers = findHumanUsersWithRoles(oldMembers), findHumanUsersWithRoles(members)
+	var oldNonServiceAccounts, newNonServiceAccounts = findNonServiceAccountsWithRoles(oldMembers), findNonServiceAccountsWithRoles(members)
 	// Remove owner subject from `members` list to always allow it to be added
-	if owner != nil && isHumanUser(*owner) {
-		ownerKey := humanMemberKey(*owner)
-		removeEntriesWithMember(oldHumanUsers, ownerKey)
-		removeEntriesWithMember(newHumanUsers, ownerKey)
+	if owner != nil && !isServiceAccountSubject(*owner) {
+		ownerKey := memberSubjectKey(*owner)
+		removeEntriesWithMember(oldNonServiceAccounts, ownerKey)
+		removeEntriesWithMember(newNonServiceAccounts, ownerKey)
 	}
 
-	return !oldHumanUsers.Equal(newHumanUsers)
+	return !oldNonServiceAccounts.Equal(newNonServiceAccounts)
 }
 
 type humanMembership struct {
@@ -320,12 +320,12 @@ type humanMembership struct {
 	role   string
 }
 
-func findHumanUsersWithRoles(members []core.ProjectMember) sets.Set[humanMembership] {
+func findNonServiceAccountsWithRoles(members []core.ProjectMember) sets.Set[humanMembership] {
 	result := sets.New[humanMembership]()
 
 	for _, member := range members {
-		if isHumanUser(member.Subject) {
-			memberKey := humanMemberKey(member.Subject)
+		if !isServiceAccountSubject(member.Subject) {
+			memberKey := memberSubjectKey(member.Subject)
 			// Create a unique key that includes both subject and roles
 			for _, role := range member.Roles {
 				result.Insert(humanMembership{member: memberKey, role: role})
@@ -340,11 +340,15 @@ func findHumanUsersWithRoles(members []core.ProjectMember) sets.Set[humanMembers
 	return result
 }
 
-func isHumanUser(subject rbacv1.Subject) bool {
-	return subject.Kind == rbacv1.UserKind && !strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
+func isServiceAccountSubject(subject rbacv1.Subject) bool {
+	// Service account groups, e.g. (subject.Kind == "Group" && strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountGroupPrefix))
+	// are not considered as service account subjects, otherwise it would allow project admins to manage also service account groups
+	// which is not allowed (see docs/usage/project/projects.md#user-access-management).
+	return subject.APIGroup == "" && subject.Kind == rbacv1.ServiceAccountKind ||
+		subject.APIGroup == rbacv1.GroupName && subject.Kind == rbacv1.UserKind && strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
 }
 
-func humanMemberKey(subject rbacv1.Subject) string {
+func memberSubjectKey(subject rbacv1.Subject) string {
 	return subject.Kind + subject.Name
 }
 
