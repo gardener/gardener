@@ -3501,6 +3501,72 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
+
+			It("should allow removing the architecture capability entirely (revert to legacy CloudProfile) even if values are still in use by a NamespacedCloudProfile", func() {
+				// Reduce parent CloudProfile to only have the architecture capability,
+				// simulating the legacy state where 'architecture' is the only capability defined.
+				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64", "arm64"}},
+				}
+				cloudProfile.Spec.MachineImages = []core.MachineImage{
+					{
+						Name: "ubuntu",
+						Versions: []core.MachineImageVersion{
+							{
+								ExpirableVersion: core.ExpirableVersion{Version: "20.04"},
+								CapabilityFlavors: []core.MachineImageFlavor{
+									{Capabilities: core.Capabilities{
+										"architecture": []string{"amd64"},
+									}},
+								},
+							},
+						},
+					},
+				}
+				cloudProfile.Spec.MachineTypes = []core.MachineType{
+					{
+						Name: "m5.large",
+						Capabilities: core.Capabilities{
+							"architecture": []string{"amd64"},
+						},
+					},
+				}
+				oldCloudProfile = cloudProfile.DeepCopy()
+
+				// NamespacedCloudProfile still uses architecture values from the parent.
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "debian",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "11"},
+								CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+									{Capabilities: gardencorev1beta1.Capabilities{
+										"architecture": []string{"arm64"},
+									}},
+								},
+							},
+						},
+					},
+				}
+				namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+					{
+						Name: "t3.micro",
+						Capabilities: gardencorev1beta1.Capabilities{
+							"architecture": []string{"arm64"},
+						},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Update(namespacedCloudProfile)).To(Succeed())
+
+				// Completely drop the MachineCapabilities section. The legacy
+				// architecture(s) fields on machineImages/machineTypes still cover the architecture.
+				cloudProfile.Spec.MachineCapabilities = nil
+
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
 		})
 
 		Context("NamespacedCloudProfile - Extending Kubernetes versions", func() {

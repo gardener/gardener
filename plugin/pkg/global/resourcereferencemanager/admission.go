@@ -1523,5 +1523,14 @@ func getRemovedMachineCapabilities(old, new []core.CapabilityDefinition) []core.
 			}
 		}
 	}
+
+	// To allow reverting to legacy CloudProfiles the special case of removing the architecture Capability
+	// must be allowed, as long as the architecture(s) fields for machineImages and machineTypes is still supported.
+	if len(newCapabilitiesMap) == 0 &&
+		len(removedCapabilities) == 1 &&
+		removedCapabilities[0].Name == v1beta1constants.ArchitectureName {
+		return []core.CapabilityDefinition{}
+	}
+
 	return removedCapabilities
 }
