@@ -131,7 +131,7 @@ func getOpenTelemetryCollectorPathAuthTokenUnit() extensionsv1alpha1.Unit {
 		Content: new(`[Unit]
 Description=Monitor the auth-token file for required for opentelemetry-collector
 [Install]
-WantedBy=multi-user.target
+WantedBy=paths.target
 [Path]
 Unit=` + UnitName + `
 PathExists=` + PathAuthToken + ``),

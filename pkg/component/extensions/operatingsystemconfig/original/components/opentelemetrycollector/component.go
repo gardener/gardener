@@ -85,6 +85,26 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, err
 	}
 
+	// File dependencies for the opentelemetry-collector unit are expressed in two
+	// complementary ways, and it is worth being explicit about why:
+	//   - The `FilePaths` field on extensionsv1alpha1.Unit lists files that are
+	//     managed as part of the OperatingSystemConfig (config, CA cert, binary,
+	//     kubeconfig). The gardener-node-agent restarts the unit when any of
+	//     these managed files change.
+	//   - A systemd.path(5) unit (see getOpenTelemetryCollectorPathAuthTokenUnit)
+	//     waits for the auth-token file to appear on disk. The auth-token is not
+	//     part of the OSC `Files` list because it is provisioned at runtime by
+	//     another component, so `FilePaths` cannot express this dependency.
+	// A future refactor that unifies how resource dependencies are declared
+	// would make the overall picture easier to follow.
+	//
+	// As a consequence, the opentelemetry-collector service can be (re)started
+	// through four different mechanisms, which can be confusing while debugging:
+	//   - the path unit, when the auth-token file first appears,
+	//   - the healthcheck timer unit, which restarts the service on a failed probe,
+	//   - the gardener-node-agent, when any file listed in `FilePaths` changes,
+	//   - `Restart=always` in the service unit itself, on process exit.
+	// When investigating an unexpected restart, check all four sources.
 	units = append(
 		units,
 		getOpenTelemetryCollectorUnit(),

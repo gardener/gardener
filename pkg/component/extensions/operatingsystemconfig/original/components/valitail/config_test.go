@@ -263,7 +263,7 @@ scrape_configs:
 					Content: new(`[Unit]
 Description=Monitor the auth-token file for required for valitail
 [Install]
-WantedBy=multi-user.target
+WantedBy=paths.target
 [Path]
 Unit=` + UnitName + `
 PathExists=` + PathAuthToken),
