@@ -592,6 +592,7 @@ build:
             - pkg/api
             - pkg/api/config/controllermanager/v1alpha1/validation
             - pkg/api/core/helper
+            - pkg/api/core/v1/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
             - pkg/api/extensions/v1alpha1/helper
@@ -640,6 +641,7 @@ build:
             - pkg/controllermanager/controller/certificatesigningrequest
             - pkg/controllermanager/controller/cloudprofile
             - pkg/controllermanager/controller/controllerdeployment/controllerdeployment
+            - pkg/controllermanager/controller/controllerdeployment/reference
             - pkg/controllermanager/controller/controllerregistration
             - pkg/controllermanager/controller/controllerregistration/clusterfinalizer
             - pkg/controllermanager/controller/controllerregistration/controllerinstallation
