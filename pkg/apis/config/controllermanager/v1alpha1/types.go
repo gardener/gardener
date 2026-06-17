@@ -58,6 +58,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
 	// +optional
 	ControllerDeployment *ControllerDeploymentControllerConfiguration `json:"controllerDeployment,omitempty"`
+	// ControllerDeploymentReference defines the configuration of the ControllerDeploymentReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// +optional
+	ControllerDeploymentReference *ControllerDeploymentReferenceControllerConfiguration `json:"controllerDeploymentReference,omitempty"`
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
 	// +optional
 	ControllerRegistration *ControllerRegistrationControllerConfiguration `json:"controllerRegistration,omitempty"`
@@ -166,6 +169,14 @@ type NamespacedCloudProfileControllerConfiguration struct {
 type ControllerDeploymentControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// ControllerDeploymentReferenceControllerConfiguration defines the configuration of the
+// ControllerDeploymentReference controller.
+type ControllerDeploymentReferenceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on controller deployments.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
