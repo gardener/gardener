@@ -304,35 +304,38 @@ func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rb
 		return false
 	}
 
-	var oldHumanUsers, newHumanUsers = findHumanUsersWithRoles(oldMembers), findHumanUsersWithRoles(members)
+	var oldNonServiceAccounts, newNonServiceAccounts = findNonServiceAccountsWithRoles(oldMembers), findNonServiceAccountsWithRoles(members)
 	// Remove owner subject from `members` list to always allow it to be added
-	if owner != nil && isHumanUser(*owner) {
-		ownerKey := humanMemberKey(*owner)
-		removeEntriesWithMember(oldHumanUsers, ownerKey)
-		removeEntriesWithMember(newHumanUsers, ownerKey)
+	if owner != nil && !isServiceAccountSubject(*owner) {
+		ownerKey := memberSubjectKey(*owner)
+		removeEntriesWithMember(oldNonServiceAccounts, ownerKey)
+		removeEntriesWithMember(newNonServiceAccounts, ownerKey)
 	}
 
-	return !oldHumanUsers.Equal(newHumanUsers)
+	return !oldNonServiceAccounts.Equal(newNonServiceAccounts)
 }
 
-type humanMembership struct {
+// membership is a data structure representing project member with one of its roles.
+// Project members with multiple roles can create a membership for each role.
+// Members with no roles associated, can create a membership with empty role.
+type membership struct {
 	member string
 	role   string
 }
 
-func findHumanUsersWithRoles(members []core.ProjectMember) sets.Set[humanMembership] {
-	result := sets.New[humanMembership]()
+func findNonServiceAccountsWithRoles(members []core.ProjectMember) sets.Set[membership] {
+	result := sets.New[membership]()
 
 	for _, member := range members {
-		if isHumanUser(member.Subject) {
-			memberKey := humanMemberKey(member.Subject)
+		if !isServiceAccountSubject(member.Subject) {
+			memberKey := memberSubjectKey(member.Subject)
 			// Create a unique key that includes both subject and roles
 			for _, role := range member.Roles {
-				result.Insert(humanMembership{member: memberKey, role: role})
+				result.Insert(membership{member: memberKey, role: role})
 			}
 			// If no roles are specified, still create an entry with empty role
 			if len(member.Roles) == 0 {
-				result.Insert(humanMembership{member: memberKey, role: ""})
+				result.Insert(membership{member: memberKey, role: ""})
 			}
 		}
 	}
@@ -340,15 +343,24 @@ func findHumanUsersWithRoles(members []core.ProjectMember) sets.Set[humanMembers
 	return result
 }
 
-func isHumanUser(subject rbacv1.Subject) bool {
-	return subject.Kind == rbacv1.UserKind && !strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
+func isServiceAccountSubject(subject rbacv1.Subject) bool {
+	// Service account groups, e.g. (subject.Kind == "Group" && strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountGroupPrefix))
+	// are not considered as service account subjects, otherwise it would allow project admins to manage also service account groups
+	// which is not allowed (see docs/usage/project/projects.md#user-access-management).
+	var (
+		isServiceAccount              = subject.APIGroup == "" && subject.Kind == rbacv1.ServiceAccountKind
+		isServiceAccountAsUserSubject = subject.APIGroup == rbacv1.GroupName && subject.Kind == rbacv1.UserKind &&
+			strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
+	)
+
+	return isServiceAccount || isServiceAccountAsUserSubject
 }
 
-func humanMemberKey(subject rbacv1.Subject) string {
+func memberSubjectKey(subject rbacv1.Subject) string {
 	return subject.Kind + subject.Name
 }
 
-func removeEntriesWithMember(set sets.Set[humanMembership], member string) {
+func removeEntriesWithMember(set sets.Set[membership], member string) {
 	for membership := range set {
 		if membership.member == member {
 			set.Delete(membership)
