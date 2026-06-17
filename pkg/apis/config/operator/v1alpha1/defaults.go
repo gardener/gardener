@@ -122,6 +122,13 @@ func SetDefaults_ExtensionCareControllerConfiguration(obj *ExtensionCareControll
 	}
 }
 
+// SetDefaults_ExtensionReferenceControllerConfiguration sets defaults for the ExtensionReferenceControllerConfiguration object.
+func SetDefaults_ExtensionReferenceControllerConfiguration(obj *ExtensionReferenceControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = new(5)
+	}
+}
+
 // SetDefaults_ExtensionRequiredRuntimeControllerConfiguration sets defaults for the ExtensionRequiredControllerRuntimeConfiguration object.
 func SetDefaults_ExtensionRequiredRuntimeControllerConfiguration(obj *ExtensionRequiredRuntimeControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {

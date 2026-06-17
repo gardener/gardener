@@ -307,6 +307,28 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
+		Describe("ExtensionReference controller defaulting", func() {
+			It("should default the ExtensionReference controller config", func() {
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionReference.ConcurrentSyncs).To(PointTo(Equal(5)))
+			})
+
+			It("should not overwrite already set values for ExtensionReference controller config", func() {
+				obj = &OperatorConfiguration{
+					Controllers: ControllerConfiguration{
+						ExtensionReference: ExtensionReferenceControllerConfiguration{
+							ConcurrentSyncs: new(2),
+						},
+					},
+				}
+
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionReference.ConcurrentSyncs).To(PointTo(Equal(2)))
+			})
+		})
+
 		Describe("ExtensionRequiredRuntime controller defaulting", func() {
 			It("should default the ExtensionRequiredRuntime controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
