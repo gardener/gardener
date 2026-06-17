@@ -6,8 +6,6 @@
 
 set -e
 
-export GOWORK=off
-
 skaffold_file=""
 binary_name=""
 skaffold_config_name=""
@@ -62,7 +60,7 @@ echo "$skaffold_yaml" |\
   uniq > "$path_current_skaffold_dependencies"
 
 echo "cmd/$binary_name" > "$path_actual_dependencies"
-module_name=$(go list -m)
+module_name=$(GOWORK=off go list -m -f '{{ .Path }}')
 module_prefix="$module_name/"
 go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
   grep "$module_prefix" |\
@@ -70,12 +68,8 @@ go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
   sort -f |\
   uniq >> "$path_actual_dependencies"
 
-# read dependencies into array and add prefix "./"
-read -r -a go_dependencies <<< "$(sed -e "s@^@./@" "$path_actual_dependencies" | tr '\n' ' ')"
-# the EmbedPatterns are relative to the module, so we prepend the ImportPath
-go list -json "${go_dependencies[@]}" 2>/dev/null |\
-  yq eval -p=json -N ".ImportPath as \$p | .EmbedPatterns[]? |= \$p+\"/\"+. | .EmbedPatterns[]?" |\
-  sed "s@$module_prefix@@g" >> "$path_actual_dependencies"
+# Embedded files (`//go:embed`) are not listed explicitly: every embed pattern resolves within its package directory,
+# which is already in the dependency list above, and Skaffold watches directory entries recursively.
 
 # always add VERSION file
 echo "VERSION" >> "$path_actual_dependencies"

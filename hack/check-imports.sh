@@ -19,7 +19,7 @@ set -o pipefail
 
 echo "> Check Imports"
 
-this_module=$(go list -m)
+this_module=$(GOWORK=off go list -m -f '{{ .Path }}')
 
 packages=()
 for p in "$@"; do

@@ -57,7 +57,7 @@ parse_flags() {
   done
 }
 
-root_module=$(cd "$REPO_ROOT"; go list -m)
+root_module=$(cd "$REPO_ROOT"; GOWORK=off go list -m -f '{{ .Path }}')
 overwrite_paths() {
   local updated_paths=()
 
