@@ -368,6 +368,31 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("ControllerDeploymentReferenceControllerConfiguration defaulting", func() {
+		It("should default ControllerDeploymentReferenceControllerConfiguration correctly", func() {
+			expected := &ControllerDeploymentReferenceControllerConfiguration{
+				ConcurrentSyncs: new(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ControllerDeploymentReference).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ControllerDeploymentReference: &ControllerDeploymentReferenceControllerConfiguration{
+						ConcurrentSyncs: new(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ControllerDeploymentReference.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ControllerDeploymentReference).To(Equal(expected))
+		})
+	})
+
 	Describe("ControllerRegistrationControllerConfiguration defaulting", func() {
 		It("should default ControllerRegistrationControllerConfiguration correctly", func() {
 			expected := &ControllerRegistrationControllerConfiguration{
