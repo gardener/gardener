@@ -32,6 +32,7 @@ func SetObjectDefaults_OperatorConfiguration(in *OperatorConfiguration) {
 	SetDefaults_GardenletDeployerControllerConfig(&in.Controllers.GardenletDeployer)
 	SetDefaults_ExtensionControllerConfiguration(&in.Controllers.Extension)
 	SetDefaults_ExtensionCareControllerConfiguration(&in.Controllers.ExtensionCare)
+	SetDefaults_ExtensionReferenceControllerConfiguration(&in.Controllers.ExtensionReference)
 	SetDefaults_ExtensionRequiredRuntimeControllerConfiguration(&in.Controllers.ExtensionRequiredRuntime)
 	SetDefaults_ExtensionRequiredVirtualControllerConfiguration(&in.Controllers.ExtensionRequiredVirtual)
 }
