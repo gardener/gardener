@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/care"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/reference"
 	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
 	requiredvirtual "github.com/gardener/gardener/pkg/operator/controller/extension/required/virtual"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
@@ -42,6 +43,10 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 	}
 
 	if err := extension.AddToManager(mgr, cfg, gardenClientMap); err != nil {
+		return err
+	}
+
+	if err := reference.AddToManager(mgr, cfg.Controllers.ExtensionReference); err != nil {
 		return err
 	}
 

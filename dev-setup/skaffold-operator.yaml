@@ -26,6 +26,7 @@ build:
             - pkg/api/config/operator/v1alpha1/validation
             - pkg/api/core/helper
             - pkg/api/core/shoot
+            - pkg/api/core/v1/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/core/validation
             - pkg/api/extensions
@@ -176,6 +177,7 @@ build:
             - pkg/operator/controller/extension/extension/admission
             - pkg/operator/controller/extension/extension/controllerregistration
             - pkg/operator/controller/extension/extension/runtime
+            - pkg/operator/controller/extension/reference
             - pkg/operator/controller/extension/required/runtime
             - pkg/operator/controller/extension/required/virtual
             - pkg/operator/controller/garden
