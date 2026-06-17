@@ -254,6 +254,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:     component.OpWait(c.openTelemetryCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
+		deployPVCAutoscalerCRDs = g.Add(flow.Task{
+			Name: "Deploy PVC Autoscaler-related custom resource definitions",
+			Fn:   component.OpWait(c.pvcAutoscalerCRD).Deploy,
+		})
 		syncPointCRDs = flow.NewTaskIDs(
 			deployMachineCRDs,
 			deployExtensionCRDs,
@@ -265,6 +269,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployPersesCRDs,
 			deployVictoriaCRDs,
 			deployOpenTelemetryCRDs,
+			deployPVCAutoscalerCRDs,
 		)
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPA for gardenlet",
@@ -433,6 +438,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.verticalPodAutoscaler.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying PVC Autoscaler",
+			Fn:           c.pvcAutoscaler.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",

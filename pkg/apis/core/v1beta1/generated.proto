@@ -3062,6 +3062,13 @@ message SeedSettingLoadBalancerServicesZones {
   optional LoadBalancerServicesProxyProtocol proxyProtocol = 4;
 }
 
+// SeedSettingPersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the
+// seed.
+message SeedSettingPersistentVolumeClaimAutoscaler {
+  // Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster.
+  optional bool enabled = 1;
+}
+
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
 message SeedSettingScheduling {
   // Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
@@ -3140,6 +3147,10 @@ message SeedSettings {
   // See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection.
   // +optional
   optional SeedSettingZoneSelection zoneSelection = 9;
+
+  // PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the seed.
+  // +optional
+  optional SeedSettingPersistentVolumeClaimAutoscaler persistentVolumeClaimAutoscaler = 10;
 }
 
 // SeedSpec is the specification of a Seed.

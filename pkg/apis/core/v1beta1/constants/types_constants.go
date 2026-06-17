@@ -183,6 +183,10 @@ const (
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
 	DeploymentNameVPAUpdater = "vpa-updater"
 
+	// DeploymentNamePVCAutoscaler is a constant for the name of a Kubernetes deployment object that contains
+	// the pvc-autoscaler pod.
+	DeploymentNamePVCAutoscaler = "pvc-autoscaler"
+
 	// DeploymentNameIstioBasicAuthServer is a constant for the name of the istio-basic-auth-server deployment.
 	DeploymentNameIstioBasicAuthServer = "istio-basic-auth-server"
 

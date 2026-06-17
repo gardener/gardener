@@ -372,6 +372,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
         loadBalancerServices:
           zonalIngress:
             enabled: true
+        persistentVolumeClaimAutoscaler:
+          enabled: false
         scheduling:
           visible: true
         topologyAwareRouting:

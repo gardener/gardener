@@ -205,6 +205,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:     component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
 			SkipIf: seedIsGarden,
 		})
+		destroyPVCAutoscaler = g.Add(flow.Task{
+			Name: "Destroy PVC Autoscaler",
+			Fn:   component.OpDestroyAndWait(c.pvcAutoscaler).Destroy,
+		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
 			Name: "Destroy kube-state-metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
@@ -299,6 +303,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
 			destroyVPA,
+			destroyPVCAutoscaler,
 			destroyFluentBit,
 			destroyFluentOperator,
 			destroyVali,
@@ -352,6 +357,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 			SkipIf:       seedIsGarden || seedIsSelfHostedShoot || !vpaEnabled(seed.GetInfo().Spec.Settings),
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
+		destroyPVCAutoscalerCRDs = g.Add(flow.Task{
+			Name:         "Destroy PVCAutoscaler-related custom resource definitions",
+			Fn:           component.OpDestroyAndWait(c.pvcAutoscalerCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
+		})
 		destroyFluentCRDs = g.Add(flow.Task{
 			Name:         "Destroying Fluent Operator custom resource definitions",
 			Fn:           component.OpDestroyAndWait(c.fluentCRD).Destroy,
@@ -394,6 +404,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyPersesCRDs,
 			destroyVictoriaCRDs,
 			destroyOpenTelemetryCRDs,
+			destroyPVCAutoscalerCRDs,
 		)
 
 		destroySystemResources = g.Add(flow.Task{

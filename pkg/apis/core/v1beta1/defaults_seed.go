@@ -40,6 +40,10 @@ func SetDefaults_SeedSettings(obj *SeedSettings) {
 		obj.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
 
+	if obj.PersistentVolumeClaimAutoscaler == nil {
+		obj.PersistentVolumeClaimAutoscaler = &SeedSettingPersistentVolumeClaimAutoscaler{Enabled: false}
+	}
+
 	if obj.DependencyWatchdog == nil {
 		obj.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
 	}

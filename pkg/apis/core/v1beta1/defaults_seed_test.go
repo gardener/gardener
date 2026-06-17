@@ -37,6 +37,7 @@ var _ = Describe("Seed defaulting", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
+			Expect(obj.Spec.Settings.PersistentVolumeClaimAutoscaler.Enabled).To(BeFalse())
 		})
 
 		It("should default the excessCapacityReservation field when excess capacity reservation is enabled and excess capacity reservation config empty", func() {
@@ -75,9 +76,10 @@ var _ = Describe("Seed defaulting", func() {
 				TopologyAwareRouting: &SeedSettingTopologyAwareRouting{
 					Enabled: true,
 				},
-				ExcessCapacityReservation: &excessCapacityReservation,
-				Scheduling:                &SeedSettingScheduling{Visible: true},
-				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: false},
+				ExcessCapacityReservation:       &excessCapacityReservation,
+				Scheduling:                      &SeedSettingScheduling{Visible: true},
+				VerticalPodAutoscaler:           &SeedSettingVerticalPodAutoscaler{Enabled: false},
+				PersistentVolumeClaimAutoscaler: &SeedSettingPersistentVolumeClaimAutoscaler{Enabled: true},
 			}
 
 			SetObjectDefaults_Seed(obj)
@@ -88,6 +90,7 @@ var _ = Describe("Seed defaulting", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeFalse())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.PersistentVolumeClaimAutoscaler.Enabled).To(BeTrue())
 		})
 
 		DescribeTable("should default zonalIngress to enabled",

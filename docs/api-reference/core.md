@@ -10980,6 +10980,44 @@ object (keys:string, values:string)
 </table>
 
 
+<h3 id="seedsettingpersistentvolumeclaimautoscaler">SeedSettingPersistentVolumeClaimAutoscaler
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#seedsettings">SeedSettings</a>)
+</p>
+
+<p>
+SeedSettingPersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the
+seed.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<p>Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="seedsettingscheduling">SeedSettingScheduling
 </h3>
 
@@ -11246,6 +11284,18 @@ SeedSettings contains certain settings for this seed cluster.
 <td>
 <em>(Optional)</em>
 <p>ZoneSelection controls whether shoot control plane zone placement is derived from the shoot's worker pool zones<br />rather than randomly selected from seed zones.<br />See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zone-selection.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>persistentVolumeClaimAutoscaler</code></br>
+<em>
+<a href="#seedsettingpersistentvolumeclaimautoscaler">SeedSettingPersistentVolumeClaimAutoscaler</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the seed.</p>
 </td>
 </tr>
 

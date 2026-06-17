@@ -28,6 +28,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
@@ -89,6 +90,7 @@ type components struct {
 	persesCRD        component.DeployWaiter
 	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
+	pvcAutoscalerCRD component.DeployWaiter
 
 	backupBucket            component.DeployWaiter
 	clusterIdentity         component.DeployWaiter
@@ -126,6 +128,7 @@ type components struct {
 	openTelemetryOperator         component.DeployWaiter
 	openTelemetryCollector        component.Deployer
 	victoriaLogs                  component.DeployWaiter
+	pvcAutoscaler                 component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -183,6 +186,13 @@ func (r *Reconciler) instantiateComponents(
 	c.victoriaCRD, err = victoriaoperator.NewCRDs(r.SeedClientSet.Client())
 	if err != nil {
 		return
+	}
+	c.pvcAutoscalerCRD, err = pvcautoscaler.NewCRDs(r.SeedClientSet.Client())
+	if err != nil {
+		return
+	}
+	if !pvcAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
+		c.pvcAutoscalerCRD = component.OpDestroyAndWait(c.pvcAutoscalerCRD)
 	}
 
 	// seed system components
@@ -296,6 +306,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.victoriaLogs, err = r.newVictoriaLogs()
+	if err != nil {
+		return
+	}
+	c.pvcAutoscaler, err = r.newPVCAutoscaler(seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return
 	}
@@ -850,6 +864,15 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		"",
 		centralLoggingConfigurations,
 		output,
+	)
+}
+
+func (r *Reconciler) newPVCAutoscaler(settings *gardencorev1beta1.SeedSettings) (component.DeployWaiter, error) {
+	return sharedcomponent.NewPVCAutoscaler(
+		r.SeedClientSet.Client(),
+		r.GardenNamespace,
+		pvcAutoscalerEnabled(settings),
+		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
 

@@ -392,6 +392,10 @@ func (m *SeedSettingLoadBalancerServicesZonalIngress) Reset() {
 
 func (m *SeedSettingLoadBalancerServicesZones) Reset() { *m = SeedSettingLoadBalancerServicesZones{} }
 
+func (m *SeedSettingPersistentVolumeClaimAutoscaler) Reset() {
+	*m = SeedSettingPersistentVolumeClaimAutoscaler{}
+}
+
 func (m *SeedSettingScheduling) Reset() { *m = SeedSettingScheduling{} }
 
 func (m *SeedSettingTopologyAwareRouting) Reset() { *m = SeedSettingTopologyAwareRouting{} }
@@ -10348,6 +10352,37 @@ func (m *SeedSettingLoadBalancerServicesZones) MarshalToSizedBuffer(dAtA []byte)
 	return len(dAtA) - i, nil
 }
 
+func (m *SeedSettingPersistentVolumeClaimAutoscaler) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SeedSettingPersistentVolumeClaimAutoscaler) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SeedSettingPersistentVolumeClaimAutoscaler) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	i--
+	if m.Enabled {
+		dAtA[i] = 1
+	} else {
+		dAtA[i] = 0
+	}
+	i--
+	dAtA[i] = 0x8
+	return len(dAtA) - i, nil
+}
+
 func (m *SeedSettingScheduling) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -10545,6 +10580,18 @@ func (m *SeedSettings) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.PersistentVolumeClaimAutoscaler != nil {
+		{
+			size, err := m.PersistentVolumeClaimAutoscaler.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x52
+	}
 	if m.ZoneSelection != nil {
 		{
 			size, err := m.ZoneSelection.MarshalToSizedBuffer(dAtA[:i])
@@ -17180,6 +17227,16 @@ func (m *SeedSettingLoadBalancerServicesZones) Size() (n int) {
 	return n
 }
 
+func (m *SeedSettingPersistentVolumeClaimAutoscaler) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	n += 2
+	return n
+}
+
 func (m *SeedSettingScheduling) Size() (n int) {
 	if m == nil {
 		return 0
@@ -17270,6 +17327,10 @@ func (m *SeedSettings) Size() (n int) {
 	}
 	if m.ZoneSelection != nil {
 		l = m.ZoneSelection.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.PersistentVolumeClaimAutoscaler != nil {
+		l = m.PersistentVolumeClaimAutoscaler.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
@@ -20902,6 +20963,16 @@ func (this *SeedSettingLoadBalancerServicesZones) String() string {
 	}, "")
 	return s
 }
+func (this *SeedSettingPersistentVolumeClaimAutoscaler) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&SeedSettingPersistentVolumeClaimAutoscaler{`,
+		`Enabled:` + fmt.Sprintf("%v", this.Enabled) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *SeedSettingScheduling) String() string {
 	if this == nil {
 		return "nil"
@@ -20976,6 +21047,7 @@ func (this *SeedSettings) String() string {
 		`DependencyWatchdog:` + strings.Replace(this.DependencyWatchdog.String(), "SeedSettingDependencyWatchdog", "SeedSettingDependencyWatchdog", 1) + `,`,
 		`TopologyAwareRouting:` + strings.Replace(this.TopologyAwareRouting.String(), "SeedSettingTopologyAwareRouting", "SeedSettingTopologyAwareRouting", 1) + `,`,
 		`ZoneSelection:` + strings.Replace(this.ZoneSelection.String(), "SeedSettingZoneSelection", "SeedSettingZoneSelection", 1) + `,`,
+		`PersistentVolumeClaimAutoscaler:` + strings.Replace(this.PersistentVolumeClaimAutoscaler.String(), "SeedSettingPersistentVolumeClaimAutoscaler", "SeedSettingPersistentVolumeClaimAutoscaler", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -50460,6 +50532,76 @@ func (m *SeedSettingLoadBalancerServicesZones) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *SeedSettingPersistentVolumeClaimAutoscaler) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SeedSettingPersistentVolumeClaimAutoscaler: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SeedSettingPersistentVolumeClaimAutoscaler: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Enabled", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Enabled = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *SeedSettingScheduling) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -51274,6 +51416,42 @@ func (m *SeedSettings) Unmarshal(dAtA []byte) error {
 				m.ZoneSelection = &SeedSettingZoneSelection{}
 			}
 			if err := m.ZoneSelection.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PersistentVolumeClaimAutoscaler", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PersistentVolumeClaimAutoscaler == nil {
+				m.PersistentVolumeClaimAutoscaler = &SeedSettingPersistentVolumeClaimAutoscaler{}
+			}
+			if err := m.PersistentVolumeClaimAutoscaler.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

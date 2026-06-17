@@ -314,6 +314,10 @@ func selfHostedShootHasManagedInfrastructure(ctx context.Context, reader client.
 	return shoot != nil && v1beta1helper.HasManagedInfrastructure(shoot), nil
 }
 
+func pvcAutoscalerEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings != nil && settings.PersistentVolumeClaimAutoscaler != nil && settings.PersistentVolumeClaimAutoscaler.Enabled
+}
+
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return []secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCASeed, CommonName: "kubernetes", CertType: secretsutils.CACert, Validity: new(30 * 24 * time.Hour)},

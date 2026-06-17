@@ -363,6 +363,8 @@ func (*SeedSettingLoadBalancerServicesZonalIngress) ProtoMessage() {}
 
 func (*SeedSettingLoadBalancerServicesZones) ProtoMessage() {}
 
+func (*SeedSettingPersistentVolumeClaimAutoscaler) ProtoMessage() {}
+
 func (*SeedSettingScheduling) ProtoMessage() {}
 
 func (*SeedSettingTopologyAwareRouting) ProtoMessage() {}
