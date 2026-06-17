@@ -639,7 +639,7 @@ build:
             - pkg/controllermanager/controller/bastion
             - pkg/controllermanager/controller/certificatesigningrequest
             - pkg/controllermanager/controller/cloudprofile
-            - pkg/controllermanager/controller/controllerdeployment
+            - pkg/controllermanager/controller/controllerdeployment/controllerdeployment
             - pkg/controllermanager/controller/controllerregistration
             - pkg/controllermanager/controller/controllerregistration/clusterfinalizer
             - pkg/controllermanager/controller/controllerregistration/controllerinstallation

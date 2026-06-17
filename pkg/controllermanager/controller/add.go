@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment/controllerdeployment"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
