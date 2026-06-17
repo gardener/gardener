@@ -12,6 +12,7 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	opentelemetryv1alpha1 "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
 	opentelemetryv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
@@ -119,6 +120,7 @@ var (
 		opentelemetryv1beta1.AddToScheme,
 		victoriametricsv1beta1.AddToScheme,
 		victoriametricsv1.AddToScheme,
+		pvcautoscalerv1alpha1.AddToScheme,
 	)
 
 	shootSchemeBuilder = runtime.NewSchemeBuilder(
