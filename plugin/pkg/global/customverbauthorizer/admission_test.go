@@ -43,7 +43,7 @@ var _ = Describe("customverbauthorizer", func() {
 			admissionHandler    *CustomVerbAuthorizer
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
-			userInfo            = &user.DefaultInfo{Name: "foo"}
+			userInfo            user.Info
 			authorizeAttributes authorizer.AttributesRecord
 		)
 
@@ -53,6 +53,7 @@ var _ = Describe("customverbauthorizer", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+			userInfo = &user.DefaultInfo{Name: "foo"}
 		})
 
 		Context("Projects", func() {
@@ -70,16 +71,14 @@ var _ = Describe("customverbauthorizer", func() {
 				authorizeAttributes = authorizer.AttributesRecord{
 					User:            userInfo,
 					APIGroup:        "core.gardener.cloud",
-					Namespace:       project.Namespace,
 					Name:            project.Name,
 					ResourceRequest: true,
+					Resource:        "projects",
 				}
-
-				authorizeAttributes.Resource = "projects"
 			})
 
 			It("should do nothing because the resource is not Project", func() {
-				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), project.Namespace, project.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), "", project.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Validate(ctx, attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -90,7 +89,7 @@ var _ = Describe("customverbauthorizer", func() {
 				})
 
 				It("should always allow creating a project without whitelist tolerations", func() {
-					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
@@ -102,7 +101,7 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should allow creating a project with whitelist tolerations", func() {
 						project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{{Key: "foo"}}}
 
-						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
@@ -111,7 +110,7 @@ var _ = Describe("customverbauthorizer", func() {
 						oldProject := project.DeepCopy()
 						project.Spec.Tolerations.Whitelist = append(project.Spec.Tolerations.Whitelist, core.Toleration{Key: "bar"})
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
@@ -120,7 +119,7 @@ var _ = Describe("customverbauthorizer", func() {
 						oldProject := project.DeepCopy()
 						project.Spec.Tolerations.Whitelist = nil
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 				})
@@ -133,7 +132,7 @@ var _ = Describe("customverbauthorizer", func() {
 					It("should forbid creating a project with whitelist tolerations", func() {
 						project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{{Key: "foo"}}}
 
-						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 					})
 
@@ -142,7 +141,7 @@ var _ = Describe("customverbauthorizer", func() {
 						oldProject := project.DeepCopy()
 						project.Spec.Tolerations.Whitelist = append(project.Spec.Tolerations.Whitelist, core.Toleration{Key: "bar"})
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 					})
 
@@ -151,7 +150,7 @@ var _ = Describe("customverbauthorizer", func() {
 						oldProject := project.DeepCopy()
 						project.Spec.Tolerations.Whitelist = nil
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 					})
 				})
@@ -163,9 +162,16 @@ var _ = Describe("customverbauthorizer", func() {
 				})
 
 				var (
+					owner                       rbacv1.Subject
+					projectMembersWithHumans    []core.ProjectMember
+					projectMembersWithoutHumans []core.ProjectMember
+				)
+
+				BeforeEach(func() {
 					owner = rbacv1.Subject{
-						Kind: rbacv1.UserKind,
-						Name: "owner",
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.UserKind,
+						Name:     "owner",
 					}
 					projectMembersWithHumans = []core.ProjectMember{
 						{
@@ -173,46 +179,47 @@ var _ = Describe("customverbauthorizer", func() {
 						},
 						{
 							Subject: rbacv1.Subject{
-								Kind: rbacv1.UserKind,
-								Name: "foo",
+								APIGroup: rbacv1.GroupName,
+								Kind:     rbacv1.UserKind,
+								Name:     "foo",
 							},
 						},
 						{
 							Subject: rbacv1.Subject{
-								Kind: rbacv1.GroupKind,
-								Name: "bar",
+								APIGroup: rbacv1.GroupName,
+								Kind:     rbacv1.GroupKind,
+								Name:     "bar",
 							},
 						},
 					}
 					projectMembersWithoutHumans = []core.ProjectMember{
 						{
 							Subject: rbacv1.Subject{
-								Kind: rbacv1.ServiceAccountKind,
-								Name: "foo",
+								APIGroup: "",
+								Kind:     rbacv1.ServiceAccountKind,
+								Name:     "foo",
 							},
 						},
 						{
 							Subject: rbacv1.Subject{
-								Kind: rbacv1.UserKind,
-								Name: servieaccount.ServiceAccountUsernamePrefix + "foo:bar",
+								APIGroup: rbacv1.GroupName,
+								Kind:     rbacv1.UserKind,
+								Name:     servieaccount.ServiceAccountUsernamePrefix + "foo:bar",
 							},
 						},
 					}
-				)
-
-				BeforeEach(func() {
 					project.Spec.Owner = &owner
 				})
 
 				It("should always allow creating a project without members", func() {
-					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
 				It("should always allow creating a project with only owner as member", func() {
 					project.Spec.Owner = &owner
 					project.Spec.Members = []core.ProjectMember{{Subject: owner}}
-					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
@@ -221,7 +228,7 @@ var _ = Describe("customverbauthorizer", func() {
 					oldProject := project.DeepCopy()
 					project.Spec.Members = append(projectMembersWithHumans, projectMembersWithoutHumans...)
 
-					attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
@@ -233,22 +240,22 @@ var _ = Describe("customverbauthorizer", func() {
 					Context("CREATE", func() {
 						It("should allow creating a project with human members if creator=owner", func() {
 							project.Spec.Members = projectMembersWithHumans
-							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
 						It("should allow creating a project without human members if creator=owner", func() {
 							project.Spec.Members = projectMembersWithoutHumans
-							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
 						It("should allow creating a project with owner plus additional human members", func() {
 							project.Spec.Owner = &owner
 							project.Spec.Members = append([]core.ProjectMember{{Subject: owner}}, projectMembersWithHumans...)
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 					})
@@ -259,7 +266,7 @@ var _ = Describe("customverbauthorizer", func() {
 							oldProject := project.DeepCopy()
 							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
@@ -268,7 +275,7 @@ var _ = Describe("customverbauthorizer", func() {
 							oldProject := project.DeepCopy()
 							project.Spec.Members = projectMembersWithoutHumans
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 					})
@@ -283,57 +290,74 @@ var _ = Describe("customverbauthorizer", func() {
 						It("should allow creating a project without human members if owner=nil (meaning creator=owner)", func() {
 							project.Spec.Owner = nil
 							project.Spec.Members = projectMembersWithoutHumans
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
 						It("should allow creating a project with owner plus additional human members if creator=owner", func() {
-							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
 							project.Spec.Members = append([]core.ProjectMember{{Subject: owner}}, projectMembersWithHumans...)
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
 						It("should allow creating a project with human members if owner=nil (meaning creator=owner)", func() {
 							project.Spec.Owner = nil
 							project.Spec.Members = projectMembersWithHumans
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
 						It("should forbid creating a project with human members if creator!=owner", func() {
 							project.Spec.Owner = &owner
 							project.Spec.Members = projectMembersWithHumans
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 						})
 
 						It("should forbid creating a project with owner plus additional human members if creator!=owner", func() {
 							project.Spec.Owner = &owner
 							project.Spec.Members = append([]core.ProjectMember{{Subject: owner}}, projectMembersWithHumans...)
-							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+						})
+
+						It("should forbid creating a project with group members if creator!=owner", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = []core.ProjectMember{{Subject: rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "baz"}}}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+						})
+
+						It("should forbid creating a project with owner plus additional group members if creator!=owner", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = []core.ProjectMember{
+								{Subject: owner},
+								{Subject: rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "baz"}},
+							}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 						})
 					})
 
 					Context("UPDATE", func() {
 						It("should allow to add human users (user=owner)", func() {
-							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
 							project.Spec.Members = projectMembersWithoutHumans
 							oldProject := project.DeepCopy()
 							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
 						It("should allow to remove human users (user=owner)", func() {
-							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
 							project.Spec.Members = projectMembersWithHumans
 							oldProject := project.DeepCopy()
 							project.Spec.Members = projectMembersWithoutHumans
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 						})
 
@@ -343,7 +367,7 @@ var _ = Describe("customverbauthorizer", func() {
 							oldProject := project.DeepCopy()
 							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 						})
 
@@ -353,7 +377,27 @@ var _ = Describe("customverbauthorizer", func() {
 							oldProject := project.DeepCopy()
 							project.Spec.Members = projectMembersWithoutHumans
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+						})
+
+						It("should forbid to add groups (user!=owner)", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = projectMembersWithoutHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = append(projectMembersWithoutHumans, core.ProjectMember{Subject: rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "baz"}})
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+						})
+
+						It("should forbid to remove groups (user!=owner)", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = []core.ProjectMember{{Subject: rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "baz"}}}
+							oldProject := project.DeepCopy()
+							project.Spec.Members = []core.ProjectMember{}
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 						})
 
@@ -362,8 +406,9 @@ var _ = Describe("customverbauthorizer", func() {
 							project.Spec.Members = []core.ProjectMember{
 								{
 									Subject: rbacv1.Subject{
-										Kind: rbacv1.UserKind,
-										Name: "test-user",
+										APIGroup: rbacv1.GroupName,
+										Kind:     rbacv1.UserKind,
+										Name:     "test-user",
 									},
 									Roles: []string{"viewer"},
 								},
@@ -372,7 +417,7 @@ var _ = Describe("customverbauthorizer", func() {
 							// Only change the roles, keep the subject the same
 							project.Spec.Members[0].Roles = []string{"admin"}
 
-							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
 						})
 					})
@@ -382,8 +427,8 @@ var _ = Describe("customverbauthorizer", func() {
 			Context("owner configuration", func() {
 				Context("CREATE", func() {
 					It("should allow setting the owner", func() {
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
-						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
+						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 				})
@@ -394,52 +439,52 @@ var _ = Describe("customverbauthorizer", func() {
 					})
 
 					It("should succeed without owner change", func() {
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
 						oldProject := project.DeepCopy()
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
 					It("should allow changing the owner for owner", func() {
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: userInfo.GetName()}
 						oldProject := project.DeepCopy()
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "new-owner"}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "new-owner"}
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
 					It("should allow changing the owner for uam user", func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
 
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "old-owner"}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "old-owner"}
 						oldProject := project.DeepCopy()
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "new-owner"}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "new-owner"}
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 					})
 
 					It("should deny changing the owner", func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
 
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "old-owner"}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "old-owner"}
 						oldProject := project.DeepCopy()
 						project.Spec.Owner.Name = "new-owner"
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("not allowed to manage owner")))
 					})
 
 					It("should deny unsetting the owner", func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
 
-						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "owner"}
+						project.Spec.Owner = &rbacv1.Subject{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "owner"}
 						oldProject := project.DeepCopy()
 						project.Spec.Owner = nil
 
-						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("not allowed to manage owner")))
 					})
 				})
