@@ -6,23 +6,45 @@ This page explains how the varieties of credentials can be rotated so that the c
 
 ## User-Provided Credentials
 
+> This section covers rotation of cloud provider credentials you supplied to Gardener — for example, an Azure Service Principal, AWS access keys, a GCP service account key, or OpenStack credentials.
+> For rotating credentials that Gardener generates and manages internally (CAs, SSH key pair, ETCD encryption key, etc.), see [Gardener-Provided Credentials](#gardener-provided-credentials).
+
 ### Cloud Provider Keys
 
 End-users must provide credentials such that Gardener and Kubernetes controllers can communicate with the respective cloud provider APIs in order to perform infrastructure operations.
 For example, Gardener uses them to set up and maintain the networks, security groups, subnets, etc., while the [cloud-controller-manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) uses them to reconcile load balancers and routes, and the [CSI controller](https://kubernetes-csi.github.io/docs/) uses them to reconcile volumes and disks.
 
-Depending on the cloud provider, the required [data keys of the `Secret` differ](../../../example/70-secret-provider.yaml).
-Please consult the documentation of the respective provider extension documentation to get to know the concrete data keys (e.g., [this document for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#provider-secret-data)).
+These credentials are stored in a Kubernetes `Secret` in your project namespace in the garden cluster and referenced by the Shoot via a `CredentialsBinding` (`spec.credentialsBindingName`).
+The legacy `SecretBinding` (`spec.secretBindingName`) is deprecated and cannot be used for Shoots running Kubernetes v1.34 or later — migrate to `CredentialsBinding` if you haven't already (see [SecretBinding to CredentialsBinding Migration](secretbinding-to-credentialsbinding-migration.md)).
+
+Depending on the cloud provider, the required data keys of the `Secret` differ.
+Please consult the documentation of the respective provider extension to get the concrete data keys:
+
+- [AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#provider-secret-data)
+- [Azure](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#provider-secret-data)
+- [GCP](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/docs/usage/usage.md#provider-secret-data)
+- [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/docs/usage/usage.md#provider-secret-data)
+- [Canonical example `Secret` YAML](../../../example/70-secret-provider.yaml)
 
 **It is the responsibility of the end-user to regularly rotate those credentials.**
 The following steps are required to perform the rotation:
 
 1. Update the data in the `Secret` with new credentials.
-2. ⚠️ Wait until all `Shoot`s using the `Secret` are reconciled before you disable the old credentials in your cloud provider account! Otherwise, the `Shoot`s will no longer work as expected. Check out [this document](shoot_operations.md#immediate-reconciliation) to learn how to trigger a reconciliation of your `Shoot`s.
-   - (Optional) If you want to verify that the new credentials are valid you can trigger [immediate maintenance operation](shoot_operations.md#immediate-maintenance) for the corresponding shoot cluster(s) and wait for to subsequent reconciliation(s) to complete successfully. The maintenance operation triggers infrastructure reconciliation during the subsequent shoot reconciliation which makes use of the new cloud provider credentials.
-3. After all `Shoot`s using the `Secret` were reconciled, you can go ahead and deactivate the old credentials in your provider account.
+2. ⚠️ Wait until all `Shoot`s using the `Secret` are reconciled before you disable the old credentials in your cloud provider account! Otherwise, the `Shoot`s will no longer work as expected.
+   Each `Shoot` reconciles automatically at least once every 24 hours during its maintenance window. To trigger reconciliation immediately:
+   ```bash
+   kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=reconcile
+   ```
+   - (Optional) To verify the new credentials are valid, trigger an [immediate maintenance operation](shoot_operations.md#immediate-maintenance) — this exercises infrastructure reconciliation using the new credentials:
+   ```bash
+   kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=maintain
+   ```
+3. After all `Shoot`s using the `Secret` were reconciled successfully, you can go ahead and deactivate the old credentials in your provider account.
 
 ## Gardener-Provided Credentials
+
+> This section covers rotation of credentials that Gardener generates and manages internally for your Shoot cluster.
+> For rotating cloud provider credentials you supplied to Gardener, see [User-Provided Credentials](#user-provided-credentials).
 
 The below credentials are generated by Gardener when shoot clusters are being created.
 Those include:
@@ -34,7 +56,20 @@ Those include:
 - `ServiceAccount` token signing key
 - ...
 
-**🚨 There is no auto-rotation of those credentials, and it is the responsibility of the end-user to regularly rotate them.**
+The following table summarizes the credential types and their automatic rotation support:
+
+| Credential type | Auto-rotation supported |
+|---|---|
+| Certificate Authorities | No — requires user action between phases |
+| `ServiceAccount` Token Signing Key | No — requires user action between phases |
+| SSH Key Pair | Yes — via `.spec.maintenance.autoRotation.credentials.sshKeypair` |
+| ETCD Encryption Key | Yes — via `.spec.maintenance.autoRotation.credentials.etcdEncryptionKey` (enabled by default on new Shoots) |
+| Observability Passwords | Yes — via `.spec.maintenance.autoRotation.credentials.observability` |
+| OpenVPN TLS Auth Key | No — cannot be rotated at all (no manual or automatic trigger) |
+
+See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for configuration details.
+
+**🚨 For credential types without auto-rotation, there is no automatic rotation, and it is the responsibility of the end-user to regularly rotate them.**
 
 While it is possible to rotate them one by one, there is also a convenient method to combine the rotation of all of those credentials.
 The rotation happens in two phases since it might be required to update some API clients (e.g., when CAs are rotated).
@@ -106,6 +141,12 @@ This will trigger a `Shoot` reconciliation and performs stage one.
 After it is completed, the `.status.credentials.rotation.certificateAuthorities.phase` is set to `Prepared`.
 
 Now you must update all API clients outside the cluster (such as the `kubeconfig`s on developer machines) to use the newly issued CA bundle in the `<shoot-name>.ca-cluster` `ConfigMap`.
+You can retrieve the new bundle with:
+
+```bash
+kubectl -n garden-<project-name> get configmap <shoot-name>.ca-cluster -o jsonpath='{.data.ca\.crt}'
+```
+
 Please also note that client certificates must be re-issued now.
 
 After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-ca-complete` operation:
@@ -199,7 +240,7 @@ The old key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair.old`
 
 ### ETCD Encryption Key
 
-This key is used to encrypt the data of `Secret` resources inside etcd (see [upstream Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
+This key is used to encrypt the data of `Secret` resources (and any additional resources configured in `spec.kubernetes.kubeAPIServer.encryptionConfig` — see [ETCD Encryption Config](../security/etcd_encryption_config.md)) inside etcd (see [upstream Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
 The encryption key has no expiration date.
 **Unless automatic credentials rotation is enabled, it is the responsibility of the end-user to regularly rotate those credentials.**
