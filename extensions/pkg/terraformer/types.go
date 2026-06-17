@@ -66,6 +66,8 @@ type terraformer struct {
 }
 
 // RawState represent the terraformer state's raw data
+//
+// Deprecated: This type is deprecated and will be removed after v1.154 has been released.
 type RawState struct {
 	Data     string `json:"data"`
 	Encoding string `json:"encoding"`
@@ -91,6 +93,8 @@ const (
 )
 
 // Terraformer is the Terraformer interface.
+//
+// Deprecated: This interface is deprecated and will be removed after v1.154 has been released.
 type Terraformer interface {
 	SetLogLevel(string) Terraformer
 	SetEnvVars(envVars ...corev1.EnvVar) Terraformer
@@ -116,11 +120,15 @@ type Terraformer interface {
 }
 
 // Initializer can initialize a Terraformer.
+//
+// Deprecated: This interface is deprecated and will be removed after v1.154 has been released.
 type Initializer interface {
 	Initialize(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error
 }
 
 // Factory is a factory that can produce Terraformer and Initializer.
+//
+// Deprecated: This interface is deprecated and will be removed after v1.154 has been released.
 type Factory interface {
 	NewForConfig(logger logr.Logger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error)
 	New(logger logr.Logger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer
@@ -128,15 +136,21 @@ type Factory interface {
 }
 
 // StateConfigMapInitializer initialize terraformer state ConfigMap
+//
+// Deprecated: This interface is deprecated and will be removed after v1.154 has been released.
 type StateConfigMapInitializer interface {
 	Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error
 }
 
 // StateConfigMapInitializerFunc implements StateConfigMapInitializer
+//
+// Deprecated: This type is deprecated and will be removed after v1.154 has been released.
 type StateConfigMapInitializerFunc func(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error
 
 // CreateOrUpdateState implements StateConfigMapInitializer.
 // It use it field state for creating or updating the state ConfigMap
+//
+// Deprecated: This type is deprecated and will be removed after v1.154 has been released.
 type CreateOrUpdateState struct {
 	State *string
 }

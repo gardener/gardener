@@ -46,11 +46,15 @@ func (f factory) DefaultInitializer(c client.Client, main, variables string, tfV
 }
 
 // DefaultFactory returns the default factory.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func DefaultFactory() Factory {
 	return factory{}
 }
 
 // NewForConfig creates a new Terraformer and its dependencies from the given configuration.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func NewForConfig(
 	logger logr.Logger,
 	config *rest.Config,
@@ -80,6 +84,8 @@ func NewForConfig(
 // <image> name for the to-be-used Docker image. It returns a Terraformer interface with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func New(
 	logger logr.Logger,
 	c client.Client,
