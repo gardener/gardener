@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -121,6 +122,7 @@ honor_labels: true`
 
 		clusterRoleTarget        *rbacv1.ClusterRole
 		clusterRoleBindingTarget *rbacv1.ClusterRoleBinding
+		pvca                     *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -686,6 +688,30 @@ honor_labels: true`
 				Namespace: "kube-system",
 			}},
 		}
+		pvca = &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                              "prometheus",
+					"role":                             "monitoring",
+					"name":                             name,
+					"observability.gardener.cloud/app": "prometheus-" + name,
+				},
+			},
+			Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+				TargetRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "monitoring.coreos.com/v1",
+					Kind:       "Prometheus",
+					Name:       name,
+				},
+				VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
+					{
+						MaxCapacity: resource.MustParse("100Gi"),
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1135,6 +1161,35 @@ tls_config:
 							TargetLabel:  "shoot_dashboard_url",
 						}}
 					})
+				})
+			})
+
+			When("PVC autoscaler is enabled", func() {
+				BeforeEach(func() {
+					values.PVCAutoscalerEnabled = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusFor(nil, false),
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+						pvca,
+					))
 				})
 			})
 

@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
@@ -154,6 +155,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			corev1.ResourceCPU:    resource.MustParse("150m"),
 			corev1.ResourceMemory: resource.MustParse("100M"),
 		},
+		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
 	}
 
 	if b.Shoot.WantsAlertmanager {

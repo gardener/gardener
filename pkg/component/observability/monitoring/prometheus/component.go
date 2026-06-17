@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -134,6 +135,8 @@ type Values struct {
 	ResourceRequests *corev1.ResourceList
 	// HealthCheckBy is the value of the health-check-by label for the Prometheus resource.
 	HealthCheckBy string
+	// PVCAutoscalerEnabled controls whether the Prometheus instance's volume should be autoscaled by PVC Autoscaler.
+	PVCAutoscalerEnabled bool
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
@@ -266,6 +269,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		roleBinding        *rbacv1.RoleBinding
 		gardenRoleBinding  *rbacv1.RoleBinding
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		pvca               *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler
 	)
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
@@ -274,6 +278,10 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		gardenRoleBinding = p.gardenRoleBinding()
 	} else {
 		clusterRoleBinding = p.clusterRoleBinding()
+	}
+
+	if p.values.PVCAutoscalerEnabled {
+		pvca = p.pvca(resource.MustParse("100Gi"))
 	}
 
 	objects := append([]client.Object{
@@ -290,6 +298,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.prometheus(cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
+		pvca,
 	}, istioResources...)
 
 	resources, err := registry.AddAllAndSerialize(objects...)

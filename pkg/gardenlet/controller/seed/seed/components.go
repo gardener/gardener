@@ -711,6 +711,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
 			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
 		},
+		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 	})
 }
 
@@ -737,6 +738,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			ScrapeConfigs:   seedprometheus.CentralScrapeConfigs(),
 			PrometheusRules: seedprometheus.CentralPrometheusRules(),
 		},
+		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 	})
 }
 
@@ -780,6 +782,7 @@ func (r *Reconciler) newAggregatePrometheus(
 			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
 			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
 		},
+		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 	}
 
 	if globalMonitoringSecret != nil {
