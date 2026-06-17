@@ -344,8 +344,13 @@ func isServiceAccountSubject(subject rbacv1.Subject) bool {
 	// Service account groups, e.g. (subject.Kind == "Group" && strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountGroupPrefix))
 	// are not considered as service account subjects, otherwise it would allow project admins to manage also service account groups
 	// which is not allowed (see docs/usage/project/projects.md#user-access-management).
-	return subject.APIGroup == "" && subject.Kind == rbacv1.ServiceAccountKind ||
-		subject.APIGroup == rbacv1.GroupName && subject.Kind == rbacv1.UserKind && strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
+	var (
+		isServiceAccount              = subject.APIGroup == "" && subject.Kind == rbacv1.ServiceAccountKind
+		isServiceAccountAsUserSubject = subject.APIGroup == rbacv1.GroupName && subject.Kind == rbacv1.UserKind &&
+			strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
+	)
+
+	return isServiceAccount || isServiceAccountAsUserSubject
 }
 
 func memberSubjectKey(subject rbacv1.Subject) string {
