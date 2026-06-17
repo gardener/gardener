@@ -3381,12 +3381,12 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 				Expect(err).To(HaveOccurred())
 
-				// Should get multiple errors for different capability values being removed
+				// Should get one aggregated error per removed capability for the NamespacedCloudProfile
 				Expect(err.Error()).To(And(
-					ContainSubstring("unable to delete MachineCapability \"architecture\" with value \"arm64\" from CloudProfile"),
-					ContainSubstring("capability value is still in use by NamespacedCloudProfile 'default/namespaced-profile'"),
-					ContainSubstring("unable to delete MachineCapability \"network\" with value \"private\" from CloudProfile"),
-					ContainSubstring("unable to delete MachineCapability \"storage\" with value \"hdd\" from CloudProfile"),
+					ContainSubstring("unable to delete MachineCapability \"architecture\" with values [arm64] from CloudProfile"),
+					ContainSubstring("capability values are still in use by NamespacedCloudProfile 'default/namespaced-profile'"),
+					ContainSubstring("unable to delete MachineCapability \"network\" with values [private] from CloudProfile"),
+					ContainSubstring("unable to delete MachineCapability \"storage\" with values [hdd] from CloudProfile"),
 				))
 			})
 
@@ -3463,8 +3463,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(And(
-					ContainSubstring("unable to delete MachineCapability \"storage\""),
-					ContainSubstring("capability value is still in use by NamespacedCloudProfile 'default/namespaced-profile'"),
+					ContainSubstring("unable to delete MachineCapability \"storage\" with values [hdd ssd] from CloudProfile"),
+					ContainSubstring("capability values are still in use by NamespacedCloudProfile 'default/namespaced-profile'"),
 				))
 			})
 
@@ -3502,11 +3502,15 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
-			It("should allow removing the architecture capability entirely (revert to legacy CloudProfile) even if values are still in use by a NamespacedCloudProfile", func() {
-				// Reduce parent CloudProfile to only have the architecture capability,
-				// simulating the legacy state where 'architecture' is the only capability defined.
+			It("should allow removing capabilities (revert to legacy CloudProfile) when NamespacedCloudProfiles only reference the architecture capability, even if multiple capabilities are removed", func() {
+				// Parent CloudProfile defines architecture and additional capabilities; the additional ones
+				// are not referenced by any NamespacedCloudProfile. Removing all of them must be allowed
+				// because the legacy architecture(s) fields on machineImages/machineTypes still cover the
+				// only capability that is actually in use by NamespacedCloudProfiles.
 				cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
 					{Name: "architecture", Values: []string{"amd64", "arm64"}},
+					{Name: "network", Values: []string{"public", "private"}},
+					{Name: "storage", Values: []string{"ssd", "hdd"}},
 				}
 				cloudProfile.Spec.MachineImages = []core.MachineImage{
 					{
@@ -3533,7 +3537,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				}
 				oldCloudProfile = cloudProfile.DeepCopy()
 
-				// NamespacedCloudProfile still uses architecture values from the parent.
+				// NamespacedCloudProfile only uses the architecture capability.
 				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{
 						Name: "debian",
@@ -3559,8 +3563,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Update(namespacedCloudProfile)).To(Succeed())
 
-				// Completely drop the MachineCapabilities section. The legacy
-				// architecture(s) fields on machineImages/machineTypes still cover the architecture.
+				// Drop the entire MachineCapabilities section to revert to a legacy CloudProfile.
 				cloudProfile.Spec.MachineCapabilities = nil
 
 				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("cloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
