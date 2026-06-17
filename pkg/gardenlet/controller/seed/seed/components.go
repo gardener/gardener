@@ -265,7 +265,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(c.istioDefaultLabels, c.istioDefaultNamespace)
+	c.vali, err = r.newVali(seed, c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -578,7 +578,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed, seedIsSelfHostedSho
 	), nil
 }
 
-func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string, istioIngressGatewayNamespace string) (component.Deployer, error) {
+func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[string]string, istioIngressGatewayNamespace string) (component.Deployer, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
@@ -597,6 +597,7 @@ func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string, istioI
 		false,
 		istioIngressGatewayLabels,
 		istioIngressGatewayNamespace,
+		v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 	)
 	if err != nil {
 		return nil, err

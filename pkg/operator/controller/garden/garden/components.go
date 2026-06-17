@@ -1438,6 +1438,7 @@ func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) 
 		true,
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
+		false,
 	)
 	if err != nil {
 		return nil, err

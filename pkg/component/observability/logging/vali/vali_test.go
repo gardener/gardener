@@ -7,6 +7,7 @@ package vali_test
 import (
 	"context"
 
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -374,6 +375,36 @@ var _ = Describe("Vali", func() {
 
 			test.PrometheusRule(getPrometheusRule("aggregate"), "testdata/aggregate-vali.prometheusrule.test.yaml")
 		})
+
+		It("should deploy the PersistentVolumeClaimAutoscaler when PVCAutoscalerEnabled is true", func() {
+			valiDeployer := New(
+				c,
+				namespace,
+				fakeSecretManager,
+				Values{
+					Replicas:                     1,
+					Storage:                      &storage,
+					ShootNodeLoggingEnabled:      true,
+					ValiImage:                    valiImage,
+					CuratorImage:                 curatorImage,
+					InitLargeDirImage:            initLargeDirImage,
+					TelegrafImage:                telegrafImage,
+					KubeRBACProxyImage:           kubeRBACProxyImage,
+					WithRBACProxy:                true,
+					PriorityClassName:            priorityClassName,
+					ClusterType:                  "shoot",
+					IngressHost:                  valiHost,
+					IstioIngressGatewayNamespace: "istio-ingress",
+					IsGardenCluster:              false,
+					PVCAutoscalerEnabled:         true,
+				},
+			)
+
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+
+			Expect(managedResource).To(NewManagedResourceContainsObjectsMatcher(c)(getPVCA()))
+		})
 	})
 
 	Describe("#ResizeOrDeleteValiDataVolumeIfStorageNotTheSame", func() {
@@ -463,6 +494,19 @@ var _ = Describe("Vali", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, managedResource)).To(Succeed())
 			Expect(managedResource.Annotations).NotTo(HaveKey(resourcesv1alpha1.Ignore))
+		})
+
+		It("shouldn't do anything when PVCAutoscalerEnabled is true", func() {
+			valiDeployer := New(fakeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity, PVCAutoscalerEnabled: true})
+
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+
+			pvcResult := &corev1.PersistentVolumeClaim{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: valiPVCName}, pvcResult)).To(Succeed())
+			Expect(pvcResult.Spec.Resources.Requests.Storage()).To(PointTo(Equal(resource.MustParse("100Gi"))))
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed())
+			Expect(sts.Spec.Replicas).To(PointTo(Equal(int32(2))))
 		})
 
 		It("shouldn't do anything when garden/vali's PVC is missing", func() {
@@ -1500,5 +1544,27 @@ func getLabels() map[string]string {
 		"gardener.cloud/role": "logging",
 		"role":                "logging",
 		"app":                 "vali",
+	}
+}
+
+func getPVCA() *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			TargetRef: autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "StatefulSet",
+				Name:       valiName,
+			},
+			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
+				{
+					MaxCapacity: resource.MustParse("100Gi"),
+				},
+			},
+		},
 	}
 }

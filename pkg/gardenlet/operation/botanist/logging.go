@@ -12,6 +12,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardenlethelper "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
@@ -183,6 +184,7 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		false,
 		istioLabels,
 		istioNamespace,
+		v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
 	)
 }
 
