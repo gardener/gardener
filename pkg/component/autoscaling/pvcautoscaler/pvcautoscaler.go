@@ -26,7 +26,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -49,6 +48,15 @@ type Values struct {
 	Image string
 	// PriorityClassName is the name of the priority class of the PVCAutoscaler.
 	PriorityClassName string
+	// ManagedResourceName is the name of the ManagedResource to create/delete.
+	ManagedResourceName string
+	// PrometheusServiceName is the name of the Prometheus service the controller connects to.
+	PrometheusServiceName string
+	// ServiceMonitorLabel is the Prometheus instance label for the ServiceMonitor.
+	ServiceMonitorLabel string
+	// InjectScrapeTargetAnnotations injects the appropriate network policy annotation
+	// allowing Prometheus to scrape the metrics Service.
+	InjectScrapeTargetAnnotations func(*corev1.Service, ...networkingv1.NetworkPolicyPort) error
 }
 
 type pvcAutoscaler struct {
@@ -85,7 +93,7 @@ func (p *pvcAutoscaler) Deploy(ctx context.Context) error {
 		serviceMonitor     = p.serviceMonitor()
 	)
 
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
+	utilruntime.Must(p.values.InjectScrapeTargetAnnotations(service, networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(metricsPort)),
 		Protocol: new(corev1.ProtocolTCP),
 	}))
@@ -105,11 +113,11 @@ func (p *pvcAutoscaler) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return managedresources.CreateForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName, false, serializedResources)
+	return managedresources.CreateForSeed(ctx, p.client, p.namespace, p.values.ManagedResourceName, false, serializedResources)
 }
 
 func (p *pvcAutoscaler) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.values.ManagedResourceName)
 }
 
 const timeoutWaitForManagedResources = 2 * time.Minute
@@ -118,14 +126,14 @@ func (p *pvcAutoscaler) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, p.values.ManagedResourceName)
 }
 
 func (p *pvcAutoscaler) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.values.ManagedResourceName)
 }
 
 func getLabels() map[string]string {
@@ -303,9 +311,9 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                   v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("prometheus-cache", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                               v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                  v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(p.values.PrometheusServiceName, 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
@@ -327,7 +335,7 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 								"--metrics-bind-address=:8080",
 								"--leader-elect",
 								"--interval=60s",
-								"--prometheus-address=http://prometheus-cache.garden.svc.cluster.local:80",
+								"--prometheus-address=http://" + p.values.PrometheusServiceName + "." + p.namespace + ".svc.cluster.local:80",
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -440,7 +448,7 @@ func (p *pvcAutoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAut
 
 func (p *pvcAutoscaler) serviceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(name, p.namespace, seed.Label),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(name, p.namespace, p.values.ServiceMonitorLabel),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{

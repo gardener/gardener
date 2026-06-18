@@ -10,6 +10,8 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
+	seedprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // NewPVCAutoscaler instantiates a new `PVCAutoscaler` component.
@@ -31,8 +33,12 @@ func NewPVCAutoscaler(
 		c,
 		gardenNamespaceName,
 		pvcautoscaler.Values{
-			Image:             image.String(),
-			PriorityClassName: priorityClassName,
+			Image:                         image.String(),
+			PriorityClassName:             priorityClassName,
+			ManagedResourceName:           pvcautoscaler.PVCAutoscalerManagedResourceName,
+			PrometheusServiceName:         "prometheus-cache",
+			ServiceMonitorLabel:           seedprometheus.Label,
+			InjectScrapeTargetAnnotations: gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets,
 		},
 	)
 
