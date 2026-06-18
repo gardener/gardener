@@ -539,9 +539,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 
 				wg.Add(len(relevantNamespacedCloudProfiles))
 
-				for _, ncp := range relevantNamespacedCloudProfiles {
-					ncpNamespacedName := types.NamespacedName{Name: ncp.Name, Namespace: ncp.Namespace}
-
+				for ncpNamespacedName, ncp := range relevantNamespacedCloudProfiles {
 					go func(nscpfl *gardencorev1beta1.NamespacedCloudProfile) {
 						defer wg.Done()
 
@@ -557,10 +555,10 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 
 						for _, machineImage := range nscpfl.Spec.MachineImages {
 							if machineImageDiff.RemovedImages.Has(machineImage.Name) {
-								channel <- fmt.Errorf("unable to delete MachineImage %q from CloudProfile %q - MachineImage is still in use by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName.String())
+								channel <- fmt.Errorf("unable to delete MachineImage %q from CloudProfile %q - MachineImage is still in use by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName)
 							}
 							if machineImageDiff.AddedImages.Has(machineImage.Name) {
-								channel <- fmt.Errorf("unable to add MachineImage %q to CloudProfile %q - MachineImage is already defined by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName.String())
+								channel <- fmt.Errorf("unable to add MachineImage %q to CloudProfile %q - MachineImage is already defined by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName)
 							}
 							if removedVersions, exists := machineImageDiff.RemovedVersions[machineImage.Name]; exists {
 								for _, imageVersion := range machineImage.Versions {
