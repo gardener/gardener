@@ -846,6 +846,11 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Name: "Deploying custom resource definitions for OpenTelemetry",
 			Fn:   c.openTelemetryCRD.Deploy,
 		})
+		deployPVCAutoscalerCRD = g.Add(flow.Task{
+			Name:   "Deploying custom resource definitions for pvc-autoscaler",
+			Fn:     c.pvcAutoscalerCRD.Deploy,
+			SkipIf: !pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
+		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Waiting for custom resource definitions for fluent-operator",
@@ -896,6 +901,12 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Name:         "Waiting for custom resource definitions for OpenTelemetry",
 			Fn:           c.openTelemetryCRD.Wait,
 			Dependencies: flow.NewTaskIDs(deployOpenTelemetryCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for custom resource definitions for pvc-autoscaler",
+			Fn:           c.pvcAutoscalerCRD.Wait,
+			Dependencies: flow.NewTaskIDs(deployPVCAutoscalerCRD),
+			SkipIf:       !pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
