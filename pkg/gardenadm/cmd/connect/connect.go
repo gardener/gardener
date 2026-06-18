@@ -111,8 +111,11 @@ func run(ctx context.Context, opts *Options) error {
 				},
 			})
 			prepareResources = g.Add(flow.Task{
-				Name:         "Preparing Gardener resources in garden cluster",
-				Fn:           func(ctx context.Context) error { return prepareGardenerResources(ctx, b) },
+				Name: "Preparing Gardener resources in garden cluster",
+				// Retry to tolerate transient unavailability of admission webhooks (e.g. gardener-extension-admission-calico)
+				// whose Service endpoints can briefly TCP-reset right after extension reconciliation. The task is idempotent:
+				// all create-calls already swallow AlreadyExists, and the Shoot status patch only runs after a successful Create.
+				Fn:           flow.TaskFn(func(ctx context.Context) error { return prepareGardenerResources(ctx, b) }).RetryUntilTimeout(2*time.Second, 2*time.Minute),
 				Dependencies: flow.NewTaskIDs(retrieveShortLivedKubeconfig),
 			})
 			deployGardenlet = g.Add(flow.Task{
