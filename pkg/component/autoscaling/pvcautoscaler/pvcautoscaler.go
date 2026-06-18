@@ -35,6 +35,8 @@ import (
 const (
 	// PVCAutoscalerManagedResourceName is the name of the PVCAutoscaler managed resource.
 	PVCAutoscalerManagedResourceName = name
+	// PVCAutoscalerGardenManagedResourceName is the name of the PVCAutoscaler managed resource for the garden cluster.
+	PVCAutoscalerGardenManagedResourceName = "pvc-autoscaler-garden"
 
 	name               = "pvc-autoscaler"
 	serviceAccountName = name
