@@ -152,7 +152,7 @@ func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.Cluste
 				CustomPlugin: &custom.CustomPlugin{
 					Config: `Name ` + pluginNameGardener + `
 Match                     ` + matchKubernetes + `
-LogLevel                  error
+LogLevel                  info
 Retry_Limit               10
 SeedType                  otlp_grpc
 ShootType                 otlp_grpc
