@@ -126,6 +126,11 @@ var _ = Describe("Fluent Operator", func() {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
+					Verbs:     []string{"get", "list", "watch"},
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+				},
+				{
 					APIGroups: []string{"extensions.gardener.cloud"},
 					Resources: []string{"clusters"},
 					Verbs:     []string{"get", "list", "watch"},
