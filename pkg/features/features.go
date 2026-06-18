@@ -39,7 +39,7 @@ const (
 	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operations.
 	// owner: @roncossek
 	// alpha: v1.117.0
-	// beta: v1.145.0
+	// beta: v1.146.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 
 	// VersionClassificationLifecycle enables the features introduced by GEP-0032,
