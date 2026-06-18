@@ -173,6 +173,10 @@ type Settings struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
+	// PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler
+	// components deployed in the garden cluster.
+	// +optional
+	PersistentVolumeClaimAutoscaler *SettingPersistentVolumeClaimAutoscaler `json:"persistentVolumeClaimAutoscaler,omitempty"`
 }
 
 // SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
@@ -231,6 +235,13 @@ type SettingTopologyAwareRouting struct {
 	// These Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.
 	// Additionally, other components that are deployed to the runtime cluster via other means can read this field and
 	// according to its value enable/disable topology-aware routing for their Services.
+	Enabled bool `json:"enabled"`
+}
+
+// SettingPersistentVolumeClaimAutoscaler controls the pvc-autoscaler settings for the garden cluster.
+type SettingPersistentVolumeClaimAutoscaler struct {
+	// Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the
+	// garden cluster.
 	Enabled bool `json:"enabled"`
 }
 
