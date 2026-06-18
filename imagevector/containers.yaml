@@ -650,7 +650,7 @@ images:
       name: fluent-bit-plugin
     sourceRepository: github.com/gardener/logging
     repository: europe-docker.pkg.dev/gardener-project/snapshots/gardener/fluent-bit-plugin
-    tag: "v1.6.0-dev-e8c8135c-dirty"
+    tag: "v1.6.0-dev-cc48ec38-dirty"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
