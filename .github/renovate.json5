@@ -107,6 +107,19 @@
       automerge: true,
     },
     {
+      // Run `make tidy` for all gomod updates because `gomodTidy` postUpdateOption only tidies the updated module,
+      // while this repository contains multiple modules wired via `go.work` that all need to stay in sync.
+      matchManagers: [
+        'gomod',
+      ],
+      postUpgradeTasks: {
+        commands: [
+          '/bin/bash -c "PATH=$PATH:$(go env GOROOT)/bin make tidy"',
+        ],
+        executionMode: 'branch',
+      },
+    },
+    {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
         'go',
