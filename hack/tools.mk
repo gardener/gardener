@@ -71,7 +71,6 @@ SKAFFOLD_VERSION ?= v2.22.0
 YQ_VERSION ?= v4.53.3
 # renovate: datasource=github-releases depName=crate-ci/typos
 TYPOS_VERSION ?= v1.47.2
-GOBUILDCACHE_VERSION ?= 83bfeb837b93a786ff37b33d0be108bcc74b089f
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION     ?= $(call version_gomod,sigs.k8s.io/controller-tools)
