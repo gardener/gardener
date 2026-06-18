@@ -506,6 +506,16 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 					Resources: []string{"clusters"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+				{
+					APIGroups: []string{"opentelemetry.io"},
+					Resources: []string{"opentelemetrycollectors"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
 			},
 			Service: fluentbitv1alpha2.FluentBitService{
 				Name:        v1beta1constants.DaemonSetNameFluentBit,
