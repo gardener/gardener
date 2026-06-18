@@ -786,6 +786,11 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying victoria-operator",
 			Fn:   c.victoriaOperator.Deploy,
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying pvc-autoscaler",
+			Fn:           c.pvcAutoscaler.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilPrometheusGardenReady),
+		})
 	)
 
 	gardenCopy := garden.DeepCopy()

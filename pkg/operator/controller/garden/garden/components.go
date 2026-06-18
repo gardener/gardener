@@ -156,6 +156,7 @@ type components struct {
 	persesOperator                component.DeployWaiter
 	victoriaOperator              component.DeployWaiter
 	victoriaLogs                  component.DeployWaiter
+	pvcAutoscaler                 component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -215,6 +216,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.pvcAutoscalerCRD, err = pvcautoscaler.NewCRDs(r.RuntimeClientSet.Client())
+	if err != nil {
+		return
+	}
+	c.pvcAutoscaler, err = r.newPVCAutoscaler(garden)
 	if err != nil {
 		return
 	}
@@ -489,6 +494,19 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 	}
 
 	return verticalPodAutoscaler, nil
+}
+
+func (r *Reconciler) newPVCAutoscaler(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+	return sharedcomponent.NewPVCAutoscaler(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		pvcautoscaler.PVCAutoscalerGardenManagedResourceName,
+		"prometheus-garden",
+		gardenprometheus.Label,
+		gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets,
+	)
 }
 
 func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, runtimeIsSelfHostedShoot bool) (component.DeployWaiter, error) {
