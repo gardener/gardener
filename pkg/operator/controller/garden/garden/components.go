@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	pvcautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
@@ -105,6 +106,7 @@ type components struct {
 	persesCRD        component.DeployWaiter
 	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
+	pvcAutoscalerCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -209,6 +211,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.victoriaCRD, err = victoriaoperator.NewCRDs(r.RuntimeClientSet.Client())
+	if err != nil {
+		return
+	}
+	c.pvcAutoscalerCRD, err = pvcautoscaler.NewCRDs(r.RuntimeClientSet.Client())
 	if err != nil {
 		return
 	}
