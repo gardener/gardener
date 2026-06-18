@@ -316,8 +316,12 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Restoring external DNSRecord",
-			Fn:           b.RestoreExternalDNSRecord,
+			Name: "Restoring external DNSRecord",
+			// Retry to tolerate the warmup window of the in-cluster extension controllers that were just redeployed
+			// into the pod network: their pods are Ready, but leader-election and informer cache sync can take
+			// long enough that the first Restore+Wait hits the severe-error threshold before the controller observes
+			// the new generation.
+			Fn:           flow.TaskFn(b.RestoreExternalDNSRecord).RetryUntilTimeout(5*time.Second, 5*time.Minute),
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped, deploySelfHostedShootExposure),
 		})
