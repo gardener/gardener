@@ -42,35 +42,41 @@ jobs:
           type: ocm-resource
           id:
             name: gardenadm
+            type: executable
             os: darwin
             architecture: amd64
         - name: gardenadm-darwin-arm64
           type: ocm-resource
           id:
             name: gardenadm
+            type: executable
             os: darwin
             architecture: arm64
         - name: gardenadm-linux-amd64
           type: ocm-resource
           id:
             name: gardenadm
+            type: executable
             os: linux
             architecture: amd64
         - name: gardenadm-linux-arm64
           type: ocm-resource
           id:
             name: gardenadm
+            type: executable
             os: linux
             architecture: arm64
         - name: gardenadm-windows-amd64
           type: ocm-resource
           id:
             name: gardenadm
+            type: executable
             os: windows
             architecture: amd64
         - name: gardenadm-windows-arm64
           type: ocm-resource
           id:
             name: gardenadm
+            type: executable
             os: windows
             architecture: arm64
