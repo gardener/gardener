@@ -25,7 +25,7 @@ func RegisterFeatureGates() {
 		// OpenTelemetryCollector is registered here so the operator can wire the
 		// OTel→VictoriaLogs pipeline (see newFluentCustomResources). This also
 		// flips the garden fluent-bit init image and the static ClusterOutput to
-		// the OTLP path; see #13961 for the rollout context.
+		// the OTLP path; see https://github.com/gardener/gardener/pull/13961 for the rollout context.
 		features.OpenTelemetryCollector,
 	)))
 }
