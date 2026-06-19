@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	comp "github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/plutono"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -234,13 +235,15 @@ metadata:
 `
 				}
 				if !values.OnlyDeployDataSourcesAndDashboards {
-					configMapData += `    - name: vali
+					if !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+						configMapData += `    - name: vali
       type: vali
       access: proxy
       url: http://logging.` + namespace + `.svc:3100
       jsonData:
         maxLines: ` + maxLine
 
+					}
 				}
 				configMapData = strings.TrimSuffix(configMapData, "\n")
 				var dataSourcesKeySuffix string
@@ -778,6 +781,28 @@ status: {}
 
 				It("should successfully deploy all resources", func() {
 					checkDeployedResources("plutono-dashboards", 24)
+				})
+
+				Context("w/ RemoveVali feature gate disabled", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, false))
+					})
+
+					It("should include the vali datasource in the datasources ConfigMap", func() {
+						Expect(manifests).To(ContainElement(dataSourceConfigMapYAMLFor(values)))
+						Expect(manifests).To(ContainElement(ContainSubstring("- name: vali")))
+					})
+				})
+
+				Context("w/ RemoveVali feature gate enabled", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, true))
+					})
+
+					It("should omit the vali datasource from the datasources ConfigMap", func() {
+						Expect(manifests).To(ContainElement(dataSourceConfigMapYAMLFor(values)))
+						Expect(manifests).NotTo(ContainElement(ContainSubstring("- name: vali")))
+					})
 				})
 
 				Context("w/ enabled vpa", func() {
