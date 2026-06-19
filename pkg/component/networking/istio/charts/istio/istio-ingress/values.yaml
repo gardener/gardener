@@ -43,4 +43,3 @@ httpProxy:
     enabled: false
     header: Reversed-VPN
     port: 8132
-vpaUpdateMode: InPlaceOrRecreate

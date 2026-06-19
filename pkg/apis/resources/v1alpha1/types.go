@@ -194,12 +194,14 @@ const (
 	// Service is has been created for.
 	NetworkingServiceNamespace = NetworkPolicyLabelKeyPrefix + "service-namespace"
 	// VPAInPlaceUpdatesSkip is a constant for a label on a VerticalPodAutoscaler resource which indicates that
-	// it's updateMode field option should not be modified to "InPlaceOrRecreate"
-	// TODO(vitanovs): Remove the VPAInPlaceUpdatesSkip label constant once the VPAInPlaceUpdates feature gates is deprecated.
+	// it's updateMode field option should not be modified to "InPlaceOrRecreate".
+	//
+	// TODO(vitanovs): Remove the VPAInPlaceUpdatesSkip label constant once the vpa-in-place-updates webhook is removed.
 	VPAInPlaceUpdatesSkip = "vpa-in-place-updates.resources.gardener.cloud/skip"
 	// VPAInPlaceUpdatesMutated is a constant for a label on a VerticalPodAutoscaler resource which indicates that
 	// it's updateMode field has already been mutated.
-	// TODO(vitanovs): Remove the VPAInPlaceUpdatesMutated label constant once the VPAInPlaceUpdates feature gate is promoted to GA.
+	//
+	// TODO(vitanovs): Remove the VPAInPlaceUpdatesMutated label constant once the vpa-in-place-updates webhook is removed.
 	VPAInPlaceUpdatesMutated = "vpa-in-place-updates.resources.gardener.cloud/mutated"
 )
 

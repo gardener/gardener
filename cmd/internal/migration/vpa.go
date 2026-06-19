@@ -89,7 +89,8 @@ func migrateVPA(ctx context.Context, cfg *vpaMigrationConfig) error {
 // MigrateVPAEmptyPatch performs an empty patch updates to VerticalPodAutoscaler resources,
 // that are elighible to adopt the InPlaceOrRecreate update mode, but are filtered out, because of
 // the Resource Manager's alwaysUpdate=false configuration.
-// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gate is promoted to GA.
+//
+// TODO(ialidzhikov): Clean up the migration below when cleaning up the VPAInPlaceUpdates feature gate.
 func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger) error {
 	log.Info("Migrating VerticalPodAutoscalers")
 	var (
@@ -133,51 +134,5 @@ func MigrateVPAEmptyPatch(ctx context.Context, c client.Client, log logr.Logger)
 	}
 
 	log.Info("Successfully migrated VerticalPodAutoscalers")
-	return nil
-}
-
-// MigrateVPAUpdateModeToRecreate applies a patch to VerticalPodAutoscaler resources that
-// sets their update modes to Recreate, in order to undo the change applied by a GRM mutation webhook.
-// TODO(vitanovs): Remove the migration once the VPAInPlaceUpdates feature gate is promoted to GA.
-func MigrateVPAUpdateModeToRecreate(ctx context.Context, c client.Client, log logr.Logger) error {
-	log.Info("Migrating VerticalPodAutoscalers to update mode Recreate")
-
-	var (
-		labelSkipShouldNotExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesSkip, selection.DoesNotExist)
-		labelMutatedShouldExist = utils.MustNewRequirement(resourcesv1alpha1.VPAInPlaceUpdatesMutated, selection.Exists)
-		labelSelector           = labels.NewSelector().Add(
-			labelMutatedShouldExist,
-			labelSkipShouldNotExist,
-		)
-		listOpts = client.ListOptions{
-			LabelSelector: labelSelector,
-		}
-
-		filterFn = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) bool {
-			if vpa.Namespace == metav1.NamespaceSystem || vpa.Namespace == v1beta1constants.KubernetesDashboardNamespace {
-				return false
-			}
-			return true
-		}
-		mutateFn = func(vpa *vpaautoscalingv1.VerticalPodAutoscaler) *vpaautoscalingv1.VerticalPodAutoscaler {
-			vpa.Spec.UpdatePolicy.UpdateMode = new(vpaautoscalingv1.UpdateModeRecreate)
-			delete(vpa.Labels, resourcesv1alpha1.VPAInPlaceUpdatesMutated)
-			return vpa
-		}
-	)
-
-	cfg := vpaMigrationConfig{
-		migrationName: "MigrateVPAUpdateModeToRecreate",
-		log:           log,
-		client:        c,
-		listOpts:      listOpts,
-		filterFn:      filterFn,
-		mutateFn:      mutateFn,
-	}
-	if err := migrateVPA(ctx, &cfg); err != nil {
-		return err
-	}
-
-	log.Info("Successfully migrated VerticalPodAutoscalers to update mode Recreate")
 	return nil
 }
