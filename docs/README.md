@@ -239,6 +239,7 @@
 * [Trusted TLS certificate for garden runtime cluster](operations/trusted-tls-for-garden-runtime.md)
 * [Overlapping Network Ranges between Seeds and Shoots](operations/overlapping-network-ranges.md)
 * [Disaster Recovery: Restoring a Garden Cluster to a new Runtime Cluster](operations/disaster_recovery_garden.md)
+* [Nginx Ingress Retirement and Migration Guide](operations/nginx_ingress.md)
 
 ## Monitoring
 
