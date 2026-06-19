@@ -34,7 +34,6 @@ Verify that the `InPlacePodVerticalScaling` Kubernetes feature gate is not expli
 - kube-apiserver: `.spec.kubernetes.kubeAPIServer.featureGates`
 - kubelet: `.spec.kubernetes.kubelet.featureGates` or `.spec.provider.workers[].kubernetes.kubelet.featureGates`
 
-
 ## References
 
 - [Kubernetes v1.33: In-Place Pod Resize Graduated to Beta](https://kubernetes.io/blog/2025/05/16/kubernetes-v1-33-in-place-pod-resize-beta/)
