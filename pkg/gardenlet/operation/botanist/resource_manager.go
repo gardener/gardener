@@ -68,6 +68,12 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 	if b.Shoot.IsSelfHosted() {
 		values.KubernetesServiceHost = nil
+		// Disable the vpa-in-place-updates webhook as there are no VPA components that manage VPA resources and
+		// there is no reason for the GRM webhook to be deployed.
+		//
+		// GRM's vpa-in-place-updates webhook is planned to be removed soon in favor of setting the update mode to InPlaceOrRecreate explicitly.
+		// For more details, see https://github.com/gardener/gardener/issues/12955.
+		values.VPAInPlaceUpdatesEnabled = false
 
 		if !b.Shoot.RunsControlPlane() {
 			newFunc = shared.NewRuntimeGardenerResourceManager
