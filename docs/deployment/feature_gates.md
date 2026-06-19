@@ -27,8 +27,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | CloudProfileCapabilities       | `false` | `Alpha` | `1.117` |         |
 | OpenTelemetryCollector         | `false` | `Alpha` | `1.124` | `1.135` |
 | OpenTelemetryCollector         | `true`  | `Beta`  | `1.136` |         |
-| VPAInPlaceUpdates              | `false` | `Alpha` | `1.133` | `1.137` |
-| VPAInPlaceUpdates              | `true`  | `Beta`  | `1.138` |         |
 | VictoriaLogsBackend            | `false` | `Alpha` | `1.137` |         |
 | CustomDNSServerInNodeLocalDNS  | `true`  | `Beta`  | `1.133` |         |
 | VPNBondingModeRoundRobin       | `false` | `Alpha` | `1.135` |         |
@@ -227,6 +225,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseUnifiedHTTPProxyPort                      | `true`  | `Beta`       | `1.140` | `1.143` |
 | UseUnifiedHTTPProxyPort                      | `true`  | `GA`         | `1.144` | `1.144` |
 | UseUnifiedHTTPProxyPort                      |         | `Removed`    | `1.145` |         |
+| VPAInPlaceUpdates                            | `false` | `Alpha`      | `1.133` | `1.137` |
+| VPAInPlaceUpdates                            | `true`  | `Beta`       | `1.138` | `1.145` |
+| VPAInPlaceUpdates                            | `true`  | `GA`         | `1.146` |         |
 
 ## Using a Feature
 
