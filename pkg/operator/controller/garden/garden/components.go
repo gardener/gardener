@@ -1462,6 +1462,7 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		true,
+		false,
 	)
 	if err != nil {
 		return nil, err

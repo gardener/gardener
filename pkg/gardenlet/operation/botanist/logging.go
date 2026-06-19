@@ -242,6 +242,7 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		false,
+		v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
 	)
 	if err != nil {
 		return nil, err

@@ -9,6 +9,7 @@ import (
 
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -66,6 +67,7 @@ var _ = Describe("VictoriaLogs", func() {
 		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
 		serviceMonitor *monitoringv1.ServiceMonitor
 		prometheusRule *monitoringv1.PrometheusRule
+		pvca           *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -212,6 +214,26 @@ var _ = Describe("VictoriaLogs", func() {
 				}},
 			},
 		}
+
+		pvca = &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      victorialogsconstants.VLSingleResourceName,
+				Namespace: namespace,
+				Labels:    getLabels(),
+			},
+			Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+				TargetRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       "vlsingle-" + victorialogsconstants.VLSingleResourceName,
+				},
+				VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
+					{
+						MaxCapacity: resource.MustParse("100Gi"),
+					},
+				},
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -255,6 +277,30 @@ var _ = Describe("VictoriaLogs", func() {
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+		})
+
+		Context("when PVC autoscaler is enabled", func() {
+			BeforeEach(func() {
+				values = Values{
+					Image:                image,
+					PVCAutoscalerEnabled: true,
+				}
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources including the PersistentVolumeClaimAutoscaler", func() {
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+				Expect(customResourcesManagedResource).To(consistOf(
+					vlSingle,
+					vpa,
+					serviceMonitor,
+					prometheusRule,
+					pvca,
+				))
+			})
 		})
 
 		Context("when deployed in seed cluster", func() {

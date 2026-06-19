@@ -12,6 +12,7 @@ import (
 
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	"github.com/google/go-containerregistry/pkg/name"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -54,6 +55,8 @@ type Values struct {
 	Replicas int32
 	// PriorityClassName is the name of the priority class for the VictoriaLogs pods.
 	PriorityClassName string
+	// PVCAutoscalerEnabled controls whether the VictoriaLogs instance's volume should be autoscaled by PVC Autoscaler.
+	PVCAutoscalerEnabled bool
 }
 
 type victoriaLogs struct {
@@ -82,12 +85,18 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	serializedResources, err := registry.AddAllAndSerialize(
+	resources := []client.Object{
 		v.vlSingle(imageRef.Context().Name(), imageRef.Identifier()),
 		v.getVPA(),
 		v.getServiceMonitor(),
 		v.getPrometheusRule(),
-	)
+	}
+
+	if v.values.PVCAutoscalerEnabled {
+		resources = append(resources, v.getPVCA())
+	}
+
+	serializedResources, err := registry.AddAllAndSerialize(resources...)
 	if err != nil {
 		return err
 	}
@@ -220,6 +229,28 @@ func (v *victoriaLogs) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 						ContainerName:    "vlsingle",
 						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
+				},
+			},
+		},
+	}
+}
+
+func (v *victoriaLogs) getPVCA() *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.VLSingleResourceName,
+			Namespace: v.namespace,
+			Labels:    getLabels(),
+		},
+		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			TargetRef: autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       "vlsingle-" + constants.VLSingleResourceName,
+			},
+			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
+				{
+					MaxCapacity: resource.MustParse("100Gi"),
 				},
 			},
 		},

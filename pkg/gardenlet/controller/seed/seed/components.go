@@ -305,7 +305,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs()
+	c.victoriaLogs, err = r.newVictoriaLogs(v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings))
 	if err != nil {
 		return
 	}
@@ -617,7 +617,7 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(pvcAutoscalerEnabled bool) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
@@ -631,6 +631,7 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
 		false,
+		pvcAutoscalerEnabled,
 	)
 	if err != nil {
 		return nil, err
