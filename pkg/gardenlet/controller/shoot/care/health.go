@@ -904,6 +904,7 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		}
 	}
 
+	// Report reason "NodesRollOutScalingUp" if enough nodes are registered and not enough are ready (still starting required pods, lost connection)
 	if readyAndSchedulableNodes < desiredMachines {
 		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
 			return "NodesRollOutScalingUp", err
