@@ -184,6 +184,10 @@ var _ = Describe("Strategy", func() {
 
 			It("should not return a secretName warning when credentialsRef was synced to secretName", func() {
 				shoot := &core.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot",
+						Namespace: "garden",
+					},
 					Spec: core.ShootSpec{
 						Kubernetes: core.Kubernetes{Version: "1.34.0"},
 						DNS: &core.DNS{
@@ -199,7 +203,7 @@ var _ = Describe("Strategy", func() {
 				}
 
 				strategy.PrepareForCreate(ctx, shoot)
-				Expect(strategy.WarningsOnCreate(ctx, shoot)).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
+				Expect(strategy.WarningsOnCreate(ctx, shoot.DeepCopy())).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
 			})
 		})
 	})
@@ -772,7 +776,10 @@ var _ = Describe("Strategy", func() {
 			It("should not return a secretName warning when credentialsRef was synced to secretName", func() {
 				oldShoot := &core.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
-						Generation: 1,
+						Name:            "shoot",
+						Namespace:       "garden",
+						ResourceVersion: "42",
+						Generation:      1,
 					},
 					Spec: core.ShootSpec{
 						Kubernetes: core.Kubernetes{Version: "1.34.0"},
@@ -791,7 +798,7 @@ var _ = Describe("Strategy", func() {
 				}
 
 				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
-				Expect(strategy.WarningsOnUpdate(ctx, newShoot, oldShoot)).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
+				Expect(strategy.WarningsOnUpdate(ctx, newShoot.DeepCopy(), oldShoot.DeepCopy())).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
 			})
 		})
 	})
