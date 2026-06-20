@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -21,7 +22,7 @@ import (
 )
 
 // GetWarnings returns warnings for the given Shoot.
-func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRotationInterval time.Duration) []string {
+func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRotationInterval time.Duration, suppressedDNSProviderSecretNameWarningIndexes []int) []string {
 	if shoot == nil {
 		return nil
 	}
@@ -82,18 +83,18 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	}
 
 	if shoot.Spec.DNS != nil {
-		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"))...)
+		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), suppressedDNSProviderSecretNameWarningIndexes)...)
 	}
 
 	return warnings
 }
 
 // GetDNSProviderWarnings returns warnings for the given DNS configuration.
-func GetDNSProviderWarnings(dns *core.DNS, fldPath *field.Path) []string {
+func GetDNSProviderWarnings(dns *core.DNS, fldPath *field.Path, suppressedSecretNameWarningIndexes []int) []string {
 	var warnings []string
 
 	for i, provider := range dns.Providers {
-		if provider.SecretName == nil {
+		if provider.SecretName == nil || slices.Contains(suppressedSecretNameWarningIndexes, i) {
 			continue
 		}
 
