@@ -691,7 +691,7 @@ type GardenerDashboardConfig struct {
 	// +optional
 	Domain *DNSDomain `json:"domain,omitempty"`
 	// TLSSecretName is the name of a secret (in the garden namespace) containing
-	// a trusted TLS certificate for the domain. If not configured, Gardener falls
+	// a trusted TLS certificate for the domains. If not configured, Gardener falls
 	// back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not
 	// configured it generates a self-signed certificate.
 	// +optional

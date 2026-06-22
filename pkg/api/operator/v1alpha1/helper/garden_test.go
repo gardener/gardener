@@ -428,7 +428,10 @@ var _ = Describe("helper", func() {
 			Spec: operatorv1alpha1.GardenSpec{
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 					Ingress: operatorv1alpha1.Ingress{
-						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+						Domains: []operatorv1alpha1.DNSDomain{
+							{Name: "ingress.example.com"},
+							{Name: "secondary.example.com"},
+						},
 					},
 				},
 			},
@@ -437,7 +440,10 @@ var _ = Describe("helper", func() {
 			Spec: operatorv1alpha1.GardenSpec{
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 					Ingress: operatorv1alpha1.Ingress{
-						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.example.com"}},
+						Domains: []operatorv1alpha1.DNSDomain{
+							{Name: "ingress.example.com"},
+							{Name: "secondary.example.com"},
+						},
 					},
 				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
@@ -604,21 +610,11 @@ var _ = Describe("helper", func() {
 							},
 						},
 					},
-					VirtualCluster: operatorv1alpha1.VirtualCluster{
-						Gardener: operatorv1alpha1.Gardener{
-							DiscoveryServer: &operatorv1alpha1.GardenerDiscoveryServerConfig{
-								Domain: &operatorv1alpha1.DNSDomain{
-									Name:     "discovery.local.gardener.cloud",
-									Provider: new("primary"),
-								},
-							},
-						},
-					},
 				},
 			}
 		})
 
-		It("should return the ingress wildcard domains and the discovery server domain", func() {
+		It("should return the ingress wildcard domains", func() {
 			Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 				operatorv1alpha1.DNSDomain{
 					Name:     "*.ingress.local.gardener.cloud",
@@ -628,19 +624,20 @@ var _ = Describe("helper", func() {
 					Name:     "*.secondary.local.gardener.cloud",
 					Provider: new("secondary"),
 				},
-				operatorv1alpha1.DNSDomain{
-					Name:     "discovery.local.gardener.cloud",
-					Provider: new("primary"),
-				},
 			))
 		})
 
-		When("the discovery server is not configured with an explicit domain", func() {
+		When("the discovery server is configured with an explicit domain", func() {
 			BeforeEach(func() {
-				garden.Spec.VirtualCluster.Gardener.DiscoveryServer.Domain = nil
+				garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+					Domain: &operatorv1alpha1.DNSDomain{
+						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				}
 			})
 
-			It("should only return the ingress wildcard domains", func() {
+			It("should return the ingress wildcard domains and the discovery server domain", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
@@ -650,13 +647,22 @@ var _ = Describe("helper", func() {
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
 					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
+					},
 				))
 			})
 		})
 
 		When("the discovery server domain overlaps with the ingress domains", func() {
 			BeforeEach(func() {
-				garden.Spec.VirtualCluster.Gardener.DiscoveryServer.Domain.Name = "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+				garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+					Domain: &operatorv1alpha1.DNSDomain{
+						Name:     "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name,
+						Provider: new("primary"),
+					},
+				}
 			})
 
 			It("should only return the ingress wildcard domains but not the discovery server domain", func() {
@@ -683,7 +689,7 @@ var _ = Describe("helper", func() {
 				}
 			})
 
-			It("should return the ingress wildcard domains, discovery server domain, and dashboard domain", func() {
+			It("should return the ingress wildcard domains and the dashboard domain", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
@@ -692,10 +698,6 @@ var _ = Describe("helper", func() {
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
-					},
-					operatorv1alpha1.DNSDomain{
-						Name:     "discovery.local.gardener.cloud",
-						Provider: new("primary"),
 					},
 					operatorv1alpha1.DNSDomain{
 						Name:     "dashboard.local.gardener.cloud",
@@ -709,13 +711,13 @@ var _ = Describe("helper", func() {
 			BeforeEach(func() {
 				garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
 					Domain: &operatorv1alpha1.DNSDomain{
-						Name:     "dashboard.ingress.local.gardener.cloud",
+						Name:     "dashboard." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name,
 						Provider: new("primary"),
 					},
 				}
 			})
 
-			It("should not add the dashboard domain since it is already covered by wildcard", func() {
+			It("should only return the ingress wildcard domains but not the dashboard domain", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
@@ -724,10 +726,6 @@ var _ = Describe("helper", func() {
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
-					},
-					operatorv1alpha1.DNSDomain{
-						Name:     "discovery.local.gardener.cloud",
-						Provider: new("primary"),
 					},
 				))
 			})
@@ -748,8 +746,42 @@ var _ = Describe("helper", func() {
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
 					},
+				))
+			})
+		})
+
+		When("the discovery server and dashboard are configured with explicit domains", func() {
+			BeforeEach(func() {
+				garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
+					Domain: &operatorv1alpha1.DNSDomain{
+						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				}
+				garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{
+					Domain: &operatorv1alpha1.DNSDomain{
+						Name:     "dashboard.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+				}
+			})
+
+			It("should return the ingress wildcard domains and the custom domains", func() {
+				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.ingress.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "*.secondary.local.gardener.cloud",
+						Provider: new("secondary"),
+					},
 					operatorv1alpha1.DNSDomain{
 						Name:     "discovery.local.gardener.cloud",
+						Provider: new("primary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "dashboard.local.gardener.cloud",
 						Provider: new("primary"),
 					},
 				))

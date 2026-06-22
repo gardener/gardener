@@ -2484,7 +2484,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>TLSSecretName is the name of a secret (in the garden namespace) containing<br />a trusted TLS certificate for the domain. If not configured, Gardener falls<br />back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not<br />configured it generates a self-signed certificate.</p>
+<p>TLSSecretName is the name of a secret (in the garden namespace) containing<br />a trusted TLS certificate for the domains. If not configured, Gardener falls<br />back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not<br />configured it generates a self-signed certificate.</p>
 </td>
 </tr>
 <tr>

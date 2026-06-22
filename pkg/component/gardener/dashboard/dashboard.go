@@ -86,7 +86,7 @@ type IngressValues struct {
 	Enabled bool
 	// Domains is the list of hostnames the dashboard is exposed on.
 	Domains []string
-	// TLSSecretName is the name of the TLS secret containing a trusted TLS certificate for the domain.
+	// TLSSecretName is the name of the TLS secret containing a trusted TLS certificate for the domains.
 	// If not provided, a self-signed certificate will be generated.
 	TLSSecretName *string
 	// IstioIngressGatewayLabels are the labels for identifying the used istio ingress gateway.
