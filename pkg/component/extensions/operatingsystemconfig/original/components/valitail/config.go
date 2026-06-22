@@ -118,7 +118,7 @@ func getValitailPathAuthTokenUnit() extensionsv1alpha1.Unit {
 		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
-Description=Monitor the auth-token file for required for valitail
+Description=Monitor the auth-token file required for valitail
 [Install]
 WantedBy=paths.target
 [Path]
