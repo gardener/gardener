@@ -648,6 +648,9 @@ When an object is not actively referenced anymore because the `Extension` specif
 This reconciler inspects the following references:
 
 - `Secret`s and `ConfigMap`s from `.spec.deployment.resources[]`
+- `Secret`s from `.spec.deployment.extension.helm.ociRepository.pullSecretRef` and `.spec.deployment.extension.helm.ociRepository.caBundleSecretRef`
+- `Secret`s from `.spec.deployment.admission.runtimeCluster.helm.ociRepository.pullSecretRef` and `.spec.deployment.admission.runtimeCluster.helm.ociRepository.caBundleSecretRef`
+- `Secret`s from `.spec.deployment.admission.virtualCluster.helm.ociRepository.pullSecretRef` and `.spec.deployment.admission.virtualCluster.helm.ociRepository.caBundleSecretRef`
 
 ### [`Access` Controller](../../pkg/operator/controller/virtual/access)
 
