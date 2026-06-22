@@ -117,7 +117,7 @@ func namespace(technicalID string) *corev1.Namespace {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: MachineNamespaceName(technicalID),
 			Labels: map[string]string{
-				v1beta1constants.GardenRole: "machine-pods",
+				v1beta1constants.GardenRole: "infra",
 			},
 		},
 	}
@@ -125,7 +125,7 @@ func namespace(technicalID string) *corev1.Namespace {
 
 // MachineNamespaceName returns the name of the namespace for machine pods for the given shoot namespace.
 func MachineNamespaceName(technicalID string) string {
-	return "machine-pods-" + technicalID
+	return "infra-" + technicalID
 }
 
 // IPPoolName returns the name of the crd.projectcalico.org/v1.IPPool resource for the given shoot namespace.
