@@ -24,18 +24,10 @@ import (
 
 const istioIngressGatewayNamespace = operatorv1alpha1.VirtualGardenNamePrefix + v1beta1constants.DefaultSNIIngressNamespace
 
-func (g *gardenerDashboard) ingressHosts() []string {
-	hosts := make([]string, 0, len(g.values.Ingress.Domains))
-	for _, domain := range g.values.Ingress.Domains {
-		hosts = append(hosts, "dashboard."+domain)
-	}
-	return hosts
-}
-
 func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object, error) {
 	var (
 		gatewayName   = deploymentName
-		tlsSecretName = ptr.Deref(g.values.Ingress.WildcardCertSecretName, "")
+		tlsSecretName = ptr.Deref(g.values.Ingress.TLSSecretName, "")
 		tlsSecret     *corev1.Secret
 	)
 
@@ -43,7 +35,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 		ingressTLSSecret, err := g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        deploymentName + "-tls",
 			CommonName:                  deploymentName,
-			DNSNames:                    g.ingressHosts(),
+			DNSNames:                    g.values.Ingress.Domains,
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
@@ -74,7 +66,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 		gateway,
 		GetLabels(),
 		g.values.Ingress.IstioIngressGatewayLabels,
-		g.ingressHosts(),
+		g.values.Ingress.Domains,
 		tlsSecretInIstioNamespace.Name,
 	)(); err != nil {
 		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
@@ -86,7 +78,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context) ([]client.Object
 		virtualService,
 		GetLabels(),
 		[]string{istioIngressGatewayNamespace},
-		g.ingressHosts(),
+		g.values.Ingress.Domains,
 		gatewayName,
 		portServer,
 		destinationHost,

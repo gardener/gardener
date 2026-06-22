@@ -589,7 +589,7 @@ DNS holds information about DNS settings.
 
 
 <p>
-(<em>Appears on:</em><a href="#dns">DNS</a>, <a href="#gardenerdiscoveryserverconfig">GardenerDiscoveryServerConfig</a>, <a href="#ingress">Ingress</a>)
+(<em>Appears on:</em><a href="#dns">DNS</a>, <a href="#gardenerdashboardconfig">GardenerDashboardConfig</a>, <a href="#gardenerdiscoveryserverconfig">GardenerDiscoveryServerConfig</a>, <a href="#ingress">Ingress</a>)
 </p>
 
 <p>
@@ -853,7 +853,7 @@ boolean
 </td>
 <td>
 <em>(Optional)</em>
-<p>Enabled controls whether the Dashboard Ingress resource will be deployed to the cluster.</p>
+<p>Enabled controls whether the Dashboard Ingress resource will be deployed to the cluster.<br />Deprecated: use the GardenerDashboardConfig.Domain field for customizing the ingress domain instead.</p>
 </td>
 </tr>
 
@@ -2465,6 +2465,30 @@ string
 </tr>
 <tr>
 <td>
+<code>domain</code></br>
+<em>
+<a href="#dnsdomain">DNSDomain</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-dashboard.<br />If not set, the dashboard is exposed on each configured runtime ingress domain via the<br />"dashboard.<ingress-domain>" subdomain pattern.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tlsSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLSSecretName is the name of a secret (in the garden namespace) containing<br />a trusted TLS certificate for the domains. If not configured, Gardener falls<br />back to a secret labelled with 'gardener.cloud/role=garden-cert', if in turn not<br />configured it generates a self-signed certificate.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>ingress</code></br>
 <em>
 <a href="#dashboardingress">DashboardIngress</a>
@@ -2472,7 +2496,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Ingress contains configuration for the ingress settings.</p>
+<p>Ingress contains configuration for the ingress settings.<br />Deprecated: This field is deprecated and will be removed in a future version. Use the Domain field for<br />customizing the ingress domain instead.</p>
 </td>
 </tr>
 <tr>

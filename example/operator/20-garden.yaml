@@ -297,8 +297,10 @@ spec:
     #     container:
     #       image: busybox:latest
     #       description: A nice container for debugging purposes
-    #   ingress:
-    #     enabled: true
+    #   domain:
+    #     name: dashboard.local.gardener.cloud
+    #     provider: primary
+    #   tlsSecretName: gardener-dashboard-tls
     #   propagateCAFromSNI: false # set to true when SNI CA is not in client trust stores
       gardenerDiscoveryServer:
       # domain:

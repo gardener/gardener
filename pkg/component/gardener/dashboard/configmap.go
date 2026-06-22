@@ -51,7 +51,7 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 		websocketAllowedOrigins []string
 	)
 
-	for _, host := range g.ingressHosts() {
+	for _, host := range g.values.Ingress.Domains {
 		websocketAllowedOrigins = append(websocketAllowedOrigins, "https://"+host)
 	}
 
@@ -120,8 +120,8 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 	}
 
 	if g.values.OIDC != nil {
-		redirectURIs := make([]string, 0, len(g.ingressHosts()))
-		for _, host := range g.ingressHosts() {
+		redirectURIs := make([]string, 0, len(g.values.Ingress.Domains))
+		for _, host := range g.values.Ingress.Domains {
 			redirectURIs = append(redirectURIs, "https://"+host+"/auth/callback")
 		}
 

@@ -106,6 +106,10 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 				Gardener: operatorv1alpha1.Gardener{
 					ClusterIdentity: "e2e-test",
 					Dashboard: &operatorv1alpha1.GardenerDashboardConfig{
+						Domain: &operatorv1alpha1.DNSDomain{
+							Name:     "dashboard.local.gardener.cloud",
+							Provider: new("primary"),
+						},
 						Terminal: &operatorv1alpha1.DashboardTerminal{
 							Container: operatorv1alpha1.DashboardTerminalContainer{Image: "busybox:latest"},
 						},

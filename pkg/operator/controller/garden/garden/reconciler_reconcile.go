@@ -642,9 +642,9 @@ func (r *Reconciler) reconcile(
 				if err != nil {
 					return err
 				}
-				primaryIngressDomain := garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 				discoveryServerEnabled := garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil
-				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusHost, primaryIngressDomain, discoveryServerEnabled)
+				dashboardDomain := helper.PrimaryDashboardDomain(garden)
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusHost, dashboardDomain, discoveryServerEnabled)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
@@ -1098,7 +1098,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, primaryIngressDomain string, discoveryServerEnabled bool) error {
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, dashboardDomain string, discoveryServerEnabled bool) error {
 	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
@@ -1169,21 +1169,21 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        "(.+);(.+)",
 			Action:       "replace",
-			Replacement:  new("https://dashboard." + primaryIngressDomain + "/namespace/garden-$1/shoots/$2"),
+			Replacement:  new("https://" + dashboardDomain + "/namespace/garden-$1/shoots/$2"),
 			TargetLabel:  "dashboard_url",
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        "garden;(.+)",
 			Action:       "replace",
-			Replacement:  new("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			Replacement:  new("https://" + dashboardDomain + "/namespace/garden/shoots/$1"),
 			TargetLabel:  "dashboard_url",
 		},
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        ";(" + strings.Join(managedSeedNames, "|") + ")",
 			Action:       "replace",
-			Replacement:  new("https://dashboard." + primaryIngressDomain + "/namespace/garden/shoots/$1"),
+			Replacement:  new("https://" + dashboardDomain + "/namespace/garden/shoots/$1"),
 			TargetLabel:  "dashboard_url",
 		},
 	}

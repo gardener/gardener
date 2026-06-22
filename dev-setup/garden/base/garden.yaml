@@ -61,7 +61,10 @@ spec:
       gardenerControllerManager:
         featureGates:
           DisableNginxIngressInShoot: true
-      gardenerDashboard: {}
+      gardenerDashboard:
+        domain:
+          name: dashboard.local.gardener.cloud
+          provider: primary
       gardenerDiscoveryServer:
         domain:
           name: discovery.local.gardener.cloud

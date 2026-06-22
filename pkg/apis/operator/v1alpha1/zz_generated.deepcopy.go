@@ -1192,6 +1192,16 @@ func (in *GardenerDashboardConfig) DeepCopyInto(out *GardenerDashboardConfig) {
 		*out = new(DashboardTerminal)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Domain != nil {
+		in, out := &in.Domain, &out.Domain
+		*out = new(DNSDomain)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.TLSSecretName != nil {
+		in, out := &in.TLSSecretName, &out.TLSSecretName
+		*out = new(string)
+		**out = **in
+	}
 	if in.Ingress != nil {
 		in, out := &in.Ingress, &out.Ingress
 		*out = new(DashboardIngress)

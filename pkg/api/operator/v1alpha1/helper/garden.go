@@ -291,6 +291,27 @@ func GetEncryptionProviderTypeInStatus(gardenStatus operatorv1alpha1.GardenStatu
 	return ""
 }
 
+// DashboardDomains returns the domains the gardener-dashboard is exposed on.
+// If a custom domain is configured, it returns only that domain. Otherwise, it returns the default
+// domains constructed from the runtime cluster ingress domains.
+func DashboardDomains(garden *operatorv1alpha1.Garden) []string {
+	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil && config.Domain != nil {
+		return []string{config.Domain.Name}
+	}
+
+	domains := make([]string, 0, len(garden.Spec.RuntimeCluster.Ingress.Domains))
+	for _, domain := range garden.Spec.RuntimeCluster.Ingress.Domains {
+		domains = append(domains, "dashboard."+domain.Name)
+	}
+	return domains
+}
+
+// PrimaryDashboardDomain returns the primary domain for the gardener-dashboard.
+// It is equivalent to DashboardDomains(garden)[0].
+func PrimaryDashboardDomain(garden *operatorv1alpha1.Garden) string {
+	return DashboardDomains(garden)[0]
+}
+
 // DiscoveryServerDomain returns the effective domain for the gardener-discovery-server.
 // If a custom domain is configured, it returns that domain. Otherwise, it returns the default
 // domain constructed from the first runtime cluster ingress domain.
@@ -318,24 +339,32 @@ func GetIngressWildcardDomains(garden *operatorv1alpha1.Garden) []operatorv1alph
 }
 
 // GetAllIngressDomains returns all domains already covered by GetIngressWildcardDomains plus
-// the discovery server domain (Garden.spec.virtualCluster.gardener.gardenerDiscoveryServer.domain)
-// if specified and not already covered by the wildcard domains
+// the dashboard and discovery server domains (if specified with a custom domain and not already covered by the
+// wildcard domains).
 func GetAllIngressDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSDomain {
 	allIngressDomains := GetIngressWildcardDomains(garden)
 
-	if discoveryServerConfig := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; discoveryServerConfig != nil && discoveryServerConfig.Domain != nil {
-		// Cut the first segment of the discovery server domain to get the parent domain.
-		discoveryServerParentDomain := discoveryServerConfig.Domain.Name
-		if idx := strings.IndexByte(discoveryServerParentDomain, '.'); idx != -1 {
-			discoveryServerParentDomain = discoveryServerParentDomain[idx+1:]
+	var customDomains []operatorv1alpha1.DNSDomain
+	if c := garden.Spec.VirtualCluster.Gardener.Dashboard; c != nil && c.Domain != nil {
+		customDomains = append(customDomains, *c.Domain)
+	}
+	if c := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; c != nil && c.Domain != nil {
+		customDomains = append(customDomains, *c.Domain)
+	}
+
+	for _, domain := range customDomains {
+		// Cut the first segment of the custom domain to get the parent domain.
+		parentDomain := domain.Name
+		if idx := strings.IndexByte(parentDomain, '.'); idx != -1 {
+			parentDomain = parentDomain[idx+1:]
 		}
 
-		// Check if the discovery server's domain is a subdomain of the ingress domains, i.e., if the domain is already
-		// covered by the wildcard domains. If not, add the discovery server domain as well.
-		if !slices.ContainsFunc(garden.Spec.RuntimeCluster.Ingress.Domains, func(domain operatorv1alpha1.DNSDomain) bool {
-			return domain.Name == discoveryServerParentDomain
+		// Check if the custom domain is a subdomain of the ingress domains, i.e., if the domain is already
+		// covered by the wildcard domains. If not, add the custom domain as well.
+		if !slices.ContainsFunc(garden.Spec.RuntimeCluster.Ingress.Domains, func(d operatorv1alpha1.DNSDomain) bool {
+			return d.Name == parentDomain
 		}) {
-			allIngressDomains = append(allIngressDomains, *discoveryServerConfig.Domain.DeepCopy())
+			allIngressDomains = append(allIngressDomains, *domain.DeepCopy())
 		}
 	}
 
