@@ -38,7 +38,8 @@ IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
 KIND                       := $(TOOLS_BIN_DIR)/kind
 KUBECTL                    := $(TOOLS_BIN_DIR)/kubectl
 KUSTOMIZE                  := $(TOOLS_BIN_DIR)/kustomize
-LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so # plugin binary
+# plugin binary loaded by golangci-lint
+LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
@@ -88,6 +89,13 @@ GO_ADD_LICENSE_VERSION     ?= $(call version_gomod,github.com/google/addlicense)
 CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
 K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
+# logcheck is built from sources in this repo, so its "version" is a hash of the analyzer sources, the main module's
+# go.mod (which determines the toolchain), and the golangci-lint version (which determines the host x/tools version
+# the plugin must match). This way, the marker file invalidates whenever any input that could change the plugin's
+# build inputs changes, triggering a rebuild — and stays stable otherwise, so the bundled .so from /gardenertools is
+# reused as-is.
+LOGCHECK_VERSION           ?= $(shell { find $(GARDENER_HACK_DIR)/tools/logcheck -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
 
@@ -134,7 +142,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
+create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(LOGCHECK) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
 
 #########################################
 # Tools                                 #
@@ -204,11 +212,14 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 
 # Explicitly specify the toolchain version to ensure logcheck is compiled with the same go version as golangci-lint,
 # i.e., the go toolchain version of the main module (required for loading golangci-lint plugins).
+# The marker file (see LOGCHECK_VERSION) tracks the analyzer sources plus the inputs that determine the plugin's
+# embedded x/tools/go/analysis version, so the rebuild fires exactly when the bundled /gardenertools plugin would
+# no longer be compatible with the (also bundled) golangci-lint binary.
 ifeq ($(IS_GARDENER),true)
-$(LOGCHECK): $(GARDENER_HACK_DIR)/tools/logcheck/go.* $(shell find $(GARDENER_HACK_DIR)/tools/logcheck -type f -name '*.go') $(GOLANGCI_LINT)
+$(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
 	cd $(GARDENER_HACK_DIR)/tools/logcheck; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
-$(LOGCHECK): go.mod $(GOLANGCI_LINT)
+$(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
 	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
 endif
 
