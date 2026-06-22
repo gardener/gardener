@@ -53,6 +53,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			}, SpecTimeout(time.Minute))
 		}
 
+		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s)
+
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
 				var err error
@@ -86,6 +88,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		It("Verify that there are no orphaned resources in the source seed", func(ctx SpecContext) {
 			Expect(shootmigration.CheckForOrphanedNonNamespacedResources(ctx, s.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
 		}, SpecTimeout(time.Minute))
+
+		ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
 
 		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
 			ItShouldInitializeShootClient(s)
