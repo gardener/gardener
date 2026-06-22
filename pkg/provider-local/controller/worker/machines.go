@@ -210,7 +210,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				Taints:                       pool.Taints,
 				MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
 				ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
-				AutoPreserveFailedMachineMax: ptr.Deref(pool.AutoPreserveFailedMachineMax, 0),
+				AutoPreserveFailedMachineMax: worker.DistributeOverZones(zoneIdx, ptr.Deref(pool.AutoPreserveFailedMachineMax, 0), zoneLen),
 			})
 		}
 	}

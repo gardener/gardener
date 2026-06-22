@@ -469,7 +469,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachinesNotUpdateCandidateManualInPlace)
 				break
 			}
-			if numUnavailable <= numPreservedFailed {
+			if numUnavailable <= numPreservedFailed && (int(numHealthyDeployments) == len(wantedMachineDeployments)) {
 				// if the number of unavailable machines is not greater than the number of preserved failed machines, it means that all unavailable machines are preserved failed machines,
 				// hence we can exempt them from this check and allow shoot reconciliation to progress
 				return retryutils.Ok()
