@@ -8,7 +8,7 @@ require (
 	github.com/VictoriaMetrics/operator/api v0.66.1
 	github.com/andybalholm/brotli v1.2.1
 	github.com/bramvdbogaerde/go-scp v1.6.0
-	github.com/containerd/containerd/v2 v2.2.4
+	github.com/containerd/containerd/v2 v2.2.5
 	github.com/containerd/errdefs v1.0.0
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/distribution/distribution/v3 v3.1.1
