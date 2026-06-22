@@ -33,20 +33,25 @@ func validateExtensionSpec(spec operatorv1alpha1.ExtensionSpec, fldPath *field.P
 	return allErrs
 }
 
-func validateResourceReferences(resources []gardencorev1.NamedResourceReference, fldPath *field.Path) ([]gardencore.NamedResourceReference, field.ErrorList) {
+func getResourceReferences(resources []gardencorev1.NamedResourceReference) ([]gardencore.NamedResourceReference, error) {
 	coreResources := make([]gardencore.NamedResourceReference, 0, len(resources))
-	for i, resource := range resources {
+	for _, resource := range resources {
 		coreResource := &gardencore.NamedResourceReference{}
 		if err := gardenCoreScheme.Convert(&resource, coreResource, nil); err != nil {
-			return nil, field.ErrorList{field.InternalError(fldPath.Index(i), err)}
+			return nil, err
 		}
 		coreResources = append(coreResources, *coreResource)
 	}
 
-	allErrs := gardencorevalidation.ValidateResources(coreResources, fldPath, false)
-	allErrs = append(allErrs, gardencorevalidation.ValidateAlphanumericResourceNames(coreResources, fldPath)...)
+	return coreResources, nil
+}
 
-	return coreResources, allErrs
+func validateResourceReferences(resources []gardencore.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+	allErrs := gardencorevalidation.ValidateResources(resources, fldPath, false)
+	// Go templates allow alphanumeric variables only.
+	allErrs = append(allErrs, gardencorevalidation.ValidateAlphanumericResourceNames(resources, fldPath)...)
+
+	return allErrs
 }
 
 func validateDeployment(deployment *operatorv1alpha1.Deployment, fldPath *field.Path) field.ErrorList {
@@ -59,10 +64,14 @@ func validateDeployment(deployment *operatorv1alpha1.Deployment, fldPath *field.
 		return append(allErrs, field.Required(fldPath, "at least one of extension or admission must be specified"))
 	}
 
-	coreResources, resourceErrs := validateResourceReferences(deployment.Resources, fldPath.Child("resources"))
+	coreResources, err := getResourceReferences(deployment.Resources)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath.Child("resources"), err))
+		return allErrs
+	}
+	allErrs = append(allErrs, validateResourceReferences(coreResources, fldPath.Child("resources"))...)
 	allErrs = append(allErrs, validateExtensionDeployment(deployment.ExtensionDeployment, coreResources, fldPath.Child("extension"))...)
 	allErrs = append(allErrs, validateAdmissionDeployment(deployment.AdmissionDeployment, coreResources, fldPath.Child("admission"))...)
-	allErrs = append(allErrs, resourceErrs...)
 
 	return allErrs
 }
