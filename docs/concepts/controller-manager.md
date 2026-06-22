@@ -102,6 +102,7 @@ When an object is not actively referenced anymore because the `ControllerDeploym
 This reconciler inspects the following references:
 
 - `Secret`s and `ConfigMap`s from `.resources[]`
+- `Secret`s from `.helm.ociRepository.pullSecretRef` and `.helm.ociRepository.caBundleSecretRef`
 
 ### [`ControllerRegistration` Controller](../../pkg/controllermanager/controller/controllerregistration)
 

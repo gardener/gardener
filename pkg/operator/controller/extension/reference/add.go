@@ -6,6 +6,7 @@ package reference
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -50,7 +51,10 @@ func getReferencedSecretNames(obj client.Object) []string {
 		return nil
 	}
 
-	return namesForReferencedResources(extension, corev1.SchemeGroupVersion.String(), "Secret")
+	return append(
+		namesForReferencedResources(extension, corev1.SchemeGroupVersion.String(), "Secret"),
+		namesForPullRequestSecrets(extension)...,
+	)
 }
 
 func getReferencedConfigMapNames(obj client.Object) []string {
@@ -70,4 +74,24 @@ func namesForReferencedResources(extension *operatorv1alpha1.Extension, apiVersi
 		}
 	}
 	return names
+}
+
+func namesForPullRequestSecrets(extension *operatorv1alpha1.Extension) []string {
+	names := sets.New[string]()
+
+	if deployment := extension.Spec.Deployment; deployment != nil {
+		if deployment.ExtensionDeployment != nil && deployment.ExtensionDeployment.Helm != nil {
+			names.Insert(v1helper.GetSecretsForOCIRepository(deployment.ExtensionDeployment.Helm.OCIRepository)...)
+		}
+		if admissionDeployment := deployment.AdmissionDeployment; admissionDeployment != nil {
+			if admissionDeployment.RuntimeCluster != nil && admissionDeployment.RuntimeCluster.Helm != nil {
+				names.Insert(v1helper.GetSecretsForOCIRepository(admissionDeployment.RuntimeCluster.Helm.OCIRepository)...)
+			}
+			if admissionDeployment.VirtualCluster != nil && admissionDeployment.VirtualCluster.Helm != nil {
+				names.Insert(v1helper.GetSecretsForOCIRepository(admissionDeployment.VirtualCluster.Helm.OCIRepository)...)
+			}
+		}
+	}
+
+	return names.UnsortedList()
 }

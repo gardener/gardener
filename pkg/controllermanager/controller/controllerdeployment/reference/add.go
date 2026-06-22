@@ -51,7 +51,12 @@ func getReferencedSecretNames(obj client.Object) []string {
 		return nil
 	}
 
-	return namesForReferencedResources(controllerDeployment, corev1.SchemeGroupVersion.String(), "Secret")
+	secretNames := namesForReferencedResources(controllerDeployment, corev1.SchemeGroupVersion.String(), "Secret")
+	if controllerDeployment.Helm != nil {
+		secretNames = append(secretNames, v1helper.GetSecretsForOCIRepository(controllerDeployment.Helm.OCIRepository)...)
+	}
+
+	return secretNames
 }
 
 func getReferencedConfigMapNames(obj client.Object) []string {
