@@ -191,7 +191,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	if !pvcAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
+	if !v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
 		c.pvcAutoscalerCRD = component.OpDestroyAndWait(c.pvcAutoscalerCRD)
 	}
 
@@ -871,7 +871,7 @@ func (r *Reconciler) newPVCAutoscaler(settings *gardencorev1beta1.SeedSettings) 
 	return sharedcomponent.NewPVCAutoscaler(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		pvcAutoscalerEnabled(settings),
+		v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(settings),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
