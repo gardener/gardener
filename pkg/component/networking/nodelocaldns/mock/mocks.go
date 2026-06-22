@@ -118,6 +118,18 @@ func (mr *MockInterfaceMockRecorder) SetShootClientSet(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShootClientSet", reflect.TypeOf((*MockInterface)(nil).SetShootClientSet), arg0)
 }
 
+// SetWorkerPoolNames mocks base method.
+func (m *MockInterface) SetWorkerPoolNames(arg0 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWorkerPoolNames", arg0)
+}
+
+// SetWorkerPoolNames indicates an expected call of SetWorkerPoolNames.
+func (mr *MockInterfaceMockRecorder) SetWorkerPoolNames(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerPoolNames", reflect.TypeOf((*MockInterface)(nil).SetWorkerPoolNames), arg0)
+}
+
 // Wait mocks base method.
 func (m *MockInterface) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()

@@ -147,7 +147,7 @@ ip6.arpa:53 {
 	return serviceAccount, configMap, service, nil
 }
 
-func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAccount, configMap *corev1.ConfigMap, service *corev1.Service) (clientObjects []client.Object) {
+func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAccount, configMap *corev1.ConfigMap, service *corev1.Service, poolNames []string) (clientObjects []client.Object) {
 	var (
 		maxUnavailable       = intstr.FromString("10%")
 		hostPathFileOrCreate = corev1.HostPathFileOrCreate
@@ -156,10 +156,10 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 	)
 
 	clientObjects = []client.Object{serviceAccount, configMap, service}
-	for _, worker := range n.values.Workers {
+	for _, poolName := range poolNames {
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "node-local-dns-" + worker.Name,
+				Name:      "node-local-dns-" + poolName,
 				Namespace: metav1.NamespaceSystem,
 				Annotations: map[string]string{
 					// This annotation is required so that the new label selector that includes the worker's name,
@@ -183,11 +183,11 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 				},
 				RevisionHistoryLimit: new(int32(2)),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getPoolLabels(worker.Name),
+					MatchLabels: getPoolLabels(poolName),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(getPoolLabels(worker.Name), map[string]string{
+						Labels: utils.MergeStringMaps(getPoolLabels(poolName), map[string]string{
 							v1beta1constants.LabelNetworkPolicyToDNS:    "allowed",
 							v1beta1constants.LabelNodeCriticalComponent: "true",
 						}),
@@ -218,7 +218,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 						},
 						NodeSelector: map[string]string{
 							v1beta1constants.LabelNodeLocalDNS: "true",
-							v1beta1constants.LabelWorkerPool:   worker.Name,
+							v1beta1constants.LabelWorkerPool:   poolName,
 						},
 						Containers: []corev1.Container{
 							{
@@ -411,7 +411,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 			vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
 			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "node-local-dns-" + worker.Name,
+					Name:      "node-local-dns-" + poolName,
 					Namespace: metav1.NamespaceSystem,
 				},
 				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
