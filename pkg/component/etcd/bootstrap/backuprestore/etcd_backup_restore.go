@@ -9,7 +9,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
@@ -69,9 +68,9 @@ func (cfg *Config) InitContainer(role, dataVolumeName string) corev1.Container {
 		Image:           cfg.EtcdbrctlImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
-			RunAsUser:                ptr.To[int64](0),
-			RunAsGroup:               ptr.To[int64](0),
-			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsUser:                new(int64(0)),
+			RunAsGroup:               new(int64(0)),
+			AllowPrivilegeEscalation: new(false),
 		},
 		Args: []string{
 			"initialize",
@@ -97,7 +96,7 @@ func (cfg *Config) InitContainer(role, dataVolumeName string) corev1.Container {
 // Volumes returns the volumes needed by the backup-restore init container.
 func (cfg *Config) Volumes() []corev1.Volume {
 	return []corev1.Volume{
-		{Name: volumeNameBackupBuckets, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: cfg.BackupBucketsHostPath, Type: ptr.To(corev1.HostPathDirectoryOrCreate)}}},
+		{Name: volumeNameBackupBuckets, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: cfg.BackupBucketsHostPath, Type: new(corev1.HostPathDirectoryOrCreate)}}},
 		{Name: volumeNameRestoreTmp, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 		{Name: volumeNameEtcdConf, VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMapName}, Items: []corev1.KeyToPath{{Key: EtcdConfigFileName, Path: EtcdConfigFileName}}}}},
 	}

@@ -73,8 +73,8 @@ images:
 
   - name: etcd-backup-restore
     sourceRepository: github.com/gardener/etcd-backup-restore
-    repository: europe-docker.pkg.dev/gardener-project/public/gardener/etcdbrctl
-    tag: "v0.40.0"
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl
+    tag: "v0.42.0"
   - name: etcd-druid
     sourceRepository: github.com/gardener/etcd-druid
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcd-druid

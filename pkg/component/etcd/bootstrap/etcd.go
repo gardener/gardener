@@ -101,7 +101,6 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 
 	if e.values.BackupRestore.ShouldRun() {
 		configMap := e.values.BackupRestore.ConfigMap(e.namespace)
-		configMap.Labels = e.labels()
 		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, e.client, configMap, func() error {
 			configMap.Labels = e.labels()
 			configMap.Data = map[string]string{backuprestore.EtcdConfigFileName: e.values.BackupRestore.EtcdInitializeConfig()}
