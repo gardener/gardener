@@ -13,9 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
@@ -133,13 +130,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-var (
-	noGardenRole = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.DoesNotExist)
-
-	// UserManagedSelector is a selector for objects which are managed by users and not created by Gardener.
-	UserManagedSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noGardenRole)}
-)
-
 func (r *Reconciler) handleReferencedResources(
 	ctx context.Context,
 	log logr.Logger,
@@ -162,11 +152,6 @@ func (r *Reconciler) handleReferencedResources(
 			obj := newObjectFunc()
 			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 				return err
-			}
-
-			// Don't handle Gardener managed secrets.
-			if kind == "Secret" && obj.GetLabels()[v1beta1constants.GardenRole] != "" {
-				return nil
 			}
 
 			atomic.StoreUint32(&added, 1)
@@ -218,7 +203,7 @@ func (r *Reconciler) getUnreferencedResources(
 ) {
 	var (
 		reconciledObjListOptions []client.ListOption
-		resourceListOptions      = []client.ListOption{UserManagedSelector}
+		resourceListOptions      []client.ListOption
 		reconciledObjList        = r.NewObjectListFunc()
 	)
 
