@@ -27,6 +27,7 @@ import (
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -254,8 +255,8 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 		if config == nil {
 			config = &gardencorev1beta1.ServiceAccountConfig{}
 		}
-		config.Issuer = new(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().UID))
-		jwksURI = new(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().UID))
+		config.Issuer = new(gardenerutils.ComputeManagedServiceAccountIssuerURL(*b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, string(b.Shoot.GetInfo().UID)))
+		jwksURI = new(gardenerutils.ComputeManagedServiceAccountIssuerURL(*b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, string(b.Shoot.GetInfo().UID)) + "/jwks")
 	}
 
 	serviceAccountConfig := kubeapiserver.ComputeKubeAPIServerServiceAccountConfig(

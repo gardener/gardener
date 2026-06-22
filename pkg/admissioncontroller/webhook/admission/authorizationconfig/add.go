@@ -5,6 +5,7 @@
 package authorizationconfig
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"slices"
@@ -79,7 +80,7 @@ func init() {
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 }
 
-func admitConfig(authorizationConfigurationRaw string, shoots []*gardencore.Shoot) (int32, error) {
+func admitConfig(_ context.Context, authorizationConfigurationRaw string, shoots []*gardencore.Shoot) (int32, error) {
 	obj, schemaVersion, err := decoder.Decode([]byte(authorizationConfigurationRaw), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided authorization configuration: %w", err)

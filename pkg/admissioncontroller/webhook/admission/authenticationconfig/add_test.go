@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -23,6 +24,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authenticationconfig"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
@@ -127,6 +129,66 @@ jwt:
     username:
       claim: username
       prefix: "abc:"
+`
+
+		managedIssuerAuthenticationConfiguration = `
+---
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+jwt:
+- issuer:
+    url: https://managed.example.com/projects/my-project/shoots/some-uid/issuer
+    audiences:
+    - example-client-id
+  claimMappings:
+    username:
+      claim: username
+      prefix: "managed:"
+`
+
+		computedManagedIssuerAuthenticationConfiguration = `
+---
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+jwt:
+- issuer:
+    url: https://issuer.example.com/projects/test-project/shoots/test-shoot-uid/issuer
+    audiences:
+    - example-client-id
+  claimMappings:
+    username:
+      claim: username
+      prefix: "managed:"
+`
+
+		defaultIssuerAuthenticationConfiguration = `
+---
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+jwt:
+- issuer:
+    url: https://api.fake-shoot-name.test-project.internal.example.com
+    audiences:
+    - example-client-id
+  claimMappings:
+    username:
+      claim: username
+      prefix: "default:"
+`
+
+		externalIssuerAuthenticationConfiguration = `
+---
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+jwt:
+- issuer:
+    url: https://api.fake-shoot-name.test-project.external.example.com
+    audiences:
+    - example-client-id
+  claimMappings:
+    username:
+      claim: username
+      prefix: "default:"
 `
 
 		anonymousAuthenticationConfiguration = `
@@ -303,6 +365,88 @@ anonymous:
 				newShoot.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = new(true)
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
 			})
+
+			It("references a valid authenticationConfiguration when the service account issuer advertised address uses a different URL (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressServiceAccountIssuer,
+							URL:  "https://api.my-shoot.my-project.example.com",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
+			})
+
+			It("allows auth config with managed issuer URL when shoot has no UID yet (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   shootNamespace,
+						Labels: map[string]string{v1beta1constants.ProjectName: "test-project"},
+					},
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot-service-account-issuer",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer},
+					},
+					Data: map[string][]byte{"hostname": []byte("issuer.example.com")},
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": computedManagedIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+
+				shootv1beta1.Annotations = map[string]string{v1beta1constants.AnnotationAuthenticationIssuer: v1beta1constants.AnnotationAuthenticationIssuerManaged}
+				// No UID set - computed issuer should be skipped
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
+			})
+
+			It("allows auth config with different URL when shoot has managed issuer (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   shootNamespace,
+						Labels: map[string]string{v1beta1constants.ProjectName: "test-project"},
+					},
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot-service-account-issuer",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer},
+					},
+					Data: map[string][]byte{"hostname": []byte("issuer.example.com")},
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthenticationConfiguration},
+				})).To(Succeed())
+
+				shootv1beta1.UID = types.UID("test-shoot-uid")
+				shootv1beta1.Annotations = map[string]string{v1beta1constants.AnnotationAuthenticationIssuer: v1beta1constants.AnnotationAuthenticationIssuerManaged}
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
+			})
+
+			It("allows auth config when the default issuer URL is not used (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": validAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressInternal,
+							URL:  "https://api.fake-shoot-name.test-project.internal.example.com",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
+			})
 		})
 
 		Context("Deny", func() {
@@ -354,6 +498,79 @@ anonymous:
 					Data:       map[string]string{"config.yaml": invalidIssuerUrl},
 				})).To(Succeed())
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://abc.com\": URL must not overlap with disallowed issuers:", "")
+			})
+
+			It("contains service account issuer from status advertised addresses in the authentication configuration", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": managedIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressServiceAccountIssuer,
+							URL:  "https://managed.example.com/projects/my-project/shoots/some-uid/issuer",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://managed.example.com/projects/my-project/shoots/some-uid/issuer\": URL must not overlap with disallowed issuers:", "")
+			})
+
+			It("denies authentication configuration containing the computed managed issuer URL (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   shootNamespace,
+						Labels: map[string]string{v1beta1constants.ProjectName: "test-project"},
+					},
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot-service-account-issuer",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer},
+					},
+					Data: map[string][]byte{"hostname": []byte("issuer.example.com")},
+				})).To(Succeed())
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": computedManagedIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+
+				shootv1beta1.UID = types.UID("test-shoot-uid")
+				shootv1beta1.Annotations = map[string]string{v1beta1constants.AnnotationAuthenticationIssuer: v1beta1constants.AnnotationAuthenticationIssuerManaged}
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://issuer.example.com/projects/test-project/shoots/test-shoot-uid/issuer\": URL must not overlap with disallowed issuers:", "")
+			})
+
+			It("denies authentication configuration containing the default issuer URL from internal advertised address (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": defaultIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressInternal,
+							URL:  "https://api.fake-shoot-name.test-project.internal.example.com",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://api.fake-shoot-name.test-project.internal.example.com\": URL must not overlap with disallowed issuers:", "")
+			})
+
+			It("denies authentication configuration containing the default issuer URL from external advertised address (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": externalIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressExternal,
+							URL:  "https://api.fake-shoot-name.test-project.external.example.com",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://api.fake-shoot-name.test-project.external.example.com\": URL must not overlap with disallowed issuers:", "")
 			})
 
 			It("enables legacy anonymous authentication on the kube-apiserver when anonymous authentication configuration is already present", func() {
@@ -456,6 +673,49 @@ anonymous:
 					newCm.Data["config.yaml"] = invalidIssuerUrl
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://abc.com\": URL must not overlap with disallowed issuers:", "")
+				})
+
+				It("contains service account issuer from status advertised addresses in the authentication configuration", func() {
+					shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+						AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+							{
+								Name: v1beta1constants.AdvertisedAddressServiceAccountIssuer,
+								URL:  "https://managed.example.com/projects/my-project/shoots/some-uid/issuer",
+							},
+						},
+					}
+					Expect(fakeClient.Update(ctx, shootv1beta1)).To(Succeed())
+
+					newCm := cm.DeepCopy()
+					newCm.Data["config.yaml"] = managedIssuerAuthenticationConfiguration
+
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://managed.example.com/projects/my-project/shoots/some-uid/issuer\": URL must not overlap with disallowed issuers:", "")
+				})
+
+				It("denies ConfigMap update with computed managed issuer URL", func() {
+					Expect(fakeClient.Create(ctx, &corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   shootNamespace,
+							Labels: map[string]string{v1beta1constants.ProjectName: "test-project"},
+						},
+					})).To(Succeed())
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "shoot-service-account-issuer",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels:    map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer},
+						},
+						Data: map[string][]byte{"hostname": []byte("issuer.example.com")},
+					})).To(Succeed())
+
+					shootv1beta1.UID = types.UID("test-shoot-uid")
+					shootv1beta1.Annotations = map[string]string{v1beta1constants.AnnotationAuthenticationIssuer: v1beta1constants.AnnotationAuthenticationIssuerManaged}
+					Expect(fakeClient.Update(ctx, shootv1beta1)).To(Succeed())
+
+					newCm := cm.DeepCopy()
+					newCm.Data["config.yaml"] = computedManagedIssuerAuthenticationConfiguration
+
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://issuer.example.com/projects/test-project/shoots/test-shoot-uid/issuer\": URL must not overlap with disallowed issuers:", "")
 				})
 
 				It("uses anonymous authentication and has the legacy kube-apiserver setting already enabled", func() {
