@@ -89,11 +89,7 @@ GO_ADD_LICENSE_VERSION     ?= $(call version_gomod,github.com/google/addlicense)
 CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
 K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
-# logcheck is built from sources in this repo, so its "version" is a hash of the analyzer sources, the main module's
-# go.mod (which determines the toolchain), and the golangci-lint version (which determines the host x/tools version
-# the plugin must match). This way, the marker file invalidates whenever any input that could change the plugin's
-# build inputs changes, triggering a rebuild — and stays stable otherwise, so the bundled .so from /gardenertools is
-# reused as-is.
+# Hash of analyzer sources + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
 LOGCHECK_VERSION           ?= $(shell { find $(GARDENER_HACK_DIR)/tools/logcheck -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
 
 # default dir for importing tool binaries
@@ -210,15 +206,9 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 	tar zxvf - -C $(abspath $(TOOLS_BIN_DIR))
 	touch $(KUSTOMIZE) && chmod +x $(KUSTOMIZE)
 
-# Explicitly specify the toolchain version to ensure logcheck is compiled with the same go version as golangci-lint,
-# i.e., the go toolchain version of the main module (required for loading golangci-lint plugins).
-# The marker file (see LOGCHECK_VERSION) tracks the analyzer sources plus the inputs that determine the plugin's
-# embedded x/tools/go/analysis version, so the rebuild fires exactly when the bundled /gardenertools plugin would
-# no longer be compatible with the (also bundled) golangci-lint binary.
-# Whenever logcheck.so is (re)built, also force golangci-lint to be (re)built from the current main go.mod via
-# go_tool_copy: the imported /gardenertools binary may have been built against an older go.mod, so reusing it
-# would risk the same `plugin was built with a different version of package golang.org/x/tools/go/analysis`
-# failure that this rule guards against. Rebuilding both from the same module graph keeps them compatible.
+# Build logcheck with the same toolchain as golangci-lint (required for plugin loading). The recipe also re-copies
+# golangci-lint via go_tool_copy so the locally-built plugin and host both come from the current main go.mod.
+# Without this, a stale /gardenertools golangci-lint would risk an x/tools/go/analysis version mismatch.
 ifeq ($(IS_GARDENER),true)
 $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION))
 	$(call go_tool_copy,$(GOLANGCI_LINT))
