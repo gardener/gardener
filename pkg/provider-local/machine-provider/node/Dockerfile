@@ -18,7 +18,12 @@ RUN rm -f /etc/systemd/system/kubelet.service && \
 # kubelets) get their own cgroup namespace. Without this, nested kubelets see the host's cgroup
 # hierarchy and fail to manage cgroups properly. This is the same adjustment that kind.sh performs
 # at cluster creation time for KinD nodes.
-RUN jq '.linux.namespaces += [{"type": "cgroup"}]' /etc/containerd/cri-base.json > /tmp/cri-base.json && \
+#
+# Also run containers unconfined (no seccomp, no AppArmor) so that processes started by the
+# machine node's containerd (e.g. the cilium-cli host-netns DaemonSet used for encryption tests)
+# are not restricted. Without this, the runtime default seccomp profile and the host's AppArmor
+# profile are inherited by nested containers.
+RUN jq '.linux.namespaces += [{"type": "cgroup"}] | .linux.seccomp = {} | .process.apparmorProfile = "unconfined"' /etc/containerd/cri-base.json > /tmp/cri-base.json && \
     mv /tmp/cri-base.json /etc/containerd/cri-base.json
 
 # copy containerd hosts configurations for local registry mirrors
