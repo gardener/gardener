@@ -330,7 +330,7 @@ Unit=opentelemetry-collector-healthcheck.service`),
 				Command: new(extensionsv1alpha1.CommandStart),
 				Enable:  new(true),
 				Content: new(`[Unit]
-Description=Monitor the auth-token file for required for opentelemetry-collector
+Description=Monitor the auth-token file required for opentelemetry-collector
 [Install]
 WantedBy=paths.target
 [Path]
