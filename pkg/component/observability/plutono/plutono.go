@@ -403,16 +403,14 @@ datasources:
 `
 	}
 
-	if !p.values.OnlyDeployDataSourcesAndDashboards {
-		if !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
-			datasource += `- name: vali
+	if !p.values.OnlyDeployDataSourcesAndDashboards && !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		datasource += `- name: vali
   type: vali
   access: proxy
   url: http://logging.` + p.namespace + `.svc:` + strconv.Itoa(valiconstants.ValiPort) + `
   jsonData:
     maxLines: ` + maxLine + `
 `
-		}
 	}
 
 	return datasource

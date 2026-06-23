@@ -234,16 +234,14 @@ metadata:
         timeInterval: 1m
 `
 				}
-				if !values.OnlyDeployDataSourcesAndDashboards {
-					if !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
-						configMapData += `    - name: vali
+				if !values.OnlyDeployDataSourcesAndDashboards && !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+					configMapData += `    - name: vali
       type: vali
       access: proxy
       url: http://logging.` + namespace + `.svc:3100
       jsonData:
         maxLines: ` + maxLine
 
-					}
 				}
 				configMapData = strings.TrimSuffix(configMapData, "\n")
 				var dataSourcesKeySuffix string
