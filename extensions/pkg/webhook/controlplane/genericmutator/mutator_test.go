@@ -636,7 +636,7 @@ func clusterObject(cluster *extensionscontroller.Cluster) *extensionsv1alpha1.Cl
 			CloudProfile: runtime.RawExtension{
 				Raw: encode(cluster.CloudProfile),
 			},
-			Seed: runtime.RawExtension{
+			Seed: &runtime.RawExtension{
 				Raw: encode(cluster.Seed),
 			},
 			Shoot: runtime.RawExtension{

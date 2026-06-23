@@ -47,10 +47,11 @@ type ClusterSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	CloudProfile runtime.RawExtension `json:"cloudProfile"`
 	// Seed is a raw extension field that contains the seed resource referenced by the shoot that
-	// has to be reconciled.
+	// has to be reconciled. It is not set for self-hosted shoots (see GEP-28).
+	// +optional
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Seed runtime.RawExtension `json:"seed"`
+	Seed *runtime.RawExtension `json:"seed,omitempty"`
 	// Shoot is a raw extension field that contains the shoot resource that has to be reconciled.
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields

@@ -112,7 +112,17 @@ var _ = Describe("Cluster", func() {
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())
 
 			Expect(cluster.Spec.CloudProfile.Raw).NotTo(BeNil())
+			Expect(cluster.Spec.Seed).NotTo(BeNil())
 			Expect(cluster.Spec.Seed.Raw).NotTo(BeNil())
+			Expect(cluster.Spec.Shoot.Raw).NotTo(BeNil())
+		})
+
+		It("should sync cloudprofile and shoot to cluster without seed", func() {
+			Expect(SyncClusterResourceToSeed(ctx, fakeSeedClient, cluster.Name, expectedShoot, expectedCloudProfile, nil)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(cluster), cluster)).To(Succeed())
+
+			Expect(cluster.Spec.CloudProfile.Raw).NotTo(BeNil())
+			Expect(cluster.Spec.Seed).To(BeNil())
 			Expect(cluster.Spec.Shoot.Raw).NotTo(BeNil())
 		})
 	})
@@ -159,7 +169,7 @@ var _ = Describe("Cluster", func() {
 					CloudProfile: runtime.RawExtension{
 						Object: expectedCloudProfile,
 					},
-					Seed: runtime.RawExtension{
+					Seed: &runtime.RawExtension{
 						Object: expectedSeed,
 					},
 					Shoot: runtime.RawExtension{
@@ -257,7 +267,7 @@ var _ = Describe("Cluster", func() {
 					Name: "foo",
 				},
 				Spec: extensionsv1alpha1.ClusterSpec{
-					Seed: runtime.RawExtension{
+					Seed: &runtime.RawExtension{
 						Raw: encode(expectedSeed),
 					},
 				},
@@ -281,6 +291,14 @@ var _ = Describe("Cluster", func() {
 
 		It("should return nil because the seed is not in raw format in the cluster", func() {
 			cluster.Spec.Seed.Raw = nil
+
+			seed, err := SeedFromCluster(cluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(seed).To(BeNil())
+		})
+
+		It("should return nil because the seed is absent from the cluster", func() {
+			cluster.Spec.Seed = nil
 
 			seed, err := SeedFromCluster(cluster)
 			Expect(err).ToNot(HaveOccurred())

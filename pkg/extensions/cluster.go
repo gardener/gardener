@@ -73,7 +73,7 @@ func SyncClusterResourceToSeed(
 			cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
 		}
 		if seedObj != nil {
-			cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
+			cluster.Spec.Seed = &runtime.RawExtension{Object: seedObj}
 		}
 		if shootObj != nil {
 			cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
@@ -138,7 +138,7 @@ func SeedFromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.Se
 		seed    = &gardencorev1beta1.Seed{}
 	)
 
-	if cluster.Spec.Seed.Raw == nil {
+	if cluster.Spec.Seed == nil || cluster.Spec.Seed.Raw == nil {
 		return nil, nil
 	}
 	if _, _, err := decoder.Decode(cluster.Spec.Seed.Raw, nil, seed); err != nil {

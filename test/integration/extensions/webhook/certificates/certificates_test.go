@@ -146,7 +146,7 @@ var _ = Describe("Certificates tests", func() {
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				CloudProfile: runtime.RawExtension{Object: &gardencorev1beta1.CloudProfile{}},
-				Seed:         runtime.RawExtension{Object: &gardencorev1beta1.Seed{}},
+				Seed:         &runtime.RawExtension{Object: &gardencorev1beta1.Seed{}},
 				Shoot:        runtime.RawExtension{Object: &gardencorev1beta1.Shoot{}},
 			},
 		}

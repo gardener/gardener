@@ -83,7 +83,7 @@ var _ = Describe("BackupEntry", func() {
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
-				Seed:         runtime.RawExtension{Raw: []byte("{}")},
+				Seed:         &runtime.RawExtension{Raw: []byte("{}")},
 				Shoot:        runtime.RawExtension{Raw: []byte("{}")},
 			},
 		}
