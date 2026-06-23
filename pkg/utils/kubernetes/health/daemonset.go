@@ -87,28 +87,30 @@ func IsDaemonSetProgressing(daemonSet *appsv1.DaemonSet) (bool, string) {
 // CheckDaemonSetWithPreservedNodes re-evaluates a failing DaemonSet health check by subtracting
 // unavailable pods on preserved unhealthy nodes.
 // Returns true if the failure is suppressed (attributable entirely to preserved nodes), false otherwise.
-func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *appsv1.DaemonSet, preservedNodeNames sets.Set[string]) (bool, error) {
+func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *appsv1.DaemonSet, preservedNodeNames sets.Set[string]) (isHealthy bool, suppress bool, err error) {
 	// Fast path: already healthy.
-	if err := CheckDaemonSet(ds); err == nil {
-		return false, nil
+	if err = CheckDaemonSet(ds); err == nil {
+		isHealthy = true
+		// explicit return to suppress linter error
+		return isHealthy, false, nil
 	}
 	if preservedNodeNames.Len() == 0 {
-		return false, nil
+		return
 	}
 	// Count not-ready pods on preserved unhealthy nodes using the PodNodeName field index.
 	selector, err := metav1.LabelSelectorAsSelector(ds.Spec.Selector)
 	if err != nil {
-		return false, err
+		return
 	}
 	var preservedUnavailable int
 	for nodeName := range preservedNodeNames {
 		podList := &corev1.PodList{}
-		if err := c.List(ctx, podList,
+		if err = c.List(ctx, podList,
 			client.InNamespace(ds.Namespace),
 			client.MatchingFields{indexer.PodNodeName: nodeName},
 			client.MatchingLabelsSelector{Selector: selector},
 		); err != nil {
-			return false, err
+			return
 		}
 		for _, pod := range podList.Items {
 			if !slices.ContainsFunc(pod.Status.Conditions, func(c corev1.PodCondition) bool {
@@ -123,13 +125,13 @@ func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *
 	if ds.Status.UpdatedNumberScheduled < ds.Status.DesiredNumberScheduled {
 		// During rollout: tolerance is maxUnavailable.
 		if nonPreservedUnavailable > maxUnavailable {
-			return false, nil
+			return
 		}
 	} else {
 		// Fully rolled out: tolerance is 0.
 		if nonPreservedUnavailable > 0 {
-			return false, nil
+			return
 		}
 	}
-	return true, nil
+	return false, true, nil
 }
