@@ -41,6 +41,10 @@ The resource is written by Gardener before it starts the reconciliation flow of 
 
 :warning: All Gardener components use the `core.gardener.cloud/v1beta1` version, i.e., the `Cluster` resource will contain the objects in this version.
 
+> [!NOTE]
+> The `.spec.seed` field is optional and not set for self-hosted shoots (see [GEP-28](../proposals/28-self-hosted-shoot-clusters.md)).
+> Extension controllers must tolerate its absence and not assume that a `Seed` resource is always present in the `Cluster`.
+
 ## Important Information that Should Be Taken into Account
 
 There are some fields in the `Shoot` specification that might be interesting to take into account.
