@@ -15,3 +15,7 @@ versions:
   addedIn: "1.136.0"
   startDate: 2026-02-14
   endDate: 2027-04-14
+- version: "1.36"
+  addedIn: "1.145.0"
+  startDate: 2026-06-19
+  endDate: 2027-08-19
