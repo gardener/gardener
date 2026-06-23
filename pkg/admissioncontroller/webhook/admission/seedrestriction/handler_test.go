@@ -1658,8 +1658,8 @@ var _ = Describe("handler", func() {
 							secret    *corev1.Secret
 							gardenlet *seedmanagementv1alpha1.Gardenlet
 
-							gardenletNamespace = "glet1ns"
-							gardenletName      = "glet1name"
+							gardenletNamespace = "garden"
+							gardenletName      = "seed"
 						)
 
 						BeforeEach(func() {
@@ -1886,6 +1886,42 @@ var _ = Describe("handler", func() {
 							})).To(Succeed())
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should forbid if the gardenlet name does not match the requesting seed", func() {
+							foreignName := "other-seed"
+							secret.Data["description"] = []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource " + gardenletNamespace + "/" + foreignName + ".")
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("gardenlet %s/%s does not belong to seed %q", gardenletNamespace, foreignName, seedName),
+									},
+								},
+							}))
+						})
+
+						It("should forbid if the gardenlet namespace is not the garden namespace", func() {
+							foreignNamespace := "kube-system"
+							secret.Data["description"] = []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource " + foreignNamespace + "/" + gardenletName + ".")
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("gardenlet %s/%s does not belong to seed %q", foreignNamespace, gardenletName, seedName),
+									},
+								},
+							}))
 						})
 					})
 
