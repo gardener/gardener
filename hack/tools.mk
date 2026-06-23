@@ -159,7 +159,10 @@ $(GOIMPORTS): $(call tool_version_file,$(GOIMPORTS),$(GOIMPORTS_VERSION))
 $(GOIMPORTSREVISER): $(call tool_version_file,$(GOIMPORTSREVISER),$(GOIMPORTSREVISER_VERSION))
 	$(call go_tool_copy,$(GOIMPORTSREVISER))
 
-$(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION))
+# Include LOGCHECK_VERSION in golangci-lint's marker so any input that invalidates the bundled logcheck plugin also
+# invalidates golangci-lint, forcing both to be (re)built from the same module graph and avoiding plugin-vs-host
+# x/tools/go/analysis mismatches.
+$(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION)-$(LOGCHECK_VERSION))
 	$(call go_tool_copy,$(GOLANGCI_LINT))
 
 $(GOSEC): $(call tool_version_file,$(GOSEC),$(GOSEC_VERSION))
@@ -206,16 +209,14 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 	tar zxvf - -C $(abspath $(TOOLS_BIN_DIR))
 	touch $(KUSTOMIZE) && chmod +x $(KUSTOMIZE)
 
-# Build logcheck with the same toolchain as golangci-lint (required for plugin loading). The recipe also re-copies
-# golangci-lint via go_tool_copy so the locally-built plugin and host both come from the current main go.mod.
-# Without this, a stale /gardenertools golangci-lint would risk an x/tools/go/analysis version mismatch.
+# Build logcheck with the same toolchain as golangci-lint (required for plugin loading). Depending on $(GOLANGCI_LINT)
+# ensures the host binary is (re)built from the current main go.mod before the plugin is — see also the composite
+# marker on $(GOLANGCI_LINT), which guarantees both invalidate together.
 ifeq ($(IS_GARDENER),true)
-$(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION))
-	$(call go_tool_copy,$(GOLANGCI_LINT))
+$(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
 	cd $(GARDENER_HACK_DIR)/tools/logcheck; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
-$(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION))
-	$(call go_tool_copy,$(GOLANGCI_LINT))
+$(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
 	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
 endif
 
