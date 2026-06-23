@@ -109,6 +109,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			}
 			botanist.Shoot.ControlPlaneNamespace = namespace
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		Context("CA wanted", func() {
