@@ -111,10 +111,9 @@ func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *
 			return false, err
 		}
 		for _, pod := range podList.Items {
-			isReady := slices.ContainsFunc(pod.Status.Conditions, func(c corev1.PodCondition) bool {
+			if !slices.ContainsFunc(pod.Status.Conditions, func(c corev1.PodCondition) bool {
 				return c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue
-			})
-			if !isReady {
+			}) {
 				preservedUnavailable++
 			}
 		}

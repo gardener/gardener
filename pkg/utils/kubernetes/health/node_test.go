@@ -41,27 +41,38 @@ var _ = Describe("Node", func() {
 					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
 					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
 				}}},
-				true),
+				true,
+			),
 			Entry("preserved and not ready (Unknown)",
 				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
 					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
 					{Type: corev1.NodeReady, Status: corev1.ConditionUnknown},
 				}}},
-				true),
+				true,
+			),
 			Entry("preserved and ready",
 				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
 					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
 					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
 				}}},
-				false),
+				false,
+			),
 			Entry("not preserved and not ready",
 				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
 					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
 				}}},
-				false),
+				false,
+			),
+			Entry("not preserved and ready",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+				}}},
+				false,
+			),
 			Entry("no conditions",
 				corev1.Node{},
-				false),
+				false,
+			),
 		)
 	})
 })
