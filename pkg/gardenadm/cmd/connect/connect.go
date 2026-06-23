@@ -11,8 +11,6 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
@@ -85,7 +83,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set for self-hosted shoot: %w", err)
 	}
 
-	if alreadyConnected, err := isGardenletDeployed(ctx, b); err != nil {
+	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b); err != nil {
 		return fmt.Errorf("failed checking if gardenlet is already deployed: %w", err)
 	} else if !alreadyConnected || opts.Force {
 		bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.GardenScheme)
@@ -178,24 +176,6 @@ Happy Gardening!
 `, b.Shoot.ControlPlaneNamespace, opts.BootstrapToken, opts.ConfigDir)
 
 	return nil
-}
-
-func isGardenletDeployed(ctx context.Context, b *botanist.GardenadmBotanist) (bool, error) {
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}, &appsv1.Deployment{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("failed checking if gardenlet deployment already exists: %w", err)
-		}
-		return false, nil
-	}
-
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: gardenletdeployer.GardenletDefaultKubeconfigSecretName}, &corev1.Secret{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("failed checking if gardenlet's kubeconfig secret already exists: %w", err)
-		}
-		return false, nil
-	}
-
-	return true, nil
 }
 
 func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist) error {
