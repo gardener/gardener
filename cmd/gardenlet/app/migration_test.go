@@ -21,63 +21,65 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("cleanupHashVersioningSecrets", func() {
-	var (
-		ctx        = context.Background()
-		fakeClient client.Client
-	)
+var _ = Describe("Migration", func() {
+	Describe("#CleanupHashVersioningSecrets", func() {
+		var (
+			ctx        = context.Background()
+			fakeClient client.Client
+		)
 
-	BeforeEach(func() {
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-	})
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		})
 
-	It("should do nothing when there are no shoot namespaces", func() {
-		Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
-	})
+		It("should do nothing when there are no shoot namespaces", func() {
+			Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
+		})
 
-	It("should not error when shoot namespaces exist but the secret is absent", func() {
-		ns := shootNamespace("shoot--foo--bar")
-		Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+		It("should not error when shoot namespaces exist but the secret is absent", func() {
+			ns := shootNamespace("shoot--foo--bar")
+			Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
-		Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
-	})
+			Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
+		})
 
-	It("should delete the secret in a shoot namespace", func() {
-		ns := shootNamespace("shoot--foo--bar")
-		Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+		It("should delete the secret in a shoot namespace", func() {
+			ns := shootNamespace("shoot--foo--bar")
+			Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
-		secret := oscHashSecret("shoot--foo--bar")
-		Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			secret := oscHashSecret("shoot--foo--bar")
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
-		Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
+			Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
 
-		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(MatchError(ContainSubstring("not found")))
-	})
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(MatchError(ContainSubstring("not found")))
+		})
 
-	It("should delete secrets across multiple shoot namespaces", func() {
-		for _, name := range []string{"shoot--p--a", "shoot--p--b", "shoot--p--c"} {
-			Expect(fakeClient.Create(ctx, shootNamespace(name))).To(Succeed())
-			Expect(fakeClient.Create(ctx, oscHashSecret(name))).To(Succeed())
-		}
+		It("should delete secrets across multiple shoot namespaces", func() {
+			for _, name := range []string{"shoot--p--a", "shoot--p--b", "shoot--p--c"} {
+				Expect(fakeClient.Create(ctx, shootNamespace(name))).To(Succeed())
+				Expect(fakeClient.Create(ctx, oscHashSecret(name))).To(Succeed())
+			}
 
-		Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
+			Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
 
-		for _, name := range []string{"shoot--p--a", "shoot--p--b", "shoot--p--c"} {
-			secret := oscHashSecret(name)
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
-		}
-	})
+			for _, name := range []string{"shoot--p--a", "shoot--p--b", "shoot--p--c"} {
+				secret := oscHashSecret(name)
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
+			}
+		})
 
-	It("should handle a mix of namespaces with and without the secret", func() {
-		for _, name := range []string{"shoot--p--a", "shoot--p--b"} {
-			Expect(fakeClient.Create(ctx, shootNamespace(name))).To(Succeed())
-		}
-		Expect(fakeClient.Create(ctx, oscHashSecret("shoot--p--a"))).To(Succeed())
+		It("should handle a mix of namespaces with and without the secret", func() {
+			for _, name := range []string{"shoot--p--a", "shoot--p--b"} {
+				Expect(fakeClient.Create(ctx, shootNamespace(name))).To(Succeed())
+			}
+			Expect(fakeClient.Create(ctx, oscHashSecret("shoot--p--a"))).To(Succeed())
 
-		Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
+			Expect(CleanupHashVersioningSecrets(ctx, fakeClient)).To(Succeed())
 
-		secretA := oscHashSecret("shoot--p--a")
-		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretA), secretA)).To(BeNotFoundError())
+			secretA := oscHashSecret("shoot--p--a")
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretA), secretA)).To(BeNotFoundError())
+		})
 	})
 })
 

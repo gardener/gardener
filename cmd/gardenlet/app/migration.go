@@ -30,7 +30,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 		return fmt.Errorf("failed to migrate VerticalPodAutoscaler with 'MigrateVPAEmptyPatch' migration: %w", err)
 	}
 
-	// TODO(shafeeqes): Remove this function in gardener v1.147
+	// TODO(shafeeqes): Remove this function in gardener v1.148
 	log.Info("Cleaning up OSC hash versioning secrets in shoot namespaces")
 	if err := CleanupHashVersioningSecrets(ctx, seedClient); err != nil {
 		return fmt.Errorf("failed to clean up OSC hash versioning secrets: %w", err)
@@ -39,6 +39,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	return nil
 }
 
+// CleanupHashVersioningSecrets removes the OSC hash versioning secrets in shoot namespaces.
 func CleanupHashVersioningSecrets(ctx context.Context, seedClient client.Client) error {
 	shootNamespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
