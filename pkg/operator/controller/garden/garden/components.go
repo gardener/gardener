@@ -1410,13 +1410,20 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
+	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
+
+	output := fluentcustomresources.GetStaticClusterOutput(customResourcesLabels)
+	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
+	}
+
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		true,
 		"-garden",
 		logging.GardenCentralLoggingConfigurations,
-		fluentcustomresources.GetStaticClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}),
+		output,
 	)
 }
 
@@ -1725,6 +1732,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		operatorv1alpha1.SecretNameCARuntime,
 		component.ClusterTypeSeed,
 		true,
+		features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 	)
 }
 

@@ -740,6 +740,38 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getKubeRBACProxyClusterRoleBinding(),
 			))
 		})
+
+		It("should add the logs/victorialogs pipeline when VictoriaLogsBackend is enabled", func() {
+			values.VictoriaLogsBackend = true
+			component = New(c, namespace, values, fakeSecretManager)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+			tlsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "logging-tls",
+					Namespace: namespace,
+				},
+			}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
+
+			openTelemetryCollector.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
+				Exporters:  []string{"otlphttp/victorialogs"},
+				Receivers:  []string{"otlp"},
+				Processors: []string{"batch"},
+			}
+
+			Expect(customResourcesManagedResource).To(consistOf(
+				openTelemetryCollector,
+				getGateway(),
+				getVirtualService(),
+				getDestinationRule(),
+				getTLSSecret(tlsSecret),
+				serviceMonitor,
+				serviceAccount,
+			))
+		})
 	})
 
 	Describe("#Destroy", func() {

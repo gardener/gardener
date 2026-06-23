@@ -135,6 +135,12 @@ QueueName ` + queueNameSeedJournald + `
 }
 
 // GetDynamicClusterOutput returns the dynamic fluent-bit-to-vali output used by the Fluent Operator.
+// On the gardenlet path (a seed without a co-located garden) there is no static ClusterOutput, so
+// the gardener-plugin's seedClient fallback is the route for non-`shoot-*` records (seed-system
+// pods in the `garden` namespace). On the operator path (garden runtime, including the seedIsGarden
+// scenario) this is the only ClusterOutput deployed for kubernetes.* records — the static
+// ClusterOutput is intentionally skipped there to avoid log duplication, and the seedClient
+// fallback ships garden-namespace records to the local OpenTelemetry Collector.
 func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		return &fluentbitv1alpha2.ClusterOutput{
@@ -146,7 +152,7 @@ func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.Cluste
 				CustomPlugin: &custom.CustomPlugin{
 					Config: `Name ` + pluginNameGardener + `
 Match                     ` + matchKubernetes + `
-LogLevel                  error
+LogLevel                  info
 Retry_Limit               10
 SeedType                  otlp_grpc
 ShootType                 otlp_grpc
@@ -183,6 +189,9 @@ TagKey                    tag`,
 		}
 	}
 
+	// Legacy vali variant (OpenTelemetryCollector feature gate off): the gardenervali plugin filters
+	// records by the `gardener.cloud/role:shoot` namespace label before any seedClient fallback can
+	// run.
 	return &fluentbitv1alpha2.ClusterOutput{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   outputNameVali,
@@ -234,7 +243,7 @@ DQueDir                   ` + dqueDir + `
 DQueName                  ` + dqueNameGarden + `
 Origin                    ` + originGarden + `
 HostnameValue             ${NODE_NAME}
-FallbackToTagWhenMetadataIsMissing false`,
+FallbackToTagWhenMetadataIsMissing true`,
 				},
 			},
 		}

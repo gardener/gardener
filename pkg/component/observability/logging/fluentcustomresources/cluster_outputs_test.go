@@ -67,7 +67,7 @@ FallbackToTagWhenMetadataIsMissing false`,
 						CustomPlugin: &custom.CustomPlugin{
 							Config: `Name gardener
 Match                     kubernetes.*
-LogLevel                  error
+LogLevel                  info
 Retry_Limit               10
 SeedType                  otlp_grpc
 ShootType                 otlp_grpc
@@ -132,7 +132,7 @@ DQueDir                   /var/fluentbit/dque
 DQueName                  garden
 Origin                    garden
 HostnameValue             ${NODE_NAME}
-FallbackToTagWhenMetadataIsMissing false`,
+FallbackToTagWhenMetadataIsMissing true`,
 						},
 					},
 				},

@@ -110,6 +110,11 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
 					APIGroups: []string{"extensions.gardener.cloud"},
 					Resources: []string{"clusters"},
 					Verbs:     []string{"get", "list", "watch"},
