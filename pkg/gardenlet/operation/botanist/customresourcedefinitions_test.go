@@ -21,9 +21,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
-	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
@@ -33,7 +32,7 @@ var _ = Describe("CustomResourceDefinitions", func() {
 
 		fakeClient client.Client
 
-		b *GardenadmBotanist
+		b *Botanist
 	)
 
 	BeforeEach(func() {
@@ -45,17 +44,15 @@ var _ = Describe("CustomResourceDefinitions", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(fakeClient, mapper)
 
-		b = &GardenadmBotanist{
-			Botanist: &botanistpkg.Botanist{
-				Operation: &operation.Operation{
-					SeedClientSet: fakekubernetes.
-						NewClientSetBuilder().
-						WithClient(fakeClient).
-						WithApplier(applier).
-						WithRESTConfig(&rest.Config{}).
-						Build(),
-					Shoot: &shoot.Shoot{KubernetesVersion: semver.MustParse("1.33.0")},
-				},
+		b = &Botanist{
+			Operation: &operation.Operation{
+				SeedClientSet: fakekubernetes.
+					NewClientSetBuilder().
+					WithClient(fakeClient).
+					WithApplier(applier).
+					WithRESTConfig(&rest.Config{}).
+					Build(),
+				Shoot: &shoot.Shoot{KubernetesVersion: semver.MustParse("1.33.0")},
 			},
 		}
 	})
