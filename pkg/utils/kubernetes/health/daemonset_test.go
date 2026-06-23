@@ -211,9 +211,10 @@ var _ = Describe("DaemonSet", func() {
 			c := fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeFalse())
+			Expect(isHealthy).To(BeTrue())
+			Expect(suppress).To(BeFalse())
 		})
 
 		It("returns true when NumberAvailable is zero but all unavailable pods are on preserved nodes", func() {
@@ -231,9 +232,10 @@ var _ = Describe("DaemonSet", func() {
 
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeTrue())
+			Expect(isHealthy).To(BeFalse())
+			Expect(suppress).To(BeTrue())
 		})
 
 		It("returns false when no preserved nodes exist", func() {
@@ -245,9 +247,10 @@ var _ = Describe("DaemonSet", func() {
 
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeFalse())
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			Expect(err).To(HaveOccurred())
+			Expect(isHealthy).To(BeFalse())
+			Expect(suppress).To(BeFalse())
 		})
 
 		It("returns true when the only unavailable pod is on a preserved node", func() {
@@ -262,9 +265,10 @@ var _ = Describe("DaemonSet", func() {
 
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeTrue())
+			Expect(isHealthy).To(BeFalse())
+			Expect(suppress).To(BeTrue())
 		})
 
 		It("returns false when unavailable pods are on both preserved and normal nodes", func() {
@@ -284,9 +288,10 @@ var _ = Describe("DaemonSet", func() {
 
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeFalse())
+			Expect(isHealthy).To(BeFalse())
+			Expect(suppress).To(BeFalse())
 		})
 
 		It("returns false when nonPreservedUnavailable count still exceeds maxUnavailable during rollout", func() {
@@ -306,9 +311,10 @@ var _ = Describe("DaemonSet", func() {
 
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeFalse())
+			Expect(isHealthy).To(BeFalse())
+			Expect(suppress).To(BeFalse())
 		})
 
 		It("returns true when adjusted unavailable count is within maxUnavailable during rollout", func() {
@@ -329,9 +335,10 @@ var _ = Describe("DaemonSet", func() {
 
 			preservedNodeNames, err := health.GetPreservedNodeNames(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
+			isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, c, ds, preservedNodeNames)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(suppressed).To(BeTrue())
+			Expect(isHealthy).To(BeFalse())
+			Expect(suppress).To(BeTrue())
 		})
 	})
 })

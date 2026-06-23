@@ -621,12 +621,13 @@ func (h *Health) checkSystemComponents(
 			h.log.Error(err, "Failed to list preserved nodes for DaemonSet suppression check")
 		} else {
 			suppressFunc = func(mr *resourcesv1alpha1.ManagedResource) bool {
-				// For each resource in the MR: DaemonSets are checked with the preserved-node-aware
-				// check so that failures attributable entirely to preserved unhealthy nodes do not
-				// block suppression; Deployment and StatefulSet are checked directly and reject
-				// suppression if unhealthy; any other kind (Service, ConfigMap, RBAC, etc.) also
-				// rejects suppression — if an unknown resource kind caused the MR failure, it
-				// cannot be attributed to preserved nodes.
+				// Suppress only if the MR failure is entirely attributable to DaemonSet pods
+				// on preserved unhealthy nodes. Deployments and StatefulSets are also fetched
+				// and checked directly — if unhealthy they reject suppression since their
+				// failures cannot be attributed to a single preserved node. Resource kinds that
+				// GRM never health-checks (RBAC, PDB, ConfigMap, CSIDriver, etc.) are skipped.
+				// suppressedCount ensures we don't suppress an MR that has no DaemonSets at all.
+				suppressedCount := 0
 				for _, ref := range mr.Status.Resources {
 					switch ref.Kind {
 					case "DaemonSet":
@@ -635,14 +636,18 @@ func (h *Health) checkSystemComponents(
 							h.log.Error(err, "Failed to get DaemonSet for preserved node suppression check", "namespace", ref.Namespace, "name", ref.Name)
 							return false
 						}
-						suppressed, err := health.CheckDaemonSetWithPreservedNodes(ctx, shootClient.Client(), ds, preservedNodeNames)
+						isHealthy, suppress, err := health.CheckDaemonSetWithPreservedNodes(ctx, shootClient.Client(), ds, preservedNodeNames)
 						if err != nil {
 							h.log.Error(err, "Failed to check DaemonSet with preserved nodes", "namespace", ref.Namespace, "name", ref.Name)
 							return false
 						}
-						if !suppressed {
+						if isHealthy {
+							continue
+						}
+						if !suppress {
 							return false
 						}
+						suppressedCount++
 					case "Deployment":
 						deploy := &appsv1.Deployment{}
 						if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, deploy); err != nil {
@@ -662,10 +667,10 @@ func (h *Health) checkSystemComponents(
 							return false
 						}
 					default:
-						return false
+						continue
 					}
 				}
-				return true
+				return suppressedCount > 0
 			}
 		}
 	}
