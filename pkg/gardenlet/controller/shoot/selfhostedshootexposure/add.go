@@ -5,7 +5,6 @@
 package selfhostedshootexposure
 
 import (
-	"context"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -36,8 +35,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
-	if r.RuntimeClient == nil {
-		r.RuntimeClient = mgr.GetClient()
+	if r.ShootClient == nil {
+		r.ShootClient = mgr.GetClient()
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
@@ -47,41 +46,34 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	// (RBAC, hence endpointUpdatesEnabled fetches them by name, indirectly via ControllerInstallations).
 	return builder.
 		ControllerManagedBy(mgr).
-		// Only one Shoot is managed, and every Node event enqueues the same key, so there is nothing to parallelize.
+		// Only one Shoot is managed, so there is nothing to parallelize.
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Named(ControllerName).
 		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(),
 			&corev1.Node{},
-			r.EventHandler(),
+			&handler.EnqueueRequestForObject{},
 			r.NodePredicate(),
 		)).
 		// Watch the Shoot so switching the exposure mechanism (or omitting exposure) reconciles without a Node event.
 		WatchesRawSource(source.Kind[client.Object](gardenCluster.GetCache(),
 			&gardencorev1beta1.Shoot{},
-			r.EventHandler(),
-			shootExposureChangePredicate(),
+			&handler.EnqueueRequestForObject{},
+			r.ShootExposureChangePredicate(),
 		)).
 		// Watch the SelfHostedShootExposure for ingress changes by the exposure extension (e.g. a rotated LB IP).
 		WatchesRawSource(source.Kind[client.Object](mgr.GetCache(),
 			&extensionsv1alpha1.SelfHostedShootExposure{},
-			r.EventHandler(),
-			exposureIngressChangePredicate(),
+			&handler.EnqueueRequestForObject{},
+			r.ExposureIngressChangePredicate(),
 		)).
 		Complete(r)
-}
-
-// EventHandler returns a handler that enqueues the configured shoot key for every relevant Node event.
-func (r *Reconciler) EventHandler() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
-		return []reconcile.Request{{NamespacedName: r.ShootKey}}
-	})
 }
 
 // NodePredicate triggers on control-plane Node events relevant to exposure: create/delete of a control-plane Node,
 // gaining/losing the control-plane label (after registration), and address or health-verdict changes on one.
 func (r *Reconciler) NodePredicate() predicate.Predicate {
 	isControlPlane := func(obj client.Object) bool {
-		_, ok := obj.GetLabels()[nodeRoleControlPlaneLabel]
+		_, ok := obj.GetLabels()[v1beta1constants.LabelNodeRoleControlPlane]
 		return ok
 	}
 	return predicate.Funcs{
@@ -92,7 +84,7 @@ func (r *Reconciler) NodePredicate() predicate.Predicate {
 			oldNode, ok1 := e.ObjectOld.(*corev1.Node)
 			newNode, ok2 := e.ObjectNew.(*corev1.Node)
 			if !ok1 || !ok2 {
-				return true
+				return false
 			}
 			// React only if the node is (or was) a control-plane node. A label-membership change always matters;
 			// otherwise only address or health-verdict changes do.
@@ -108,8 +100,8 @@ func (r *Reconciler) NodePredicate() predicate.Predicate {
 	}
 }
 
-// exposureIngressChangePredicate triggers only when the ingress reported by the exposure extension changes.
-func exposureIngressChangePredicate() predicate.Predicate {
+// ExposureIngressChangePredicate triggers only when the ingress reported by the exposure extension changes.
+func (r *Reconciler) ExposureIngressChangePredicate() predicate.Predicate {
 	ingressOf := func(obj client.Object) []corev1.LoadBalancerIngress {
 		if exposure, ok := obj.(*extensionsv1alpha1.SelfHostedShootExposure); ok {
 			return exposure.Status.Ingress
@@ -126,9 +118,9 @@ func exposureIngressChangePredicate() predicate.Predicate {
 	}
 }
 
-// shootExposureChangePredicate triggers only when the control-plane exposure configuration changes (or the Shoot first
+// ShootExposureChangePredicate triggers only when the control-plane exposure configuration changes (or the Shoot first
 // appears), so an unrelated Shoot update does not enqueue a reconcile.
-func shootExposureChangePredicate() predicate.Predicate {
+func (r *Reconciler) ShootExposureChangePredicate() predicate.Predicate {
 	exposureOf := func(obj client.Object) *gardencorev1beta1.Exposure {
 		shoot, ok := obj.(*gardencorev1beta1.Shoot)
 		if !ok {
