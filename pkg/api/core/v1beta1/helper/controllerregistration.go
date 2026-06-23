@@ -29,7 +29,7 @@ func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resou
 func ContinuousEndpointUpdateEnabled(registrations []gardencorev1beta1.ControllerRegistration, extensionType string) bool {
 	for _, reg := range registrations {
 		for _, res := range reg.Spec.Resources {
-			if res.Kind == extensionsv1alpha1.SelfHostedShootExposureResource && strings.EqualFold(res.Type, extensionType) {
+			if res.Kind == extensionsv1alpha1.SelfHostedShootExposureResource && res.Type == extensionType {
 				return ptr.Deref(res.ContinuousEndpointUpdate, true)
 			}
 		}

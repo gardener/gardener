@@ -60,7 +60,7 @@ func (b *Botanist) DeploySelfHostedShootExposure(ctx context.Context) error {
 
 	endpoints, err := gardenerutils.ControlPlaneEndpointsFromNodes(nodes)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed computing control plane endpoints: %w", err)
 	}
 
 	b.Shoot.Components.Extensions.SelfHostedShootExposure.Values.Endpoints = endpoints

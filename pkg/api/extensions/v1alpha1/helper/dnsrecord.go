@@ -43,12 +43,12 @@ func DNSValuesFromIngress(ingress []corev1.LoadBalancerIngress, ipFamilies []gar
 	}
 
 	var ips, hostnames []string
-	for _, i := range ingress {
-		if i.IP != "" {
-			ips = append(ips, i.IP)
+	for _, ingress := range ingress {
+		if ingress.IP != "" {
+			ips = append(ips, ingress.IP)
 		}
-		if i.Hostname != "" {
-			hostnames = append(hostnames, i.Hostname)
+		if ingress.Hostname != "" {
+			hostnames = append(hostnames, ingress.Hostname)
 		}
 	}
 
@@ -75,9 +75,9 @@ func DNSValuesFromIngress(ingress []corev1.LoadBalancerIngress, ipFamilies []gar
 // DNSValuesFromNodes computes the values and record type for a DNSRecord from the given node addresses: each node
 // contributes its first address in the order of addressTypePreference (first family with at least one match wins).
 func DNSValuesFromNodes(nodes []corev1.Node, ipFamilies []gardencorev1beta1.IPFamily, addressTypePreference ...corev1.NodeAddressType) ([]string, extensionsv1alpha1.DNSRecordType, error) {
-	for i := range nodes {
-		if len(nodes[i].Status.Addresses) == 0 {
-			return nil, "", fmt.Errorf("node %q has no addresses", nodes[i].Name)
+	for _, node := range nodes {
+		if len(node.Status.Addresses) == 0 {
+			return nil, "", fmt.Errorf("node %q has no addresses", node.Name)
 		}
 	}
 

@@ -35,7 +35,7 @@ var _ = Describe("Reconciler", func() {
 		ctx = context.Background()
 
 		gardenClient  client.Client
-		runtimeClient client.Client
+		shootClient   client.Client
 		runtimeScheme *runtime.Scheme
 		reconciler    *Reconciler
 
@@ -93,13 +93,13 @@ var _ = Describe("Reconciler", func() {
 		runtimeScheme = runtime.NewScheme()
 		Expect(kubernetes.AddSeedSchemeToScheme(runtimeScheme)).To(Succeed())
 		Expect(extensionsv1alpha1.AddToScheme(runtimeScheme)).To(Succeed())
-		runtimeClient = fakeclient.NewClientBuilder().WithScheme(runtimeScheme).Build()
+		shootClient = fakeclient.NewClientBuilder().WithScheme(runtimeScheme).Build()
 
 		reconciler = &Reconciler{
-			GardenClient:  gardenClient,
-			RuntimeClient: runtimeClient,
-			ShootKey:      client.ObjectKeyFromObject(shoot),
-			Clock:         testclock.NewFakeClock(time.Now()),
+			GardenClient: gardenClient,
+			ShootClient:  shootClient,
+			ShootKey:     client.ObjectKeyFromObject(shoot),
+			Clock:        testclock.NewFakeClock(time.Now()),
 		}
 	})
 
@@ -119,14 +119,14 @@ var _ = Describe("Reconciler", func() {
 
 	Context("DNS-based exposure", func() {
 		It("should patch the external DNSRecord with the sorted external node addresses", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.5")))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-2", externalIP("1.2.3.4")))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.5")))).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-2", externalIP("1.2.3.4")))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.RecordType).To(Equal(extensionsv1alpha1.DNSRecordTypeA))
 			// Equal (not ConsistOf) on purpose: the values must be sorted so equal node sets don't cause unnecessary updates.
 			Expect(updated.Spec.Values).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
@@ -134,47 +134,47 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should not patch the DNSRecord when it is already up-to-date", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
 			dnsRecord.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeA
 			dnsRecord.Spec.Values = []string{"1.2.3.4"}
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			// No reconcile annotation means the no-op guard skipped the patch entirely.
 			Expect(updated.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 		})
 
 		It("should fall back to a node's internal address if it has no external one (e.g. local setups)", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.Values).To(Equal([]string{"10.0.0.1"}))
 		})
 
 		It("should ignore the addresses of unhealthy nodes", func() {
 			unhealthy := controlPlaneNode("cp-2", externalIP("1.2.3.5"))
 			unhealthy.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, unhealthy)).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
+			Expect(shootClient.Create(ctx, unhealthy)).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.Values).To(Equal([]string{"1.2.3.4"}))
 		})
 
 		It("should fail if no healthy node has a usable address", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeHostName, Address: "cp-1"}))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeHostName, Address: "cp-1"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{})
 			Expect(err).To(MatchError(ContainSubstring("matches a configured IP family")))
@@ -184,17 +184,17 @@ var _ = Describe("Reconciler", func() {
 			leftover := &extensionsv1alpha1.SelfHostedShootExposure{
 				ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: metav1.NamespaceSystem},
 			}
-			Expect(runtimeClient.Create(ctx, leftover)).To(Succeed())
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, leftover)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.Values).To(Equal([]string{"1.2.3.4"}))
 
-			err := runtimeClient.Get(ctx, client.ObjectKeyFromObject(leftover), leftover)
+			err := shootClient.Get(ctx, client.ObjectKeyFromObject(leftover), leftover)
 			Expect(apierrors.IsNotFound(err)).To(BeTrue(), "orphaned SelfHostedShootExposure must be deleted")
 		})
 	})
@@ -249,7 +249,7 @@ var _ = Describe("Reconciler", func() {
 				return c.Status().Patch(ctx, exposure, client.MergeFrom(beforeStatus))
 			}
 
-			runtimeClient = fakeclient.NewClientBuilder().
+			shootClient = fakeclient.NewClientBuilder().
 				WithScheme(runtimeScheme).
 				WithStatusSubresource(&extensionsv1alpha1.SelfHostedShootExposure{}).
 				WithInterceptorFuncs(interceptor.Funcs{
@@ -307,38 +307,38 @@ var _ = Describe("Reconciler", func() {
 				Build()
 
 			reconciler = &Reconciler{
-				GardenClient:  gardenClient,
-				RuntimeClient: runtimeClient,
-				ShootKey:      client.ObjectKeyFromObject(shoot),
-				Clock:         fakeClock,
+				GardenClient: gardenClient,
+				ShootClient:  shootClient,
+				ShootKey:     client.ObjectKeyFromObject(shoot),
+				Clock:        fakeClock,
 			}
 		})
 
 		It("should deploy the SelfHostedShootExposure and patch the DNSRecord from its ingress", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			// The exposure resource was created carrying the control-plane node endpoints (all addresses, the extension
 			// decides which to use).
 			exposure := &extensionsv1alpha1.SelfHostedShootExposure{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: shootName}, exposure)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: shootName}, exposure)).To(Succeed())
 			Expect(exposure.Spec.Type).To(Equal(exposureType))
 			Expect(exposure.Spec.Endpoints).To(HaveLen(1))
 			Expect(exposure.Spec.Endpoints[0].NodeName).To(Equal("cp-1"))
 
 			// The DNSRecord was updated from the extension-reported ingress, not from the node addresses.
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.RecordType).To(Equal(extensionsv1alpha1.DNSRecordTypeA))
 			Expect(updated.Spec.Values).To(Equal([]string{"5.6.7.8"}))
 			Expect(updated.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 		})
 
 		It("should reuse the reported ingress without re-triggering the extension when endpoints are unchanged", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			// An already-reconciled exposure targeting the same endpoints, reporting a distinct ingress.
 			exposure := &extensionsv1alpha1.SelfHostedShootExposure{
@@ -350,17 +350,17 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 			}
-			Expect(runtimeClient.Create(ctx, exposure)).To(Succeed())
+			Expect(shootClient.Create(ctx, exposure)).To(Succeed())
 			exposure.Status.ObservedGeneration = exposure.Generation
 			exposure.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile, State: gardencorev1beta1.LastOperationStateSucceeded}
 			exposure.Status.Ingress = []corev1.LoadBalancerIngress{{IP: "9.9.9.9"}}
-			Expect(runtimeClient.Status().Update(ctx, exposure)).To(Succeed())
+			Expect(shootClient.Status().Update(ctx, exposure)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			// The DNSRecord was set from the pre-existing ingress (9.9.9.9); a re-trigger would have stamped 5.6.7.8.
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.Values).To(Equal([]string{"9.9.9.9"}))
 		})
 
@@ -370,17 +370,17 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should not deploy the SelfHostedShootExposure nor touch the DNSRecord", func() {
-				Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
-				Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+				Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
+				Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 				Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 				exposure := &extensionsv1alpha1.SelfHostedShootExposure{}
-				err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: shootName}, exposure)
+				err := shootClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: shootName}, exposure)
 				Expect(apierrors.IsNotFound(err)).To(BeTrue(), "SelfHostedShootExposure must not be created")
 
 				updated := &extensionsv1alpha1.DNSRecord{}
-				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+				Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 				Expect(updated.Spec.Values).To(BeEmpty())
 				Expect(updated.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 			})
@@ -399,34 +399,34 @@ var _ = Describe("Reconciler", func() {
 			exposure := &extensionsv1alpha1.SelfHostedShootExposure{
 				ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: metav1.NamespaceSystem},
 			}
-			Expect(runtimeClient.Create(ctx, exposure)).To(Succeed())
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, exposure)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))).To(Succeed())
 			// The record still points at the old extension ingress.
 			dnsRecord.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeA
 			dnsRecord.Spec.Values = []string{"5.6.7.8"}
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			// The DNSRecord was flipped to the control-plane node addresses one last time.
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.Values).To(Equal([]string{"10.0.0.1"}))
 			Expect(updated.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 
 			// The SelfHostedShootExposure was deleted, leaving the record to the operator.
-			err := runtimeClient.Get(ctx, client.ObjectKeyFromObject(exposure), exposure)
+			err := shootClient.Get(ctx, client.ObjectKeyFromObject(exposure), exposure)
 			Expect(apierrors.IsNotFound(err)).To(BeTrue(), "SelfHostedShootExposure must be deleted")
 		})
 
 		It("should do nothing when no SelfHostedShootExposure exists (DNS-based or never managed)", func() {
-			Expect(runtimeClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
-			Expect(runtimeClient.Create(ctx, dnsRecord)).To(Succeed())
+			Expect(shootClient.Create(ctx, controlPlaneNode("cp-1", externalIP("1.2.3.4")))).To(Succeed())
+			Expect(shootClient.Create(ctx, dnsRecord)).To(Succeed())
 
 			Expect(reconciler.Reconcile(ctx, reconcile.Request{})).To(Equal(reconcile.Result{}))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
 			Expect(updated.Spec.Values).To(BeEmpty())
 			Expect(updated.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 		})

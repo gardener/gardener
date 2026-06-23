@@ -527,6 +527,10 @@ Please refer to [GEP-0022: Improved Usage of the `ShootState` API](https://githu
 
 This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. A worker pool is removed from `status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate` field in the `Shoot` if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that all the nodes of that worker pool are successfully updated and are no longer pending manual in-place updates.
 
+### [`SelfHostedShootExposure` Reconciler](../../pkg/gardenlet/controller/shoot/selfhostedshootexposure)
+
+This reconciler only runs in `gardenlet`s responsible for a self-hosted `Shoot` and keeps its API server exposure in sync with the control-plane `Node`s. Depending on `spec.provider.workers[].controlPlane.exposure`, it either maintains the `SelfHostedShootExposure` extension resource's endpoints and updates the external `DNSRecord` from the reported ingress (extension-based exposure), or points the external `DNSRecord` directly at the control-plane node addresses (DNS-based exposure). When the mechanism is switched or exposure is removed, it updates the `DNSRecord` a final time and deletes the obsolete `SelfHostedShootExposure`. Please refer to [GEP-0036: Self-Hosted Shoot Exposure](https://github.com/gardener/enhancements/tree/main/geps/0036-self-hosted-shoot-exposure) for more details.
+
 ### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/controller/tokenrequestor)
 
 The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.

@@ -33,15 +33,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
-const nodeRoleControlPlaneLabel = "node-role.kubernetes.io/control-plane"
-
 // Reconciler keeps the SelfHostedShootExposure endpoints (or the external DNSRecord values in DNS-only setups) in
 // sync with the self-hosted shoot's control-plane Node addresses.
 type Reconciler struct {
-	GardenClient  client.Client
-	RuntimeClient client.Client
-	ShootKey      types.NamespacedName
-	Clock         clock.PassiveClock
+	GardenClient client.Client
+	ShootClient  client.Client
+	ShootKey     types.NamespacedName
+	Clock        clock.Clock
 }
 
 // Reconcile recomputes the control-plane endpoints from the current Node state and patches the SelfHostedShootExposure
@@ -61,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		// Extension-based exposure: some extensions opt out of continuously updated endpoints via the ControllerRegistration.
 		enabled, err := r.endpointUpdatesEnabled(ctx, shoot)
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed checking whether continuous endpoint updates are enabled: %w", err)
 		}
 		if !enabled {
 			log.V(1).Info("Endpoint updates disabled by ControllerRegistration")
@@ -84,11 +82,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 func (r *Reconciler) reconcileDNSExposure(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	nodes, err := r.listControlPlaneNodes(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed reconciling DNS-based exposure: %w", err)
 	}
 	// Steady-state DNS exposure: the record tracks the healthy nodes' preferably external addresses (erroring keeps the last good values).
 	if err := r.updateExternalDNSRecordFromNodes(ctx, log, shoot, health.FilterHealthyNodes(nodes), corev1.NodeExternalIP, corev1.NodeInternalIP); err != nil {
-		return err
+		return fmt.Errorf("failed reconciling DNS-based exposure: %w", err)
 	}
 	// Remove a SelfHostedShootExposure left over from a previous extension-based exposure (switch).
 	return r.deleteExposureIfExists(ctx, log, shoot)
@@ -108,14 +106,14 @@ func (r *Reconciler) reconcileExposureDisabled(ctx context.Context, log logr.Log
 	// Bootstrap address semantics: keep the record resolvable within the cluster network after the handoff.
 	nodes, err := r.listControlPlaneNodes(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed disabling control plane exposure: %w", err)
 	}
 	if err := r.updateExternalDNSRecordFromNodes(ctx, log, shoot, nodes, corev1.NodeInternalIP, corev1.NodeExternalIP); err != nil {
-		return err
+		return fmt.Errorf("failed disabling control plane exposure: %w", err)
 	}
 
 	log.Info("Control plane exposure disabled, deleting SelfHostedShootExposure after final external DNSRecord update")
-	return extensions.DeleteExtensionObject(ctx, r.RuntimeClient, exposure)
+	return extensions.DeleteExtensionObject(ctx, r.ShootClient, exposure)
 }
 
 // updateExternalDNSRecordFromNodes computes the DNSRecord values from the given nodes (in the given address-type
@@ -136,11 +134,11 @@ func (r *Reconciler) getExposure(ctx context.Context, shoot *gardencorev1beta1.S
 			Namespace: v1beta1helper.ControlPlaneNamespaceForShoot(shoot),
 		},
 	}
-	if err := r.RuntimeClient.Get(ctx, client.ObjectKeyFromObject(exposure), exposure); err != nil {
+	if err := r.ShootClient.Get(ctx, client.ObjectKeyFromObject(exposure), exposure); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed getting SelfHostedShootExposure: %w", err)
 	}
 	return exposure, nil
 }
@@ -153,7 +151,7 @@ func (r *Reconciler) deleteExposureIfExists(ctx context.Context, log logr.Logger
 		return err
 	}
 	log.Info("Deleting SelfHostedShootExposure left over from a previous extension-based exposure")
-	return extensions.DeleteExtensionObject(ctx, r.RuntimeClient, exposure)
+	return extensions.DeleteExtensionObject(ctx, r.ShootClient, exposure)
 }
 
 // patchExternalDNSRecord keeps the shoot's external DNSRecord in sync with the desired values and record type.
@@ -165,7 +163,7 @@ func (r *Reconciler) patchExternalDNSRecord(ctx context.Context, log logr.Logger
 		Name:      shoot.Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace: v1beta1helper.ControlPlaneNamespaceForShoot(shoot),
 	}
-	if err := r.RuntimeClient.Get(ctx, key, dnsRecord); err != nil {
+	if err := r.ShootClient.Get(ctx, key, dnsRecord); err != nil {
 		return fmt.Errorf("failed getting external DNSRecord %q: %w", key, err)
 	}
 
@@ -178,7 +176,7 @@ func (r *Reconciler) patchExternalDNSRecord(ctx context.Context, log logr.Logger
 	dnsRecord.Spec.Values = values
 	dnsRecord.Spec.RecordType = recordType
 	metav1.SetMetaDataAnnotation(&dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-	if err := r.RuntimeClient.Patch(ctx, dnsRecord, patch); err != nil {
+	if err := r.ShootClient.Patch(ctx, dnsRecord, patch); err != nil {
 		return fmt.Errorf("failed patching external DNSRecord %q: %w", key, err)
 	}
 
@@ -205,7 +203,7 @@ func (r *Reconciler) endpointUpdatesEnabled(ctx context.Context, shoot *gardenco
 
 func (r *Reconciler) listControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
 	nodes := &corev1.NodeList{}
-	if err := r.RuntimeClient.List(ctx, nodes, client.MatchingLabels{nodeRoleControlPlaneLabel: ""}); err != nil {
+	if err := r.ShootClient.List(ctx, nodes, client.MatchingLabels{v1beta1constants.LabelNodeRoleControlPlane: ""}); err != nil {
 		return nil, fmt.Errorf("failed listing control-plane nodes: %w", err)
 	}
 	return nodes.Items, nil
@@ -214,12 +212,12 @@ func (r *Reconciler) listControlPlaneNodes(ctx context.Context) ([]corev1.Node, 
 func (r *Reconciler) reconcileExtensionExposure(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	nodes, err := r.listControlPlaneNodes(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed reconciling extension-based exposure: %w", err)
 	}
 
 	endpoints, err := gardenerutils.ControlPlaneEndpointsFromNodes(nodes)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed reconciling extension-based exposure: %w", err)
 	}
 
 	values := &extensionsselfhostedshootexposure.Values{
@@ -237,14 +235,12 @@ func (r *Reconciler) reconcileExtensionExposure(ctx context.Context, log logr.Lo
 		}
 	}
 
-	c := extensionsselfhostedshootexposure.New(log, r.RuntimeClient, values)
-	if r.Clock != nil {
-		c.Clock = r.Clock
-	}
+	c := extensionsselfhostedshootexposure.New(log, r.ShootClient, values)
+	c.Clock = r.Clock
 
 	existing, err := r.getExposure(ctx, shoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed reconciling extension-based exposure: %w", err)
 	}
 
 	if existing != nil && health.CheckExtensionObject(existing) == nil &&
@@ -252,12 +248,12 @@ func (r *Reconciler) reconcileExtensionExposure(ctx context.Context, log logr.Lo
 		apiequality.Semantic.DeepEqual(existing.Spec.Endpoints, values.Endpoints) {
 		c.Ingress = existing.Status.Ingress
 	} else if err := component.OpWait(c).Deploy(ctx); err != nil {
-		return err
+		return fmt.Errorf("failed reconciling extension-based exposure: %w", err)
 	}
 
 	dnsValues, recordType, err := extensionsv1alpha1helper.DNSValuesFromIngress(c.Ingress, shoot.Spec.Networking.IPFamilies)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed reconciling extension-based exposure: %w", err)
 	}
 	return r.patchExternalDNSRecord(ctx, log, shoot, dnsValues, recordType)
 }

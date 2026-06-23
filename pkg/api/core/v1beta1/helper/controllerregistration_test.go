@@ -94,16 +94,5 @@ var _ = Describe("Helper", func() {
 			"local",
 			false,
 		),
-		Entry("type lookup is case-insensitive",
-			[]gardencorev1beta1.ControllerRegistration{{
-				Spec: gardencorev1beta1.ControllerRegistrationSpec{
-					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: "SelfHostedShootExposure", Type: "Local", ContinuousEndpointUpdate: new(false)},
-					},
-				},
-			}},
-			"local",
-			false,
-		),
 	)
 })
