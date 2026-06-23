@@ -18,12 +18,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
-	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -55,19 +53,11 @@ func (b *GardenadmBotanist) ReconcileBackupBucket(ctx context.Context) error {
 }
 
 func (b *GardenadmBotanist) reconcileCoreBackupBucketResource(ctx context.Context) (*gardencorev1beta1.BackupBucket, error) {
-	component := corebackupbucket.New(b.Logger, b.GardenClient, &corebackupbucket.Values{
-		Name:          string(b.Shoot.GetInfo().Status.UID),
-		Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),
-		DefaultRegion: b.Shoot.GetInfo().Spec.Region,
-		Clock:         b.Clock,
-		Shoot:         b.Shoot.GetInfo(),
-	}, corebackupbucket.DefaultInterval, corebackupbucket.DefaultTimeout)
-
-	if err := component.Deploy(ctx); err != nil {
+	if err := b.Shoot.Components.BackupBucket.Deploy(ctx); err != nil {
 		return nil, fmt.Errorf("failed reconciling core.gardener.cloud/v1beta1.BackupBucket resource: %w", err)
 	}
 
-	return component.Get(ctx)
+	return b.Shoot.Components.BackupBucket.Get(ctx)
 }
 
 // ReconcileBackupEntry reconciles the core.gardener.cloud/v1beta1.BackupEntry resource for the shoot cluster.

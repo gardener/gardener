@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
+	"github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/component/garden/backupentry"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -117,6 +118,7 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
+	BackupBucket             backupbucket.Interface
 	BackupEntry              backupentry.Interface
 	SourceBackupEntry        backupentry.Interface
 	ControlPlane             *ControlPlane

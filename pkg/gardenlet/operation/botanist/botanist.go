@@ -237,8 +237,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if !o.Shoot.IsWorkerless {
 		o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	}
-	if o.Shoot.IsSelfHosted() && !o.Shoot.RunsControlPlane() {
-		o.Shoot.Components.Bastion = b.DefaultBastion()
+	if o.Shoot.IsSelfHosted() {
+		o.Shoot.Components.BackupBucket = b.DefaultCoreBackupBucket()
+
+		if !o.Shoot.RunsControlPlane() {
+			o.Shoot.Components.Bastion = b.DefaultBastion()
+		}
 	}
 
 	// Addons
