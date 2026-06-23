@@ -53,7 +53,7 @@ spec:
               seed:
                 description: |-
                   Seed is a raw extension field that contains the seed resource referenced by the shoot that
-                  has to be reconciled.
+                  has to be reconciled. It is not set for self-hosted shoots (see GEP-28).
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               shoot:
@@ -63,7 +63,6 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
             required:
             - cloudProfile
-            - seed
             - shoot
             type: object
         required:
