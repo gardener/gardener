@@ -1083,6 +1083,8 @@ build:
             - pkg/provider-local/apis/local/install
             - pkg/provider-local/apis/local/v1alpha1
             - pkg/provider-local/charts
+            - pkg/provider-local/cloud-provider/api/v1alpha1
+            - pkg/provider-local/cloud-provider/loadbalancer
             - pkg/provider-local/controller/backupbucket
             - pkg/provider-local/controller/backupentry
             - pkg/provider-local/controller/backupoptions
@@ -1094,7 +1096,6 @@ build:
             - pkg/provider-local/controller/extension/shootafterworker
             - pkg/provider-local/controller/healthcheck
             - pkg/provider-local/controller/infrastructure
-            - pkg/provider-local/controller/networkpolicy
             - pkg/provider-local/controller/operatingsystemconfig
             - pkg/provider-local/controller/selfhostedshootexposure
             - pkg/provider-local/controller/worker

@@ -280,6 +280,8 @@ const (
 	GardenRoleIstioSystem = "istio-system"
 	// GardenRoleIstioIngress is the value of the GardenRole key indicating type 'istio-ingress'.
 	GardenRoleIstioIngress = "istio-ingress"
+	// GardenRoleInfra is the value of the GardenRole key indicating type 'infra'.
+	GardenRoleInfra = "infra"
 	// GardenRoleProject is the value of GardenRole key indicating type 'project'.
 	GardenRoleProject = "project"
 	// GardenRoleControlPlane is the value of the GardenRole key indicating type 'controlplane'.

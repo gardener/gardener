@@ -63,6 +63,10 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		}
 	}
 
+	if err := reconcileNetworkPolicies(ctx, providerClient, MachineNamespaceName(cluster.Shoot.Status.TechnicalID), cluster); err != nil {
+		return err
+	}
+
 	patch := client.MergeFrom(infrastructure.DeepCopy())
 	infrastructure.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{}
 	if nodes := cluster.Shoot.Spec.Networking.Nodes; nodes != nil {
@@ -117,7 +121,8 @@ func namespace(technicalID string) *corev1.Namespace {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: MachineNamespaceName(technicalID),
 			Labels: map[string]string{
-				v1beta1constants.GardenRole: "infra",
+				v1beta1constants.GardenRole:        v1beta1constants.GardenRoleInfra,
+				v1beta1constants.LabelSeedProvider: local.Type,
 			},
 		},
 	}
