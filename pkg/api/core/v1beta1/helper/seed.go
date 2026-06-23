@@ -66,7 +66,7 @@ func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSet
 
 // SeedSettingPersistentVolumeClaimAutoscalerEnabled returns true if the 'persistentVolumeClaimAutoscaler' setting is enabled.
 func SeedSettingPersistentVolumeClaimAutoscalerEnabled(settings *gardencorev1beta1.SeedSettings) bool {
-	return settings == nil || settings.PersistentVolumeClaimAutoscaler == nil || settings.PersistentVolumeClaimAutoscaler.Enabled
+	return settings != nil && settings.PersistentVolumeClaimAutoscaler != nil && settings.PersistentVolumeClaimAutoscaler.Enabled
 }
 
 // SeedSettingVerticalPodAutoscalerMaxAllowed returns the configured vertical pod autoscaler's maximum allowed recommendation.
