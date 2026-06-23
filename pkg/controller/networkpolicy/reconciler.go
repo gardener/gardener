@@ -171,6 +171,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInfra}),
 				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
@@ -185,6 +186,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInfra}),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
 		{
@@ -194,6 +196,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInfra}),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
 		{
@@ -203,6 +206,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInfra}),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
 		{
@@ -212,6 +216,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInfra}),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
 		{
