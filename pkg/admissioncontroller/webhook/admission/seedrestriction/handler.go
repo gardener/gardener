@@ -433,7 +433,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		case gardenletbootstraputil.KindManagedSeed:
 			return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, namespace, name)
 		case gardenletbootstraputil.KindGardenlet:
-			return h.allowIfGardenletIsNotYetBootstrapped(ctx, namespace, name)
+			return h.allowIfGardenletIsNotYetBootstrapped(ctx, seedName, namespace, name)
 		default:
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unknown kind %q found in bootstrap token secret description %q", kind, secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]))
 		}
@@ -614,7 +614,11 @@ func (h *Handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 	return admission.Errored(http.StatusBadRequest, fmt.Errorf("managed seed %s/%s is already bootstrapped", managedSeed.Namespace, managedSeed.Name))
 }
 
-func (h *Handler) allowIfGardenletIsNotYetBootstrapped(ctx context.Context, gardenletNamespace, gardenletName string) admission.Response {
+func (h *Handler) allowIfGardenletIsNotYetBootstrapped(ctx context.Context, seedName, gardenletNamespace, gardenletName string) admission.Response {
+	if gardenletName != seedName || gardenletNamespace != v1beta1constants.GardenNamespace {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("gardenlet %s/%s does not belong to seed %q", gardenletNamespace, gardenletName, seedName))
+	}
+
 	gardenlet := &seedmanagementv1alpha1.Gardenlet{}
 	if err := h.Client.Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gardenlet); err != nil {
 		if apierrors.IsNotFound(err) {
