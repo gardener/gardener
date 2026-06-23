@@ -146,12 +146,15 @@ type ControlPlane struct {
 	MachineControllerManager machinecontrollermanager.Interface
 	Plutono                  plutono.Interface
 	Prometheus               prometheus.Interface
-	ResourceManager          resourcemanager.Interface
-	Vali                     vali.Interface
-	OtelCollector            collector.Interface
-	VictoriaLogs             component.DeployWaiter
-	VerticalPodAutoscaler    vpa.Interface
-	VPNSeedServer            vpnseedserver.Interface
+	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in
+	// the garden namespace (only set for self-hosted shoots).
+	RuntimeResourceManager resourcemanager.Interface
+	ResourceManager        resourcemanager.Interface
+	Vali                   vali.Interface
+	OtelCollector          collector.Interface
+	VictoriaLogs           component.DeployWaiter
+	VerticalPodAutoscaler  vpa.Interface
+	VPNSeedServer          vpnseedserver.Interface
 }
 
 // Extensions contains references to extension resources.

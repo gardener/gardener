@@ -178,6 +178,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+		o.Shoot.Components.ControlPlane.RuntimeResourceManager, err = b.DefaultRuntimeGardenerResourceManager()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// system components

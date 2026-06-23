@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/bastion"
-	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -80,9 +79,6 @@ type GardenadmBotanist struct {
 type Components struct {
 	// Bastion is only set for `gardenadm bootstrap`.
 	Bastion *bastion.Bastion
-	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in
-	// the garden namespace.
-	RuntimeResourceManager resourcemanager.Interface
 }
 
 // Extension contains the resources needed for an extension registration.
@@ -163,12 +159,7 @@ func NewGardenadmBotanist(
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	if gardenadmBotanist.Shoot.RunsControlPlane() {
-		gardenadmBotanist.Components.RuntimeResourceManager, err = gardenadmBotanist.NewRuntimeGardenerResourceManager()
-		if err != nil {
-			return nil, fmt.Errorf("failed creating runtime gardener resource manager: %w", err)
-		}
-	} else {
+	if !gardenadmBotanist.Shoot.RunsControlPlane() {
 		gardenadmBotanist.Components.Bastion = gardenadmBotanist.DefaultBastion()
 
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".

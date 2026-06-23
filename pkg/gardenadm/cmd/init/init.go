@@ -144,7 +144,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
 			Fn: func(ctx context.Context) error {
-				b.Components.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
+				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 
 				if shootIsGarden {
@@ -152,7 +152,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Deploy,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
 			},
@@ -166,7 +166,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				)(ctx)
 			},
@@ -253,7 +253,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployGardenerResourceManagerIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying gardener-resource-manager into pod network",
 			Fn: func(ctx context.Context) error {
-				b.Components.RuntimeResourceManager.SetBootstrapControlPlaneNode(false)
+				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(false)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(false)
 
 				if shootIsGarden {
@@ -261,7 +261,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Deploy,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
 			},
@@ -276,7 +276,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				)(ctx)
 			},
@@ -409,7 +409,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Waiting until components with webhooks are ready",
 			Fn: flow.Sequential(
 				flow.Parallel(
-					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				),
 				b.WaitUntilExtensionControllerInstallationsHealthy,
