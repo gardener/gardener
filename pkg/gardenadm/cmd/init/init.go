@@ -18,8 +18,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenadm/botanist"
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -370,13 +371,15 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs have been reconciled",
-			Fn:           b.WaitUntilEtcdsReconciled,
+			Fn:           b.WaitUntilEtcdsReady,
 			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
-			Name:         "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
-			Fn:           b.DeployControlPlaneDeployments,
+			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
+			Fn: func(ctx context.Context) error {
+				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd)
+			},
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilEtcdsReady),
 		})
 		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
@@ -507,8 +510,8 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 	return nil
 }
 
-func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.GardenadmBotanist, error) {
-	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
+func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotanist.GardenadmBotanist, error) {
+	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
 	}
@@ -590,5 +593,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 		return nil, flow.Errors(err)
 	}
 
-	return botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
+	return gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
 }

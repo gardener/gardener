@@ -120,6 +120,7 @@ build:
             - pkg/component/autoscaling/vpa/constants
             - pkg/component/clusteridentity
             - pkg/component/crddeployer
+            - pkg/component/etcd/bootstrap
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
@@ -226,6 +227,7 @@ build:
             - pkg/controllerutils/routes
             - pkg/extensions
             - pkg/features
+            - pkg/gardenadm/staticpod
             - pkg/gardenlet/bootstrap
             - pkg/gardenlet/bootstrap/certificate
             - pkg/gardenlet/bootstrap/util

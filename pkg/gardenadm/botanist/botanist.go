@@ -62,9 +62,7 @@ type GardenadmBotanist struct {
 	// This field is only relevant for shoot with unmanaged infrastructure.
 	Zone *string
 
-	operatingSystemConfigSecret       *corev1.Secret
-	gardenerResourceManagerServiceIPs []string
-	useEtcdManagedByDruid             bool
+	operatingSystemConfigSecret *corev1.Secret
 
 	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
 	controlPlaneMachines []machinev1alpha1.Machine

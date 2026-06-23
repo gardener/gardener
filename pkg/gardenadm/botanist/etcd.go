@@ -114,17 +114,6 @@ func runReconcilerUntilCondition(ctx context.Context, logger logr.Logger, contro
 	})
 }
 
-// WaitUntilEtcdsReconciled waits until the druid.gardener.cloud/v1alpha1.Etcd resources have been reconciled by
-// etcd-druid.
-func (b *GardenadmBotanist) WaitUntilEtcdsReconciled(ctx context.Context) error {
-	if err := b.WaitUntilEtcdsReady(ctx); err != nil {
-		return fmt.Errorf("failed waiting for etcd to become ready: %w", err)
-	}
-
-	b.useEtcdManagedByDruid = true
-	return nil
-}
-
 // FinalizeEtcdBootstrapTransition cleans up no longer needed directories for the bootstrap etcds. Those are not deleted
 // automatically.
 func (b *GardenadmBotanist) FinalizeEtcdBootstrapTransition(_ context.Context) error {

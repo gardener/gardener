@@ -28,23 +28,20 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentcontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
-	"github.com/gardener/gardener/pkg/utils"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DeployOperatingSystemConfigSecretForBootstrap deploys the OperatingSystemConfig resource and adds its content into
 // a Secret so that gardener-node-agent can read it and reconcile its content.
 func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx context.Context) error {
-	if err := b.deployControlPlaneDeployments(ctx); err != nil {
+	if err := b.DeployControlPlaneDeployments(ctx, true); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	oscData, controlPlaneWorkerPoolName, err := b.deployOperatingSystemConfig(ctx)
+	oscData, controlPlaneWorkerPoolName, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true)
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
@@ -61,54 +58,6 @@ func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx co
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
-}
-
-func (b *GardenadmBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
-	userKubeconfigSecret, ok := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
-	if !ok {
-		return nil, fmt.Errorf("failed fetching secret %q", kubeapiserver.SecretNameUserKubeconfig)
-	}
-
-	return append(files, extensionsv1alpha1.File{
-		Path:        PathKubeconfig,
-		Permissions: new(uint32(0600)),
-		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(userKubeconfigSecret.Data[secretsutils.DataKeyKubeconfig])}},
-	}), nil
-}
-
-func (b *GardenadmBotanist) deployOperatingSystemConfig(ctx context.Context) (*operatingsystemconfig.Data, string, error) {
-	pods, err := b.staticControlPlanePods(ctx)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
-	}
-
-	files, err := b.appendAdminKubeconfigToFiles(pods.allFiles())
-	if err != nil {
-		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
-	}
-
-	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
-		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
-	}
-
-	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
-	if controlPlaneWorkerPool == nil {
-		return nil, "", fmt.Errorf("failed fetching the control plane worker pool for the shoot")
-	}
-
-	oscData, ok := b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerPoolNameToOperatingSystemConfigsMap()[controlPlaneWorkerPool.Name]
-	if !ok {
-		return nil, "", fmt.Errorf("failed fetching the generated OperatingSystemConfig data for the control plane worker pool %q", controlPlaneWorkerPool.Name)
-	}
-	osc := oscData.Original.Object
-
-	patch := client.MergeFrom(osc.DeepCopy())
-	osc.Spec.Files = append(osc.Spec.Files, files...)
-	if err := b.SeedClientSet.Client().Patch(ctx, osc, patch); err != nil {
-		return nil, "", fmt.Errorf("failed patching OperatingSystemConfig with additional files for static control plane pods: %w", err)
-	}
-
-	return &oscData.Original, controlPlaneWorkerPool.Name, nil
 }
 
 // ApplyOperatingSystemConfig runs gardener-node-agent's reconciliation logic in order to apply the
