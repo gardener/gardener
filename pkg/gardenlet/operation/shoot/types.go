@@ -131,6 +131,7 @@ type ControlPlane struct {
 	Alertmanager             alertmanager.Interface
 	BlackboxExporter         component.DeployWaiter
 	ClusterAutoscaler        clusterautoscaler.Interface
+	EtcdDruid                component.DeployWaiter
 	EtcdMain                 etcd.Interface
 	EtcdEvents               etcd.Interface
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface

@@ -24,6 +24,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -201,9 +202,13 @@ func NewGardenadmBotanistWithoutResources(log logr.Logger) (*GardenadmBotanist, 
 }
 
 func newOperation(log logr.Logger, gardenClient client.Client, clientSet kubernetes.Interface) *operation.Operation {
+	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
+
 	return &operation.Operation{
 		Logger:         log,
 		Clock:          clock.RealClock{},
+		Config:         gardenletConfig,
 		GardenClient:   gardenClient,
 		SeedClientSet:  clientSet,
 		ShootClientSet: clientSet,

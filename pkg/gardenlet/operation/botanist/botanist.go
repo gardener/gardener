@@ -173,6 +173,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	if o.Shoot.IsSelfHosted() {
+		o.Shoot.Components.ControlPlane.EtcdDruid, err = b.DefaultEtcdDruid()
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// system components
 	o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()

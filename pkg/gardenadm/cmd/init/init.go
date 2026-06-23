@@ -349,7 +349,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
-			Fn:           b.DeployEtcdDruid,
+			Fn:           b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
 			SkipIf:       opts.UseBootstrapEtcd || shootIsGarden,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
