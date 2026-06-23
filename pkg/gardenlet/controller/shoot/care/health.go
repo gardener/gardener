@@ -1233,25 +1233,37 @@ type ShootConditions struct {
 
 // ConvertToSlice returns the shoot conditions as a slice.
 func (s ShootConditions) ConvertToSlice() []gardencorev1beta1.Condition {
-	conditions := []gardencorev1beta1.Condition{
+	required := []gardencorev1beta1.Condition{
 		s.apiServerAvailable,
 		s.controlPlaneHealthy,
 		s.observabilityComponentsHealthy,
 	}
 
 	if s.everyNodeReady != nil {
-		conditions = append(conditions, *s.everyNodeReady)
+		required = append(required, *s.everyNodeReady)
 	}
-	if s.noPreservedFailedMachines != nil && s.noPreservedFailedMachines.Status != gardencorev1beta1.ConditionTrue {
-		conditions = append(conditions, *s.noPreservedFailedMachines)
-	}
-	conditions = append(conditions, s.systemComponentsHealthy)
+	required = append(required, s.systemComponentsHealthy)
 
 	if s.backupBucketsReady != nil {
-		conditions = append(conditions, *s.backupBucketsReady)
+		required = append(required, *s.backupBucketsReady)
 	}
 
-	return conditions
+	var optional []gardencorev1beta1.Condition
+	if s.noPreservedFailedMachines != nil {
+		optional = append(optional, *s.noPreservedFailedMachines)
+	}
+
+	return filterOptionalConditions(required, optional)
+}
+
+func filterOptionalConditions(required, optional []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	out := append([]gardencorev1beta1.Condition{}, required...)
+	for _, c := range optional {
+		if c.Status != gardencorev1beta1.ConditionTrue {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // ConditionTypes returns all shoot condition types.
