@@ -15,12 +15,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	apiv1alpha1 "github.com/gardener/gardener/pkg/provider-local/machine-provider/api/v1alpha1"
 )
-
-var log = logf.Log.WithName("machine-provider-local")
 
 const (
 	fieldOwner        = client.FieldOwner("machine-controller-manager-provider-local")

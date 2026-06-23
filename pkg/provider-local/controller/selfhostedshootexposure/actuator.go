@@ -109,11 +109,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 	return nil
 }
 
-func (a *actuator) providerClient(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
+func (a *actuator) providerClient(ctx context.Context, _ logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
 	if exposure.Spec.CredentialsRef == nil {
 		return nil, fmt.Errorf("credentialsRef is required for the provider-local SelfHostedShootExposure implementation but is not set")
 	}
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
 		Name:      exposure.Spec.CredentialsRef.Name,
 		Namespace: exposure.Spec.CredentialsRef.Namespace,
 	})

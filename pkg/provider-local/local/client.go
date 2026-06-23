@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,7 +18,7 @@ import (
 // GetProviderClient returns a Kubernetes client for the cluster in which provider-local should manage infrastructure
 // resources, i.e. machine Pods. It is constructed from the provider secret.
 // See https://github.com/gardener/gardener/blob/master/docs/extensions/provider-local.md#credentials.
-func GetProviderClient(ctx context.Context, _ logr.Logger, runtimeClient client.Client, secretRef corev1.SecretReference) (client.Client, error) {
+func GetProviderClient(ctx context.Context, runtimeClient client.Client, secretRef corev1.SecretReference) (client.Client, error) {
 	providerSecret, err := kubernetesutils.GetSecretByReference(ctx, runtimeClient, &secretRef)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve provider secret: %w", err)

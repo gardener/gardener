@@ -43,8 +43,8 @@ func newActuator(mgr manager.Manager) bastion.Actuator {
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
 		Name:      v1beta1constants.SecretNameCloudProvider,
 		Namespace: bastion.Namespace,
 	})
@@ -91,8 +91,8 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, bastion *exte
 	return providerClient.Status().Patch(ctx, bastion, patch)
 }
 
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
 		Name:      v1beta1constants.SecretNameCloudProvider,
 		Namespace: bastion.Namespace,
 	})
@@ -220,7 +220,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, technicalID, image, user
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  userDataSecretName,
-							DefaultMode: new(int32(0777)),
+							DefaultMode: new(int32(0o777)),
 						},
 					},
 				},

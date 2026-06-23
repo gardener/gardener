@@ -36,8 +36,8 @@ func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, infrastructure.Spec.SecretRef)
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, infrastructure.Spec.SecretRef)
 	if err != nil {
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
@@ -83,8 +83,8 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, infrastructur
 	return a.runtimeClient.Status().Patch(ctx, infrastructure, patch)
 }
 
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, infrastructure.Spec.SecretRef)
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, infrastructure.Spec.SecretRef)
 	if err != nil {
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
