@@ -7,10 +7,12 @@ package connect
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
@@ -27,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -81,6 +84,12 @@ func run(ctx context.Context, opts *Options) error {
 	b.SeedClientSet, err = b.CreateClientSet(ctx)
 	if err != nil {
 		return fmt.Errorf("failed creating client set for self-hosted shoot: %w", err)
+	}
+
+	if bootstrapEtcdExists, err := isBootstrapEtcdStillRunning(ctx, b); err != nil {
+		return fmt.Errorf("failed checking if bootstrap etcd is still running: %w", err)
+	} else if bootstrapEtcdExists {
+		return fmt.Errorf("bootstrap etcd is still running in the self-hosted shoot cluster, please run 'gardenadm init --use-bootstrap-etcd=false' first")
 	}
 
 	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
@@ -182,6 +191,22 @@ Happy Gardening!
 `, b.Shoot.ControlPlaneNamespace, opts.BootstrapToken, opts.ConfigDir)
 
 	return nil
+}
+
+func isBootstrapEtcdStillRunning(ctx context.Context, b *botanist.GardenadmBotanist) (bool, error) {
+	podList := &metav1.PartialObjectMetadataList{}
+	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+	if err := b.SeedClientSet.Client().List(ctx, podList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
+		return false, fmt.Errorf("failed checking if bootstrap etcd still exists: %w", err)
+	}
+
+	for _, pod := range podList.Items {
+		if strings.HasPrefix(pod.GetName(), bootstrap.NamePrefix) {
+			return true, nil
+		}
+	}
+
+	return true, nil
 }
 
 func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist) error {
