@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	etcdcopybackupstask "github.com/gardener/gardener/pkg/component/etcd/copybackupstask"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	"github.com/gardener/gardener/pkg/component/extensions/bastion"
 	"github.com/gardener/gardener/pkg/component/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
@@ -124,6 +125,7 @@ type Components struct {
 	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
+	Bastion                  *bastion.Bastion
 }
 
 // ControlPlane contains references to K8S control plane components.

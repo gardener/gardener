@@ -30,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/component/extensions/bastion"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -57,7 +56,6 @@ type GardenadmBotanist struct {
 	FS       afero.Afero
 
 	Resources  gardenadm.Resources
-	Components Components
 	Extensions []Extension
 	// Zone is the availability zone in which the new node is being added. This is used to set the
 	// topology.kubernetes.io/zone label on the node resource.
@@ -73,12 +71,6 @@ type GardenadmBotanist struct {
 	// sshConnection is the SSH connection to the first control plane machine. It is set by ConnectToControlPlaneMachine
 	// during `gardenadm bootstrap`.
 	sshConnection *sshutils.Connection
-}
-
-// Components contains deployable components for self-hosted shoots.
-type Components struct {
-	// Bastion is only set for `gardenadm bootstrap`.
-	Bastion *bastion.Bastion
 }
 
 // Extension contains the resources needed for an extension registration.
@@ -160,8 +152,6 @@ func NewGardenadmBotanist(
 	}
 
 	if !gardenadmBotanist.Shoot.RunsControlPlane() {
-		gardenadmBotanist.Components.Bastion = gardenadmBotanist.DefaultBastion()
-
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
 		gardenadmBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = gardenadmBotanist.ControlPlaneBootstrapOperatingSystemConfig()

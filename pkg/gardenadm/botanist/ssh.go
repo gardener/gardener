@@ -46,7 +46,7 @@ func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) er
 	}
 
 	conn, err := sshutils.Dial(ctx, sshAddr,
-		sshutils.WithProxyConnection(b.Components.Bastion.Connection),
+		sshutils.WithProxyConnection(b.Shoot.Components.Bastion.Connection),
 		sshutils.WithUser("gardener"),
 		sshutils.WithPrivateKeyBytes(sshKeypairSecret.Data[secretsutils.DataKeyRSAPrivateKey]),
 	)

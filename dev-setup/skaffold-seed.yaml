@@ -125,6 +125,7 @@ build:
             - pkg/component/etcd/etcd/constants
             - pkg/component/extensions
             - pkg/component/extensions/backupentry
+            - pkg/component/extensions/bastion
             - pkg/component/extensions/containerruntime
             - pkg/component/extensions/controlplane
             - pkg/component/extensions/crds
@@ -305,6 +306,7 @@ build:
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
             - pkg/utils/signals
+            - pkg/utils/ssh
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups
