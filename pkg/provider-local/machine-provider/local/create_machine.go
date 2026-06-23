@@ -36,7 +36,7 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("requested for provider '%s', we only support '%s'", req.MachineClass.Provider, apiv1alpha1.Provider))
 	}
 
-	providerClient, err := local.GetProviderClient(ctx, log, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
+	providerClient, err := local.GetProviderClient(ctx, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
 	if err != nil {
 		return nil, fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
@@ -225,7 +225,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  userDataSecret.Name,
-						DefaultMode: new(int32(0777)),
+						DefaultMode: new(int32(0o777)),
 					},
 				},
 			},
