@@ -19,6 +19,8 @@ On the `Vertical Pod Autoscaler` side, with Release [1.6.0](https://github.com/k
 
 With Kubernetes 1.33, the `InPlacePodVerticalScaling` feature gate, which enables `in-place` resource updates, is enabled by default and __does not__ require additional instrumentation. Prior versions, from Kubernetes 1.27 onwards require the `InPlacePodVerticalScaling` feature gate __to be enabled__ for both _kube-apiserver_ and _kubelet_.
 
+When the `InPlacePodVerticalScaling` feature gate is not enabled and Pod resources cannot be updated in-place, for VerticalPodAutoscaler resources with `.spec.updatePolicy.updateMode=InPlaceOrRecreate` `vpa-updater` successfully falls back to Pod eviction (`updateMode=Recreate`).
+
 ### Vertical Pod Autoscaling
 
 With [1.6.0](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.6.0), the `InPlaceOrRecreate` feature gate, which enables `in-place` resource updates for `vpa-admission-controller` and `vpa-updater`, got promoted to a __GA__ feature.
@@ -33,7 +35,6 @@ As described in the [Compatibility](#compatibility) section, _alpha_ versions of
 Verify that the `InPlacePodVerticalScaling` Kubernetes feature gate is not explicitly disabled in the Shoot spec for:
 - kube-apiserver: `.spec.kubernetes.kubeAPIServer.featureGates`
 - kubelet: `.spec.kubernetes.kubelet.featureGates` or `.spec.provider.workers[].kubernetes.kubelet.featureGates`
-
 
 ## References
 

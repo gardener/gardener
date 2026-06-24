@@ -17,6 +17,11 @@ Currently, Gardener supports the following Kubernetes versions:
 > [!NOTE]  
 > Gardener supports Kubernetes versions for at least 14 months after their initial support date.
 
+> [!WARNING]
+> Gardener unconditionally deploys VerticalPodAutoscaler resources in the Garden, Seed and Shoot clusters with update mode `InPlaceOrRecreate`.
+> Enable the `InPlacePodVerticalScaling` feature gate for `kube-apiserver` and `kubelet` for Kubernetes 1.32 Garden, Seed and Shoot clusters in order to benefit from in-place resource updates by the Vertical Pod Autoscaler.
+> For more details, see [In-Place Updates of Pod Resources](../autoscaling/in-place-resource-updates.md).
+
 ## Garden Clusters
 
 The minimum version of a garden cluster that can be used to run Gardener is **`1.32.x`** up to **`1.35.x`**.

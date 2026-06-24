@@ -16,7 +16,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -56,9 +55,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 			TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
 			TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
-			// TODO(vitanovs): Remove the VPAInPlaceUpdates webhook once the
-			// VPAInPlaceUpdates feature gates is deprecated.
-			VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
+			VPAInPlaceUpdatesEnabled:            true,
 		}
 	)
 
@@ -68,6 +65,12 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 	if b.Shoot.IsSelfHosted() {
 		values.KubernetesServiceHost = nil
+		// Disable the vpa-in-place-updates webhook as there are no VPA components that manage VPA resources and
+		// there is no reason for the GRM webhook to be deployed.
+		//
+		// GRM's vpa-in-place-updates webhook is planned to be removed soon in favor of setting the update mode to InPlaceOrRecreate explicitly.
+		// For more details, see https://github.com/gardener/gardener/issues/12955.
+		values.VPAInPlaceUpdatesEnabled = false
 
 		if !b.Shoot.RunsControlPlane() {
 			newFunc = shared.NewRuntimeGardenerResourceManager

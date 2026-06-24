@@ -16,11 +16,7 @@ Refer to the [in-place resource updates](../usage/autoscaling/in-place-resource-
 ## Configuration
 
 Gardener provides a dedicated [resource manager](../concepts/resource-manager.md) [webhook](../concepts/resource-manager.md#webhooks) capable of _mutating_ VerticalPodAutoscaler resources, configured with [update mode](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/quickstart.md#contents) `Auto` or `Recreate`, with the `in-place` updates enabling `InPlaceOrRecreate`.
-Available for deployment with both [gardenlet](../concepts/gardenlet.md) and [gardener operator](../concepts/operator.md), the _mutating_ webhook can be activated with the following feature gate, listed within the respective component manifest. Refer to the Gardener [feature gates](../deployment/feature_gates.md) page for additional details:
-
-```
-VPAInPlaceUpdates
-```
+The _mutating_ webhook is enabled unconditionally for [resource manager](../concepts/resource-manager.md) deployments managed by both [gardenlet](../concepts/gardenlet.md) and [gardener operator](../concepts/operator.md).
 
 To keep a VerticalPodAutoscaler resource out of the _mutating_ webhook scope, add the following `skip` label, indicating that the resource should preserve its current configuration and __not__ get  updated:
 
@@ -30,16 +26,7 @@ vpa-in-place-updates.resources.gardener.cloud/skip
 
 ### gardenlet
 
-> With Gardener [v1.138](https://github.com/gardener/gardener/releases/tag/v1.138.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
-
-To enable the _mutating_ [resource manager](../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
-
-```yaml
-featureGates:
-  VPAInPlaceUpdates: true
-```
-
-Refer to the `gardenlet` component configuration [manifest](../../../example/20-componentconfig-gardenlet.yaml) for an overview.
+The _mutating_ webhook is enabled unconditionally for [resource manager](../concepts/resource-manager.md) deployments managed by [gardenlet](../concepts/gardenlet.md).
 
 #### Shoot
 
@@ -58,16 +45,7 @@ With the adoption of `Vertical Pod Autoscaler` [1.6.0](https://github.com/kubern
 
 ### Gardener Operator
 
-> With Gardener [v1.138](https://github.com/gardener/gardener/releases/tag/v1.138.0), the `VPAInPlaceUpdates` feature gate got promoted to `Beta` and is now __enabled by default__.
-
-To enable the _mutating_ [resource manager](../concepts/resource-manager.md) webhook, the `VPAInPlaceUpdates` feature gate must be set to `true`:
-
-```yaml
-featureGates:
-  VPAInPlaceUpdates: true
-```
-
-Refer to the `operator` component configuration [manifest](../../../example/operator/10-componentconfig.yaml) for an overview.
+The _mutating_ webhook is enabled unconditionally for [resource manager](../concepts/resource-manager.md) deployments managed by [gardener operator](../concepts/operator.md).
 
 > [!NOTE]
 > If you are using a VPA not managed by gardener-operator (i.e., Garden's `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled` is set to `false`), ensure that your VPA installation supports in-place resource updates.

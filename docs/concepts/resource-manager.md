@@ -1278,11 +1278,7 @@ vpa-in-place-updates.resources.gardener.cloud/mutated
 
 _label_ gets added to the resource metadata.
 
-Available for deployment with both [gardenlet](https://github.com/gardener/gardener/blob/master/docs/concepts/gardenlet.md) and [gardener-operator](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md), enabling the webhook happens by activating a dedicated _feature gate_ within the respective component manifest:
-
-```
-VPAInPlaceUpdates
-```
+The webhook is enabled unconditionally for resource manager deployments managed by both [gardenlet](./gardenlet.md) and [gardener operator](./operator.md).
 
 ### Validating Webhooks
 

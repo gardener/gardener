@@ -30,6 +30,18 @@ func (b *GardenadmBotanist) NewRuntimeGardenerResourceManager() (resourcemanager
 				},
 			},
 		},
-		VPAInPlaceUpdatesEnabled: features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates),
+		// Disable the vpa-in-place-updates webhook as there are no VPA components that manage VPA resources and
+		// there is no reason for the GRM webhook to be deployed.
+		//
+		// Further more, upon invocation, the GRM's /webhooks/vpa-in-place-updates endpoint,
+		// introduced by the webhook, fails to verify the request certificate with the following error message:
+		//
+		// "x509: certificate is valid for machine-0, not gardener-resource-manager.kube-system.svc"
+		//
+		// indicating that the gardenadm's initialization flow introduces a side effect when redeplying the GRM.
+		//
+		// GRM's vpa-in-place-updates webhook is planned to be removed soon in favor of setting the update mode to InPlaceOrRecreate explicitly.
+		// For more details, see https://github.com/gardener/gardener/issues/12955.
+		VPAInPlaceUpdatesEnabled: false,
 	})
 }

@@ -78,11 +78,6 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			}
 		}
 
-		vpaUpdateMode := "InPlaceOrRecreate"
-		if !features.DefaultFeatureGate.Enabled(features.VPAInPlaceUpdates) {
-			vpaUpdateMode = "Recreate"
-		}
-
 		cpuRequests := "300m"
 		hpaCPUAverageValue := "2"
 		if enableAPIServerTLSTermination {
@@ -124,7 +119,6 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
 			"cpuRequests":        cpuRequests,
 			"hpaCPUAverageValue": hpaCPUAverageValue,
-			"vpaUpdateMode":      vpaUpdateMode,
 			"kubernetesVersion":  istioIngressGateway.KubernetesVersion,
 		}
 

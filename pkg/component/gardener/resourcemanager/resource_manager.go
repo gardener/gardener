@@ -329,7 +329,9 @@ type Values struct {
 	MachineNamespace *string
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
-	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-pod-vertical-scaling webhook should be enabled.
+	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-updates webhook should be enabled.
+	//
+	// TODO(vitanovs): Remove the vpa-in-place-updates webhook in favor of setting the update mode to InPlaceOrRecreate explicitly.
 	VPAInPlaceUpdatesEnabled bool
 }
 
