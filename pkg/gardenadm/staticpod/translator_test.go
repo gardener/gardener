@@ -143,6 +143,51 @@ status: {}
 				}))
 			})
 
+			It("should upgrade DNSPolicy from ClusterFirst to ClusterFirstWithHostNet", func() {
+				deployment.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirst
+
+				files, hash, err := Translate(ctx, fakeClient, deployment, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).NotTo(BeEmpty())
+				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
+					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
+					Permissions: new(uint32(0640)),
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    bar: baz
+    gardener.cloud/config.mirror: ` + hash + `
+  labels:
+    baz: foo
+    static-pod: "true"
+  name: foo
+  namespace: kube-system
+spec:
+  containers: null
+  dnsPolicy: ClusterFirstWithHostNet
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  securityContext:
+    fsGroup: 0
+status: {}
+`))}},
+				}))
+			})
+
 			It("should fail translate a deployment whose ConfigMap volumes refer to non-existing objects", func() {
 				deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 					{Name: "foo", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "some-configmap"}}}},
