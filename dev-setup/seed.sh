@@ -24,7 +24,7 @@ elif [[ "$COMMAND" == "debug" ]]; then
 fi
 
 gardenlet_name="local"
-if [[ "$SKAFFOLD_PROFILE" == "multi-node2" ]]; then
+if [[ "$SKAFFOLD_PROFILE" == "single-node2" ]] || [[ "$SKAFFOLD_PROFILE" == "multi-node2" ]]; then
   gardenlet_name="local2"
 elif [[ "$SKAFFOLD_PROFILE" == "remote" ]]; then
   gardenlet_name="remote"
