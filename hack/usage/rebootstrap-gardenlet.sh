@@ -63,7 +63,7 @@ EOF
 
 function generate_random_string() {
   local length=$1
-  LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c "$length"
+  LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c "$length" || true
 }
 
 function validate_requirements() {
