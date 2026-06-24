@@ -49,7 +49,7 @@ When `NoPreservedFailedMachines` is `False`, Gardener suppresses `SystemComponen
 
 - For each unhealthy ManagedResource, suppression is evaluated per resource type:
   - **DaemonSet:** failures caused entirely by pods on preserved nodes are suppressed.
-  - **Deployment / StatefulSet:** failures are never suppressed — these are not node-specific.
+  - **Deployment / StatefulSet:** failures are never suppressed since these are not node-specific.
   - **Any other resource kind:** failures are never suppressed.
 - If a ManagedResource contains a mix of resource types, suppression applies only when all resources within that ManagedResource pass their respective checks.
 
@@ -57,15 +57,15 @@ When `NoPreservedFailedMachines` is `False`, Gardener suppresses `SystemComponen
 
 Preservation is configured per worker pool in the Shoot spec. Two fields control it:
 
-- **`spec.provider.workers[].autoPreserveFailedMachineMax`** — the maximum number of `Failed` machines MCM may auto-preserve concurrently in this worker pool.
-- **`spec.provider.workers[].machineControllerManager.machinePreserveTimeout`** — how long a machine stays preserved before MCM automatically stops preservation. Defaults to `96h` (4 days) if not set. Must be a positive duration.
+- **`spec.provider.workers[].autoPreserveFailedMachineMax`:** the maximum number of `Failed` machines MCM may auto-preserve concurrently in this worker pool.
+- **`spec.provider.workers[].machineControllerManager.machinePreserveTimeout`:** how long a machine stays preserved before MCM automatically stops preservation. Defaults to `96h` (4 days) if not set. Must be a positive duration.
 
 ### Constraints on `autoPreserveFailedMachineMax`
 
-| Condition | Maximum allowed value |
-|---|---|
-| Worker pool allows system components (`systemComponents.allow: true`) | `Maximum - 1` — at least one machine must remain available to run system components |
-| Worker pool does not allow system components | `Maximum` |
+| Condition | Maximum allowed value                                                               |
+|---|-------------------------------------------------------------------------------------|
+| Worker pool allows system components (`systemComponents.allow: true`) | `Maximum - 1` : at least one machine must remain available to run system components |
+| Worker pool does not allow system components | `Maximum`                                                                           |
 
 `autoPreserveFailedMachineMax` defaults to `0`, meaning auto-preservation is disabled. The configured value is distributed across zones (MachineDeployments) in the worker pool using the same proportional distribution as `minimum` and `maximum`. If the limit is reached, additional failed machines are not preserved and are terminated normally.
 
@@ -111,7 +111,7 @@ Operators and end-users can preserve individual machines by annotating the machi
 | `when-failed`    | Preserve the machine only when (or if) it enters `Failed` phase                          |
 | `now`            | Preserve the machine immediately, regardless of its current phase                        |
 | `false`          | Explicitly opt out of auto-preservation for this machine; also stops active preservation |
-| `auto-preserved` | Set by MCM only — indicates this machine is being preserved due to auto-preservation     |
+| `auto-preserved` | Set by MCM only. Indicates this machine is being preserved due to auto-preservation      |
 
 #### Annotation priority
 
@@ -140,8 +140,8 @@ In all cases, when the machine transitions to `Running`, the backing node is unc
 Delete the preservation annotation from whichever object (node or machine) carries it.
 
 ### Auto-preservation
-
-Annotate the machine or node with `node.machine.sapcloud.io/preserve=false`. This instructs MCM to stop auto-preservation and marks the machine as ineligible for future auto-preservation. Deleting the annotation is not sufficient — MCM would re-preserve the machine if it is still in Failed phase, provided the limit permits.
+Auto-preserved machines are annotated with `node.machine.sapcloud.io/preserve=auto-preserved`. To stop auto-preservation early, deleting this annotation from the machine or node will not stop auto-preservation. This is because MCM will re-apply the annotation on the next reconciliation loop.
+Instead, annotate the machine or node with `node.machine.sapcloud.io/preserve=false`. This instructs MCM to stop auto-preservation and marks the machine as ineligible for future auto-preservation.
 
 ## Preventing Auto-Preservation
 
@@ -166,7 +166,7 @@ node.machine.sapcloud.io/preserve=false
 
 Preservation state is visible in two places:
 
-**On the Node object** — a `NodeCondition` of type `Preserved` is set:
+**On the Node object:** a `NodeCondition` of type `Preserved` is set:
 
 | Reason | Meaning |
 |---|---|
@@ -174,6 +174,6 @@ Preservation state is visible in two places:
 | `Preserved by user.` | The node is manually preserved |
 | `Preservation stopped.` | Preservation has ended |
 
-**On the Machine object** — `status.currentStatus.preserveExpiryTime` shows when preservation will end.
+**On the Machine object:** `status.currentStatus.preserveExpiryTime` shows when preservation will end.
 
-**In the Shoot status** — the `NoPreservedFailedMachines` condition (see above) reflects whether any failed machines are currently preserved across the cluster.
+**In the Shoot status:** the `NoPreservedFailedMachines` condition (see above) reflects whether any failed machines are currently preserved across the cluster.
