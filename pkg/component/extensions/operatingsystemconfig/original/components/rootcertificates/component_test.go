@@ -72,26 +72,19 @@ set -o nounset
 set -o pipefail
 
 if [[ -f "/etc/debian_version" ]]; then
-    # Copy certificates from default "localcertsdir" because /usr is mounted read-only in Garden Linux.
-    # See https://github.com/gardenlinux/gardenlinux/issues/1490
     mkdir -p "/var/lib/ca-certificates-local"
     if [[ -d "/usr/local/share/ca-certificates" && -n "$(ls -A '/usr/local/share/ca-certificates')" ]]; then
         cp -af /usr/local/share/ca-certificates/* "/var/lib/ca-certificates-local"
     fi
-    # localcertsdir is supported on Debian based OS only
     /usr/sbin/update-ca-certificates --fresh --localcertsdir "/var/lib/ca-certificates-local"
-    exit
-fi
-
-if grep -q flatcar "/etc/os-release"; then
-    # Flatcar needs the file in /etc/ssl/certs/ with .pem file extension
-    cp "/var/lib/ca-certificates-local/ROOTcerts.crt" /etc/ssl/certs/ROOTcerts.pem
-    # Flatcar does not support --fresh
+elif grep -q flatcar "/etc/os-release"; then
+    for f in "/var/lib/ca-certificates-local"/*.crt; do
+        [ -f "$f" ] && cp "$f" "/etc/ssl/certs/$(basename "${f%.crt}").pem"
+    done
     /usr/sbin/update-ca-certificates
-    exit
+else
+    /usr/sbin/update-ca-certificates --fresh
 fi
-
-/usr/sbin/update-ca-certificates --fresh
 `)),
 						},
 					},
