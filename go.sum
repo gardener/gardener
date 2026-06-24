@@ -624,8 +624,8 @@ github.com/prometheus/blackbox_exporter v0.28.0/go.mod h1:F9H+UbXJsW0OaGv4uVuPFI
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
 github.com/prometheus/client_golang v1.1.0/go.mod h1:I1FGZT9+L76gKKOs5djB6ezCbFQP1xR9D75/vuwEF3g=
-github.com/prometheus/client_golang v1.23.3-0.20260602051030-3537b20ac86b h1:QNV54DNcRqdeECNdEXiOqTmI75w2rlZtOq5rt8RKhVo=
-github.com/prometheus/client_golang v1.23.3-0.20260602051030-3537b20ac86b/go.mod h1:kPaff19KETV3GKIZJehgPmlA2Di3jNeWdgKA9RpObuU=
+github.com/prometheus/client_golang v1.23.3-0.20260624042014-28914d017fba h1:KHpSrmy2SF+MKJ38YZHpLotXS+Y5DDJXmyAQ0fJtKMc=
+github.com/prometheus/client_golang v1.23.3-0.20260624042014-28914d017fba/go.mod h1:yil2FhBgMjSH1lTcj2doFhabCcBjs5d/MjPMGJl9vTA=
 github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910/go.mod h1:MbSGuTsp3dbXC40dX6PRTWyKYBIrTGTE9sqQNg2J8bo=
 github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
