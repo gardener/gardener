@@ -10,6 +10,9 @@ set -o errexit
 
 source $(dirname "${0}")/ci-common.sh
 
+export GOMAXPROCS=4
+export BUILD_CONCURRENCY=2
+
 VERSION="$(cat VERSION)"
 SEED_NAME="local"
 

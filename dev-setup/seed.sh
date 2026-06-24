@@ -42,6 +42,7 @@ case "$COMMAND" in
   up)
     skaffold run \
       -m garden-config \
+      ${BUILD_CONCURRENCY:+--build-concurrency "$BUILD_CONCURRENCY"} \
       --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
