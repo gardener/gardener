@@ -654,11 +654,29 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 		Name:            "tunnel-controller",
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/bin/tunnel-controller"},
+		Command:         []string{"/bin/vpn-client", "tunnel-controller"},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("10m"),
 				corev1.ResourceMemory: resource.MustParse("10Mi"),
+			},
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "HA_VPN_CLIENTS",
+				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
+			},
+			{
+				Name:  "WATCHDOG_WINDOW_SIZE",
+				Value: "20",
+			},
+			{
+				Name:  "WATCHDOG_THRESHOLD",
+				Value: "10",
+			},
+			{
+				Name:  "WATCHDOG_COOLDOWN",
+				Value: "20",
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{

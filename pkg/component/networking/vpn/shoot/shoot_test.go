@@ -694,7 +694,7 @@ var _ = Describe("VPNShoot", func() {
 					obj.Spec.Containers = append(obj.Spec.Containers, corev1.Container{
 						Name:    "tunnel-controller",
 						Image:   image,
-						Command: []string{"/bin/tunnel-controller"},
+						Command: []string{"/bin/vpn-client", "tunnel-controller"},
 						SecurityContext: &corev1.SecurityContext{
 							Privileged:               new(false),
 							AllowPrivilegeEscalation: new(false),
@@ -706,6 +706,24 @@ var _ = Describe("VPNShoot", func() {
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("10Mi"),
+							},
+						},
+						Env: []corev1.EnvVar{
+							{
+								Name:  "HA_VPN_CLIENTS",
+								Value: "2",
+							},
+							{
+								Name:  "WATCHDOG_WINDOW_SIZE",
+								Value: "20",
+							},
+							{
+								Name:  "WATCHDOG_THRESHOLD",
+								Value: "10",
+							},
+							{
+								Name:  "WATCHDOG_COOLDOWN",
+								Value: "20",
 							},
 						},
 						ImagePullPolicy: corev1.PullIfNotPresent,
