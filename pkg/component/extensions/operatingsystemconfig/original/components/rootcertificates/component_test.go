@@ -20,8 +20,10 @@ var _ = Describe("Component", func() {
 			component components.Component
 			ctx       components.Context
 
-			caBundle       = "some-non-base64-encoded-ca-bundle"
-			caBundleBase64 = utils.EncodeBase64([]byte(caBundle))
+			caBundle            = "some-non-base64-encoded-ca-bundle"
+			caBundleBase64      = utils.EncodeBase64([]byte(caBundle))
+			registryCABundle    = "registry-ca"
+			registryCABundleB64 = utils.EncodeBase64([]byte(registryCABundle))
 		)
 
 		BeforeEach(func() {
@@ -113,6 +115,43 @@ fi
 
 			Expect(units).To(ConsistOf(updateCACertsUnit))
 			Expect(files).To(ConsistOf(updateCACertsFiles))
+		})
+
+		When("RegistryCABundle is set", func() {
+			BeforeEach(func() {
+				ctx.RegistryCABundle = &registryCABundle
+			})
+
+			It("should include the registry CA as a separate file and not merge it into ROOTcerts.crt", func() {
+				units, files, err := component.Config(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(units).To(HaveLen(1))
+				Expect(units[0].FilePaths).To(ContainElement(PathLocalSSLRegistryCACerts))
+
+				Expect(files).To(ContainElements(
+					extensionsv1alpha1.File{
+						Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
+						Permissions: new(uint32(0644)),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     caBundleBase64,
+							},
+						},
+					},
+					extensionsv1alpha1.File{
+						Path:        PathLocalSSLRegistryCACerts,
+						Permissions: new(uint32(0644)),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     registryCABundleB64,
+							},
+						},
+					},
+				))
+			})
 		})
 	})
 })
