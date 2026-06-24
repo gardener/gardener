@@ -22,6 +22,8 @@ import (
 
 const (
 	// TerraformerFinalizer is the finalizer key set by the terraformer on the configmaps and secrets
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	TerraformerFinalizer = "gardener.cloud/terraformer"
 )
 
@@ -124,6 +126,8 @@ func (e *variablesNotFoundError) Error() string {
 }
 
 // IsVariablesNotFoundError returns true if the error indicates that not all variables have been found.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func IsVariablesNotFoundError(err error) bool {
 	switch err.(type) {
 	case *variablesNotFoundError:
@@ -178,12 +182,16 @@ func sniffJSONStateVersion(stateConfigMap []byte) (uint64, error) {
 }
 
 // Initialize implements StateConfigMapInitializer
+//
+// Deprecated: This method is deprecated and will be removed after v1.154 has been released.
 func (f StateConfigMapInitializerFunc) Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error {
 	return f(ctx, c, namespace, name, ownerRef)
 }
 
 // CreateState create terraform state config map and use empty state.
 // It does not create or update state ConfigMap if already exists,
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func CreateState(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
@@ -200,6 +208,8 @@ func CreateState(ctx context.Context, c client.Client, namespace, name string, o
 }
 
 // Initialize implements StateConfigMapInitializer
+//
+// Deprecated: This method is deprecated and will be removed after v1.154 has been released.
 func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error {
 	if cus.State == nil {
 		return fmt.Errorf("missing state when creating or updating terraform state ConfigMap %s/%s", namespace, name)

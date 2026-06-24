@@ -16,6 +16,8 @@ import (
 )
 
 // Marshal transform RawState to []byte representation. It encodes the raw state data
+//
+// Deprecated: This method is deprecated and will be removed after v1.154 has been released.
 func (trs *RawState) Marshal() ([]byte, error) {
 	return json.Marshal(trs.encodeBase64())
 }

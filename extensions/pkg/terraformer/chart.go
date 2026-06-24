@@ -29,10 +29,9 @@ func nonEmptyFileContent(release *chartrenderer.RenderedChart, filename string) 
 }
 
 // ExtractTerraformFiles extracts TerraformFiles from the given RenderedChart.
+// It errors if a file is not contained in the chart.
 //
 // Deprecated: This function is deprecated and will be removed after v1.154 has been released.
-//
-// It errors if a file is not contained in the chart.
 func ExtractTerraformFiles(release *chartrenderer.RenderedChart) (*TerraformFiles, error) {
 	main, err := nonEmptyFileContent(release, MainKey)
 	if err != nil {

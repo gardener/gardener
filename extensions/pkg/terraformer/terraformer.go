@@ -26,8 +26,12 @@ import (
 
 const (
 	// LabelKeyName is a key for label on a Terraformer Pod indicating the Terraformer name.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	LabelKeyName = "terraformer.gardener.cloud/name"
 	// LabelKeyPurpose is a key for label on a Terraformer Pod indicating the Terraformer purpose.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	LabelKeyPurpose = "terraformer.gardener.cloud/purpose"
 )
 
@@ -124,8 +128,12 @@ func New(
 
 const (
 	// CommandApply is a constant for the "apply" command.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	CommandApply = "apply"
 	// CommandDestroy is a constant for the "destroy" command.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	CommandDestroy = "destroy"
 )
 

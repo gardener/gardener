@@ -77,18 +77,28 @@ const (
 	numberOfConfigResources = 3
 
 	// ConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	ConfigSuffix = ".tf-config"
 
 	// VariablesSuffix is the suffix used for the Secret which stores the Terraform variables definition.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	VariablesSuffix = ".tf-vars"
 
 	// StateSuffix is the suffix used for the ConfigMap which stores the Terraform state.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	StateSuffix = ".tf-state"
 
 	// Base64Encoding denotes base64 encoding for the RawState.Data
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	Base64Encoding = "base64"
 
 	// NoneEncoding denotes none encoding for the RawState.Data
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	NoneEncoding = "none"
 )
 

@@ -22,12 +22,20 @@ import (
 
 const (
 	// MainKey is the key of the main.tf file inside the configuration ConfigMap.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	MainKey = "main.tf"
 	// VariablesKey is the key of the variables.tf file inside the configuration ConfigMap.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	VariablesKey = "variables.tf"
 	// TFVarsKey is the key of the terraform.tfvars file inside the variables Secret.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	TFVarsKey = "terraform.tfvars"
 	// StateKey is the key of the terraform.tfstate file inside the state ConfigMap.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	StateKey = "terraform.tfstate"
 )
 
