@@ -32,9 +32,6 @@ import (
 const portName = "https"
 
 type actuator struct {
-	// runtimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
-	// It's used to interact with extension objects. By default, it's also used as the provider runtimeClient to interact with
-	// infrastructure resources, unless a kubeconfig is specified in the cloudprovider secret.
 	runtimeClient client.Client
 }
 
@@ -112,11 +109,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 	return nil
 }
 
-func (a *actuator) providerClient(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
+func (a *actuator) providerClient(ctx context.Context, _ logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
 	if exposure.Spec.CredentialsRef == nil {
 		return nil, fmt.Errorf("credentialsRef is required for the provider-local SelfHostedShootExposure implementation but is not set")
 	}
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
 		Name:      exposure.Spec.CredentialsRef.Name,
 		Namespace: exposure.Spec.CredentialsRef.Namespace,
 	})

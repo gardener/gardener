@@ -24,7 +24,7 @@ func (d *localDriver) GetMachineStatus(ctx context.Context, req *driver.GetMachi
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, apiv1alpha1.Provider))
 	}
 
-	providerClient, err := local.GetProviderClient(ctx, log, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
+	providerClient, err := local.GetProviderClient(ctx, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
 	if err != nil {
 		return nil, fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}

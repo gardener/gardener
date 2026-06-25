@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -118,7 +119,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			initialControlPlaneMachineName = machineList.Items[0].Name
 
 			podList := &corev1.PodList{}
-			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
+			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
@@ -207,10 +208,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 		It("should connect to the shoot", func(ctx SpecContext) {
 			By("Forward port to control plane machine pod")
-			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), technicalID, machinePodName(ctx, technicalID, 0), localPort, 443)
+			fw, err := kubernetes.SetupPortForwarder(portForwardCtx, RuntimeClient.RESTConfig(), infrastructure.MachineNamespaceName(technicalID), machinePodName(ctx, technicalID, 0), localPort, 443)
 			Expect(err).NotTo(HaveOccurred())
 
 			go func() {
+				GinkgoRecover()
 				if err := fw.ForwardPorts(); err != nil {
 					Fail("Error forwarding ports: " + err.Error())
 				}
@@ -259,10 +261,10 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			// Verify that the infrastructure created in the shoot has corresponding resources in the bootstrap cluster, but
 			// not in the shoot itself. This is specific to provider-local as the infrastructure resources are managed in the
 			// bootstrap cluster. This check is unrelated to gardenadm functionality, but serves as an additional verification
-			// that the functionality of using a non-default provider client in provider-local works as expected.
-			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "machines", Namespace: technicalID}}
-			Consistently(ctx, shootKomega.Get(service)).Should(BeNotFoundError())
-			Eventually(ctx, Get(service)).Should(Succeed())
+			// that the functionality of using the provider client of the "gardener-local" cluster works.
+			ipPool := &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: infrastructure.IPPoolName(technicalID, string(gardencorev1beta1.IPFamilyIPv4))}}
+			Consistently(ctx, shootKomega.Get(ipPool)).Should(BeNotFoundError())
+			Eventually(ctx, Get(ipPool)).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("should deploy the SelfHostedShootExposure in the shoot", func(ctx SpecContext) {
@@ -294,7 +296,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, shootKomega.Object(&machinev1alpha1.Machine{ObjectMeta: metav1.ObjectMeta{Name: initialControlPlaneMachineName, Namespace: "kube-system"}})).
 				Should(HaveField("Status.CurrentStatus.Phase", machinev1alpha1.MachineRunning))
 
-			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: technicalID}})).
+			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: infrastructure.MachineNamespaceName(technicalID)}})).
 				Should(HaveField("Status.Phase", corev1.PodRunning))
 		}, SpecTimeout(time.Minute))
 
@@ -303,7 +305,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			// that provider-local correctly uses the kind kubeconfig in the cloudprovider secret to create a non-default
 			// provider client for managing machines.
 			podList := &corev1.PodList{}
-			Eventually(ctx, ObjectList(podList, client.InNamespace(technicalID), client.MatchingLabels{"app": "machine"})).
+			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
 				Should(HaveField("Items", ContainElements(
 					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-control-plane-")),
 					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-worker-")),

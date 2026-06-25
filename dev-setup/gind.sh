@@ -58,6 +58,8 @@ case "$COMMAND" in
       fi
       docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "gardenadm init -d /gardenadm/resources ${GARDENADM_INIT_FLAGS:-}"
       ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
+      cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig"
+      cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-local/kubeconfig/kubeconfig"
     fi
 
     # Run `gardenadm join` on gind-machine-1 to join it as worker node

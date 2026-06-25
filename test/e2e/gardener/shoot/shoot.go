@@ -26,6 +26,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -264,7 +265,7 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
 
 	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
 		beforeStartMachinePodList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)), client.MatchingLabels{
 			"app":              "machine",
 			"machine-provider": "local",
 		})).Should(Succeed())
@@ -283,7 +284,7 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeT
 
 	It("Compare machine pod names", func(ctx SpecContext) {
 		machinePodListAfterTest := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(machinePodListAfterTest, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+		Eventually(ctx, s.SeedKomega.List(machinePodListAfterTest, client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)), client.MatchingLabels{
 			"app":              "machine",
 			"machine-provider": "local",
 		})).Should(Succeed())

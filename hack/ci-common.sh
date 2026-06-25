@@ -81,7 +81,7 @@ export_artifacts_for_cluster() {
       # container logs
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
     done < <(kubectl -n "$namespace" get po -l 'app in (machine,bastion)' -oname | cut -d/ -f2)
-  done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2)
+  done < <(kubectl get ns -l gardener.cloud/role=infra -oname | cut -d/ -f2)
 }
 
 export_artifacts_gind() {

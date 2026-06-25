@@ -7,12 +7,15 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 )
+
+const infraNamespacePrefix = "infra-"
 
 type mutator struct {
 	client client.Client
@@ -28,7 +31,10 @@ func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
 		return fmt.Errorf("unexpected object, got %T wanted *networkingv1.NetworkPolicy", newObj)
 	}
 
-	cluster, err := extensionscontroller.GetCluster(ctx, m.client, networkPolicy.Namespace)
+	// For infra namespaces (infra-<technicalID>), derive the Cluster name from the shoot namespace.
+	clusterName := strings.TrimPrefix(networkPolicy.Namespace, infraNamespacePrefix)
+
+	cluster, err := extensionscontroller.GetCluster(ctx, m.client, clusterName)
 	if err != nil {
 		return err
 	}
