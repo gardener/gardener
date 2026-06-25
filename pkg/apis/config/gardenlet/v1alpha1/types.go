@@ -92,6 +92,22 @@ type GardenletConfiguration struct {
 	// NodeToleration contains optional settings for default tolerations.
 	// +optional
 	NodeToleration *NodeToleration `json:"nodeToleration,omitempty"`
+	// RegistryCABundle is the CA bundle for the private registry from which gardenlet and the
+	// components it deploys pull their images. Exactly one of SecretRef or Inline must be set.
+	// +optional
+	RegistryCABundle *RegistryCABundle `json:"registryCABundle,omitempty"`
+}
+
+// RegistryCABundle contains the CA certificate bundle for a private container registry.
+// Exactly one of SecretRef or Inline must be set.
+type RegistryCABundle struct {
+	// SecretRef references a Secret in the virtual garden's garden namespace containing
+	// the PEM-encoded CA bundle under the key "bundle.crt".
+	// +optional
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
+	// Inline contains the PEM-encoded CA bundle directly.
+	// +optional
+	Inline *string `json:"inline,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
