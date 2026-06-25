@@ -452,6 +452,14 @@ func (r *Reconciler) initializeOperation(
 		return nil, err
 	}
 
+	if r.Config.RegistryCABundle != nil {
+		bundle, err := kubernetesutils.ResolveRegistryCABundle(ctx, r.GardenClient, r.Config.RegistryCABundle.SecretRef, r.Config.RegistryCABundle.Inline)
+		if err != nil {
+			return nil, fmt.Errorf("failed resolving registry CA bundle: %w", err)
+		}
+		op.RegistryCABundle = &bundle
+	}
+
 	// Only set UID once the operation was initialized successfully.
 	// This serves as a marker in the lifecycle of a shoot that all necessary information is available to begin with the
 	// cluster creation.
