@@ -929,6 +929,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		},
 		getLoadBalancerServiceProxyProtocol(garden),
 		false,
+		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 		len(garden.Spec.RuntimeCluster.Networking.IPFamilies) == 2,
 		r.RuntimeVersion,

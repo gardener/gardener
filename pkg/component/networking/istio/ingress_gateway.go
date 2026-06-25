@@ -47,6 +47,7 @@ type IngressGatewayValues struct {
 	TrustDomain                        string
 	TerminateLoadBalancerProxyProtocol bool
 	VPNEnabled                         bool
+	HTTPProxyLegacyPortEnabled         bool
 	Zones                              []string
 	DualStack                          bool
 	EnforceSpreadAcrossHosts           bool
@@ -88,7 +89,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 		httpProxy := map[string]any{
 			"enabled": istioIngressGateway.VPNEnabled,
 			"legacyPort": map[string]any{
-				"enabled": true,
+				"enabled": istioIngressGateway.HTTPProxyLegacyPortEnabled,
 				"port":    vpnseedserver.GatewayPort,
 				"header":  "Reversed-VPN",
 			},
