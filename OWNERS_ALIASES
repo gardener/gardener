@@ -38,6 +38,7 @@ aliases:
   - shreyas-s-rao
   - unmarshall
   gardener-reviewers-logging: # This group is primarily responsible for logging topics.
+  - Bobi-Wan
   - iypetrov
   - nickytd
   - rrhubenov
