@@ -100,7 +100,8 @@ export_artifacts_gind() {
 
       # container logs
       mkdir -p "$node_dir/var-log"
-      docker cp "$container_name":/var/log/. "$node_dir/var-log" || true
+      # `docker cp` aborts on the first symlink that resolves outside the container FS; `tar -h` dereferences symlinks and continues.
+      docker exec "$container_name" tar -chf - /var/log/ | tar -xf - -C "$node_dir" --strip-components=2 || true
     fi
   done
 }
