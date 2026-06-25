@@ -179,7 +179,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					caBundle = fmt.Sprintf("%s\n%s", caBundle, *worker.CABundle)
 				}
 
-				key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig, nil)
+				key := Key(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				if inPlaceUpdate {
 					key = fmt.Sprintf("gardener-node-agent-%s", worker.Name)
 				}
@@ -485,156 +485,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
-			It("should successfully create the worker-pools-operatingsystemconfig-hashes secret", func() {
-				DeferCleanup(test.WithVars(
-					&OriginalConfigFn, originalConfigFn,
-				))
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
-				Expect(secret.Labels).To(Equal(map[string]string{
-					"persist": "true",
-				}))
-				pools := secret.Data["pools"]
-				Expect(string(pools)).To(Equal(`pools:
-    - name: worker1
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: gardener-node-agent-worker1-4692a28d44cc6a0c
-    - name: worker2
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: gardener-node-agent-worker2-2ad2eaf0b80f61a3
-`))
-			})
-
-			calculateKeyForVersionFn := func(
-				oscVersion int,
-				_ *semver.Version,
-				_ *Values,
-				worker *gardencorev1beta1.Worker,
-				_ *gardencorev1beta1.KubeletConfig,
-				_ *gardencorev1beta1.KubeProxyConfig,
-			) (
-				string,
-				error,
-			) {
-				switch oscVersion {
-				case 1:
-					return worker.Name + "-version1", nil
-				case 2:
-					return worker.Name + "-version2", nil
-				default:
-					return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
-				}
-			}
-
-			It("should successfully fill missing hashes and workers in the worker-pools-operatingsystemconfig-hashes secret", func() {
-				DeferCleanup(test.WithVars(
-					&OriginalConfigFn, originalConfigFn,
-					&CalculateKeyForVersion, calculateKeyForVersionFn,
-				))
-
-				poolHashesSecret.Data["pools"] = []byte(`pools:
-    - name: worker1
-      currentVersion: 1
-`)
-				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
-				Expect(secret.Labels).To(Equal(map[string]string{
-					"persist": "true",
-				}))
-				pools := secret.Data["pools"]
-				Expect(string(pools)).To(Equal(`pools:
-    - name: worker1
-      currentVersion: 1
-      hashVersionToOSCKey:
-        1: worker1-version1
-        2: worker1-version2
-    - name: worker2
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: worker2-version2
-`))
-
-			})
-
-			It("should successfully upgrade the hash versions in the worker-pools-operatingsystemconfig-hashes secret", func() {
-				DeferCleanup(test.WithVars(
-					&OriginalConfigFn, originalConfigFn,
-					&CalculateKeyForVersion, calculateKeyForVersionFn,
-				))
-
-				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
-				Expect(secret.Labels).To(Equal(map[string]string{
-					"persist": "true",
-				}))
-				pools := secret.Data["pools"]
-				Expect(string(pools)).To(Equal(`pools:
-    - name: worker1
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: worker1-version2
-    - name: worker2
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: worker2-version2
-`))
-			})
-
-			calculateStableKeyForVersionFn := func(
-				oscVersion int,
-				kubernetesVersion *semver.Version,
-				_ *Values,
-				worker *gardencorev1beta1.Worker,
-				_ *gardencorev1beta1.KubeletConfig,
-				_ *gardencorev1beta1.KubeProxyConfig,
-			) (string, error) {
-				switch oscVersion {
-				case 1:
-					return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
-				case 2:
-					return worker.Name + "-version2", nil
-				default:
-					return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
-				}
-			}
-
-			It("should successfully keep the current hash versions if nothing changes in the worker-pools-operatingsystemconfig-hashes secret", func() {
-				DeferCleanup(test.WithVars(
-					&OriginalConfigFn, originalConfigFn,
-					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
-				))
-
-				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
-				Expect(secret.Labels).To(Equal(map[string]string{
-					"persist": "true",
-				}))
-				pools := secret.Data["pools"]
-				Expect(string(pools)).To(Equal(`pools:
-    - name: worker1
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: worker1-version2
-    - name: worker2
-      currentVersion: 2
-      hashVersionToOSCKey:
-        2: worker2-version2
-`))
-			})
-
 			It("should successfully deploy all extensions resources", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, fakeClock.Now,
@@ -857,7 +707,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := KeyV2(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig, nil)
+					key := Key(k8sVersion, values.CredentialsRotationStatus, &worker, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
@@ -1087,26 +937,22 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							Object:                        worker1OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                      worker1OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							Object:                        worker1OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                      worker1OSCOriginal,
 						},
 					},
 					worker2Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							Object:                        worker2OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                      worker2OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							Object:                        worker2OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                      worker2OSCOriginal,
 						},
 					},
 				}))
@@ -1153,28 +999,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							SecretName:                    new("cc-" + expected[0].Name),
-							Object:                        worker1OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							SecretName:                  new("cc-" + expected[0].Name),
+							Object:                      worker1OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
-							Object:                        worker1OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-4692a28d44cc6a0c",
+							Object:                      worker1OSCOriginal,
 						},
 					},
 					worker2Name: {
 						Init: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							SecretName:                    new("cc-" + expected[2].Name),
-							Object:                        worker2OSCDownloader,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							SecretName:                  new("cc-" + expected[2].Name),
+							Object:                      worker2OSCDownloader,
 						},
 						Original: Data{
-							GardenerNodeAgentSecretName:   "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
-							Object:                        worker2OSCOriginal,
-							IncludeSecretNameInWorkerPool: true,
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-2ad2eaf0b80f61a3",
+							Object:                      worker2OSCOriginal,
 						},
 					},
 				}))
@@ -1351,50 +1193,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 	})
 
-	Describe("#KeyV1", func() {
-		var (
-			workerName        = "foo"
-			kubernetesVersion = "1.2.3"
-		)
-
-		It("should return an empty string", func() {
-			Expect(KeyV1(workerName, nil, nil)).To(BeEmpty())
-		})
-
-		It("should return the expected key", func() {
-			Expect(KeyV1(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
-		})
-
-		It("is different for different worker.cri configurations", func() {
-			containerDKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			otherKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
-			Expect(containerDKey).NotTo(Equal(otherKey))
-		})
-
-		It("should return the expected key for version 1", func() {
-			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), nil,
-				&gardencorev1beta1.Worker{
-					Name: workerName,
-					Machine: gardencorev1beta1.Machine{
-						Image: &gardencorev1beta1.ShootMachineImage{
-							Name:    "type1",
-							Version: new("12.34"),
-						},
-					},
-				}, nil, nil)
-			Expect(err).To(Succeed())
-			Expect(key).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
-		})
-
-		It("should return an error for unknown versions", func() {
-			for _, version := range []int{0, 3} {
-				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, nil, nil)
-				Expect(err).NotTo(Succeed())
-			}
-		})
-	})
-
-	Describe("#KeyV2", func() {
+	Describe("#Key", func() {
 		var (
 			kubernetesVersion *semver.Version
 			values            *Values
@@ -1456,14 +1255,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Enabled: new(false),
 			}
 
-			var err error
-			hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
-			Expect(err).ToNot(HaveOccurred())
+			hash = Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, kubeProxyConfig)
 		})
 
 		It("should handle an empty machine image version", func() {
 			p.Machine.Image.Version = nil
-			Expect(CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)).NotTo(BeEmpty())
+			Expect(Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)).NotTo(BeEmpty())
 		})
 
 		Context("hash value should not change", func() {
@@ -1472,8 +1269,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Mode:    new(gardencorev1beta1.ProxyModeIPTables),
 					Enabled: new(false),
 				}
-				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
-				Expect(err).NotTo(HaveOccurred())
+				actual := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, kubeProxyConfig)
 				Expect(actual).To(Equal(hash))
 			})
 
@@ -1555,8 +1351,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).NotTo(HaveOccurred())
+				actual := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				Expect(actual).NotTo(Equal(hash))
 			})
 
@@ -1599,11 +1394,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
-				var err error
 				credentialStatusWithInitiatedRotation := values.CredentialsRotationStatus.CertificateAuthorities.DeepCopy()
 				values.CredentialsRotationStatus.CertificateAuthorities = nil
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).ToNot(HaveOccurred())
+				hash = Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 
 				values.CredentialsRotationStatus.CertificateAuthorities = credentialStatusWithInitiatedRotation
 			})
@@ -1614,11 +1407,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("when a shoot service account key rotation is triggered for the first time (lastInitiationTime was nil)", func() {
-				var err error
 				credentialStatusWithInitiatedRotation := values.CredentialsRotationStatus.ServiceAccountKey.DeepCopy()
 				values.CredentialsRotationStatus.ServiceAccountKey = nil
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).ToNot(HaveOccurred())
+				hash = Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 
 				values.CredentialsRotationStatus.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
@@ -1669,41 +1460,32 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("when node-local-dns gets enabled and kubernetes version is equal or larger than 1.34", func() {
 				values.NodeLocalDNSEnabled = false
-				var err error
 				kubernetesVersion = semver.MustParse("1.34")
-				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).ToNot(HaveOccurred())
+				hash1 := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				values.NodeLocalDNSEnabled = true
-				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).ToNot(HaveOccurred())
+				hash2 := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				Expect(hash1).To(Equal(hash2))
 			})
 
 			It("when node-local-dns gets disabled and kube-proxy runs in ipvs mode", func() {
 				values.NodeLocalDNSEnabled = true
-				var err error
 				kubernetesVersion = semver.MustParse("1.34")
 				kubeProxyConfig := &gardencorev1beta1.KubeProxyConfig{
 					Mode:    new(gardencorev1beta1.ProxyModeIPVS),
 					Enabled: new(true),
 				}
-				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
-				Expect(err).ToNot(HaveOccurred())
+				hash1 := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, kubeProxyConfig)
 				values.NodeLocalDNSEnabled = false
-				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, kubeProxyConfig)
-				Expect(err).ToNot(HaveOccurred())
+				hash2 := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, kubeProxyConfig)
 				Expect(hash1).ToNot(Equal(hash2))
 			})
 
 			It("when node-local-dns gets enabled and kubernetes version is lower than 1.34", func() {
 				values.NodeLocalDNSEnabled = false
-				var err error
 				kubernetesVersion = semver.MustParse("1.31")
-				hash1, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).ToNot(HaveOccurred())
+				hash1 := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				values.NodeLocalDNSEnabled = true
-				hash2, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig, nil)
-				Expect(err).ToNot(HaveOccurred())
+				hash2 := Key(kubernetesVersion, values.CredentialsRotationStatus, p, values.NodeLocalDNSEnabled, kubeletConfig, nil)
 				Expect(hash1).ToNot(Equal(hash2))
 			})
 		})

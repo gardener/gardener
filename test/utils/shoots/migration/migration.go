@@ -14,26 +14,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
-
-// MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated.
-func MarkOSCSecret(ctx context.Context, seedClient client.Client, namespace string) error {
-	secret := &corev1.Secret{}
-	if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: operatingsystemconfig.WorkerPoolHashesSecretName}, secret); err != nil {
-		return err
-	}
-	metav1.SetMetaDataLabel(&secret.ObjectMeta, "gardener.cloud/custom-test-label", "test")
-	return seedClient.Update(ctx, secret)
-}
 
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
 // from the Shoot's control plane namespace.

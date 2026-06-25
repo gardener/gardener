@@ -20,7 +20,6 @@ import (
 
 	. "github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
-	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
 const (
@@ -99,11 +98,6 @@ func validateConfig() {
 }
 
 func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *applications.GuestBookTest) error {
-	ginkgo.By("Mark osc hash secret")
-	if err := shootmigration.MarkOSCSecret(ctx, t.SourceSeedClient.Client(), t.SeedShootNamespace); err != nil {
-		return err
-	}
-
 	if err := t.PopulateBeforeMigrationComparisonElements(ctx); err != nil {
 		return err
 	}

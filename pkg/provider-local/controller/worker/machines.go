@@ -71,7 +71,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	)
 
 	for _, pool := range w.worker.Spec.Pools {
-		workerPoolHash, err := worker.WorkerPoolHash(pool, w.cluster, nil, nil, nil)
+		workerPoolHash, err := worker.WorkerPoolHash(pool, w.cluster, nil, nil)
 		if err != nil {
 			return err
 		}
