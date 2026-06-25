@@ -7,7 +7,7 @@ patches:
       path: /nodes/-
       value:
         role: worker
-        image: kindest/node:v1.35.1@sha256:05d7bcdefbda08b4e038f644c4df690cdac3fba8b06f8289f30e10026720a1ab
+        image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
         labels:
           topology.kubernetes.io/zone: "0"
         extraPortMappings: []
@@ -42,21 +42,8 @@ patches:
     - op: replace
       path: /nodes/0/kubeadmConfigPatches/0
       value: |
-        # TODO(ialidzhikov): Use the kubeadm.k8s.io/v1beta4 API when kind supports it (ref https://github.com/kubernetes-sigs/kind/pull/3675).
-        # Currently kind accepts kubeadm.k8s.io/v1beta3 only.
-        apiVersion: kubeadm.k8s.io/v1beta3
+        apiVersion: kubeadm.k8s.io/v1beta4
         kind: ClusterConfiguration
-        apiServer:
-          extraArgs:
-            # TODO(DobromirNPeev): Remove once kind uses a Kubernetes version 1.36+.
-            # The MutatingAdmissionPolicy feature gate is promoted to GA and enabled by default in Kubernetes 1.36.
-            feature-gates: "MutatingAdmissionPolicy=true"
-            runtime-config: "admissionregistration.k8s.io/v1beta1=true"
-        controllerManager:
-          extraArgs:
-            # TODO(LucaBernstein): Remove once kind uses a Kubernetes version that includes the fix for
-            # https://github.com/kubernetes/kubernetes/issues/137409 (MaxUnavailableStatefulSet deadlock).
-            feature-gates: "MaxUnavailableStatefulSet=false"
   target:
     group: kind.x-k8s.io
     kind: Cluster
