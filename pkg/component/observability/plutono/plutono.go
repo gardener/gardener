@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -403,7 +404,9 @@ datasources:
 `
 	}
 
-	if !p.values.OnlyDeployDataSourcesAndDashboards {
+	if !p.values.OnlyDeployDataSourcesAndDashboards &&
+		(!features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) ||
+			!features.DefaultFeatureGate.Enabled(features.RemoveVali)) {
 		datasource += `- name: vali
   type: vali
   access: proxy
