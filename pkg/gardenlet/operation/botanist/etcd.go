@@ -17,7 +17,6 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -42,7 +41,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 	}
 
-	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.GetInfo(), b.ManagedSeed, class)
+	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.GetInfo())
 	if err != nil {
 		return nil, err
 	}
@@ -251,12 +250,8 @@ func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
 	)
 }
 
-func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed, class etcd.Class) (string, error) {
-	scheduleFormat := "%d %d */3 * *"
-	if managedSeed != nil && class == etcd.ClassImportant {
-		// defrag important etcds of ManagedSeeds daily in the maintenance window
-		scheduleFormat = "%d %d * * *"
-	}
+func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
+	scheduleFormat := "%d %d * * *"
 
 	return timewindow.DetermineSchedule(
 		scheduleFormat,

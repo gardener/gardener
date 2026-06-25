@@ -32,7 +32,6 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
@@ -110,7 +109,7 @@ var _ = Describe("Etcd", func() {
 				expectedReplicas:                  PointTo(Equal(int32(1))),
 				expectedETCDMainStorageCapacity:   Equal("25Gi"),
 				expectedETCDEventsStorageCapacity: Equal("10Gi"),
-				expectedDefragmentationSchedule:   Equal(new("34 12 */3 * *")),
+				expectedDefragmentationSchedule:   Equal(new("34 12 * * *")),
 				expectedMaintenanceTimeWindow:     Equal(maintenanceTimeWindow),
 				expectedHighAvailabilityEnabled:   Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 			}
@@ -142,36 +141,6 @@ var _ = Describe("Etcd", func() {
 					})
 				}
 			}
-		})
-
-		Context("with ManagedSeed", func() {
-			BeforeEach(func() {
-				botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-				validator.expectedDefragmentationSchedule = Equal(new("34 12 * * *"))
-			})
-
-			It("should successfully create an etcd interface (normal class)", func() {
-
-				oldNewEtcd := NewEtcd
-				defer func() { NewEtcd = oldNewEtcd }()
-				NewEtcd = validator.NewEtcd
-
-				etcd, err := botanist.DefaultEtcd(role, class)
-				Expect(etcd).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should successfully create an etcd interface (important class)", func() {
-				class := etcd.ClassImportant
-
-				oldNewEtcd := NewEtcd
-				defer func() { NewEtcd = oldNewEtcd }()
-				NewEtcd = validator.NewEtcd
-
-				etcd, err := botanist.DefaultEtcd(role, class)
-				Expect(etcd).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-			})
 		})
 
 		Context("with minAllowed configuration", func() {
