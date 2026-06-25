@@ -139,8 +139,9 @@ var _ = Describe("graph for seeds", func() {
 		serviceAccount1Secret2 = "sa1secret2"
 		serviceAccount1        *corev1.ServiceAccount
 
-		pullSecret1     = "pull-secret"
-		caBundleSecret1 = "ca-bundle-secret"
+		pullSecret1             = "pull-secret"
+		caBundleSecret1         = "ca-bundle-secret"
+		registryCABundleSecret1 = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "registry-ca-bundle-secret", Namespace: "namespace1"}}
 	)
 
 	BeforeEach(func() {
@@ -368,6 +369,12 @@ var _ = Describe("graph for seeds", func() {
 					Config: runtime.RawExtension{
 						Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 							SeedConfig: seedConfig1,
+							RegistryCABundle: &gardenletconfigv1alpha1.RegistryCABundle{
+								SecretRef: &corev1.SecretReference{
+									Name:      registryCABundleSecret1.Name,
+									Namespace: registryCABundleSecret1.Namespace,
+								},
+							},
 						},
 					},
 				},
@@ -380,6 +387,9 @@ var _ = Describe("graph for seeds", func() {
 				Config: runtime.RawExtension{
 					Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 						SeedConfig: seedConfig2,
+						RegistryCABundle: &gardenletconfigv1alpha1.RegistryCABundle{
+							SecretRef: &corev1.SecretReference{Name: registryCABundleSecret1.Name, Namespace: registryCABundleSecret1.Namespace},
+						},
 					},
 				},
 				Deployment: seedmanagementv1alpha1.GardenletSelfDeployment{
@@ -1730,21 +1740,22 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
 		By("Add")
 		fakeInformerManagedSeed.Add(managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(6))
-		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.graph.Nodes().Len()).To(Equal(7))
+		Expect(graph.graph.Edges().Len()).To(Equal(7))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, bootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
 		By("Update (irrelevant change)")
 		managedSeed1Copy := managedSeed1.DeepCopy()
 		seedConfig1.Labels = map[string]string{"new": "labels"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(6))
-		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.graph.Nodes().Len()).To(Equal(7))
+		Expect(graph.graph.Edges().Len()).To(Equal(7))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1755,8 +1766,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Spec.Shoot.Name = "newshoot"
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(6))
-		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.graph.Nodes().Len()).To(Equal(7))
+		Expect(graph.graph.Edges().Len()).To(Equal(7))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1Copy.Spec.Shoot.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
@@ -1770,8 +1781,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		seedConfig1.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "new2", Name: "newaswell2"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(5))
-		Expect(graph.graph.Edges().Len()).To(Equal(5))
+		Expect(graph.graph.Nodes().Len()).To(Equal(6))
+		Expect(graph.graph.Edges().Len()).To(Equal(6))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1786,8 +1797,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		seedConfig1.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "new2", Name: "newaswell2"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(5))
-		Expect(graph.graph.Edges().Len()).To(Equal(5))
+		Expect(graph.graph.Nodes().Len()).To(Equal(6))
+		Expect(graph.graph.Edges().Len()).To(Equal(6))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1806,8 +1817,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Annotations = map[string]string{"gardener.cloud/operation": "reconcile"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(6))
-		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.graph.Nodes().Len()).To(Equal(7))
+		Expect(graph.graph.Edges().Len()).To(Equal(7))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1824,8 +1835,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Annotations = map[string]string{"gardener.cloud/operation": "reconcile-again"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(5))
-		Expect(graph.graph.Edges().Len()).To(Equal(5))
+		Expect(graph.graph.Nodes().Len()).To(Equal(6))
+		Expect(graph.graph.Edges().Len()).To(Equal(6))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1836,8 +1847,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Annotations = map[string]string{"gardener.cloud/operation": "renew-kubeconfig"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(6))
-		Expect(graph.graph.Edges().Len()).To(Equal(6))
+		Expect(graph.graph.Nodes().Len()).To(Equal(7))
+		Expect(graph.graph.Edges().Len()).To(Equal(7))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1850,8 +1861,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		newBootstrapMode := seedmanagementv1alpha1.BootstrapServiceAccount
 		managedSeed1.Spec.Gardenlet.Bootstrap = &newBootstrapMode
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(7))
-		Expect(graph.graph.Edges().Len()).To(Equal(7))
+		Expect(graph.graph.Nodes().Len()).To(Equal(8))
+		Expect(graph.graph.Edges().Len()).To(Equal(8))
 		Expect(graph.HasPathFrom(VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name)).To(BeTrue())
@@ -1876,21 +1887,43 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 	It("should behave as expected for seedmanagementv1alpha1.Gardenlet", func() {
 		By("Add")
 		fakeInformerGardenlet.Add(gardenlet1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(5))
-		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.graph.Nodes().Len()).To(Equal(6))
+		Expect(graph.graph.Edges().Len()).To(Equal(5))
 		Expect(graph.HasPathFrom(VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, gardenlet1.Namespace, caBundleSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, gardenlet1.Namespace, pullSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
 
 		By("Update (irrelevant change)")
 		gardenlet1Copy := gardenlet1.DeepCopy()
 		seedConfig2.Labels = map[string]string{"new": "labels"}
 		fakeInformerGardenlet.Update(gardenlet1Copy, gardenlet1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(5))
-		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.graph.Nodes().Len()).To(Equal(6))
+		Expect(graph.graph.Edges().Len()).To(Equal(5))
 		Expect(graph.HasPathFrom(VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
+
+		By("Update (registryCABundle secretRef changed)")
+		gardenlet1Copy = gardenlet1.DeepCopy()
+		newRegistryCABundleSecret := "new-registry-ca-bundle-secret"
+		gardenlet1.Spec.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration).RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+			SecretRef: &corev1.SecretReference{Name: newRegistryCABundleSecret, Namespace: registryCABundleSecret1.Namespace},
+		}
+		fakeInformerGardenlet.Update(gardenlet1Copy, gardenlet1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(6))
+		Expect(graph.graph.Edges().Len()).To(Equal(5))
+		Expect(graph.HasPathFrom(VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, registryCABundleSecret1.Namespace, newRegistryCABundleSecret, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeTrue())
+
+		By("Update (registryCABundle removed)")
+		gardenlet1Copy = gardenlet1.DeepCopy()
+		gardenlet1.Spec.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration).RegistryCABundle = nil
+		fakeInformerGardenlet.Update(gardenlet1Copy, gardenlet1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.HasPathFrom(VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name)).To(BeFalse())
 
 		By("Update (backup credentials ref to new secret)")
 		gardenlet1Copy = gardenlet1.DeepCopy()
@@ -2126,23 +2159,25 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerManagedSeed.Add(managedSeed1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+5, edges+6
+			nodes, edges = nodes+6, edges+7
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSeed, "", managedSeed1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, bootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", managedSeed1.Name, BeTrue()})
 		})
 		wg.Go(func() {
 			fakeInformerGardenlet.Add(gardenlet1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+3, edges+4
+			nodes, edges = nodes+3, edges+5
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, caBundleSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, pullSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
+			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 		})
 		wg.Go(func() {
 			fakeInformerCertificateSigningRequest.Add(csr1)
@@ -2286,6 +2321,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, bootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", managedSeed1.Name, BeTrue()})
 		})
 		wg.Go(func() {
@@ -2300,6 +2336,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeFalse()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, caBundleSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, pullSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
+			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 		})
 		wg.Go(func() {
 			fakeInformerCertificateSigningRequest.Delete(csr1)
@@ -2453,6 +2490,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeSeed, "", managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, bootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, "garden", seed1SecretResourceRef.Name, VertexTypeSeed, "", managedSeed1.Name, BeTrue()})
 		})
 		wg.Go(func() {
@@ -2465,6 +2503,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, "newsecretnamespace", "newsecretname", VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, caBundleSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, pullSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
+			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeTrue()})
 		})
 		wg.Go(func() {
 			fakeInformerCertificateSigningRequest.Add(csr1)
@@ -2591,6 +2630,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, backupSecretCredentialsRef.Namespace, backupSecretCredentialsRef.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeFalse()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, caBundleSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeFalse()})
 			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, gardenlet1.Namespace, pullSecret1, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeFalse()})
+			paths[VertexTypeGardenlet] = append(paths[VertexTypeGardenlet], pathExpectation{VertexTypeSecret, registryCABundleSecret1.Namespace, registryCABundleSecret1.Name, VertexTypeGardenlet, gardenlet1.Namespace, gardenlet1.Name, BeFalse()})
 		})
 		wg.Go(func() {
 			fakeInformerCertificateSigningRequest.Delete(csr1)

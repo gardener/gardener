@@ -98,7 +98,7 @@ func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, garde
 
 	g.addEdge(gardenletVertex, seedVertex)
 
-	seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(gardenlet.Name, &gardenlet.Spec.Config)
+	seedTemplate, gardenletConfig, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(gardenlet.Name, &gardenlet.Spec.Config)
 	if err != nil {
 		return
 	}
@@ -147,6 +147,11 @@ func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, garde
 	if gardenlet.Spec.Deployment.Helm.OCIRepository.PullSecretRef != nil {
 		pullSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardenlet.Namespace, gardenlet.Spec.Deployment.Helm.OCIRepository.PullSecretRef.Name)
 		g.addEdge(pullSecretVertex, gardenletVertex)
+	}
+
+	if gardenletConfig != nil && gardenletConfig.RegistryCABundle != nil && gardenletConfig.RegistryCABundle.SecretRef != nil {
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, gardenletConfig.RegistryCABundle.SecretRef.Namespace, gardenletConfig.RegistryCABundle.SecretRef.Name)
+		g.addEdge(secretVertex, gardenletVertex)
 	}
 }
 
