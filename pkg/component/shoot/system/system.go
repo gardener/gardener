@@ -6,6 +6,7 @@ package system
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"slices"
@@ -75,6 +76,10 @@ type Values struct {
 	NodeNetworkCIDRs []net.IPNet
 	// EgressCIDRs are the egress CIDRs of the cluster, actual presence of this field depends on the implementation of the provider extension.
 	EgressCIDRs []net.IPNet
+	// RegistryCABundle is the PEM-encoded CA bundle for the container image registry. When non-nil,
+	// the system component creates a ConfigMap and RBAC in kube-public so that bootstrap tokens can
+	// fetch the CA before pulling the gardener-node-agent image.
+	RegistryCABundle *string
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -329,6 +334,31 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 
 	if err := registry.Add(s.selfHostedShootResources()...); err != nil {
 		return nil, err
+	}
+
+	if !s.values.IsWorkerless && s.values.RegistryCABundle != nil {
+		const name = "registry-ca-bundle"
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceSystem},
+			Data:       map[string]string{"ca.b64": base64.StdEncoding.EncodeToString([]byte(*s.values.RegistryCABundle))},
+		}
+		role := &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceSystem},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{""},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{name},
+				Verbs:         []string{"get"},
+			}},
+		}
+		roleBinding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceSystem},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.GroupKind, Name: "system:bootstrappers", APIGroup: rbacv1.GroupName}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: name},
+		}
+		if err := registry.Add(configMap, role, roleBinding); err != nil {
+			return nil, err
+		}
 	}
 
 	return registry.SerializedObjects()

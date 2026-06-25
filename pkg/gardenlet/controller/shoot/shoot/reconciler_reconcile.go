@@ -863,7 +863,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(b.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployMachineControllerManager),
+			Dependencies: flow.NewTaskIDs(deployMachineControllerManager, deployShootSystemResources),
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name: "Waiting until worker resource status is updated with latest machine deployments",

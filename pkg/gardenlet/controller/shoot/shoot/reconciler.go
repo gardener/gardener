@@ -27,6 +27,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -466,6 +467,10 @@ func (r *Reconciler) initializeOperation(
 	op, err := opBuilder.WithShoot(shootObj).Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap, shoot)
 	if err != nil {
 		return nil, err
+	}
+
+	if containersCABundle := imagevector.ContainersCABundle(); containersCABundle != nil && containersCABundle.Inline != nil {
+		op.RegistryCABundle = containersCABundle.Inline
 	}
 
 	// Only set UID once the operation was initialized successfully.

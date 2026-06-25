@@ -35,6 +35,10 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 		EncryptedResources:    append(sets.List(gardenerutils.DefaultResourcesForEncryption()), b.Shoot.ResourcesToEncrypt...),
 	}
 
+	if !b.Shoot.IsWorkerless {
+		values.RegistryCABundle = b.RegistryCABundle
+	}
+
 	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values)
 }
 
