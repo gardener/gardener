@@ -9,6 +9,13 @@ Breaking changes may be introduced with new Kubernetes versions.
 This documentation describes the Gardener specific differences and requirements for upgrading to a supported Kubernetes version.
 For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [changelogs](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) and release blogs should be considered before upgrade.
 
+## Upgrading to Kubernetes `v1.36`
+
+- **`StrictIPCIDRValidation` is now enabled by default.** The kube-apiserver rejects IPs and CIDRs with leading zeros (e.g. `010.0.0.1` or `10.0.0.0/024`). `Shoot` owners must ensure all network CIDRs in their `Shoot` spec do not contain leading zeros before upgrading.
+- **`MaxUnavailableStatefulSet` is disabled by default again.** This feature gate was unintentionally enabled by default in Kubernetes v1.35.0–v1.35.3, causing a StatefulSet rolling-update deadlock ([kubernetes#137409](https://github.com/kubernetes/kubernetes/issues/137409)). It is disabled by default in v1.36. `Shoot` owners who wish to continue using this behavior must explicitly enable the feature gate via `.spec.kubernetes.kubeControllerManager.featureGates`.
+- The alpha API groups `autoscaling/v2beta1` and `autoscaling/v2beta2` have been removed. Any resources still using these groups must be migrated to `autoscaling/v2` before upgrading.
+- The alpha API group `scheduling.k8s.io/v1alpha1` has been removed and replaced by `scheduling.k8s.io/v1alpha2`.
+
 ## Upgrading to Kubernetes `v1.35`
 
 - The `Shoot`'s `.spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication` field is forbidden. Gardener continues to disable anonymous authentication by default. If you need to configure anonymous authentication, use [Structured Authentication Configuration](shoot_access.md#configuring-anonymous-authentication) with the [anonymous authenticator](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration) instead.

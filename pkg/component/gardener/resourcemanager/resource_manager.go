@@ -76,6 +76,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -1347,7 +1348,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 	}
 
 	if r.values.HighAvailabilityConfigWebhookEnabled {
-		webhooks = append(webhooks, NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn, r.values.RuntimeKubernetesVersion))
 	}
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
@@ -1886,7 +1887,7 @@ func NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 
 // NewHighAvailabilityConfigMutatingWebhook returns the high-availability-config mutating webhook for the
 // resourcemanager component for reuse between the component and integration tests.
-func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig, runtimeKubernetesVersion *semver.Version) admissionregistrationv1.MutatingWebhook {
 	nsSelector := &metav1.LabelSelector{}
 	if namespaceSelector != nil {
 		nsSelector = namespaceSelector.DeepCopy()
@@ -1922,7 +1923,7 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 			{
 				Rule: admissionregistrationv1.Rule{
 					APIGroups:   []string{autoscalingv2.GroupName},
-					APIVersions: []string{autoscalingv2beta1.SchemeGroupVersion.Version, autoscalingv2.SchemeGroupVersion.Version},
+					APIVersions: hpaAPIVersions(runtimeKubernetesVersion),
 					Resources:   []string{"horizontalpodautoscalers"},
 				},
 				Operations: []admissionregistrationv1.OperationType{
@@ -1940,6 +1941,15 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
 		TimeoutSeconds:          new(int32(10)),
 	}
+}
+
+// hpaAPIVersions returns the HPA API versions the HA webhook should be registered for.
+// autoscaling/v2beta1 was removed in Kubernetes 1.36, so it is excluded for runtime clusters >= 1.36.
+func hpaAPIVersions(runtimeKubernetesVersion *semver.Version) []string {
+	if runtimeKubernetesVersion != nil && versionutils.ConstraintK8sGreaterEqual136.Check(runtimeKubernetesVersion) {
+		return []string{autoscalingv2.SchemeGroupVersion.Version}
+	}
+	return []string{autoscalingv2beta1.SchemeGroupVersion.Version, autoscalingv2.SchemeGroupVersion.Version}
 }
 
 // NewInPlaceUpdatesWebhook returns the VerticalPodAutoscaler mutating webhook for the resourcemanager component for reuse
