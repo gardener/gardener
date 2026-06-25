@@ -179,7 +179,7 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 	error,
 ) {
 	virtualServiceList := &istionetworkingv1beta1.VirtualServiceList{}
-	if err := i.client.List(ctx, virtualServiceList, client.InNamespace(i.namespace), client.HasLabels{v1beta1constants.LabelBasicAuthSecretName}); err != nil {
+	if err := i.client.List(ctx, virtualServiceList, client.InNamespace(i.namespace), client.MatchingLabels{v1beta1constants.LabelBasicAuthServerName: i.getPrefix() + name}); err != nil {
 		return nil, nil, nil, fmt.Errorf("unable to list virtual services: %w", err)
 	}
 
@@ -300,6 +300,19 @@ func (i *istioBasicAuthServer) getPrefix() string {
 	}
 
 	return ""
+}
+
+// BasicAuthLabels returns the labels that associate a VirtualService with its configuring istio-basic-auth-server.
+func BasicAuthLabels(isGardenCluster bool, secretName string) map[string]string {
+	basicAuthServerName := v1beta1constants.DeploymentNameIstioBasicAuthServer
+	if isGardenCluster {
+		basicAuthServerName = operatorv1alpha1.VirtualGardenNamePrefix + basicAuthServerName
+	}
+
+	return map[string]string{
+		v1beta1constants.LabelBasicAuthSecretName: secretName,
+		v1beta1constants.LabelBasicAuthServerName: basicAuthServerName,
+	}
 }
 
 func (i *istioBasicAuthServer) getLabels() map[string]string {

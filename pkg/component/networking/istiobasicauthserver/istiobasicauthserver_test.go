@@ -454,13 +454,23 @@ status: {}
 		})
 
 		Context("With secrets present", func() {
-			BeforeEach(func() {
+			createVirtualServices := func(basicAuthServerName string) {
 				Expect(c.Create(ctx, dummyVirtualService.DeepCopy())).To(Succeed())
-				Expect(c.Create(ctx, realVirtualService1.DeepCopy())).To(Succeed())
-				Expect(c.Create(ctx, realVirtualService2.DeepCopy())).To(Succeed())
-			})
+
+				vs1 := realVirtualService1.DeepCopy()
+				vs1.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
+				Expect(c.Create(ctx, vs1)).To(Succeed())
+
+				vs2 := realVirtualService2.DeepCopy()
+				vs2.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
+				Expect(c.Create(ctx, vs2)).To(Succeed())
+			}
 
 			Context("Shoot or Seed", func() {
+				BeforeEach(func() {
+					createVirtualServices("istio-basic-auth-server")
+				})
+
 				It("should successfully deploy the resources", func() {
 					testManifests(false, []prefixToSecretMapping{
 						{prefix1, secret1},
@@ -472,6 +482,7 @@ status: {}
 
 			Context("Garden", func() {
 				BeforeEach(func() {
+					createVirtualServices("virtual-garden-istio-basic-auth-server")
 					values.IsGardenCluster = true
 					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
 					values.IstioIngressGatewayNamespace = "virtual-garden-istio-ingress"

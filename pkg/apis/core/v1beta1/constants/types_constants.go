@@ -540,6 +540,8 @@ const (
 	LabelObservability = "observability"
 	// LabelBasicAuthSecretName is a constant for a label used on virtual services to include the referenced secret into the istio-basic-auth-server for basic auth.
 	LabelBasicAuthSecretName = "reference.gardener.cloud/basic-auth-secret-name"
+	// LabelBasicAuthServerName is a constant for a label used on virtual services to associate them with a specific istio-basic-auth-server instance.
+	LabelBasicAuthServerName = "reference.gardener.cloud/basic-auth-server-name"
 
 	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
 	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"

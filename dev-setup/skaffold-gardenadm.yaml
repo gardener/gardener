@@ -946,6 +946,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/proxy
+            - pkg/component/networking/istiobasicauthserver
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot

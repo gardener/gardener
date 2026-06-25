@@ -363,6 +363,7 @@ var _ = Describe("Alertmanager", func() {
 					"role":         "monitoring",
 					"alertmanager": name,
 					"reference.gardener.cloud/basic-auth-secret-name": "foo",
+					"reference.gardener.cloud/basic-auth-server-name": "istio-basic-auth-server",
 				},
 			},
 			Spec: istionetworkingv1alpha3.VirtualService{

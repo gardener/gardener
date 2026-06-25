@@ -17,6 +17,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -92,7 +93,7 @@ func (p *prometheus) istioResources(ctx context.Context) ([]client.Object, error
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(p.getLabels(), map[string]string{v1beta1constants.LabelBasicAuthSecretName: p.values.Ingress.AuthSecretName}),
+		utils.MergeStringMaps(p.getLabels(), istiobasicauthserver.BasicAuthLabels(p.values.Ingress.IsGardenCluster, p.values.Ingress.AuthSecretName)),
 		[]string{p.values.Ingress.IstioIngressGatewayNamespace},
 		[]string{p.values.Ingress.Host},
 		gatewayName,
