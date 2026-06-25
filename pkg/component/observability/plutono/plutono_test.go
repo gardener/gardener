@@ -234,7 +234,9 @@ metadata:
         timeInterval: 1m
 `
 				}
-				if !values.OnlyDeployDataSourcesAndDashboards && !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+				if !values.OnlyDeployDataSourcesAndDashboards &&
+					(!features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) ||
+						!features.DefaultFeatureGate.Enabled(features.RemoveVali)) {
 					configMapData += `    - name: vali
       type: vali
       access: proxy
@@ -781,25 +783,27 @@ status: {}
 					checkDeployedResources("plutono-dashboards", 24)
 				})
 
-				Context("w/ RemoveVali feature gate disabled", func() {
+				Context("w/ Vali is removed", func() {
 					BeforeEach(func() {
-						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, false))
-					})
-
-					It("should include the vali datasource in the datasources ConfigMap", func() {
-						Expect(manifests).To(ContainElement(dataSourceConfigMapYAMLFor(values)))
-						Expect(manifests).To(ContainElement(ContainSubstring("- name: vali")))
-					})
-				})
-
-				Context("w/ RemoveVali feature gate enabled", func() {
-					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, true))
 					})
 
 					It("should omit the vali datasource from the datasources ConfigMap", func() {
 						Expect(manifests).To(ContainElement(dataSourceConfigMapYAMLFor(values)))
 						Expect(manifests).NotTo(ContainElement(ContainSubstring("- name: vali")))
+					})
+				})
+
+				Context("w/ Vali is not removed", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, false))
+					})
+
+					It("should include the vali datasource in the datasources ConfigMap", func() {
+						Expect(manifests).To(ContainElement(dataSourceConfigMapYAMLFor(values)))
+						Expect(manifests).To(ContainElement(ContainSubstring("- name: vali")))
 					})
 				})
 

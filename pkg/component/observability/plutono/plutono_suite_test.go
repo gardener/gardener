@@ -24,6 +24,7 @@ func TestPlutono(t *testing.T) {
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
+		features.VictoriaLogsBackend,
 		features.RemoveVali,
 	)))
 })

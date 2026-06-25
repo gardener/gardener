@@ -403,7 +403,9 @@ datasources:
 `
 	}
 
-	if !p.values.OnlyDeployDataSourcesAndDashboards && !features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+	if !p.values.OnlyDeployDataSourcesAndDashboards &&
+		(!features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) ||
+			!features.DefaultFeatureGate.Enabled(features.RemoveVali)) {
 		datasource += `- name: vali
   type: vali
   access: proxy
