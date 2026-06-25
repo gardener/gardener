@@ -188,6 +188,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressServiceNoLegacyPort = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_no_legacy_port.yaml")
+			return string(data)
+		}
+
 		istioIngressServiceInternal = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_service_internal.yaml")
 			return string(data)
@@ -401,7 +406,6 @@ var _ = Describe("istiod", func() {
 				istioIngressNamespace(),
 				istioIngressRole(),
 				istioIngressRoleBinding(),
-				istioIngressService(),
 				istioIngressServiceInternal(),
 				istioIngressServiceAccount(),
 				istioIngressDeployment(minReplicas),
@@ -409,6 +413,14 @@ var _ = Describe("istiod", func() {
 				istioIngressMisdirectedRequestsEnvoyFilter(),
 				istioIngressServiceMonitor(),
 				istioIngressTelemetry(),
+			}
+
+			// The istio-ingressgateway Service drops the legacy tls-tunnel port from its from-world-to-ports
+			// annotation once RemoveHTTPProxyLegacyPort is enabled.
+			if igw[0].HTTPProxyLegacyPortEnabled {
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressService())
+			} else {
+				expectedIstioManifests = append(expectedIstioManifests, istioIngressServiceNoLegacyPort())
 			}
 
 			expectedIstioSystemManifests := []string{
@@ -446,19 +458,29 @@ var _ = Describe("istiod", func() {
 			if igw[0].TerminateLoadBalancerProxyProtocol {
 				expectedIstioManifests = append(expectedIstioManifests,
 					istioProxyProtocolEnvoyFilterSNI(),
-					istioProxyProtocolEnvoyFilterVPN(),
 					istioProxyProtocolEnvoyFilterVPNUnified(),
 				)
+
+				// The legacy proxy-protocol EnvoyFilter on the tls-tunnel port is dropped once RemoveHTTPProxyLegacyPort is enabled.
+				if igw[0].HTTPProxyLegacyPortEnabled {
+					expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterVPN())
+				}
 			}
 
 			if igw[0].VPNEnabled {
 				expectedIstioManifests = append(expectedIstioManifests,
-					istioIngressHTTPConnectGateway(),
-					istioIngressEnvoyVPNFilter(0),
-					istioIngressEnvoyVPNFilter(1),
 					istioIngressHTTPProxyGatewayUnified(),
 					istioIngressEnvoyHTTPProxyFilterUnified(),
 				)
+
+				// The legacy http-connect Gateway and VPN EnvoyFilters on the tls-tunnel port are dropped once RemoveHTTPProxyLegacyPort is enabled.
+				if igw[0].HTTPProxyLegacyPortEnabled {
+					expectedIstioManifests = append(expectedIstioManifests,
+						istioIngressHTTPConnectGateway(),
+						istioIngressEnvoyVPNFilter(0),
+						istioIngressEnvoyVPNFilter(1),
+					)
+				}
 			}
 
 			By("Verify istio resources")
@@ -803,6 +825,18 @@ var _ = Describe("istiod", func() {
 				checkSuccessfulDeployment(nil, nil)
 			})
 		})
+
+		Context("with the legacy http-proxy port disabled (RemoveHTTPProxyLegacyPort)", func() {
+			BeforeEach(func() {
+				igw[0].HTTPProxyLegacyPortEnabled = false
+				// Also terminate proxy protocol so that removal of the legacy proxy-protocol EnvoyFilter on the tls-tunnel port is covered.
+				igw[0].TerminateLoadBalancerProxyProtocol = true
+			})
+
+			It("should not deploy the legacy tls-tunnel resources but keep the unified http-proxy ones", func() {
+				checkSuccessfulDeployment(nil, nil)
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -1024,6 +1058,7 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string,
 			PriorityClassName:                  v1beta1constants.PriorityClassNameSeedSystemCritical,
 			TerminateLoadBalancerProxyProtocol: false,
 			VPNEnabled:                         true,
+			HTTPProxyLegacyPortEnabled:         true,
 			KubernetesVersion:                  "1.35.0",
 		},
 	}

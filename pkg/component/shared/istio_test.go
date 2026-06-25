@@ -47,6 +47,7 @@ type istioTestValues struct {
 	servicePorts                       []corev1.ServicePort
 	terminateLoadBalancerProxyProtocol bool
 	vpnEnabled                         bool
+	httpProxyLegacyPortEnabled         bool
 	zones                              []string
 	dualStack                          bool
 	enforceSpreadAcrossHosts           bool
@@ -79,6 +80,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.servicePorts,
 		&testValues.terminateLoadBalancerProxyProtocol,
 		testValues.vpnEnabled,
+		testValues.httpProxyLegacyPortEnabled,
 		testValues.zones,
 		testValues.dualStack,
 		testValues.kubernetesVersion,
@@ -134,6 +136,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				PriorityClassName:                  testValues.priorityClassName,
 				TerminateLoadBalancerProxyProtocol: testValues.terminateLoadBalancerProxyProtocol,
 				VPNEnabled:                         testValues.vpnEnabled,
+				HTTPProxyLegacyPortEnabled:         testValues.httpProxyLegacyPortEnabled,
 				EnforceSpreadAcrossHosts:           testValues.enforceSpreadAcrossHosts,
 				KubernetesVersion:                  testValues.kubernetesVersion.String(),
 			},
@@ -193,6 +196,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 		PriorityClassName:                  ingressValues[0].PriorityClassName,
 		TerminateLoadBalancerProxyProtocol: ingressValues[0].TerminateLoadBalancerProxyProtocol,
 		VPNEnabled:                         true,
+		HTTPProxyLegacyPortEnabled:         true,
 		Zones:                              zones,
 		DualStack:                          dualstack,
 		EnforceSpreadAcrossHosts:           enforceSpreadAcrossHosts,
@@ -236,6 +240,7 @@ var _ = Describe("Istio", func() {
 			servicePorts:                       []corev1.ServicePort{{Port: 443}},
 			terminateLoadBalancerProxyProtocol: proxyProtocolLB,
 			vpnEnabled:                         vpnEnabled,
+			httpProxyLegacyPortEnabled:         true,
 			zones:                              zones,
 			enforceSpreadAcrossHosts:           false,
 			kubernetesVersion:                  semver.MustParse("1.31.0"),
