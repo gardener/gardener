@@ -19,6 +19,7 @@ import (
 	. "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("GardenletConfiguration", func() {
@@ -798,6 +799,104 @@ var _ = Describe("GardenletConfiguration", func() {
 					}))),
 				)
 			})
+		})
+	})
+
+	Context("registryCABundle", func() {
+		var validCertPEM string
+
+		BeforeEach(func() {
+			cert, err := (&secrets.CertificateSecretConfig{
+				Name:       "test",
+				CommonName: "test",
+				CertType:   secrets.CACert,
+			}).GenerateCertificate()
+			Expect(err).NotTo(HaveOccurred())
+			validCertPEM = string(cert.CertificatePEM)
+		})
+
+		It("should pass when registryCABundle is not set", func() {
+			cfg.RegistryCABundle = nil
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+		})
+
+		It("should pass with a valid inline certificate", func() {
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				Inline: &validCertPEM,
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+		})
+
+		It("should pass with a valid secretRef", func() {
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "my-secret", Namespace: "garden"},
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+		})
+
+		It("should fail when neither secretRef nor inline is set", func() {
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("registryCABundle"),
+					"Detail": Equal("either secretRef or inline must be set"),
+				})),
+			))
+		})
+
+		It("should fail when inline is not a valid PEM certificate", func() {
+			invalid := "not-a-cert"
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				Inline: &invalid,
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("registryCABundle.inline"),
+					"Detail": Equal("caBundle is not a valid PEM-encoded certificate"),
+				})),
+			))
+		})
+
+		It("should fail when both secretRef and inline are set", func() {
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "my-secret", Namespace: "garden"},
+				Inline:    &validCertPEM,
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("registryCABundle"),
+					"Detail": Equal("secretRef and inline are mutually exclusive"),
+				})),
+			))
+		})
+
+		It("should fail when secretRef name is empty", func() {
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "", Namespace: "garden"},
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("registryCABundle.secretRef.name"),
+					"Detail": Equal("secret name must not be empty"),
+				})),
+			))
+		})
+
+		It("should fail when secretRef namespace is empty", func() {
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "my-secret", Namespace: ""},
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("registryCABundle.secretRef.namespace"),
+					"Detail": Equal("secret namespace must not be empty"),
+				})),
+			))
 		})
 	})
 
