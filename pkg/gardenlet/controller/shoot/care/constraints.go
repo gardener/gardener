@@ -49,13 +49,19 @@ const (
 func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
-		// During hibernation, these conditions are either not applicable or already computed before
-		// the hibernation guard, so we preserve their current value.
-		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated ||
-			cond.Type == gardencorev1beta1.ShootHasIgnoredManagedResources {
-			hibernationConditions = append(hibernationConditions, cond)
-			continue
-		}
+        // Not applicable during hibernation — skip entirely.
+        if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated {
+                continue
+        }
+        // Optional constraint computed before the hibernation guard.
+        // Only preserve it if it's non-True (i.e. there are ignored MRs worth showing).
+        // When True, drop it — consistent with filterOptionalConstraints behaviour.
+        if cond.Type == gardencorev1beta1.ShootHasIgnoredManagedResources {
+                if cond.Status != gardencorev1beta1.ConditionTrue {
+                        hibernationConditions = append(hibernationConditions, cond)
+                }
+                continue
+        }
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
