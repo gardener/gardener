@@ -589,7 +589,7 @@ images:
   - name: alpine-iptables
     sourceRepository: github.com/gardener/alpine-iptables
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/alpine-iptables
-    tag: "3.23.3"
+    tag: "3.24.1"
   # Logging
   - name: fluent-operator
     sourceRepository: github.com/fluent/fluent-operator
