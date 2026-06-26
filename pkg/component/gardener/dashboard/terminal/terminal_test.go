@@ -518,6 +518,11 @@ server:
 				},
 				{
 					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"shoots"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
 					Resources: []string{"shoots/adminkubeconfig"},
 					Verbs:     []string{"create"},
 				},
