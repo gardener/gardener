@@ -723,6 +723,62 @@ var _ = Describe("Constraints", func() {
 						WithMessageSubstrings("bar, baz, foo"),
 					))
 				})
+
+				Context("when shoot is hibernated", func() {
+					var hibernatedConstraint *Constraint
+
+					BeforeEach(func() {
+						shootPkg := &shootpkg.Shoot{
+							ControlPlaneNamespace: controlPlaneNamespace,
+							HibernationEnabled:    true,
+						}
+						shootPkg.SetInfo(shoot)
+
+						hibernatedConstraint = NewConstraint(
+							logr.Discard(),
+							shootPkg,
+							seedClient,
+							func() (kubernetes.Interface, bool, error) {
+								return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+							},
+							clock,
+						)
+					})
+
+					It("should remove the constraint when there are no ignored ManagedResources", func() {
+						hibernatedShoot := &gardencorev1beta1.Shoot{
+							Status: gardencorev1beta1.ShootStatus{
+								Constraints: []gardencorev1beta1.Condition{
+									{Type: gardencorev1beta1.ShootHasIgnoredManagedResources, Status: gardencorev1beta1.ConditionTrue},
+								},
+							},
+						}
+						hibernatedConstraints := NewShootConstraints(testclock.NewFakeClock(time.Time{}), hibernatedShoot)
+
+						Expect(hibernatedConstraint.Check(ctx, hibernatedConstraints)).NotTo(ContainCondition(
+							OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+						))
+					})
+
+					It("should preserve the constraint when ManagedResources are ignored", func() {
+						mr := &resourcesv1alpha1.ManagedResource{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "foo",
+								Namespace: controlPlaneNamespace,
+								Annotations: map[string]string{
+									resourcesv1alpha1.Ignore: "true",
+								},
+							},
+						}
+						Expect(seedClient.Create(ctx, mr)).To(Succeed())
+
+						Expect(hibernatedConstraint.Check(ctx, constraints)).To(ContainCondition(
+							OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+							WithReason("ManagedResourcesIgnored"),
+							WithMessageSubstrings("foo"),
+						))
+					})
+				})				
 			})
 		})
 
