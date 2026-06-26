@@ -16,6 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -33,19 +34,20 @@ func Config(
 	nodeAgentImage string,
 	config *nodeagentconfigv1alpha1.NodeAgentConfiguration,
 	clusterCABundle []byte,
+	registryCAEnabled bool,
 ) (
 	[]extensionsv1alpha1.Unit,
 	[]extensionsv1alpha1.File,
 	error,
 ) {
-	initScript, err := generateInitScript(nodeAgentImage)
+	initScript, err := generateInitScript(nodeAgentImage, registryCAEnabled, config.APIServer.Server)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating init script: %w", err)
 	}
 
 	var (
 		nodeInitUnits = []extensionsv1alpha1.Unit{
-			generateInitScriptUnit(nodeagentconfigv1alpha1.InitUnitName, "gardener-node-agent", PathInitScript),
+			generateInitScriptUnit(nodeagentconfigv1alpha1.InitUnitName, "gardener-node-agent", PathInitScript, registryCAEnabled),
 		}
 
 		nodeInitFiles = []extensionsv1alpha1.File{
@@ -92,6 +94,14 @@ func Config(
 		}
 	)
 
+	if registryCAEnabled {
+		updateCACertsScriptFile, err := rootcertificates.UpdateLocalCACertificatesScriptFile()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed generating update-ca-certificates script file: %w", err)
+		}
+		nodeInitFiles = append(nodeInitFiles, updateCACertsScriptFile)
+	}
+
 	// The gardener-node-init script above will bootstrap the gardener-node-agent. This means that the unit file for
 	// the gardener-node-agent unit will be written and eventually started (whilst gardener-node-init disables and stops
 	// itself). Hence, the files for gardener-node-agent (component configuration and kubeconfig) must be present on the
@@ -121,28 +131,51 @@ func init() {
 	initScriptTpl = template.Must(template.New("init-script").Parse(initScriptTplContent))
 }
 
-func generateInitScript(nodeAgentImage string) ([]byte, error) {
+func generateInitScript(nodeAgentImage string, registryCAEnabled bool, apiServerURL string) ([]byte, error) {
 	var initScript bytes.Buffer
-	if err := initScriptTpl.Execute(&initScript, map[string]any{
+
+	data := map[string]any{
 		"image":           nodeAgentImage,
 		"binaryName":      "gardener-node-agent",
 		"binaryDirectory": nodeagentconfigv1alpha1.BinaryDir,
 		"configDir":       nodeagentconfigv1alpha1.BaseDir,
-	}); err != nil {
+	}
+
+	if registryCAEnabled {
+		data["registryCAEnabled"] = registryCAEnabled
+		data["localCACertsDir"] = rootcertificates.PathLocalSSLCerts
+		data["registryCAFilePath"] = rootcertificates.PathLocalSSLRegistryCACerts
+		data["pkiTrustAnchorsDir"] = rootcertificates.PathPKITrustAnchors
+		data["registryCAFilePathPKI"] = rootcertificates.PathPKITrustAnchorsRegistryCACerts
+		data["bootstrapTokenFilePath"] = nodeagentconfigv1alpha1.BootstrapTokenFilePath
+		data["clusterCAFilePath"] = nodeagentconfigv1alpha1.ClusterCAFilePath
+		data["apiServerURL"] = apiServerURL
+		data["updateCACertificatesScript"] = rootcertificates.PathUpdateLocalCACertificates
+	}
+
+	if err := initScriptTpl.Execute(&initScript, data); err != nil {
 		return nil, err
 	}
 
 	return initScript.Bytes(), nil
 }
 
-func generateInitScriptUnit(unitName, binaryName, filePath string) extensionsv1alpha1.Unit {
+func generateInitScriptUnit(unitName, binaryName, filePath string, registryCAEnabled bool) extensionsv1alpha1.Unit {
+	// When a custom registry CA is configured, the init script restarts containerd after updating the
+	// system CA store so that the running daemon picks up the new certificate. Using Wants instead of
+	// Requires ensures that this temporary stop of containerd does not cause systemd to also stop the
+	// init service itself due to the dependency which would cause an infinite loop.
+	containerdDep := "Requires=containerd.service"
+	if registryCAEnabled {
+		containerdDep = "Wants=containerd.service"
+	}
 	return extensionsv1alpha1.Unit{
 		Name:    unitName,
 		Command: new(extensionsv1alpha1.CommandStart),
 		Enable:  new(true),
 		Content: new(`[Unit]
 Description=Downloads the ` + binaryName + ` binary from the container registry and bootstraps it.
-Requires=containerd.service
+` + containerdDep + `
 After=containerd.service
 After=network-online.target
 Wants=network-online.target

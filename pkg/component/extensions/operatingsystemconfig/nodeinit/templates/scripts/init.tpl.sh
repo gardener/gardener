@@ -21,6 +21,21 @@ unmount() {
 }
 trap unmount EXIT
 
+{{- if .registryCAEnabled }}
+
+CA_B64=$(curl -sf $([ -f "{{ .clusterCAFilePath }}" ] && echo "--cacert {{ .clusterCAFilePath }}") \
+  --header "Authorization: Bearer $(cat "{{ .bootstrapTokenFilePath }}" 2>/dev/null)" \
+  "{{ .apiServerURL }}/api/v1/namespaces/kube-system/configmaps/registry-ca-bundle" \
+  2>/dev/null | sed -n 's/.*"ca\.b64"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
+if [ -n "$CA_B64" ]; then
+  mkdir -p "{{ .localCACertsDir }}" "{{ .pkiTrustAnchorsDir }}"
+  printf '%s' "$CA_B64" | base64 -d | tee "{{ .registryCAFilePath }}" > "{{ .registryCAFilePathPKI }}"
+  {{ .updateCACertificatesScript }}
+  systemctl restart containerd
+  echo "> Registry CA configured"
+fi
+{{- end }}
+
 echo "> Pull {{ .binaryName }} image and mount it to the temporary directory"
 {{- /*
 ctr v2 pulls manifests for all platforms of a multi-arch image by default. Mirror registries

@@ -104,6 +104,7 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 			PrimaryIPFamily:                         b.Shoot.GetInfo().Spec.Networking.IPFamilies[0],
 			KubeProxyConfig:                         b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
 			Region:                                  region,
+			RegistryCABundle:                        b.RegistryCABundle,
 		},
 	}, nil
 }
