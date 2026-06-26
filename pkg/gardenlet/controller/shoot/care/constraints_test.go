@@ -778,7 +778,7 @@ var _ = Describe("Constraints", func() {
 							WithMessageSubstrings("foo"),
 						))
 					})
-				})				
+				})
 			})
 		})
 
