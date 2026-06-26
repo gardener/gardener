@@ -25,6 +25,7 @@ type Component interface {
 type Context struct {
 	Key                                     string
 	CABundle                                string
+	RegistryCABundle                        *string
 	ClusterDNSAddresses                     []string
 	ClusterDomain                           string
 	CRIName                                 extensionsv1alpha1.CRIName
