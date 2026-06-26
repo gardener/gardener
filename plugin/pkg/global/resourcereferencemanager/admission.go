@@ -518,19 +518,28 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 
 				relevantNamespacedCloudProfiles := make(map[string]*gardencorev1beta1.NamespacedCloudProfile)
 
-				wg.Add(len(namespacedCloudProfileList))
-
+				// First pass: identify relevant NamespacedCloudProfiles (referencing this CloudProfile and not being deleted).
 				for _, ncp := range namespacedCloudProfileList {
 					if ncp.DeletionTimestamp != nil ||
 						ncp.Spec.Parent.Name != cloudProfile.Name ||
 						ncp.Spec.Parent.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
-						wg.Done()
 						continue
 					}
-
 					ncpNamespacedName := types.NamespacedName{Name: ncp.Name, Namespace: ncp.Namespace}
 					relevantNamespacedCloudProfiles[ncpNamespacedName.String()] = ncp
+				}
 
+				// Allow reverting to a legacy CloudProfile: if all relevant NamespacedCloudProfiles
+				// reference no capability other than 'architecture' (the legacy architecture(s) fields on
+				// machineImages/machineTypes still cover that case), then capability removals on the parent
+				// CloudProfile must not be blocked, regardless of which capabilities are being removed.
+				if len(removedCapabilities) > 0 && namespacedCloudProfilesUseOnlyArchitectureCapability(relevantNamespacedCloudProfiles) {
+					removedCapabilities = nil
+				}
+
+				wg.Add(len(relevantNamespacedCloudProfiles))
+
+				for ncpNamespacedName, ncp := range relevantNamespacedCloudProfiles {
 					go func(nscpfl *gardencorev1beta1.NamespacedCloudProfile) {
 						defer wg.Done()
 
@@ -542,12 +551,14 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 							}
 						}
 
+						capabilityViolations := map[string]sets.Set[string]{}
+
 						for _, machineImage := range nscpfl.Spec.MachineImages {
 							if machineImageDiff.RemovedImages.Has(machineImage.Name) {
-								channel <- fmt.Errorf("unable to delete MachineImage %q from CloudProfile %q - MachineImage is still in use by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName.String())
+								channel <- fmt.Errorf("unable to delete MachineImage %q from CloudProfile %q - MachineImage is still in use by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName)
 							}
 							if machineImageDiff.AddedImages.Has(machineImage.Name) {
-								channel <- fmt.Errorf("unable to add MachineImage %q to CloudProfile %q - MachineImage is already defined by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName.String())
+								channel <- fmt.Errorf("unable to add MachineImage %q to CloudProfile %q - MachineImage is already defined by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName)
 							}
 							if removedVersions, exists := machineImageDiff.RemovedVersions[machineImage.Name]; exists {
 								for _, imageVersion := range machineImage.Versions {
@@ -556,10 +567,19 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 									}
 								}
 							}
-							checkMachineImageForRemovedCapabilities(machineImage, removedCapabilities, nscpfl, cloudProfile, channel)
+							collectMachineImageCapabilityViolations(machineImage, removedCapabilities, capabilityViolations)
 						}
 						for _, machineType := range nscpfl.Spec.MachineTypes {
-							checkMachineTypeForRemovedCapabilities(machineType, removedCapabilities, nscpfl, cloudProfile, channel)
+							collectMachineTypeCapabilityViolations(machineType, removedCapabilities, capabilityViolations)
+						}
+
+						// Emit one aggregated error per removed capability per NamespacedCloudProfile,
+						for _, removedCapability := range removedCapabilities {
+							values, ok := capabilityViolations[removedCapability.Name]
+							if !ok || values.Len() == 0 {
+								continue
+							}
+							channel <- fmt.Errorf("unable to delete MachineCapability %q with values %v from CloudProfile %q - capability values are still in use by NamespacedCloudProfile '%s/%s'", removedCapability.Name, sets.List(values), cloudProfile.Name, nscpfl.Namespace, nscpfl.Name)
 						}
 					}(ncp)
 				}
@@ -725,32 +745,68 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 	return nil
 }
 
-func checkMachineTypeForRemovedCapabilities(machineType gardencorev1beta1.MachineType, removedCapabilities []core.CapabilityDefinition, nscpfl *gardencorev1beta1.NamespacedCloudProfile, cloudProfile *core.CloudProfile, channel chan error) {
+func collectMachineTypeCapabilityViolations(machineType gardencorev1beta1.MachineType, removedCapabilities []core.CapabilityDefinition, violations map[string]sets.Set[string]) {
 	for _, removedCapability := range removedCapabilities {
 		if capabilityValues, exist := machineType.Capabilities[removedCapability.Name]; exist {
 			for _, capabilityValue := range capabilityValues {
 				if slices.Contains(removedCapability.Values, capabilityValue) {
-					channel <- fmt.Errorf("unable to delete MachineCapability %q with value %q from CloudProfile %q - capability value is still in use by NamespacedCloudProfile '%s/%s'", removedCapability.Name, capabilityValue, cloudProfile.Name, nscpfl.Namespace, nscpfl.Name)
+					if _, ok := violations[removedCapability.Name]; !ok {
+						violations[removedCapability.Name] = sets.New[string]()
+					}
+					violations[removedCapability.Name].Insert(capabilityValue)
 				}
 			}
 		}
 	}
 }
 
-func checkMachineImageForRemovedCapabilities(machineImage gardencorev1beta1.MachineImage, removedCapabilities []core.CapabilityDefinition, nscpfl *gardencorev1beta1.NamespacedCloudProfile, cloudProfile *core.CloudProfile, channel chan error) {
+func collectMachineImageCapabilityViolations(machineImage gardencorev1beta1.MachineImage, removedCapabilities []core.CapabilityDefinition, violations map[string]sets.Set[string]) {
 	for _, imageVersion := range machineImage.Versions {
 		for _, imageFlavor := range imageVersion.CapabilityFlavors {
 			for _, removedCapability := range removedCapabilities {
 				if capabilityValues, exist := imageFlavor.Capabilities[removedCapability.Name]; exist {
 					for _, capabilityValue := range capabilityValues {
 						if slices.Contains(removedCapability.Values, capabilityValue) {
-							channel <- fmt.Errorf("unable to delete MachineCapability %q with value %q from CloudProfile %q - capability value is still in use by NamespacedCloudProfile '%s/%s'", removedCapability.Name, capabilityValue, cloudProfile.Name, nscpfl.Namespace, nscpfl.Name)
+							if _, ok := violations[removedCapability.Name]; !ok {
+								violations[removedCapability.Name] = sets.New[string]()
+							}
+							violations[removedCapability.Name].Insert(capabilityValue)
 						}
 					}
 				}
 			}
 		}
 	}
+}
+
+// namespacedCloudProfilesUseOnlyArchitectureCapability returns true if the only capability key
+// referenced by any machineImage flavor or machineType across all given NamespacedCloudProfiles
+// is 'architecture'. NamespacedCloudProfiles that reference no capabilities at all also satisfy
+// this condition. This is used to allow reverting a parent CloudProfile to its legacy form,
+// in which the legacy architecture(s) fields on machineImages/machineTypes still cover the
+// architecture capability.
+func namespacedCloudProfilesUseOnlyArchitectureCapability(nscpfls map[string]*gardencorev1beta1.NamespacedCloudProfile) bool {
+	for _, nscpfl := range nscpfls {
+		for _, machineImage := range nscpfl.Spec.MachineImages {
+			for _, imageVersion := range machineImage.Versions {
+				for _, imageFlavor := range imageVersion.CapabilityFlavors {
+					for capabilityName := range imageFlavor.Capabilities {
+						if capabilityName != v1beta1constants.ArchitectureName {
+							return false
+						}
+					}
+				}
+			}
+		}
+		for _, machineType := range nscpfl.Spec.MachineTypes {
+			for capabilityName := range machineType.Capabilities {
+				if capabilityName != v1beta1constants.ArchitectureName {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (r *ReferenceManager) ensureControllerRegistrationReferences(ctx context.Context, ctrlReg *core.ControllerRegistration) error {
@@ -1523,5 +1579,6 @@ func getRemovedMachineCapabilities(old, new []core.CapabilityDefinition) []core.
 			}
 		}
 	}
+
 	return removedCapabilities
 }
