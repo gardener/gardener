@@ -42,7 +42,12 @@ func (p *Provider) createLoadBalancerContainer(ctx context.Context, name string,
 		return nil, fmt.Errorf("failed to determine port bindings for service: %w", err)
 	}
 
-	exposedPorts := make(nat.PortSet)
+	// ExposedPorts is technically redundant with HostConfig.PortBindings on Docker Engine >= 29.0.0, but populating
+	// it (a) ensures correct `docker inspect` output and (b) avoids inconsistent behavior with older daemons (the
+	// libnetwork sandbox on Engine <29 only exposed ports declared in Config.ExposedPorts).
+	// See: https://github.com/moby/moby/pull/50710 and https://github.com/moby/moby/commit/cb3abacc52.
+	// TODO(marc1404): Drop this once we require Docker Engine >= 29.0.0.
+	exposedPorts := make(nat.PortSet, len(portBindings))
 	for port := range portBindings {
 		exposedPorts[port] = struct{}{}
 	}
