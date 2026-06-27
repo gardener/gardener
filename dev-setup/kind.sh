@@ -118,10 +118,10 @@ EOF
       # backend on macOS, without requiring users to explicitly configure the socket path.
       socket=$(docker context inspect "$(docker context show)" -f json | jq -r '.[].Endpoints.docker.Host' | sed 's|unix://||')
 
-      # If the socket path contains .lima or .colima, we assume that Lima/Colima is used as Docker backend.
+      # If the socket path contains lima or colima, we assume that Lima/Colima is used as Docker backend.
       # In this case, the socket on the host is a forward to /var/run/docker.sock in the guest VM.
       # Instead of mounting the socket on the host back into the VM, we directly use /var/run/docker.sock in the VM.
-      if [[ "$socket" == *"/.lima/"* || "$socket" == *"/.colima/"* ]]; then
+      if [[ "$socket" == *"/.lima/"* || "$socket" == *"/.colima/"* || "$socket" == *"/lima/"* || "$socket" == *"/colima/"* ]]; then
         socket="/var/run/docker.sock"
       fi
 
