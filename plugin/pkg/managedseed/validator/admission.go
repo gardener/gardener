@@ -21,11 +21,13 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/api/seedmanagement/helper"
+	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/api/seedmanagement/v1alpha1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -194,7 +196,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	var allErrs field.ErrorList
 
 	// Admit gardenlet against shoot
-	errs, err := v.admitGardenlet(&managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
+	errs, err := v.admitGardenlet(ctx, &managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
 	if err != nil {
 		return err
 	}
@@ -266,7 +268,7 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 	return shoot, err
 }
 
-func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
+func (v *ManagedSeed) admitGardenlet(ctx context.Context, gardenlet *seedmanagement.GardenletConfig, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	if gardenlet.Config != nil {
@@ -275,6 +277,15 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, 
 		gardenletConfig, ok := gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 		if !ok {
 			return allErrs, apierrors.NewInternalError(fmt.Errorf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", gardenlet.Config))
+		}
+
+		// Inherit RegistryCABundle from parent gardenlet if not set and mergeWithParent is true
+		if gardenletConfig.RegistryCABundle == nil && ptr.Deref(gardenlet.MergeWithParent, true) && shoot.Spec.SeedName != nil {
+			parentRegistryCABundle, err := v.getParentRegistryCABundle(ctx, *shoot.Spec.SeedName)
+			if err != nil {
+				return allErrs, err
+			}
+			gardenletConfig.RegistryCABundle = parentRegistryCABundle
 		}
 
 		if gardenletConfig.SeedConfig != nil {
@@ -304,6 +315,45 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, 
 	}
 
 	return allErrs, nil
+}
+
+func (v *ManagedSeed) getParentRegistryCABundle(ctx context.Context, parentSeedName string) (*gardenletconfigv1alpha1.RegistryCABundle, error) {
+	// Try Gardenlet resource first (unmanaged seeds)
+	parentGardenlet, err := v.seedManagementClient.SeedmanagementV1alpha1().Gardenlets(v1beta1constants.GardenNamespace).Get(ctx, parentSeedName, kubernetesclient.DefaultGetOptions())
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not get parent gardenlet %s: %v", parentSeedName, err))
+	}
+	if err == nil {
+		_, parentGardenletConfig, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(parentGardenlet.Name, &parentGardenlet.Spec.Config)
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not extract gardenlet config from parent gardenlet %s: %v", parentSeedName, err))
+		}
+
+		if parentGardenletConfig == nil {
+			return nil, nil
+		}
+		return parentGardenletConfig.RegistryCABundle, nil
+	}
+
+	// Fall back to ManagedSeed resource (managed seeds)
+	parentManagedSeed, err := v.seedManagementClient.SeedmanagementV1alpha1().ManagedSeeds(v1beta1constants.GardenNamespace).Get(ctx, parentSeedName, kubernetesclient.DefaultGetOptions())
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not get parent managed seed %s: %v", parentSeedName, err))
+	}
+
+	_, parentGardenletConfig, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(parentManagedSeed.Name, &parentManagedSeed.Spec.Gardenlet.Config)
+	if err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not extract gardenlet config from parent managed seed %s: %v", parentManagedSeed.Name, err))
+	}
+
+	if parentGardenletConfig == nil {
+		return nil, nil
+	}
+
+	return parentGardenletConfig.RegistryCABundle, nil
 }
 
 func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {

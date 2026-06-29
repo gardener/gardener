@@ -86,7 +86,7 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *gardenletconfigv1alp
 		return nil, err
 	}
 
-	// Delete gardenClientConnection.bootstrapKubeconfig, gardenClientConnection.kubeconfigSecret, seedClientConnection.kubeconfig, and seedConfig in parent config values
+	// Delete gardenClientConnection.bootstrapKubeconfig, gardenClientConnection.kubeconfigSecret, seedClientConnection.kubeconfig, registryCABundle and seedConfig in parent config values
 	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "gardenClientConnection", "bootstrapKubeconfig")
 	if err != nil {
 		return nil, err
@@ -100,6 +100,11 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *gardenletconfigv1alp
 		return nil, err
 	}
 	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "seedConfig")
+	if err != nil {
+		return nil, err
+	}
+	// The managed seed admission plugin already inherit the registry CA bundle from the parent gardenlet
+	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "registryCABundle")
 	if err != nil {
 		return nil, err
 	}

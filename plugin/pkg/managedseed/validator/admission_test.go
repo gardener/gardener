@@ -564,6 +564,141 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(BeInternalServerError())
 				Expect(err).To(MatchError(ContainSubstring("expected *gardenletconfigv1alpha1.GardenletConfiguration but got *v1.Pod")))
 			})
+
+			Context("RegistryCABundle inheritance", func() {
+				var (
+					parentGardenlet   *seedmanagementv1alpha1.Gardenlet
+					parentManagedSeed *seedmanagementv1alpha1.ManagedSeed
+				)
+
+				BeforeEach(func() {
+					parentGardenlet = &seedmanagementv1alpha1.Gardenlet{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "parent-seed",
+							Namespace: namespace,
+						},
+					}
+					parentManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "parent-seed",
+							Namespace: namespace,
+						},
+						Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+							Shoot:     &seedmanagementv1alpha1.Shoot{Name: "parent-shoot"},
+							Gardenlet: seedmanagementv1alpha1.GardenletConfig{},
+						},
+					}
+				})
+
+				It("should inherit RegistryCABundle from parent Gardenlet resource when not set and mergeWithParent is nil (defaults to true)", func() {
+					inlineCA := "parent-ca-bundle"
+					parentGardenlet.Spec.Config = runtime.RawExtension{
+						Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+							RegistryCABundle: &gardenletconfigv1alpha1.RegistryCABundle{
+								Inline: &inlineCA,
+							},
+						},
+					}
+
+					seedManagementClient.AddReactor("get", "gardenlets", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, parentGardenlet, nil
+					})
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					Expect(gardenletConfig.RegistryCABundle).NotTo(BeNil())
+					Expect(gardenletConfig.RegistryCABundle.Inline).To(PointTo(Equal(inlineCA)))
+				})
+
+				It("should inherit RegistryCABundle from parent ManagedSeed resource when Gardenlet not found and mergeWithParent is nil (defaults to true)", func() {
+					inlineCA := "parent-ca-bundle"
+					parentManagedSeed.Spec.Gardenlet.Config = runtime.RawExtension{
+						Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+							RegistryCABundle: &gardenletconfigv1alpha1.RegistryCABundle{
+								Inline: &inlineCA,
+							},
+						},
+					}
+
+					seedManagementClient.AddReactor("get", "gardenlets", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, apierrors.NewNotFound(seedmanagementv1alpha1.Resource("gardenlet"), "parent-seed")
+					})
+					seedManagementClient.AddReactor("get", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, parentManagedSeed, nil
+					})
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					Expect(gardenletConfig.RegistryCABundle).NotTo(BeNil())
+					Expect(gardenletConfig.RegistryCABundle.Inline).To(PointTo(Equal(inlineCA)))
+				})
+
+				It("should not inherit RegistryCABundle when mergeWithParent is false", func() {
+					mergeWithParent := false
+					managedSeed.Spec.Gardenlet.MergeWithParent = &mergeWithParent
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					Expect(gardenletConfig.RegistryCABundle).To(BeNil())
+				})
+
+				It("should not overwrite RegistryCABundle when already set in child", func() {
+					childInlineCA := "child-ca-bundle"
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					gardenletConfig.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+						Inline: &childInlineCA,
+					}
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					Expect(gardenletConfig.RegistryCABundle.Inline).To(PointTo(Equal(childInlineCA)))
+				})
+
+				It("should not set RegistryCABundle when neither parent Gardenlet nor ManagedSeed exists", func() {
+					seedManagementClient.AddReactor("get", "gardenlets", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, apierrors.NewNotFound(seedmanagementv1alpha1.Resource("gardenlet"), "parent-seed")
+					})
+					seedManagementClient.AddReactor("get", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, apierrors.NewNotFound(seedmanagementv1alpha1.Resource("managedseed"), "parent-seed")
+					})
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					Expect(gardenletConfig.RegistryCABundle).To(BeNil())
+				})
+
+				It("should not set RegistryCABundle when parent Gardenlet has no RegistryCABundle", func() {
+					parentGardenlet.Spec.Config = runtime.RawExtension{
+						Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
+								Kind:       "GardenletConfiguration",
+							},
+						},
+					}
+
+					seedManagementClient.AddReactor("get", "gardenlets", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, parentGardenlet, nil
+					})
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					Expect(gardenletConfig.RegistryCABundle).To(BeNil())
+				})
+			})
 		})
 	})
 
