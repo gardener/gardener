@@ -726,13 +726,11 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
 			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
 		},
-		PVCAutoscaler: pvcautoscalervalues.Values{
-			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
-			MaxCapacity:                 resource.MustParse("200Gi"),
-			UtilizationThresholdPercent: new(70),
-			StepPercent:                 new(10),
-			MinStepAbsolute:             new(resource.MustParse("2Gi")),
-		},
+		// PVC autoscaling is intentionally not enabled for the cache Prometheus: it acts as a short-lived
+		// federation source (~1d retention) for the seed and aggregate Prometheuses, so growing its volume
+		// provides limited benefit. It would also introduce risks, since the cache Prometheus is the source
+		// of the metrics that drive the PVC Autoscaler itself.
+		PVCAutoscaler: pvcautoscalervalues.Values{Enabled: false},
 	})
 }
 
