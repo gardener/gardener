@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -55,8 +56,8 @@ type Values struct {
 	Replicas int32
 	// PriorityClassName is the name of the priority class for the VictoriaLogs pods.
 	PriorityClassName string
-	// PVCAutoscalerEnabled controls whether the VictoriaLogs instance's volume should be autoscaled by PVC Autoscaler.
-	PVCAutoscalerEnabled bool
+	// PVCAutoscaler configures whether and how the VictoriaLogs PVC is autoscaled.
+	PVCAutoscaler pvcautoscaler.Values
 }
 
 type victoriaLogs struct {
@@ -92,8 +93,8 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 		v.getPrometheusRule(),
 	}
 
-	if v.values.PVCAutoscalerEnabled {
-		resources = append(resources, v.getPVCA())
+	if v.values.PVCAutoscaler.Enabled {
+		resources = append(resources, v.getPVCA(v.values.PVCAutoscaler))
 	}
 
 	serializedResources, err := registry.AddAllAndSerialize(resources...)
@@ -235,7 +236,7 @@ func (v *victoriaLogs) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	}
 }
 
-func (v *victoriaLogs) getPVCA() *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (v *victoriaLogs) getPVCA(values pvcautoscaler.Values) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VLSingleResourceName,
@@ -250,7 +251,12 @@ func (v *victoriaLogs) getPVCA() *pvcautoscalerv1alpha1.PersistentVolumeClaimAut
 			},
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
-					MaxCapacity: resource.MustParse("100Gi"),
+					MaxCapacity: values.MaxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: values.UtilizationThresholdPercent,
+						StepPercent:                 values.StepPercent,
+						MinStepAbsolute:             values.MinStepAbsolute,
+					},
 				},
 			},
 		},

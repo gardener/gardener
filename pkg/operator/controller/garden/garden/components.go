@@ -83,6 +83,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -1438,7 +1439,7 @@ func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) 
 		true,
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
-		false,
+		pvcautoscaler.Values{Enabled: false},
 	)
 	if err != nil {
 		return nil, err
@@ -1462,7 +1463,7 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		true,
-		false,
+		pvcautoscaler.Values{Enabled: false},
 	)
 	if err != nil {
 		return nil, err

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -135,8 +136,8 @@ type Values struct {
 	ResourceRequests *corev1.ResourceList
 	// HealthCheckBy is the value of the health-check-by label for the Prometheus resource.
 	HealthCheckBy string
-	// PVCAutoscalerEnabled controls whether the Prometheus instance's volume should be autoscaled by PVC Autoscaler.
-	PVCAutoscalerEnabled bool
+	// PVCAutoscaler configures whether and how the Prometheus PVC is autoscaled.
+	PVCAutoscaler pvcautoscaler.Values
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
@@ -280,8 +281,8 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		clusterRoleBinding = p.clusterRoleBinding()
 	}
 
-	if p.values.PVCAutoscalerEnabled {
-		pvca = p.pvca(resource.MustParse("100Gi"))
+	if p.values.PVCAutoscaler.Enabled {
+		pvca = p.pvca(p.values.PVCAutoscaler)
 	}
 
 	objects := append([]client.Object{

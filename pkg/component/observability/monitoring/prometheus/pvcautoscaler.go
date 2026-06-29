@@ -7,14 +7,14 @@ package prometheus
 import (
 	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (p *prometheus) pvca(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (p *prometheus) pvca(values pvcautoscaler.Values) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	obj := &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
@@ -31,7 +31,12 @@ func (p *prometheus) pvca(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.
 			},
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
-					MaxCapacity: maxCapacity,
+					MaxCapacity: values.MaxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: values.UtilizationThresholdPercent,
+						StepPercent:                 values.StepPercent,
+						MinStepAbsolute:             values.MinStepAbsolute,
+					},
 				},
 			},
 		},

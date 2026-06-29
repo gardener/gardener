@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -155,7 +156,13 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			corev1.ResourceCPU:    resource.MustParse("150m"),
 			corev1.ResourceMemory: resource.MustParse("100M"),
 		},
-		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+		PVCAutoscaler: pvcautoscaler.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("40Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
+		},
 	}
 
 	if b.Shoot.WantsAlertmanager {

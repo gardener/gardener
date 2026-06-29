@@ -69,6 +69,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
+	pvcautoscalervalues "github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -305,7 +306,13 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings))
+	c.victoriaLogs, err = r.newVictoriaLogs(pvcautoscalervalues.Values{
+		Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		MaxCapacity:                 resource.MustParse("200Gi"),
+		UtilizationThresholdPercent: new(70),
+		StepPercent:                 new(10),
+		MinStepAbsolute:             new(resource.MustParse("1Gi")),
+	})
 	if err != nil {
 		return
 	}
@@ -597,7 +604,13 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 		false,
 		istioIngressGatewayLabels,
 		istioIngressGatewayNamespace,
-		v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -617,7 +630,7 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs(pvcAutoscalerEnabled bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(pvcAutoscalerValues pvcautoscalervalues.Values) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
@@ -631,7 +644,7 @@ func (r *Reconciler) newVictoriaLogs(pvcAutoscalerEnabled bool) (component.Deplo
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
 		false,
-		pvcAutoscalerEnabled,
+		pvcAutoscalerValues,
 	)
 	if err != nil {
 		return nil, err
@@ -713,7 +726,13 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
 			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
 		},
-		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		PVCAutoscaler: pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
+		},
 	})
 }
 
@@ -740,7 +759,13 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			ScrapeConfigs:   seedprometheus.CentralScrapeConfigs(),
 			PrometheusRules: seedprometheus.CentralPrometheusRules(),
 		},
-		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		PVCAutoscaler: pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
+		},
 	})
 }
 
@@ -784,7 +809,13 @@ func (r *Reconciler) newAggregatePrometheus(
 			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
 			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
 		},
-		PVCAutoscalerEnabled: v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		PVCAutoscaler: pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
+		},
 	}
 
 	if globalMonitoringSecret != nil {

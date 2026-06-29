@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -129,7 +130,7 @@ type Values struct {
 	IstioIngressGatewayNamespace string
 	ShootNodeLoggingEnabled      bool
 	Storage                      *resource.Quantity
-	PVCAutoscalerEnabled         bool
+	PVCAutoscaler                pvcautoscaler.Values
 }
 
 // Interface is the interface for the Vali deployer.
@@ -170,7 +171,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		resources []client.Object
 	)
 
-	if v.values.Storage != nil && !v.values.PVCAutoscalerEnabled {
+	if v.values.Storage != nil && !v.values.PVCAutoscaler.Enabled {
 		if err := v.resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx); err != nil {
 			return err
 		}
@@ -265,8 +266,8 @@ func (v *vali) Deploy(ctx context.Context) error {
 		v.getPrometheusRule(),
 	)
 
-	if v.values.PVCAutoscalerEnabled {
-		resources = append(resources, v.getPVCA(resource.MustParse("100Gi")))
+	if v.values.PVCAutoscaler.Enabled {
+		resources = append(resources, v.getPVCA(v.values.PVCAutoscaler))
 	}
 
 	if err := registry.Add(resources...); err != nil {
@@ -343,7 +344,7 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return vpa
 }
 
-func (v *vali) getPVCA(storage resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (v *vali) getPVCA(values pvcautoscaler.Values) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	pvca := &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiconstants.ManagedResourceNameRuntime,
@@ -354,11 +355,16 @@ func (v *vali) getPVCA(storage resource.Quantity) *pvcautoscalerv1alpha1.Persist
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "StatefulSet",
-				Name:       valiconstants.ManagedResourceNameRuntime,
+				Name:       valiName,
 			},
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
-					MaxCapacity: storage,
+					MaxCapacity: values.MaxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: values.UtilizationThresholdPercent,
+						StepPercent:                 values.StepPercent,
+						MinStepAbsolute:             values.MinStepAbsolute,
+					},
 				},
 			},
 		},
