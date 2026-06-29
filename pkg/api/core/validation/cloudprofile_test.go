@@ -2234,6 +2234,25 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					))
 				})
 
+				It("should reject capability names using the reserved gardener- prefix", func() {
+					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
+					}
+					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
+						"architecture": []string{"amd64"},
+					}
+					cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
+						{Name: "architecture", Values: []string{"amd64"}},
+						{Name: "gardener-update-type", Values: []string{"rolling", "in-place"}},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.machineCapabilities[1].name"),
+						"Detail": ContainSubstring(`"gardener-" prefix is reserved`),
+					}))))
+				})
+
 				It("should fail to validate capabilities with keys or values not passing qualified name check", func() {
 					cloudProfile.Spec.MachineCapabilities = []core.CapabilityDefinition{
 						{Name: "architecture", Values: []string{"amd64"}},

@@ -532,6 +532,12 @@ func HasDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal *int32) bool {
 	return newMaxNodesTotal != nil && oldMaxNodesTotal != nil && *newMaxNodesTotal < *oldMaxNodesTotal
 }
 
+// gardenerReservedCapabilityPrefix is the capability-name prefix reserved for Gardener
+// core. Operator-supplied capabilities in `CloudProfile.spec.machineCapabilities` must
+// not use this prefix; the namespace is reserved so that future Gardener features can
+// introduce capability names without colliding with operator-defined ones.
+const gardenerReservedCapabilityPrefix = "gardener-"
+
 func validateCapabilityDefinitions(capabilityDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -548,6 +554,9 @@ func validateCapabilityDefinitions(capabilityDefinitions []core.CapabilityDefini
 		capabilityDefinitionFieldPath := fldPath.Index(idx)
 		if _, exists := capabilityMap[capability.Name]; exists {
 			allErrs = append(allErrs, field.Duplicate(capabilityDefinitionFieldPath.Child("name"), capability.Name))
+		}
+		if strings.HasPrefix(capability.Name, gardenerReservedCapabilityPrefix) {
+			allErrs = append(allErrs, field.Forbidden(capabilityDefinitionFieldPath.Child("name"), fmt.Sprintf("the %q prefix is reserved for Gardener-core capabilities", gardenerReservedCapabilityPrefix)))
 		}
 		capabilityMap[capability.Name] = capability.Values
 	}
