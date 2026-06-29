@@ -62,6 +62,11 @@ func (t *terminal) clusterRole() *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{gardencorev1beta1.GroupName},
+				Resources: []string{"shoots"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{gardencorev1beta1.GroupName},
 				Resources: []string{"shoots/adminkubeconfig"},
 				Verbs:     []string{"create"},
 			},
