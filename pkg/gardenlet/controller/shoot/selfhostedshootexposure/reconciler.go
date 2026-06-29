@@ -45,7 +45,7 @@ type Reconciler struct {
 // Reconcile recomputes the control-plane endpoints from the current Node state and patches the SelfHostedShootExposure
 // resource or the external DNSRecord accordingly.
 func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(ctx).WithName(ControllerName)
+	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.GardenClient.Get(ctx, r.ShootKey, shoot); err != nil {
@@ -235,8 +235,7 @@ func (r *Reconciler) reconcileExtensionExposure(ctx context.Context, log logr.Lo
 		}
 	}
 
-	c := extensionsselfhostedshootexposure.New(log, r.ShootClient, values)
-	c.Clock = r.Clock
+	c := extensionsselfhostedshootexposure.New(log, r.ShootClient, r.Clock, values)
 
 	existing, err := r.getExposure(ctx, shoot)
 	if err != nil {

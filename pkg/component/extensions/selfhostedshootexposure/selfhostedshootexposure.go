@@ -42,10 +42,10 @@ type Values struct {
 type SelfHostedShootExposure struct {
 	log    logr.Logger
 	client client.Client
+	clock  clock.PassiveClock
 	Values *Values
 
 	// exposed for testing
-	Clock               clock.PassiveClock
 	WaitInterval        time.Duration
 	WaitSevereThreshold time.Duration
 	WaitTimeout         time.Duration
@@ -56,18 +56,19 @@ type SelfHostedShootExposure struct {
 	Ingress []corev1.LoadBalancerIngress
 }
 
-// New creates a new SelfHostedShootExposure component with the default clock and wait settings.
+// New creates a new SelfHostedShootExposure component with the default wait settings.
 func New(
 	log logr.Logger,
 	c client.Client,
+	clock clock.PassiveClock,
 	values *Values,
 ) *SelfHostedShootExposure {
 	return &SelfHostedShootExposure{
 		log:    log,
 		client: c,
+		clock:  clock,
 		Values: values,
 
-		Clock:               &clock.RealClock{},
 		WaitInterval:        5 * time.Second,
 		WaitSevereThreshold: 30 * time.Second,
 		WaitTimeout:         5 * time.Minute,
@@ -86,7 +87,7 @@ func New(
 func (s *SelfHostedShootExposure) Deploy(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, s.exposure, func() error {
 		metav1.SetMetaDataAnnotation(&s.exposure.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&s.exposure.ObjectMeta, v1beta1constants.GardenerTimestamp, s.Clock.Now().UTC().Format(time.RFC3339Nano))
+		metav1.SetMetaDataAnnotation(&s.exposure.ObjectMeta, v1beta1constants.GardenerTimestamp, s.clock.Now().UTC().Format(time.RFC3339Nano))
 
 		s.exposure.Spec = extensionsv1alpha1.SelfHostedShootExposureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

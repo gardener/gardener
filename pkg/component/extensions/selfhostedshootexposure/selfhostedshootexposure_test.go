@@ -78,8 +78,7 @@ var _ = Describe("SelfHostedShootExposure", func() {
 			},
 		}
 
-		deployer = New(logr.Discard(), c, values)
-		deployer.Clock = fakeClock
+		deployer = New(logr.Discard(), c, fakeClock, values)
 		deployer.WaitInterval = time.Millisecond
 		deployer.WaitSevereThreshold = 250 * time.Millisecond
 		deployer.WaitTimeout = 500 * time.Millisecond

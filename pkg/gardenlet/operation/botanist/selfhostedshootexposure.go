@@ -46,6 +46,7 @@ func (b *Botanist) DefaultSelfHostedShootExposure() *extensionsselfhostedshootex
 	return extensionsselfhostedshootexposure.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
+		b.Clock,
 		values,
 	)
 }

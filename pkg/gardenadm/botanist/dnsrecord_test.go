@@ -11,6 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -43,7 +44,7 @@ var _ = Describe("DNSRecord", func() {
 
 		ctrl := gomock.NewController(GinkgoT())
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
-		selfHostedShootExposure = selfhostedshootexposure.New(logr.Discard(), fakeClient, &selfhostedshootexposure.Values{})
+		selfHostedShootExposure = selfhostedshootexposure.New(logr.Discard(), fakeClient, clock.RealClock{}, &selfhostedshootexposure.Values{})
 
 		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
