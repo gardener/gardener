@@ -6,24 +6,10 @@ Conveniently download Gardener configuration resources from an existing garden c
 
 Conveniently download Gardener configuration resources from an existing garden cluster (CloudProfile, ControllerRegistrations, ControllerDeployments, etc.)
 
-```
-gardenadm discover [flags]
-```
-
-### Examples
-
-```
-# Download the configuration
-gardenadm discover <path-to-shoot-manifest>
-```
-
 ### Options
 
 ```
-  -d, --config-dir string        Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
-  -h, --help                     help for discover
-  -k, --kubeconfig string        Path to the kubeconfig file pointing to the garden cluster
-      --managed-infrastructure   Indicates whether Gardener will manage the shoot's infrastructure (network, domains, machines, etc.). Set this to true if using 'gardenadm bootstrap' for bootstrapping the shoot cluster. Set this to false if managing the infrastructure outside of Gardener. (default true)
+  -h, --help   help for discover
 ```
 
 ### Options inherited from parent commands
@@ -36,4 +22,6 @@ gardenadm discover <path-to-shoot-manifest>
 ### SEE ALSO
 
 * [gardenadm](gardenadm.md)	 - gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener project.
+* [gardenadm discover existing](gardenadm_discover_existing.md)	 - Download Gardener configuration resources for an existing Shoot in the garden cluster
+* [gardenadm discover new](gardenadm_discover_new.md)	 - Download Gardener configuration resources for a new Shoot described by a local manifest
 
