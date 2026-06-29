@@ -149,6 +149,7 @@ build:
             - pkg/component/observability/opentelemetry/collector/constants
             - pkg/component/observability/opentelemetry/operator
             - pkg/component/observability/plutono
+            - pkg/component/observability/pvcautoscaler
             - pkg/component/shared
             - pkg/controller/gardenletdeployer
             - pkg/controller/networkpolicy
