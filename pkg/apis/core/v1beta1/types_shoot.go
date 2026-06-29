@@ -2133,6 +2133,10 @@ const (
 	// ShootManualInPlaceWorkersUpdated is a constant for a condition type indicating that the Shoot cluster does not have
 	// any worker pools with update strategy "ManualInPlaceUpdate" and pending update.
 	ShootManualInPlaceWorkersUpdated ConditionType = "ManualInPlaceWorkersUpdated"
+	// ShootHasIgnoredManagedResources is a constant for a condition type indicating that one or more ManagedResources
+	// in the Shoot's control plane namespace in the seed have been annotated with resources.gardener.cloud/ignore=true,
+	// meaning their reconciliation has been disabled. Operators should be aware of such resources as they may diverge from the desired state.
+	ShootHasIgnoredManagedResources ConditionType = "HasIgnoredManagedResources"
 	// ShootReadyForMigration is a constant for a condition type indicating whether the Shoot can be migrated.
 	ShootReadyForMigration ConditionType = "ReadyForMigration"
 	// ShootDualStackNodesMigrationReady is a constant for a condition type indicating whether all nodes are migrated to dual-stack .
