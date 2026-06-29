@@ -16,6 +16,7 @@ type Config struct {
 	APIServerURL       string  `yaml:"apiServerUrl"`
 	APIServerCAData    *string `yaml:"apiServerCaData,omitempty"`
 	MaxRequestBodySize string  `yaml:"maxRequestBodySize"`
+	TLS                TLS     `yaml:"tls"`
 
 	ReadinessProbe          ReadinessProbe         `yaml:"readinessProbe"`
 	UnreachableSeeds        UnreachableSeeds       `yaml:"unreachableSeeds"`
@@ -25,6 +26,12 @@ type Config struct {
 	OIDC                    *OIDC                  `yaml:"oidc,omitempty"`
 	GitHub                  *GitHub                `yaml:"gitHub,omitempty"`
 	Frontend                map[string]any         `yaml:"frontend,omitempty"`
+}
+
+// TLS is the dashboard server TLS configuration.
+type TLS struct {
+	CertFile       string `yaml:"certFile"`
+	PrivateKeyFile string `yaml:"privateKeyFile"`
 }
 
 // ReadinessProbe is the readiness probe configuration.
