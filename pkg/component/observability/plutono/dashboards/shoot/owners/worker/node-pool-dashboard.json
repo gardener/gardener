@@ -1189,7 +1189,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Reboot events detected per node over time. Each bar indicates a reboot was detected in that 10-minute window. Filtered by selected worker group(s).",
+      "description": "Reboot events per node over time (detected after node rejoins cluster; each reboot shown once per 10-minute interval). Filtered by selected worker group(s).",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1212,7 +1212,7 @@
         "min": false,
         "rightSide": true,
         "show": true,
-        "total": true,
+        "total": false,
         "values": true
       },
       "lines": false,
@@ -1232,7 +1232,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "changes(\n  (\n      node_boot_time_seconds\n    + on (node) group_left (label_worker_gardener_cloud_pool)\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )[10m:]\n)",
+          "expr": "changes(\n  (\n      node_boot_time_seconds\n    + on (node) group_left (label_worker_gardener_cloud_pool)\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )[10m:10m]\n)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

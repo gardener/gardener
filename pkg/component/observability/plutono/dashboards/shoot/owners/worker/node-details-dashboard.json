@@ -1198,7 +1198,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Reboot history for node $Node: bars show reboot events detected in each 10-minute window (left axis), line shows node uptime since last boot (right axis). Legend shows total reboot count and current uptime.",
+      "description": "Reboot history for node $Node: bars show reboot events (detected after node rejoins cluster; each reboot shown once per 10-minute interval) on the left axis, line shows node uptime since last boot on the right axis.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1220,7 +1220,7 @@
         "max": false,
         "min": false,
         "show": true,
-        "total": true,
+        "total": false,
         "values": true
       },
       "lines": true,
@@ -1254,7 +1254,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "changes(node_boot_time_seconds{node=~\"$Node\"}[10m])",
+          "expr": "changes(node_boot_time_seconds{node=~\"$Node\"}[10m:10m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
