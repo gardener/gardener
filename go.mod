@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/VictoriaMetrics/operator/api v0.66.1
+	github.com/VictoriaMetrics/operator/api v0.72.0
 	github.com/andybalholm/brotli v1.2.2
 	github.com/bramvdbogaerde/go-scp v1.6.0
 	github.com/containerd/containerd/v2 v2.2.5
