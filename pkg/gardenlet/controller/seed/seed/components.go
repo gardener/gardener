@@ -742,7 +742,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
 		Replicas:          1,
-		RetentionSize:     "85GB",
+		RetentionSize:     "160GB",
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
 		HealthCheckBy:     prometheus.Gardenlet,
 		AdditionalPodLabels: map[string]string{
@@ -787,7 +787,7 @@ func (r *Reconciler) newAggregatePrometheus(
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
 		Replicas:          1,
 		Retention:         new(monitoringv1.Duration("30d")),
-		RetentionSize:     "15GB",
+		RetentionSize:     "160GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		HealthCheckBy:     prometheus.Gardenlet,

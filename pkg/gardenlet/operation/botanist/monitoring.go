@@ -119,7 +119,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		ClusterType:         component.ClusterTypeShoot,
 		Replicas:            b.Shoot.GetReplicas(1),
 		Retention:           new(monitoringv1.Duration("30d")),
-		RetentionSize:       "15GB",
+		RetentionSize:       "30GB",
 		RestrictToNamespace: true,
 		HealthCheckBy:       prometheus.Gardenlet,
 		ResourceRequests: &corev1.ResourceList{
