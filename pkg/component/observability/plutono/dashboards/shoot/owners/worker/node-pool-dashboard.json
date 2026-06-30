@@ -1189,7 +1189,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Reboot events per node over time (detected after node rejoins cluster; each reboot shown once per 10-minute interval). Filtered by selected worker group(s).",
+      "description": "Reboot events per node over time (detected after node rejoins cluster; one bar per scrape interval where a reboot is detected). Filtered by selected worker group(s).",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1232,7 +1232,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "changes(\n  (\n      node_boot_time_seconds\n    + on (node) group_left (label_worker_gardener_cloud_pool)\n      0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n  )[10m:10m]\n)",
+          "expr": "(\n  last_over_time(node_boot_time_seconds[1h])\n  + on (node) group_left (label_worker_gardener_cloud_pool)\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n)\n!=\n(\n  last_over_time(node_boot_time_seconds[1h] offset 1m)\n  + on (node) group_left (label_worker_gardener_cloud_pool)\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
