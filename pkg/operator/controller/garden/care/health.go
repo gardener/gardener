@@ -7,6 +7,8 @@ package care
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -98,6 +100,13 @@ func (h *health) Check(ctx context.Context, conditions GardenConditions) []garde
 			return nil
 		})
 	}
+
+	taskFns = append(taskFns, func(_ context.Context) error {
+		conditions.gardenHasIgnoredManagedResources = v1beta1helper.NewConditionOrError(
+			h.clock, conditions.gardenHasIgnoredManagedResources,
+			h.checkIfManagedResourcesAreIgnored(conditions.gardenHasIgnoredManagedResources, managedResources), nil)
+		return nil
+	})
 
 	_ = flow.Parallel(taskFns...)(ctx)
 
@@ -191,12 +200,34 @@ func (h *health) checkObservabilityComponents(ctx context.Context, condition gar
 	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."))
 }
 
+func (h *health) checkIfManagedResourcesAreIgnored(condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+	ignoredNames := sets.New[string]()
+	for _, mr := range managedResources {
+		if value, ok := mr.GetAnnotations()[resourcesv1alpha1.Ignore]; ok {
+			if truthy, _ := strconv.ParseBool(value); truthy {
+				ignoredNames.Insert(mr.Name)
+			}
+		}
+	}
+	if ignoredNames.Len() > 0 {
+		cond := v1beta1helper.UpdatedConditionWithClock(h.clock, condition,
+			gardencorev1beta1.ConditionFalse, "ManagedResourcesIgnored",
+			fmt.Sprintf("Some ManagedResources have been annotated with %s=true: %s",
+				resourcesv1alpha1.Ignore, strings.Join(sets.List(ignoredNames), ", ")))
+		return &cond
+	}
+	cond := v1beta1helper.UpdatedConditionWithClock(h.clock, condition,
+		gardencorev1beta1.ConditionTrue, "NoManagedResourcesIgnored", "No ManagedResources are annotated to be ignored.")
+	return &cond
+}
+
 // GardenConditions contains all conditions of the garden status subresource.
 type GardenConditions struct {
 	virtualGardenAPIServerAvailable gardencorev1beta1.Condition
 	runtimeComponentsHealthy        gardencorev1beta1.Condition
 	virtualComponentsHealthy        gardencorev1beta1.Condition
 	observabilityComponentsHealthy  gardencorev1beta1.Condition
+	gardenHasIgnoredManagedResources gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the garden conditions as a slice.
@@ -206,6 +237,7 @@ func (g GardenConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.runtimeComponentsHealthy,
 		g.virtualComponentsHealthy,
 		g.observabilityComponentsHealthy,
+		g.gardenHasIgnoredManagedResources,
 	}
 }
 
@@ -216,6 +248,7 @@ func (g GardenConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 		g.runtimeComponentsHealthy.Type,
 		g.virtualComponentsHealthy.Type,
 		g.observabilityComponentsHealthy.Type,
+		g.gardenHasIgnoredManagedResources.Type,
 	}
 }
 
@@ -223,9 +256,10 @@ func (g GardenConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 // All conditions are retrieved from the given 'status' or newly initialized.
 func NewGardenConditions(clock clock.Clock, status operatorv1alpha1.GardenStatus) GardenConditions {
 	return GardenConditions{
-		virtualGardenAPIServerAvailable: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualGardenAPIServerAvailable),
-		runtimeComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.RuntimeComponentsHealthy),
-		virtualComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualComponentsHealthy),
-		observabilityComponentsHealthy:  v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.ObservabilityComponentsHealthy),
+		virtualGardenAPIServerAvailable:  v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualGardenAPIServerAvailable),
+		runtimeComponentsHealthy:         v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.RuntimeComponentsHealthy),
+		virtualComponentsHealthy:         v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualComponentsHealthy),
+		observabilityComponentsHealthy:   v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.ObservabilityComponentsHealthy),
+		gardenHasIgnoredManagedResources: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.GardenHasIgnoredManagedResources),
 	}
 }

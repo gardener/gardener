@@ -7,8 +7,11 @@ package care
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,6 +73,7 @@ func (h *health) Check(
 	if newEmergencyStopShootReconciliations := h.checkEmergencyStopShootReconciliations(conditions.emergencyStopShootReconciliations); newEmergencyStopShootReconciliations != nil {
 		checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.emergencyStopShootReconciliations, newEmergencyStopShootReconciliations, nil))
 	}
+	checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.hasIgnoredManagedResources, h.checkIfManagedResourcesAreIgnored(conditions.hasIgnoredManagedResources, managedResources), nil))
 	return checkedConditions
 }
 
@@ -129,10 +133,32 @@ func (h *health) checkEmergencyStopShootReconciliations(condition gardencorev1be
 	))
 }
 
+func (h *health) checkIfManagedResourcesAreIgnored(condition gardencorev1beta1.Condition, managedResources []resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+	ignoredNames := sets.New[string]()
+	for _, mr := range managedResources {
+		if value, ok := mr.GetAnnotations()[resourcesv1alpha1.Ignore]; ok {
+			if truthy, _ := strconv.ParseBool(value); truthy {
+				ignoredNames.Insert(mr.Name)
+			}
+		}
+	}
+	if ignoredNames.Len() > 0 {
+		cond := v1beta1helper.UpdatedConditionWithClock(h.clock, condition,
+			gardencorev1beta1.ConditionFalse, "ManagedResourcesIgnored",
+			fmt.Sprintf("Some ManagedResources have been annotated with %s=true: %s",
+				resourcesv1alpha1.Ignore, strings.Join(sets.List(ignoredNames), ", ")))
+		return &cond
+	}
+	cond := v1beta1helper.UpdatedConditionWithClock(h.clock, condition,
+		gardencorev1beta1.ConditionTrue, "NoManagedResourcesIgnored", "No ManagedResources are annotated to be ignored.")
+	return &cond
+}
+
 // SeedConditions contains all seed related conditions of the seed status subresource.
 type SeedConditions struct {
 	systemComponentsHealthy           gardencorev1beta1.Condition
 	emergencyStopShootReconciliations gardencorev1beta1.Condition
+	hasIgnoredManagedResources        gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the seed conditions as a slice.
@@ -140,6 +166,7 @@ func (s SeedConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 	return []gardencorev1beta1.Condition{
 		s.systemComponentsHealthy,
 		s.emergencyStopShootReconciliations,
+		s.hasIgnoredManagedResources,
 	}
 }
 
@@ -148,6 +175,7 @@ func (s SeedConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{
 		s.systemComponentsHealthy.Type,
 		s.emergencyStopShootReconciliations.Type,
+		s.hasIgnoredManagedResources.Type,
 	}
 }
 
@@ -157,5 +185,6 @@ func NewSeedConditions(clock clock.Clock, status gardencorev1beta1.SeedStatus) S
 	return SeedConditions{
 		systemComponentsHealthy:           v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy),
 		emergencyStopShootReconciliations: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedEmergencyStopShootReconciliations),
+		hasIgnoredManagedResources:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedHasIgnoredManagedResources),
 	}
 }
