@@ -164,6 +164,11 @@ gardener.cloud/operation=force-redeploy
 `gardener-operator` will remove the operation annotation after it's done.
 Just like after the initial deployment, it'll also delete the kubeconfig `Secret` and set `.spec.kubeconfigSecretRef` to `nil`, see above.
 
+### Private Registry Configuration
+
+You can set `spec.config.registryCABundle` in the `Gardenlet` resource to configure a custom CA for a private container registry.
+For more details, see [Private Registry Configuration](deploy_gardenlet_manually.md#private-registry-configuration).
+
 ### Configuring the connection to garden cluster
 The garden cluster connection of your seeds are configured automatically by `gardener-operator`.
 You could also specify the `gardenClusterAddress` in the `Gardenlet` resource manually, but this is not recommended.

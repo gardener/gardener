@@ -60,3 +60,13 @@ The following configuration options are enforced by Gardener API server for the 
 1. The nginx-ingress addon should not be enabled for a Shoot referred by a ManagedSeed.
 
    An Ingress controller is also a prerequisite for a Seed cluster. For a Seed cluster, it is possible to enable Gardener managed Ingress controller or to deploy self-managed Ingress controller. There is also the nginx-ingress addon that can be enabled for a Shoot (using the Shoot spec). However, the Shoot nginx-ingress addon is in deprecated mode and it is not recommended for production clusters. Due to these reasons, the Gardener API server does not allow the Shoot nginx-ingress addon to be enabled for ManagedSeeds.
+
+### Private Registry Configuration
+
+If gardenlet pulls images from a private registry with a custom CA, set `registryCABundle` inside the gardenlet's `GardenletConfiguration` under `spec.gardenlet.config`.
+For the full field reference and secret format see [Private Registry Configuration](../deployment/deploy_gardenlet_manually.md#private-registry-configuration).
+
+**Inheriting from the parent gardenlet:**
+
+When `spec.gardenlet.mergeWithParent` is `true` (the default), the `ManagedSeed` inherits `registryCABundle` from the parent gardenlet's `GardenletConfiguration` if not set explicitly.
+This means that if the parent seed's gardenlet already has `registryCABundle` in its config, you do not need to repeat it in every child `ManagedSeed`.
