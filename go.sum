@@ -257,8 +257,8 @@ github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
 github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
-github.com/gardener/cert-management v0.23.0 h1:kD88XcPn6C4zLc8EYtrHyb+/45Iyaozhb+HEM44MKz0=
-github.com/gardener/cert-management v0.23.0/go.mod h1:Mehn8XY+iAkm8XOBbNGHmbMft8fP9ZEJFWzWSonPkfc=
+github.com/gardener/cert-management/pkg/apis v0.25.0 h1:+BSRLH1LwNTXujZmUguEIAuB078Cn5qZgSf5FnfhBFs=
+github.com/gardener/cert-management/pkg/apis v0.25.0/go.mod h1:aj0PW4fBbZMLfC9hoJWzpePGkt+9KAji86r8ADkWts0=
 github.com/gardener/dependency-watchdog v1.8.0 h1:+3FE8sR1V6YM9JsGqX7m9oUjhr1wXhedQo29r6fsC+I=
 github.com/gardener/dependency-watchdog v1.8.0/go.mod h1:jRIyBZ4ySWy+EdQjfLm/N+90vBPdWJ7khiBN7CGQs18=
 github.com/gardener/etcd-druid/api v0.36.4 h1:o/17ciPrbh/w+igKMUuglW7N9XLjoMh7AvRKTzsBEVs=
