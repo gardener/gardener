@@ -223,10 +223,10 @@ func (h *health) checkIfManagedResourcesAreIgnored(condition gardencorev1beta1.C
 
 // GardenConditions contains all conditions of the garden status subresource.
 type GardenConditions struct {
-	virtualGardenAPIServerAvailable gardencorev1beta1.Condition
-	runtimeComponentsHealthy        gardencorev1beta1.Condition
-	virtualComponentsHealthy        gardencorev1beta1.Condition
-	observabilityComponentsHealthy  gardencorev1beta1.Condition
+	virtualGardenAPIServerAvailable  gardencorev1beta1.Condition
+	runtimeComponentsHealthy         gardencorev1beta1.Condition
+	virtualComponentsHealthy         gardencorev1beta1.Condition
+	observabilityComponentsHealthy   gardencorev1beta1.Condition
 	gardenHasIgnoredManagedResources gardencorev1beta1.Condition
 }
 
