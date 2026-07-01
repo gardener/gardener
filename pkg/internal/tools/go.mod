@@ -394,11 +394,11 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.7.0 // indirect
-	k8s.io/api v0.35.5 // indirect
-	k8s.io/apiextensions-apiserver v0.35.5 // indirect
-	k8s.io/apimachinery v0.35.5 // indirect
-	k8s.io/client-go v0.35.5 // indirect
-	k8s.io/code-generator v0.35.5 // indirect
+	k8s.io/api v0.35.6 // indirect
+	k8s.io/apiextensions-apiserver v0.35.6 // indirect
+	k8s.io/apimachinery v0.35.6 // indirect
+	k8s.io/client-go v0.35.6 // indirect
+	k8s.io/code-generator v0.35.6 // indirect
 	k8s.io/gengo/v2 v2.0.0-20251215205346-5ee0d033ba5b // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
