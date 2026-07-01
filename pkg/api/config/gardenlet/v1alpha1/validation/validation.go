@@ -138,8 +138,10 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 			}
 		}
 		if bundle.Inline != nil {
-			if _, err := utils.DecodeCertificate([]byte(*bundle.Inline)); err != nil {
+			if cert, err := utils.DecodeCertificate([]byte(*bundle.Inline)); err != nil {
 				allErrs = append(allErrs, field.Invalid(bundlePath.Child("inline"), *bundle.Inline, "caBundle is not a valid PEM-encoded certificate"))
+			} else if time.Now().Add(7 * 24 * time.Hour).After(cert.NotAfter) {
+				allErrs = append(allErrs, field.Invalid(bundlePath.Child("inline"), *bundle.Inline, "caBundle certificate is either expired or expires within 7 days"))
 			}
 		}
 	}

@@ -7,9 +7,12 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ResolveRegistryCABundle resolves a registry CA bundle to its PEM-encoded certificate content.
@@ -31,6 +34,14 @@ func ResolveRegistryCABundle(ctx context.Context, c client.Client, secretRef *co
 	}
 	if len(data) == 0 {
 		return "", fmt.Errorf("registry CA bundle secret %s/%s has empty key %q", secretRef.Namespace, secretRef.Name, "bundle.crt")
+	}
+
+	cert, err := utils.DecodeCertificate(data)
+	if err != nil {
+		return "", fmt.Errorf("registry CA bundle secret %s/%s has invalid certificate in key %q: %w", secretRef.Namespace, secretRef.Name, "bundle.crt", err)
+	}
+	if time.Now().Add(7 * 24 * time.Hour).After(cert.NotAfter) {
+		return "", fmt.Errorf("registry CA bundle secret %s/%s has a certificate in key %q that is either expired or expires within 7 days", secretRef.Namespace, secretRef.Name, "bundle.crt")
 	}
 
 	return string(data), nil

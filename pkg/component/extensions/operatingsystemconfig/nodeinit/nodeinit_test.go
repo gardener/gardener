@@ -230,10 +230,11 @@ unmount() {
 }
 trap unmount EXIT
 
-CA_B64=$(curl -sf $([ -f "/var/lib/gardener-node-agent/cluster-ca.crt" ] && echo "--cacert /var/lib/gardener-node-agent/cluster-ca.crt") \
+CA_B64=$(curl -f \
+  --cacert "/var/lib/gardener-node-agent/cluster-ca.crt" \
   --header "Authorization: Bearer $(cat "/var/lib/gardener-node-agent/credentials/bootstrap-token" 2>/dev/null)" \
   "` + apiServerURL + `/api/v1/namespaces/kube-system/configmaps/registry-ca-bundle" \
-  2>/dev/null | sed -n 's/.*"ca\.b64"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
+  | sed -n 's/.*"ca\.b64"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
 if [ -n "$CA_B64" ]; then
   mkdir -p "/var/lib/ca-certificates-local" "/etc/pki/trust/anchors"
   printf '%s' "$CA_B64" | base64 -d | tee "/var/lib/ca-certificates-local/registry-ca.crt" > "/etc/pki/trust/anchors/registry-ca.pem"

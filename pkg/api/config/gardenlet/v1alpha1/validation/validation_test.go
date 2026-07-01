@@ -15,11 +15,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	testclock "k8s.io/utils/clock/testing"
 
 	. "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("GardenletConfiguration", func() {
@@ -895,6 +897,52 @@ var _ = Describe("GardenletConfiguration", func() {
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("registryCABundle.secretRef.namespace"),
 					"Detail": Equal("secret namespace must not be empty"),
+				})),
+			))
+		})
+
+		It("should fail when inline certificate expires within 7 days", func() {
+			validity := 6 * 24 * time.Hour
+			cert, err := (&secrets.CertificateSecretConfig{
+				Name:       "test",
+				CommonName: "test",
+				CertType:   secrets.CACert,
+				Validity:   &validity,
+			}).GenerateCertificate()
+			Expect(err).NotTo(HaveOccurred())
+			expiringSoon := string(cert.CertificatePEM)
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				Inline: &expiringSoon,
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("registryCABundle.inline"),
+					"Detail": Equal("caBundle certificate is either expired or expires within 7 days"),
+				})),
+			))
+		})
+
+		It("should fail when inline certificate is already expired", func() {
+			DeferCleanup(test.WithVar(&secrets.Clock, testclock.NewFakeClock(time.Now().Add(-8*24*time.Hour))))
+
+			validity := 24 * time.Hour
+			cert, err := (&secrets.CertificateSecretConfig{
+				Name:       "test",
+				CommonName: "test",
+				CertType:   secrets.CACert,
+				Validity:   &validity,
+			}).GenerateCertificate()
+			Expect(err).NotTo(HaveOccurred())
+			expired := string(cert.CertificatePEM)
+			cfg.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				Inline: &expired,
+			}
+			Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("registryCABundle.inline"),
+					"Detail": Equal("caBundle certificate is either expired or expires within 7 days"),
 				})),
 			))
 		})
