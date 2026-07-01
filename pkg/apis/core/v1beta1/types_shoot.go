@@ -1799,6 +1799,10 @@ type Worker struct {
 	// This is only relevant for self-hosted shoot clusters.
 	// +optional
 	ControlPlane *WorkerControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,24,opt,name=controlPlane"`
+	// AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+	// This value is distributed across zones like Minimum and Maximum.
+	// +optional
+	AutoPreserveFailedMachineMax *int32 `json:"autoPreserveFailedMachineMax,omitempty" protobuf:"varint,25,opt,name=autoPreserveFailedMachineMax"`
 }
 
 // WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
@@ -1897,6 +1901,13 @@ type MachineControllerManagerSettings struct {
 	// This is intended to be used only for in-place updates.
 	// +optional
 	DisableHealthTimeout *bool `json:"disableHealthTimeout,omitempty" protobuf:"varint,7,opt,name=disableHealthTimeout"`
+	// MachinePreserveTimeout defines the duration after which machine preservation is disabled.
+	// If preservation is disabled while the machine is in the Failed phase, the machine transitions
+	// to the Terminating phase. For machines in any other phase, disabling preservation does not
+	// alter the current phase, and normal behavior and phase transitions continue as usual.
+	// However, the Cluster Autoscaler (CA) may scale down the machine if required.
+	// +optional
+	MachinePreserveTimeout *metav1.Duration `json:"machinePreserveTimeout,omitempty" protobuf:"bytes,8,opt,name=machinePreserveTimeout"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool
@@ -2119,6 +2130,8 @@ const (
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+	// ShootNoPreservedFailedMachines is a constant for a condition type indicating if the Shoot has no preserved failed machines.
+	ShootNoPreservedFailedMachines ConditionType = "NoPreservedFailedMachines"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
 	// ShootMaintenancePreconditionsSatisfied is a constant for a condition type indicating whether all preconditions

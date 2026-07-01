@@ -49,6 +49,7 @@ type MachineDeployment struct {
 	State                        *shootstate.MachineDeploymentState
 	MachineConfiguration         *machinev1alpha1.MachineConfiguration
 	ClusterAutoscalerAnnotations map[string]string
+	AutoPreserveFailedMachineMax int32
 }
 
 // MachineDeployments is a list of machine deployments.

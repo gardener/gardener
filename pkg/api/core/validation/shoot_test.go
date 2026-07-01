@@ -9232,6 +9232,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
 				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManagerSettings.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
 			})
+
+			It("should forbid setting machinePreserveTimeout to negative value", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					MachinePreserveTimeout: &metav1.Duration{Duration: time.Minute * -2},
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.machinePreserveTimeout"),
+					"Detail": Equal("must be non-negative"),
+				}))))
+			})
 		})
 		It("should fail when priority is set to value less than -1", func() {
 			worker := core.Worker{
@@ -9322,6 +9335,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 				),
 			),
+		)
+
+		DescribeTable("validate AutoPreserveFailedMachineMax",
+			func(allowSystemComponents bool, autoPreserveFailedMachineMax int32, expectedDetail string) {
+				maximum := int32(5)
+				worker := core.Worker{
+					Name: "worker-name",
+					Machine: core.Machine{
+						Type: "large",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
+						Architecture: new("amd64"),
+					},
+					MaxSurge:                     new(intstr.FromInt32(1)),
+					MaxUnavailable:               new(intstr.FromInt32(0)),
+					Maximum:                      maximum,
+					SystemComponents:             &core.WorkerSystemComponents{Allow: allowSystemComponents},
+					AutoPreserveFailedMachineMax: &autoPreserveFailedMachineMax,
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+				if expectedDetail == "" {
+					Expect(errList).To(BeEmpty())
+				} else {
+					Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("autoPreserveFailedMachineMax"),
+						"Detail": Equal(expectedDetail),
+					}))))
+				}
+			},
+			Entry("system components allowed, value equals maximum", true, int32(5), "must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"),
+			Entry("system components not allowed, value exceeds maximum", false, int32(6), "must not be greater than maximum value"),
+			Entry("value is less than zero", false, int32(-1), "must not be negative"),
+			Entry("system components not allowed, value equals maximum", false, int32(5), ""),
+			Entry("system components allowed, value equals maximum-1", true, int32(4), ""),
 		)
 	})
 

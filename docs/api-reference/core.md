@@ -7327,6 +7327,18 @@ boolean
 <p>DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.<br />This is intended to be used only for in-place updates.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>machinePreserveTimeout</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#duration-v1-meta">Duration</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachinePreserveTimeout defines the duration after which machine preservation is disabled.<br />If preservation is disabled while the machine is in the Failed phase, the machine transitions<br />to the Terminating phase. For machines in any other phase, disabling preservation does not<br />alter the current phase, and normal behavior and phase transitions continue as usual.<br />However, the Cluster Autoscaler (CA) may scale down the machine if required.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
@@ -14118,6 +14130,18 @@ integer
 <td>
 <em>(Optional)</em>
 <p>ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.<br />This is only relevant for self-hosted shoot clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoPreserveFailedMachineMax</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.<br />This value is distributed across zones like Minimum and Maximum.</p>
 </td>
 </tr>
 

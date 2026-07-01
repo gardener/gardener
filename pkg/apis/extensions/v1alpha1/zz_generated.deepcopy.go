@@ -1485,6 +1485,11 @@ func (in *MachineDeployment) DeepCopyInto(out *MachineDeployment) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.AutoPreserveFailedMachineMax != nil {
+		in, out := &in.AutoPreserveFailedMachineMax, &out.AutoPreserveFailedMachineMax
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 
@@ -2273,6 +2278,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 	if in.UpdateStrategy != nil {
 		in, out := &in.UpdateStrategy, &out.UpdateStrategy
 		*out = new(v1beta1.MachineUpdateStrategy)
+		**out = **in
+	}
+	if in.AutoPreserveFailedMachineMax != nil {
+		in, out := &in.AutoPreserveFailedMachineMax, &out.AutoPreserveFailedMachineMax
+		*out = new(int32)
 		**out = **in
 	}
 	return

@@ -283,6 +283,7 @@ func deployMachineDeployment(
 		machineDeployment.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: labels,
 		}
+		machineDeployment.Spec.AutoPreserveFailedMachineMax = deployment.AutoPreserveFailedMachineMax
 		machineDeployment.Spec.Template = machinev1alpha1.MachineTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: getMachineLabels(deployment.Strategy, labels, worker.Name),
@@ -341,7 +342,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
-			numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
+			numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace, numPreservedFailed int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -443,6 +444,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numUpdated += deployment.Status.UpdatedReplicas
 			numAvailable += deployment.Status.AvailableReplicas
 			numUnavailable += deployment.Status.UnavailableReplicas
+			numPreservedFailed += deployment.Status.PreservedFailedReplicas
 		}
 
 		var msg string
@@ -467,9 +469,14 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachinesNotUpdateCandidateManualInPlace)
 				break
 			}
+			if numUnavailable <= numPreservedFailed && (int(numHealthyDeployments) == len(wantedMachineDeployments)) {
+				// if the number of unavailable machines is not greater than the number of preserved failed machines, it means that all unavailable machines are preserved failed machines,
+				// hence we can exempt them from this check and allow shoot reconciliation to progress
+				return retryutils.Ok()
+			}
+			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d preserved failed machine(s), %d/%d machinedeployments available)...",
+				numAvailable, numDesired, numUpdated+numNeedUpdateManualInPlace, numDesired, numUnavailable, numPreservedFailed, numHealthyDeployments, len(wantedMachineDeployments))
 
-			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...",
-				numAvailable, numDesired, numUpdated+numNeedUpdateManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
 				return retryutils.Ok()
@@ -663,6 +670,9 @@ func ReadMachineConfiguration(pool extensionsv1alpha1.WorkerPool) *machinev1alph
 		}
 		if poolSettings.DisableHealthTimeout != nil {
 			machineConfiguration.DisableHealthTimeout = poolSettings.DisableHealthTimeout
+		}
+		if poolSettings.MachinePreserveTimeout != nil {
+			machineConfiguration.MachinePreserveTimeout = poolSettings.MachinePreserveTimeout
 		}
 	}
 	return machineConfiguration

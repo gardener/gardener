@@ -50,6 +50,15 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	if supportedVersion, _ := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.33"); supportedVersion && shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
 		warnings = append(warnings, "you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")
 	}
+	// TODO(thiyyakat): Remove this after support for Kubernetes v1.33 is dropped
+	if supportedVersion, _ := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.34"); supportedVersion {
+		for _, worker := range shoot.Spec.Provider.Workers {
+			if ptr.Deref(worker.AutoPreserveFailedMachineMax, 0) != 0 {
+				warnings = append(warnings, "preservation of backing machines of unregistered nodes is not supported in clusters with Kubernetes version < v1.34.")
+				break
+			}
+		}
+	}
 
 	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err == nil && versionutils.ConstraintK8sGreaterEqual133.Check(kubernetesVersion) && ptr.Deref(shoot.Spec.CloudProfileName, "") != "" {

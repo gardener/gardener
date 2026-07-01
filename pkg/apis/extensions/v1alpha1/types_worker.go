@@ -174,6 +174,10 @@ type WorkerPool struct {
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	// +optional
 	UpdateStrategy *gardencorev1beta1.MachineUpdateStrategy `json:"updateStrategy,omitempty"`
+	// AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+	// This value is distributed across zones like Minimum and Maximum.
+	// +optional
+	AutoPreserveFailedMachineMax *int32 `json:"autoPreserveFailedMachineMax,omitempty"`
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
@@ -279,4 +283,7 @@ type MachineDeployment struct {
 	// Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.
 	// +optional
 	Priority *int32 `json:"priority,omitempty"`
+	// AutoPreserveFailedMachineMax is the maximum number of machines in the machine deployment that can be auto-preserved by MCM.
+	// +optional
+	AutoPreserveFailedMachineMax *int32 `json:"autoPreserveFailedMachineMax,omitempty"`
 }

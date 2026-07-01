@@ -5,6 +5,7 @@
 package health_test
 
 import (
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -27,6 +28,51 @@ var _ = Describe("Node", func() {
 			Entry("ready condition not indicating true", &corev1.Node{
 				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}},
 			}, HaveOccurred()),
+		)
+	})
+
+	Describe("IsNodePreservedAndUnhealthy", func() {
+		DescribeTable("nodes",
+			func(node corev1.Node, expected bool) {
+				Expect(health.IsNodePreservedAndUnhealthy(node)).To(Equal(expected))
+			},
+			Entry("preserved and not ready (False)",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+				}}},
+				true,
+			),
+			Entry("preserved and not ready (Unknown)",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionUnknown},
+				}}},
+				true,
+			),
+			Entry("preserved and ready",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+				}}},
+				false,
+			),
+			Entry("not preserved and not ready",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+				}}},
+				false,
+			),
+			Entry("not preserved and ready",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+				}}},
+				false,
+			),
+			Entry("no conditions",
+				corev1.Node{},
+				false,
+			),
 		)
 	})
 })
