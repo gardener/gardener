@@ -16,6 +16,8 @@ import (
 )
 
 // Marshal transform RawState to []byte representation. It encodes the raw state data
+//
+// Deprecated: This method is deprecated and will be removed after v1.154 has been released.
 func (trs *RawState) Marshal() ([]byte, error) {
 	return json.Marshal(trs.encodeBase64())
 }
@@ -33,6 +35,8 @@ func (t *terraformer) GetRawState(ctx context.Context) (*RawState, error) {
 }
 
 // UnmarshalRawState transform passed rawState to RawState struct. It tries to decode the state
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func UnmarshalRawState(rawState any) (*RawState, error) {
 	var rawData []byte
 

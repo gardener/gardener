@@ -26,8 +26,12 @@ import (
 
 const (
 	// LabelKeyName is a key for label on a Terraformer Pod indicating the Terraformer name.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	LabelKeyName = "terraformer.gardener.cloud/name"
 	// LabelKeyPurpose is a key for label on a Terraformer Pod indicating the Terraformer purpose.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	LabelKeyPurpose = "terraformer.gardener.cloud/purpose"
 )
 
@@ -46,11 +50,15 @@ func (f factory) DefaultInitializer(c client.Client, main, variables string, tfV
 }
 
 // DefaultFactory returns the default factory.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func DefaultFactory() Factory {
 	return factory{}
 }
 
 // NewForConfig creates a new Terraformer and its dependencies from the given configuration.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func NewForConfig(
 	logger logr.Logger,
 	config *rest.Config,
@@ -80,6 +88,8 @@ func NewForConfig(
 // <image> name for the to-be-used Docker image. It returns a Terraformer interface with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func New(
 	logger logr.Logger,
 	c client.Client,
@@ -118,8 +128,12 @@ func New(
 
 const (
 	// CommandApply is a constant for the "apply" command.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	CommandApply = "apply"
 	// CommandDestroy is a constant for the "destroy" command.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	CommandDestroy = "destroy"
 )
 

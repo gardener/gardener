@@ -22,12 +22,20 @@ import (
 
 const (
 	// MainKey is the key of the main.tf file inside the configuration ConfigMap.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	MainKey = "main.tf"
 	// VariablesKey is the key of the variables.tf file inside the configuration ConfigMap.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	VariablesKey = "variables.tf"
 	// TFVarsKey is the key of the terraform.tfvars file inside the variables Secret.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	TFVarsKey = "terraform.tfvars"
 	// StateKey is the key of the terraform.tfstate file inside the state ConfigMap.
+	//
+	// Deprecated: This constant is deprecated and will be removed after v1.154 has been released.
 	StateKey = "terraform.tfstate"
 )
 
@@ -82,6 +90,8 @@ func (t *terraformer) SetLogLevel(level string) Terraformer {
 
 // InitializerConfig is the configuration about the location and naming of the resources the
 // Terraformer expects.
+//
+// Deprecated: This type is deprecated and will be removed after v1.154 has been released.
 type InitializerConfig struct {
 	// Namespace is the namespace where all the resources required for the Terraformer shall be
 	// deployed.
@@ -145,6 +155,8 @@ func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, na
 
 // CreateOrUpdateConfigurationConfigMap creates or updates the Terraform configuration ConfigMap
 // with the given main and variables content.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, namespace, name, main, variables string, ownerRef *metav1.OwnerReference) (*corev1.ConfigMap, error) {
 	return createOrUpdateConfigMap(
 		ctx,
@@ -160,6 +172,8 @@ func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, 
 }
 
 // CreateOrUpdateTFVarsSecret creates or updates the Terraformer variables Secret with the given tfvars.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace, name string, tfvars []byte, ownerRef *metav1.OwnerReference) (*corev1.Secret, error) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -191,6 +205,8 @@ func (f initializerFunc) Initialize(ctx context.Context, config *InitializerConf
 
 // DefaultInitializer is an Initializer that initializes the configuration, variables and state resources
 // based on the given main, variables and tfvars content and on the given InitializerConfig.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, stateInitializer StateConfigMapInitializer) Initializer {
 	return initializerFunc(func(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error {
 		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables, ownerRef); err != nil {

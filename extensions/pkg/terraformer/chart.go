@@ -11,6 +11,8 @@ import (
 )
 
 // TerraformFiles contains all files necessary for initializing a Terraformer.
+//
+// Deprecated: This type is deprecated and will be removed after v1.154 has been released.
 type TerraformFiles struct {
 	Main      string
 	Variables string
@@ -27,8 +29,9 @@ func nonEmptyFileContent(release *chartrenderer.RenderedChart, filename string) 
 }
 
 // ExtractTerraformFiles extracts TerraformFiles from the given RenderedChart.
-//
 // It errors if a file is not contained in the chart.
+//
+// Deprecated: This function is deprecated and will be removed after v1.154 has been released.
 func ExtractTerraformFiles(release *chartrenderer.RenderedChart) (*TerraformFiles, error) {
 	main, err := nonEmptyFileContent(release, MainKey)
 	if err != nil {
