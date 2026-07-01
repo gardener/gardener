@@ -237,7 +237,7 @@ Both flavors are compatible — neither intersection is empty.
 1. `architecture`: both candidates' most-preferred supported value is `amd64`. Tie, move on.
 2. `storageAccess`: Flavor A's most-preferred supported value is `NVMe`; Flavor B's is `SCSI`. The value order in `spec.machineCapabilities` is `[NVMe, SCSI]` → `NVMe` comes first → **Flavor A wins**.
 
-**Result:**
+**Result:** Gardener selects Flavor A (`NVMe`). To flip the outcome, an operator could either:
 
 - reorder the registered values to `storageAccess: [SCSI, NVMe]` (changes the global preference), or
 - narrow the machine type to `storageAccess: [SCSI]` (drops Flavor A from the compatible set during step 1).
