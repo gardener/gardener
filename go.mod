@@ -21,6 +21,7 @@ require (
 	github.com/gardener/cert-management/pkg/apis v0.25.0
 	github.com/gardener/dependency-watchdog v1.8.0
 	github.com/gardener/etcd-druid/api v0.36.4
+	github.com/gardener/gardener/pkg/apis v0.0.0
 	github.com/gardener/machine-controller-manager v0.61.3
 	github.com/gardener/pvc-autoscaler v0.2.0
 	github.com/gardener/terminal-controller-manager v0.37.0
@@ -91,8 +92,6 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/gardener/gardener/pkg/apis v1.144.2 // overwritten by replace directive below
-
 replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
 
 // TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
@@ -100,6 +99,12 @@ exclude github.com/gardener/cert-management v0.22.0
 
 // TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
 exclude github.com/gardener/cert-management v0.23.0
+
+// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
+exclude github.com/gardener/gardener/pkg/apis v1.143.0
+
+// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
+exclude github.com/gardener/gardener/pkg/apis v1.144.2
 
 tool github.com/joelanford/go-apidiff
 
