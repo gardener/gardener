@@ -1198,7 +1198,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Reboot history for node $Node: bars show reboot events (detected after node rejoins cluster; one bar per scrape interval where a reboot is detected) on the left axis, line shows node uptime since last boot on the right axis.",
+      "description": "Reboot history for node $Node: line shows reboot events (detected after node rejoins cluster) on the left axis, line shows node uptime since last boot on the right axis.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1237,9 +1237,9 @@
       "seriesOverrides": [
         {
           "alias": "Reboots",
-          "bars": true,
+          "bars": false,
           "color": "#F2495C",
-          "lines": false,
+          "lines": true,
           "yaxis": 1
         },
         {
@@ -1254,9 +1254,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(\n  last_over_time(node_boot_time_seconds{node=~\"$Node\"}[1h])\n  !=\n  last_over_time(node_boot_time_seconds{node=~\"$Node\"}[1h] offset 1m)\n) > bool 0",
+          "expr": "changes(node_boot_time_seconds{node=~\"$Node\"}[$__rate_interval])",
           "format": "time_series",
-          "interval": "",
+          "interval": "1m",
           "intervalFactor": 1,
           "legendFormat": "Reboots",
           "refId": "A"
@@ -1607,7 +1607,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {

@@ -1185,11 +1185,11 @@
     },
     {
       "aliasColors": {},
-      "bars": true,
+      "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Reboot events per node over time (detected after node rejoins cluster; one bar per scrape interval where a reboot is detected). Filtered by selected worker group(s).",
+      "description": "Reboot events per node over time (detected after node rejoins cluster). Filtered by selected worker group(s).",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1215,7 +1215,7 @@
         "total": false,
         "values": true
       },
-      "lines": false,
+      "lines": true,
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
@@ -1232,9 +1232,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(\n  last_over_time(node_boot_time_seconds[1h])\n  + on (node) group_left (label_worker_gardener_cloud_pool)\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n)\n!=\n(\n  last_over_time(node_boot_time_seconds[1h] offset 1m)\n  + on (node) group_left (label_worker_gardener_cloud_pool)\n    0 * kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}\n)",
+          "expr": "changes(node_boot_time_seconds[$__rate_interval])\n* on (node) group_left (label_worker_gardener_cloud_pool)\n  kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}",
           "format": "time_series",
-          "interval": "",
+          "interval": "1m",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
           "refId": "A"
@@ -1444,7 +1444,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
