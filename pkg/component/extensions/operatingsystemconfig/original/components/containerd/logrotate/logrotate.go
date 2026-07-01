@@ -14,6 +14,12 @@ import (
 //
 // Prefix carries the target container runtime (such as  containerd, docker).
 // When containerd is used the log rotation based on size is performed by kubelet.
+//
+// A security requirement mandates that no log entry older than 14 days is present on the host.
+// kubelet and containerd only support size-based log rotation, not time-based retention, so
+// logrotate is used to enforce daily rotation and a 14-day retention window on top of the
+// container runtime's own size-based rotation.
+// See https://github.com/gardener/gardener/issues/653 for the historical context.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
