@@ -60,6 +60,9 @@ spec:
           spec:
             description: MachineSetSpec is the specification of a MachineSet.
             properties:
+              autoPreserveFailedMachineMax:
+                format: int32
+                type: integer
               machineClass:
                 description: ClassSpec is the class specification of machine
                 properties:
@@ -178,6 +181,10 @@ spec:
                         description: MachineInPlaceUpdateTimeout is the timeout after
                           which in-place update is declared failed.
                         type: string
+                      machinePreserveTimeout:
+                        description: MachinePreserveTimeout is the timeout after which
+                          the machine preservation is stopped
+                        type: string
                       maxEvictRetries:
                         description: MaxEvictRetries is the number of retries that
                           will be attempted while draining the node.
@@ -279,9 +286,8 @@ spec:
                                         to a node.
                                       type: string
                                     timeAdded:
-                                      description: |-
-                                        TimeAdded represents the time at which the taint was added.
-                                        It is only written for NoExecute taints.
+                                      description: TimeAdded represents the time at
+                                        which the taint was added.
                                       format: date-time
                                       type: string
                                     value:
@@ -312,6 +318,11 @@ spec:
             description: MachineSetStatus holds the most recently observed status
               of MachineSet.
             properties:
+              autoPreserveFailedMachineCount:
+                description: AutoPreserveFailedMachineCount has a count of the number
+                  of failed machines in the machineset that are currently auto-preserved
+                format: int32
+                type: integer
               availableReplicas:
                 description: The number of available replicas (ready for at least
                   minReadySeconds) for this replica set.
@@ -415,6 +426,11 @@ spec:
                 description: ObservedGeneration is the most recent generation observed
                   by the controller.
                 format: int64
+                type: integer
+              preservedFailedReplicas:
+                description: PreservedFailedReplicas is the number of preserved replicas
+                  in Failed phase for this replica set
+                format: int32
                 type: integer
               readyReplicas:
                 description: The number of ready replicas for this replica set.
