@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/dashboard/config"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -57,12 +58,16 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 
 	var (
 		cfg = &config.Config{
-			Port:                    portServer,
-			LogFormat:               "text",
-			LogLevel:                g.values.LogLevel,
-			APIServerURL:            "https://" + g.values.APIServerURL,
-			APIServerCAData:         g.values.APIServerCABundle,
-			MaxRequestBodySize:      "500kb",
+			Port:               portServer,
+			LogFormat:          "text",
+			LogLevel:           g.values.LogLevel,
+			APIServerURL:       "https://" + g.values.APIServerURL,
+			APIServerCAData:    g.values.APIServerCABundle,
+			MaxRequestBodySize: "500kb",
+			TLS: config.TLS{
+				CertFile:       volumeMountPathTLS + "/" + secretsutils.DataKeyCertificate,
+				PrivateKeyFile: volumeMountPathTLS + "/" + secretsutils.DataKeyPrivateKey,
+			},
 			ReadinessProbe:          config.ReadinessProbe{PeriodSeconds: readinessProbePeriodSeconds},
 			UnreachableSeeds:        config.UnreachableSeeds{MatchLabels: map[string]string{v1beta1constants.LabelSeedNetwork: v1beta1constants.LabelSeedNetworkPrivate}},
 			WebsocketAllowedOrigins: websocketAllowedOrigins,

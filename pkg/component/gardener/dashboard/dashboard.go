@@ -140,6 +140,16 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	serverCert, err := g.reconcileServerCert(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretCARuntime, found := g.secretsManager.Get(operatorv1alpha1.SecretNameCARuntime)
+	if !found {
+		return fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCARuntime)
+	}
+
 	sessionSecretPrevious, _ := g.secretsManager.Get("gardener-dashboard-session-secret", secretsmanager.Old)
 
 	configMap, err := g.configMap(ctx)
@@ -147,13 +157,13 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, sessionSecret.Name, sessionSecretPrevious, configMap.Name)
+	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, sessionSecret.Name, sessionSecretPrevious, serverCert.Name, configMap.Name)
 	if err != nil {
 		return err
 	}
 
 	if g.values.Ingress.Enabled {
-		istioResources, err := g.istioResources(ctx)
+		istioResources, err := g.istioResources(ctx, secretCARuntime)
 		if err != nil {
 			return err
 		}

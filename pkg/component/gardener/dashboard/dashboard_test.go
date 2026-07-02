@@ -96,6 +96,7 @@ var _ = Describe("GardenerDashboard", func() {
 		virtualService            *istionetworkingv1beta1.VirtualService
 		destinationRule           *istionetworkingv1beta1.DestinationRule
 		tlsSecret                 *corev1.Secret
+		tlsCASecret               *corev1.Secret
 		serviceMonitor            *monitoringv1.ServiceMonitor
 
 		clusterRole                      *rbacv1.ClusterRole
@@ -211,6 +212,9 @@ logFormat: text
 logLevel: ` + logLevel + `
 apiServerUrl: https://` + apiServerURL + `
 maxRequestBodySize: 500kb
+tls:
+  certFile: /etc/gardener-dashboard/secrets/tls/tls.crt
+  privateKeyFile: /etc/gardener-dashboard/secrets/tls/tls.key
 readinessProbe:
   periodSeconds: 10
 unreachableSeeds:
@@ -414,7 +418,7 @@ frontend:
 									},
 									Ports: []corev1.ContainerPort{
 										{
-											Name:          "http",
+											Name:          "https",
 											ContainerPort: 8080,
 											Protocol:      corev1.ProtocolTCP,
 										},
@@ -427,7 +431,7 @@ frontend:
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromString("http"),
+												Port: intstr.FromString("https"),
 											},
 										},
 										InitialDelaySeconds: 15,
@@ -440,8 +444,8 @@ frontend:
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
 												Path:   "/healthz",
-												Port:   intstr.FromString("http"),
-												Scheme: "HTTP",
+												Port:   intstr.FromString("https"),
+												Scheme: "HTTPS",
 											},
 										},
 										InitialDelaySeconds: 5,
@@ -467,6 +471,11 @@ frontend:
 											Name:      "gardener-dashboard-login-config",
 											MountPath: "/app/public/login-config.json",
 											SubPath:   "login-config.json",
+										},
+										{
+											Name:      "gardener-dashboard-tls",
+											MountPath: "/etc/gardener-dashboard/secrets/tls",
+											ReadOnly:  true,
 										},
 									},
 								},
@@ -506,6 +515,15 @@ frontend:
 												Key:  "login-config.json",
 												Path: "login-config.json",
 											}},
+										},
+									},
+								},
+								{
+									Name: "gardener-dashboard-tls",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName:  "gardener-dashboard-server",
+											DefaultMode: ptr.To[int32](0640),
 										},
 									},
 								},
@@ -602,7 +620,7 @@ frontend:
 				Selector: GetLabels(),
 				Ports: []corev1.ServicePort{
 					{
-						Name:       "http",
+						Name:       "https",
 						Port:       8080,
 						Protocol:   corev1.ProtocolTCP,
 						TargetPort: intstr.FromInt32(8080),
@@ -751,7 +769,11 @@ frontend:
 						},
 					},
 					OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{},
-					Tls:              &istioapinetworkingv1beta1.ClientTLSSettings{},
+					Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
+						Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+						CredentialName: "some-namespace-gardener-dashboard-tls-ca",
+						Sni:            "gardener-dashboard.some-namespace.svc.cluster.local",
+					},
 				},
 			},
 		}
@@ -763,6 +785,19 @@ frontend:
 					"app":  "gardener",
 					"role": "dashboard",
 				},
+			},
+		}
+		tlsCASecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "some-namespace-gardener-dashboard-tls-ca",
+				Namespace: "virtual-garden-istio-ingress",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			Data: map[string][]byte{
+				"cacert": []byte("ca-cert-data"),
 			},
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
@@ -951,6 +986,7 @@ frontend:
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-garden-runtime", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("ca-cert-data")}})).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -1046,10 +1082,11 @@ frontend:
 					service,
 					podDisruptionBudget,
 					vpa,
+					tlsSecret,
+					tlsCASecret,
 					gateway,
 					virtualService,
 					destinationRule,
-					tlsSecret,
 					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
