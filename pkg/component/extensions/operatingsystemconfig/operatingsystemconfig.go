@@ -749,7 +749,8 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		units, files, err = InitConfigFn(
 			d.worker,
 			d.images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
-			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, nil),
+			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, nil),
+			d.clusterCABundle,
 		)
 		if err != nil {
 			return nil, err
