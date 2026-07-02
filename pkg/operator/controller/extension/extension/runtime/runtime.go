@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	chartutils "github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -104,6 +105,17 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 	if extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues != nil {
 		if err := json.Unmarshal(extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues.Raw, &helmValues); err != nil {
 			return err
+		}
+	}
+
+	if len(extension.Spec.Deployment.Resources) > 0 && helmValues != nil {
+		resources, err := chartutils.ResolveResources(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, extension.Spec.Deployment.Resources)
+		if err != nil {
+			return fmt.Errorf("failed resolving resource references: %w", err)
+		}
+		helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
+		if err != nil {
+			return fmt.Errorf("failed substituting resource references in extension runtimeClusterValues: %w", err)
 		}
 	}
 

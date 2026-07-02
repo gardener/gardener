@@ -16,7 +16,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment/controllerdeployment"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
@@ -68,6 +69,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 		Config: *cfg.Controllers.ControllerDeployment,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding ControllerDeployment controller: %w", err)
+	}
+
+	if err := reference.AddToManager(mgr, *cfg.Controllers.ControllerDeploymentReference); err != nil {
+		return fmt.Errorf("failed adding ControllerDeploymentReference controller: %w", err)
 	}
 
 	if err := controllerregistration.AddToManager(mgr, *cfg); err != nil {

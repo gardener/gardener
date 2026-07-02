@@ -10,11 +10,15 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -143,6 +147,24 @@ var _ = Describe("Extension controller tests", func() {
 					},
 				},
 				Deployment: &operatorv1alpha1.Deployment{
+					Resources: []gardencorev1.NamedResourceReference{
+						{
+							Name: "creds",
+							ResourceRef: autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       "extension-creds",
+							},
+						},
+						{
+							Name: "cfg",
+							ResourceRef: autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "v1",
+								Kind:       "ConfigMap",
+								Name:       "extension-cfg",
+							},
+						},
+					},
 					AdmissionDeployment: &operatorv1alpha1.AdmissionDeploymentSpec{
 						RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
@@ -154,6 +176,7 @@ var _ = Describe("Extension controller tests", func() {
 								OCIRepository: &ociRepositoryAdmissionApplicationChart,
 							},
 						},
+						Values: &apiextensionsv1.JSON{Raw: []byte(`{"admissionToken":"{{ .resources.creds.data.token }}"}`)},
 					},
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
@@ -161,6 +184,8 @@ var _ = Describe("Extension controller tests", func() {
 								OCIRepository: &ociRepositoryProviderLocalChart,
 							},
 						},
+						Values:               &apiextensionsv1.JSON{Raw: []byte(`{"endpoint":"{{ .resources.cfg.data.endpoint }}"}`)},
+						RuntimeClusterValues: &apiextensionsv1.JSON{Raw: []byte(`{"runtimeEndpoint":"{{ .resources.cfg.data.endpoint }}"}`)},
 					},
 				},
 			},
@@ -198,6 +223,38 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Create(ctx, priorityClass)).To(Succeed())
 		DeferCleanup(func() {
 			Expect(testClient.Delete(ctx, priorityClass)).To(Succeed())
+		})
+
+		referencedSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-creds",
+				Namespace: testNamespace.Name,
+				Labels: map[string]string{
+					testID:                      testRunID,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+				},
+			},
+			Data: map[string][]byte{"token": []byte("s3cret-t0ken")},
+		}
+		Expect(testClient.Create(ctx, referencedSecret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, referencedSecret))).To(Succeed())
+		})
+
+		referencedConfigMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-cfg",
+				Namespace: testNamespace.Name,
+				Labels: map[string]string{
+					testID:                      testRunID,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+				},
+			},
+			Data: map[string]string{"endpoint": "https://example.com"},
+		}
+		Expect(testClient.Create(ctx, referencedConfigMap)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, referencedConfigMap))).To(Succeed())
 		})
 	})
 
@@ -314,6 +371,25 @@ var _ = Describe("Extension controller tests", func() {
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), managedResourceRegistrationFoo)).To(Succeed())
+
+		By("Verify resource reference copy is included in the extension registration ManagedResource")
+		registrationContains := NewManagedResourceContainsObjectsMatcher(testClient)
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), managedResourceRegistrationFoo)).To(Succeed())
+			g.Expect(managedResourceRegistrationFoo).To(registrationContains(
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "provider-foo-extension-cfg",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels: map[string]string{
+							testID:                      testRunID,
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleResourceReference,
+						},
+					},
+					Data: map[string]string{"endpoint": "https://example.com"},
+				},
+			))
+		}).Should(Succeed())
 
 		By("Validate that extensions are not deployed in runtime cluster yet")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())

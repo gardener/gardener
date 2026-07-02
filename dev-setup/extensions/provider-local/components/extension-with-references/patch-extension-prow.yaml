@@ -1,0 +1,9 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+spec:
+  deployment:
+    extension:
+      values:
+        {}

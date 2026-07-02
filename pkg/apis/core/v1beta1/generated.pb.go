@@ -2948,6 +2948,20 @@ func (m *ControllerInstallationSpec) MarshalToSizedBuffer(dAtA []byte) (int, err
 	_ = i
 	var l int
 	_ = l
+	if len(m.ResourceRefs) > 0 {
+		for iNdEx := len(m.ResourceRefs) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.ResourceRefs[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
 	if m.ShootRef != nil {
 		{
 			size, err := m.ShootRef.MarshalToSizedBuffer(dAtA[:i])
@@ -14445,6 +14459,12 @@ func (m *ControllerInstallationSpec) Size() (n int) {
 		l = m.ShootRef.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if len(m.ResourceRefs) > 0 {
+		for _, e := range m.ResourceRefs {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -19005,11 +19025,17 @@ func (this *ControllerInstallationSpec) String() string {
 	if this == nil {
 		return "nil"
 	}
+	repeatedStringForResourceRefs := "[]ObjectReference{"
+	for _, f := range this.ResourceRefs {
+		repeatedStringForResourceRefs += fmt.Sprintf("%v", f) + ","
+	}
+	repeatedStringForResourceRefs += "}"
 	s := strings.Join([]string{`&ControllerInstallationSpec{`,
 		`RegistrationRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.RegistrationRef), "ObjectReference", "v1.ObjectReference", 1), `&`, ``, 1) + `,`,
 		`SeedRef:` + strings.Replace(fmt.Sprintf("%v", this.SeedRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
 		`DeploymentRef:` + strings.Replace(fmt.Sprintf("%v", this.DeploymentRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
 		`ShootRef:` + strings.Replace(fmt.Sprintf("%v", this.ShootRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
+		`ResourceRefs:` + repeatedStringForResourceRefs + `,`,
 		`}`,
 	}, "")
 	return s
@@ -28971,6 +28997,40 @@ func (m *ControllerInstallationSpec) Unmarshal(dAtA []byte) error {
 				m.ShootRef = &v1.ObjectReference{}
 			}
 			if err := m.ShootRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ResourceRefs", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ResourceRefs = append(m.ResourceRefs, v1.ObjectReference{})
+			if err := m.ResourceRefs[len(m.ResourceRefs)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

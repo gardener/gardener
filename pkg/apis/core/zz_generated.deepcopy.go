@@ -1269,6 +1269,11 @@ func (in *ControllerDeployment) DeepCopyInto(out *ControllerDeployment) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]NamedResourceReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -1402,6 +1407,11 @@ func (in *ControllerInstallationSpec) DeepCopyInto(out *ControllerInstallationSp
 		in, out := &in.DeploymentRef, &out.DeploymentRef
 		*out = new(v1.ObjectReference)
 		**out = **in
+	}
+	if in.ResourceRefs != nil {
+		in, out := &in.ResourceRefs, &out.ResourceRefs
+		*out = make([]v1.ObjectReference, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

@@ -26,6 +26,7 @@ build:
             - pkg/api/config/operator/v1alpha1/validation
             - pkg/api/core/helper
             - pkg/api/core/shoot
+            - pkg/api/core/v1/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/core/validation
             - pkg/api/extensions
@@ -176,6 +177,7 @@ build:
             - pkg/operator/controller/extension/extension/admission
             - pkg/operator/controller/extension/extension/controllerregistration
             - pkg/operator/controller/extension/extension/runtime
+            - pkg/operator/controller/extension/reference
             - pkg/operator/controller/extension/required/runtime
             - pkg/operator/controller/extension/required/virtual
             - pkg/operator/controller/garden
@@ -592,6 +594,7 @@ build:
             - pkg/api
             - pkg/api/config/controllermanager/v1alpha1/validation
             - pkg/api/core/helper
+            - pkg/api/core/v1/helper
             - pkg/api/core/v1beta1/helper
             - pkg/api/extensions
             - pkg/api/extensions/v1alpha1/helper
@@ -639,7 +642,8 @@ build:
             - pkg/controllermanager/controller/bastion
             - pkg/controllermanager/controller/certificatesigningrequest
             - pkg/controllermanager/controller/cloudprofile
-            - pkg/controllermanager/controller/controllerdeployment
+            - pkg/controllermanager/controller/controllerdeployment/controllerdeployment
+            - pkg/controllermanager/controller/controllerdeployment/reference
             - pkg/controllermanager/controller/controllerregistration
             - pkg/controllermanager/controller/controllerregistration/clusterfinalizer
             - pkg/controllermanager/controller/controllerregistration/controllerinstallation

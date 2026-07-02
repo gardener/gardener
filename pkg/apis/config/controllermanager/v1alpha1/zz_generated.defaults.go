@@ -42,6 +42,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.ControllerDeployment != nil {
 		SetDefaults_ControllerDeploymentControllerConfiguration(in.Controllers.ControllerDeployment)
 	}
+	if in.Controllers.ControllerDeploymentReference != nil {
+		SetDefaults_ControllerDeploymentReferenceControllerConfiguration(in.Controllers.ControllerDeploymentReference)
+	}
 	if in.Controllers.ControllerRegistration != nil {
 		SetDefaults_ControllerRegistrationControllerConfiguration(in.Controllers.ControllerRegistration)
 	}

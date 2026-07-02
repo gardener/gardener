@@ -48,7 +48,8 @@ func mustIncreaseGeneration(oldControllerDeployment, newControllerDeployment *co
 	// The specification changes.
 	if !apiequality.Semantic.DeepEqual(oldControllerDeployment.ProviderConfig, newControllerDeployment.ProviderConfig) ||
 		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Type, newControllerDeployment.Type) ||
-		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Helm, newControllerDeployment.Helm) {
+		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Helm, newControllerDeployment.Helm) ||
+		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Resources, newControllerDeployment.Resources) {
 		return true
 	}
 

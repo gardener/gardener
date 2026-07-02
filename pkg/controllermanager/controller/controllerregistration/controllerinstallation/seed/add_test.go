@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -221,6 +222,102 @@ var _ = Describe("Add", func() {
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
 				))
+			})
+		})
+
+		Describe("#MapResourceReferenceToAllSeeds", func() {
+			var (
+				deploymentName         = "deployment"
+				configMapName          = "ref-configmap"
+				secretName             = "ref-secret"
+				configMap              *corev1.ConfigMap
+				secret                 *corev1.Secret
+				controllerDeployment   *gardencorev1.ControllerDeployment
+				controllerRegistration *gardencorev1beta1.ControllerRegistration
+				seed1, seed2           *gardencorev1beta1.Seed
+			)
+
+			BeforeEach(func() {
+				configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: v1beta1constants.GardenNamespace}}
+				secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: v1beta1constants.GardenNamespace}}
+
+				controllerDeployment = &gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{Name: deploymentName},
+					Resources: []gardencorev1.NamedResourceReference{
+						{Name: "configmap-ref", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: configMapName}},
+						{Name: "secret-ref", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: secretName}},
+					},
+				}
+				controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "registration-"},
+					Spec: gardencorev1beta1.ControllerRegistrationSpec{
+						Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+							DeploymentRefs: []gardencorev1beta1.DeploymentRef{{Name: deploymentName}},
+						},
+					},
+				}
+
+				seed1 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed1"}}
+				seed2 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed2"}}
+
+				Expect(fakeClient.Create(ctx, seed1)).To(Succeed())
+				Expect(fakeClient.Create(ctx, seed2)).To(Succeed())
+			})
+
+			It("should return nil when no ControllerDeployment exists", func() {
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, configMap)).To(BeEmpty())
+			})
+
+			It("should return nil when no ControllerDeployment references the ConfigMap", func() {
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+				controllerDeployment.Resources = nil
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, configMap)).To(BeEmpty())
+			})
+
+			It("should return nil when no ControllerRegistration references the ControllerDeployment", func() {
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, configMap)).To(BeEmpty())
+			})
+
+			It("should map to all seeds when a ControllerDeployment references the ConfigMap", func() {
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, configMap)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
+				))
+			})
+
+			It("should map to all seeds when a ControllerDeployment references the Secret", func() {
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, secret)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
+				))
+			})
+
+			It("should return nil when the resource name does not match any reference", func() {
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				other := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: v1beta1constants.GardenNamespace}}
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, other)).To(BeEmpty())
+			})
+
+			It("should return nil when the resource kind does not match (e.g. ConfigMap object but only Secret refs)", func() {
+				controllerDeployment.Resources = []gardencorev1.NamedResourceReference{
+					{Name: "secret-ref", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: configMapName}},
+				}
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSeeds(log, reconciler)(ctx, configMap)).To(BeEmpty())
 			})
 		})
 	})

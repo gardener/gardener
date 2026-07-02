@@ -68,6 +68,18 @@ boolean
 <p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload<br />resources.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#namedresourcereference">NamedResourceReference</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources is a list of named resource references that can be referenced in the Helm chart values via Go template<br />syntax (e.g. `\{\{ .resources.<name>.data.<key> \}\}`). Only resources of kind `Secret` and `ConfigMap` (apiVersion `v1`)<br />are supported. The referenced resources must reside in the garden namespace.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
@@ -128,6 +140,54 @@ integer array
 <td>
 <em>(Optional)</em>
 <p>OCIRepository defines where to pull the chart.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="namedresourcereference">NamedResourceReference
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#controllerdeployment">ControllerDeployment</a>)
+</p>
+
+<p>
+NamedResourceReference is a named reference to a resource.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the resource reference.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#crossversionobjectreference-v1-autoscaling">CrossVersionObjectReference</a>
+</em>
+</td>
+<td>
+<p>ResourceRef is a reference to a resource.</p>
 </td>
 </tr>
 

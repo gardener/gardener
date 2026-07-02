@@ -330,6 +330,9 @@ const (
 	GardenRoleOCICABundle = "oci-ca-bundle"
 	// GardenRoleObservability is the value of the GardenRole key indicating type 'observability'.
 	GardenRoleObservability = "observability"
+	// GardenRoleResourceReference is the value of the GardenRole key indicating type 'resource-reference'.
+	// It refers to a Secret or ConfigMap which can be used as a resource reference in the Helm charts of extensions and controller deployments.
+	GardenRoleResourceReference = "resource-reference"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`

@@ -624,6 +624,35 @@ func deployNeededInstallation(
 			Name:            controllerDeployment.Name,
 			ResourceVersion: controllerDeployment.ResourceVersion,
 		}
+
+		for _, resource := range controllerDeployment.Resources {
+			switch resource.ResourceRef.Kind {
+			case "ConfigMap":
+				configMap := &corev1.ConfigMap{}
+				if err := c.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: resource.ResourceRef.Name}, configMap); err != nil {
+					return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ConfigMap cannot be retrieved: %w", err)
+				}
+				installationSpec.ResourceRefs = append(installationSpec.ResourceRefs, corev1.ObjectReference{
+					Kind:            "ConfigMap",
+					Name:            configMap.Name,
+					Namespace:       configMap.Namespace,
+					ResourceVersion: configMap.ResourceVersion,
+				})
+			case "Secret":
+				secret := &corev1.Secret{}
+				if err := c.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: resource.ResourceRef.Name}, secret); err != nil {
+					return fmt.Errorf("cannot deploy ControllerInstallation because the referenced Secret cannot be retrieved: %w", err)
+				}
+				installationSpec.ResourceRefs = append(installationSpec.ResourceRefs, corev1.ObjectReference{
+					Kind:            "Secret",
+					Name:            secret.Name,
+					Namespace:       secret.Namespace,
+					ResourceVersion: secret.ResourceVersion,
+				})
+			default:
+				return fmt.Errorf("unsupported kind %q in ControllerDeployment resource reference", resource.ResourceRef.Kind)
+			}
+		}
 	}
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}

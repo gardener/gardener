@@ -636,6 +636,22 @@ The result is then put into the `RequiredRuntime` condition and added to the `Ex
 This reconciler reacts on events from `ControllerInstallation` and `Extension` resources.
 It updates the `RequiredVirtual` condition of `Extension` objects, based on the existence of related `ControllerInstallation`s and whether they are marked as required.
 
+#### [`Reference` Reconciler](../../pkg/operator/controller/extension/reference)
+
+`Extension` objects may reference `Secret`s and `ConfigMap`s in the `garden` namespace of the runtime cluster via `.spec.deployment.resources[]` to inject their values into the Helm chart values used to deploy the extension (see [Referencing Resources in Helm Values](../extensions/registration.md#referencing-resources-in-helm-values)).
+Such objects need a special protection against deletion requests as long as they are still being referenced by one or multiple `Extension`s.
+
+Therefore, this reconciler checks `Extension`s for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
+The reconciled `Extension` also gets this finalizer to enable a proper garbage collection in case the `gardener-operator` is offline at the moment of an incoming deletion request.
+When an object is not actively referenced anymore because the `Extension` specification has changed or the referencing `Extension`s were deleted, the controller will remove the added finalizer again so that the object can safely be deleted or garbage collected.
+
+This reconciler inspects the following references:
+
+- `Secret`s and `ConfigMap`s from `.spec.deployment.resources[]`
+- `Secret`s from `.spec.deployment.extension.helm.ociRepository.pullSecretRef` and `.spec.deployment.extension.helm.ociRepository.caBundleSecretRef`
+- `Secret`s from `.spec.deployment.admission.runtimeCluster.helm.ociRepository.pullSecretRef` and `.spec.deployment.admission.runtimeCluster.helm.ociRepository.caBundleSecretRef`
+- `Secret`s from `.spec.deployment.admission.virtualCluster.helm.ociRepository.pullSecretRef` and `.spec.deployment.admission.virtualCluster.helm.ociRepository.caBundleSecretRef`
+
 ### [`Access` Controller](../../pkg/operator/controller/virtual/access)
 
 This controller performs actions related to the garden access secret (`gardener` or `gardener-internal`) for the virtual garden cluster.

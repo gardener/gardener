@@ -65,6 +65,13 @@ type Deployment struct {
 	// AdmissionDeployment contains the deployment configuration for an admission controller.
 	// +optional
 	AdmissionDeployment *AdmissionDeploymentSpec `json:"admission,omitempty"`
+	// Resources is a list of named resource references that can be referenced in the Helm chart values via Go
+	// template syntax (e.g. `{{ .resources.<name>.data.<key> }}`). Only resources of kind `Secret` and `ConfigMap`
+	// (apiVersion `v1`) are supported. The referenced resources must reside in the garden namespace.
+	// References can be used in `spec.deployment.extension.values`, `spec.deployment.extension.runtimeClusterValues`
+	// and `spec.deployment.admission.values`.
+	// +optional
+	Resources []gardencorev1.NamedResourceReference `json:"resources,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ExtensionDeploymentSpec specifies how to install the extension in a gardener landscape. The installation is split into two parts:
@@ -129,8 +136,6 @@ type ExtensionStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions represents the latest available observations of an Extension's current state.
-	// +patchMergeKey=type
-	// +patchStrategy=merge
 	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// ProviderStatus contains type-specific status.

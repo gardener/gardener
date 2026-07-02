@@ -1727,6 +1727,79 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasVertex(VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
 	})
 
+	It("should track Secret and ConfigMap references from gardencorev1.ControllerDeployment.Resources", func() {
+		secretRefName := "resource-secret"
+		newSecretRefName := "new-resource-secret"
+		configMapRefName := "resource-configmap"
+		newConfigMapRefName := "new-resource-configmap"
+
+		controllerDeployment := &gardencorev1.ControllerDeployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "controllerdeployment"},
+			Helm: &gardencorev1.HelmControllerDeployment{
+				OCIRepository: &gardencorev1.OCIRepository{},
+			},
+			Resources: []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretRefName}},
+				{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: configMapRefName}},
+			},
+		}
+
+		By("Add")
+		fakeInformerControllerDeployment.Add(controllerDeployment)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, secretRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, v1beta1constants.GardenNamespace, configMapRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+
+		By("Update (swap Secret and ConfigMap references)")
+		controllerDeploymentCopy := controllerDeployment.DeepCopy()
+		controllerDeployment.Resources = []gardencorev1.NamedResourceReference{
+			{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: newSecretRefName}},
+			{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: newConfigMapRefName}},
+		}
+		fakeInformerControllerDeployment.Update(controllerDeploymentCopy, controllerDeployment)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, newSecretRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, v1beta1constants.GardenNamespace, newConfigMapRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, secretRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, v1beta1constants.GardenNamespace, configMapRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+
+		By("Update (remove all resource references)")
+		controllerDeploymentCopy = controllerDeployment.DeepCopy()
+		controllerDeployment.Resources = nil
+		fakeInformerControllerDeployment.Update(controllerDeploymentCopy, controllerDeployment)
+		Expect(graph.HasPathFrom(VertexTypeSecret, v1beta1constants.GardenNamespace, newSecretRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, v1beta1constants.GardenNamespace, newConfigMapRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+
+		By("Delete")
+		fakeInformerControllerDeployment.Delete(controllerDeployment)
+		Expect(graph.HasVertex(VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+	})
+
+	It("should track gardencorev1.ControllerDeployment with only ConfigMap references", func() {
+		configMapRefName := "resource-configmap"
+
+		controllerDeployment := &gardencorev1.ControllerDeployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "controllerdeployment"},
+			Helm: &gardencorev1.HelmControllerDeployment{
+				OCIRepository: &gardencorev1.OCIRepository{},
+			},
+			Resources: []gardencorev1.NamedResourceReference{
+				{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: configMapRefName}},
+			},
+		}
+
+		By("Add")
+		fakeInformerControllerDeployment.Add(controllerDeployment)
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, v1beta1constants.GardenNamespace, configMapRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerControllerDeployment.Delete(controllerDeployment)
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, v1beta1constants.GardenNamespace, configMapRefName, VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+		Expect(graph.HasVertex(VertexTypeControllerDeployment, "", controllerDeployment.Name)).To(BeFalse())
+	})
+
 	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
 		By("Add")
 		fakeInformerManagedSeed.Add(managedSeed1)

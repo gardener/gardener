@@ -70,6 +70,8 @@ type ControllerConfiguration struct {
 	Extension ExtensionControllerConfiguration `json:"extension"`
 	// ExtensionCare is the configuration for the extension care controller
 	ExtensionCare ExtensionCareControllerConfiguration `json:"extensionCare"`
+	// ExtensionReference is the configuration for the extension reference controller
+	ExtensionReference ExtensionReferenceControllerConfiguration `json:"extensionReference"`
 	// ExtensionRequiredRuntime defines the configuration of the ExtensionRequiredRuntime controller.
 	ExtensionRequiredRuntime ExtensionRequiredRuntimeControllerConfiguration `json:"extensionRequiredRuntime"`
 	// ExtensionRequiredVirtual defines the configuration of the ExtensionRequiredVirtual controller.
@@ -145,6 +147,13 @@ type ExtensionCareControllerConfiguration struct {
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
+// ExtensionReferenceControllerConfiguration defines the configuration of the ExtensionReference controller.
+type ExtensionReferenceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on extensions.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ExtensionRequiredRuntimeControllerConfiguration defines the configuration of the extension-required-runtime controller.

@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	chartutils "github.com/gardener/gardener/pkg/utils/chart"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -118,6 +119,17 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		}
 	}
 
+	if len(extension.Spec.Deployment.Resources) > 0 && helmValues != nil {
+		resources, err := chartutils.ResolveResources(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, extension.Spec.Deployment.Resources)
+		if err != nil {
+			return fmt.Errorf("failed resolving resource references: %w", err)
+		}
+		helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
+		if err != nil {
+			return fmt.Errorf("failed substituting resource references in admission values: %w", err)
+		}
+	}
+
 	renderedChart, err := d.runtimeClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster.Helm.OCIRepository.GetURL(), err)
@@ -202,6 +214,17 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 	if extension.Spec.Deployment.AdmissionDeployment.Values != nil {
 		if err := json.Unmarshal(extension.Spec.Deployment.AdmissionDeployment.Values.Raw, &helmValues); err != nil {
 			return err
+		}
+	}
+
+	if len(extension.Spec.Deployment.Resources) > 0 && helmValues != nil {
+		resources, err := chartutils.ResolveResources(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, extension.Spec.Deployment.Resources)
+		if err != nil {
+			return fmt.Errorf("failed resolving resource references: %w", err)
+		}
+		helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
+		if err != nil {
+			return fmt.Errorf("failed substituting resource references in chart values: %w", err)
 		}
 	}
 	namespace := virtualNamespace(extension)

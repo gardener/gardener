@@ -84,7 +84,25 @@ The controller ensures that `NamespacedCloudProfile`s in-use remain present in t
 
 Extensions are registered in the garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer to [Registering Extension Controllers](../extensions/registration.md).
 
+The controller has the following reconcilers:
+
+#### ["Main" Reconciler](../../pkg/controllermanager/controller/controllerdeployment/controllerdeployment)
+
 This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
+
+#### ["Reference" Reconciler](../../pkg/controllermanager/controller/controllerdeployment/reference)
+
+`ControllerDeployment` objects may reference `Secret`s and `ConfigMap`s in the `garden` namespace of the garden cluster via `.resources[]` to inject their values into the Helm chart values used to deploy the extension (see [Referencing Resources in Helm Values](../extensions/registration.md#referencing-resources-in-helm-values)).
+Such objects need a special protection against deletion requests as long as they are still being referenced by one or multiple `ControllerDeployment`s.
+
+Therefore, this reconciler checks `ControllerDeployment`s for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
+The reconciled `ControllerDeployment` also gets this finalizer to enable a proper garbage collection in case the `gardener-controller-manager` is offline at the moment of an incoming deletion request.
+When an object is not actively referenced anymore because the `ControllerDeployment` specification has changed or the referencing `ControllerDeployment`s were deleted, the controller will remove the added finalizer again so that the object can safely be deleted or garbage collected.
+
+This reconciler inspects the following references:
+
+- `Secret`s and `ConfigMap`s from `.resources[]`
+- `Secret`s from `.helm.ociRepository.pullSecretRef` and `.helm.ociRepository.caBundleSecretRef`
 
 ### [`ControllerRegistration` Controller](../../pkg/controllermanager/controller/controllerregistration)
 

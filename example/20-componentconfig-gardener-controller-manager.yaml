@@ -81,6 +81,8 @@ controllers:
     syncPeriod: 30m
   controllerDeployment:
     concurrentSyncs: 5
+  controllerDeploymentReference:
+    concurrentSyncs: 5
   controllerRegistration:
     concurrentSyncs: 5
   exposureClass:

@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,6 +20,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation/shoot"
@@ -174,6 +176,79 @@ var _ = Describe("Add", func() {
 				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
 
 				Expect(MapControllerDeploymentToAllSelfHostedShoots(log, reconciler)(ctx, controllerDeployment)).To(BeEmpty())
+			})
+		})
+
+		Describe("#MapResourceReferenceToAllSelfHostedShoots", func() {
+			var (
+				deploymentName         = "deployment"
+				configMapName          = "ref-configmap"
+				secretName             = "ref-secret"
+				configMap              *corev1.ConfigMap
+				secret                 *corev1.Secret
+				controllerDeployment   *gardencorev1.ControllerDeployment
+				controllerRegistration *gardencorev1beta1.ControllerRegistration
+			)
+
+			BeforeEach(func() {
+				configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: v1beta1constants.GardenNamespace}}
+				secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: v1beta1constants.GardenNamespace}}
+
+				controllerDeployment = &gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{Name: deploymentName},
+					Resources: []gardencorev1.NamedResourceReference{
+						{Name: "configmap-ref", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: configMapName}},
+						{Name: "secret-ref", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: secretName}},
+					},
+				}
+				controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "registration-"},
+					Spec: gardencorev1beta1.ControllerRegistrationSpec{
+						Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+							DeploymentRefs: []gardencorev1beta1.DeploymentRef{{Name: deploymentName}},
+						},
+					},
+				}
+			})
+
+			It("should return nil when no ControllerDeployment exists", func() {
+				Expect(MapResourceReferenceToAllSelfHostedShoots(log, reconciler)(ctx, configMap)).To(BeEmpty())
+			})
+
+			It("should return empty when ControllerDeployment matches a referenced ConfigMap (chain ends in self-hosted filter that drops PartialObjectMetadata-listed shoots)", func() {
+				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "garden"}}
+				Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSelfHostedShoots(log, reconciler)(ctx, configMap)).To(BeEmpty())
+			})
+
+			It("should return empty when ControllerDeployment matches a referenced Secret (chain ends in self-hosted filter that drops PartialObjectMetadata-listed shoots)", func() {
+				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "garden"}}
+				Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSelfHostedShoots(log, reconciler)(ctx, secret)).To(BeEmpty())
+			})
+
+			It("should return nil when the resource name does not match any reference", func() {
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				other := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: v1beta1constants.GardenNamespace}}
+				Expect(MapResourceReferenceToAllSelfHostedShoots(log, reconciler)(ctx, other)).To(BeEmpty())
+			})
+
+			It("should return nil when the resource kind does not match (e.g. ConfigMap object but only Secret refs)", func() {
+				controllerDeployment.Resources = []gardencorev1.NamedResourceReference{
+					{Name: "secret-ref", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: configMapName}},
+				}
+				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				Expect(MapResourceReferenceToAllSelfHostedShoots(log, reconciler)(ctx, configMap)).To(BeEmpty())
 			})
 		})
 	})
