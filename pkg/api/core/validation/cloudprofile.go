@@ -187,9 +187,9 @@ func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, 
 func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// NOTE: Lifecycle classifications treat nil classifications as default, which differs in old classification.
-	// Keep skipping old classifications if they are nil.
-	if (version.Classification != nil || len(version.Lifecycle) > 0) && helper.VersionIsSupported(version) {
+	// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+	// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
+	if version.Classification != nil && helper.VersionIsSupported(version) {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
 			// check is already performed by caller, avoid duplicate error
@@ -479,9 +479,9 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 			archSupported = true
 		}
 
-		// TODO(LucaBernstein): Check whether this behavior should be corrected (i.e. changed) in a later GEP-0032-PR.
-		//  The current behavior for nil classifications is treated differently across the codebase.
-		if version.Classification != nil && helper.CurrentLifecycleClassification(version.ExpirableVersion) == core.ClassificationSupported {
+		// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
+		if version.Classification != nil && helper.VersionIsSupported(version.ExpirableVersion) {
 			validClassification = true
 		}
 		if archSupported && validClassification {
