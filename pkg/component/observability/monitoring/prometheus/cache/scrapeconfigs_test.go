@@ -135,7 +135,7 @@ metric_relabel_configs:
 		})
 
 		When("not a ManagedSeed", func() {
-			It("should return the expected objects (with TLS verification enabled)", func() {
+			It("should return the expected objects (with TLS verification skipped)", func() {
 				result, err := cache.AdditionalScrapeConfigs(false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveExactElements(
@@ -147,7 +147,7 @@ metrics_path: /metrics/cadvisor
 
 tls_config:
   ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-  insecure_skip_verify: false
+  insecure_skip_verify: true
 bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
 
 kubernetes_sd_configs:
@@ -208,7 +208,7 @@ scheme: https
 
 tls_config:
   ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-  insecure_skip_verify: false
+  insecure_skip_verify: true
 bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
 
 kubernetes_sd_configs:
