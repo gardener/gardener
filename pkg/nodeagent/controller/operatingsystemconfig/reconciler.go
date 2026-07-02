@@ -933,15 +933,13 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 	}
 
 	if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet || oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
-		// Read the updated gardener-node-agent config for the API server CA bundle and server URL.
-		// This must always be called after applying the updated files.
 		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS, r.ConfigDir)
 		if err != nil {
 			return fmt.Errorf("failed reading the API server config: %w", err)
 		}
 
 		if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
-			if err := r.requestNewKubeConfigForNodeAgent(ctx, log, apiServerConfig); err != nil {
+			if err := r.requestNewKubeConfigForNodeAgent(ctx, log); err != nil {
 				return fmt.Errorf("failed requesting new certificate for node agent: %w", err)
 			}
 
@@ -992,8 +990,8 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, ap
 
 		kubeConfig.Clusters = map[string]*clientcmdapi.Cluster{
 			"default-cluster": {
-				CertificateAuthorityData: apiServerConfig.CABundle,
-				Server:                   apiServerConfig.Server,
+				CertificateAuthority: apiServerConfig.CAFile,
+				Server:               apiServerConfig.Server,
 			},
 		}
 
@@ -1042,7 +1040,7 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, ap
 // RequestAndStoreKubeconfig is an alias for `nodeagent.RequestAndStoreKubeconfig`. Exposed for tests.
 var RequestAndStoreKubeconfig = nodeagent.RequestAndStoreKubeconfig
 
-func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log logr.Logger, apiServerConfig *nodeagentconfigv1alpha1.APIServer) error {
+func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log logr.Logger) error {
 	log.Info("Requesting new kubeconfig for node agent after CA rotation")
 
 	kubeConfigFile, err := r.FS.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
@@ -1053,9 +1051,6 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 	if err != nil {
 		return fmt.Errorf("failed creating REST config from kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 	}
-
-	// Use the updated CA Bundle
-	restConfig.CAData = apiServerConfig.CABundle
 
 	return RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
 }

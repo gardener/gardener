@@ -102,7 +102,7 @@ func testAPIServerConnectivity(log logr.Logger, fs afero.Afero) error {
 	// Create REST config with bootstrap token and short timeout
 	restConfig := &rest.Config{
 		Host:            apiServerConfig.Server,
-		TLSClientConfig: rest.TLSClientConfig{CAData: apiServerConfig.CABundle},
+		TLSClientConfig: rest.TLSClientConfig{CAFile: apiServerConfig.CAFile},
 		BearerTokenFile: nodeagentconfigv1alpha1.BootstrapTokenFilePath,
 		Timeout:         10 * time.Second,
 	}

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -27,7 +28,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/yaml"
 
+	nodeagenthelper "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -88,8 +91,8 @@ var _ = Describe("Reconciler", func() {
 
 		nodeAgentConfig = &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 			APIServer: nodeagentconfigv1alpha1.APIServer{
-				CABundle: []byte("new-ca-bundle"),
-				Server:   "https://test-server",
+				CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
+				Server: "https://test-server",
 			},
 		}
 
@@ -822,7 +825,7 @@ users:
 			reconciler.Channel = channel
 
 			nodeAgentConfigFile = []byte(`apiServer:
-  caBundle: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+  caFile: ` + nodeAgentConfig.APIServer.CAFile + `
   server: ` + nodeAgentConfig.APIServer.Server + `
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 kind: NodeAgentConfiguration
@@ -883,12 +886,23 @@ kind: NodeAgentConfiguration
 		})
 
 		It("should successfully rotate the CA certificate for gardener-node-agent", func() {
-			nodeAgentKubeconfig := getNodeAgentKubeConfig([]byte("old-ca-bundle"), nodeAgentConfig.APIServer.Server, "old-cert")
+			tempDir := GinkgoT().TempDir()
+			nodeAgentConfig.APIServer.CAFile = tempDir + "/ca-bundle.crt"
+			Expect(fs.WriteFile(nodeAgentConfig.APIServer.CAFile, []byte("ca-bundle"), 0600)).To(Succeed())
+			// clientcmd validates certificate-authority paths via os.Open, so the file must exist on the real OS filesystem too.
+			Expect(os.WriteFile(nodeAgentConfig.APIServer.CAFile, []byte("ca-bundle"), 0600)).To(Succeed())
+
+			nodeAgentConfigFile, err := yaml.Marshal(nodeAgentConfig)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fs.WriteFile(nodeagenthelper.GetConfigFilePath(tempDir), nodeAgentConfigFile, 0600)).To(Succeed())
+			reconciler.ConfigDir = tempDir
+
+			nodeAgentKubeconfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CAFile, nodeAgentConfig.APIServer.Server, "old-cert")
 			Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(nodeAgentKubeconfig), 0600)).To(Succeed())
 
 			DeferCleanup(test.WithVar(
 				&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, restConfig *rest.Config, _ string) error {
-					newKubeConfig := getNodeAgentKubeConfig(restConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
+					newKubeConfig := getNodeAgentKubeConfig(restConfig.CAFile, nodeAgentConfig.APIServer.Server, "new-cert")
 
 					Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(newKubeConfig), 0600)).To(Succeed())
 
@@ -903,17 +917,17 @@ kind: NodeAgentConfiguration
 			Expect(oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent).To(BeFalse())
 			Expect(oscChanges.MustRestartNodeAgent).To(BeTrue())
 
-			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CABundle, nodeAgentConfig.APIServer.Server, "new-cert")
+			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CAFile, nodeAgentConfig.APIServer.Server, "new-cert")
 			test.AssertFileOnDisk(fs, nodeagentconfigv1alpha1.KubeconfigFilePath, expectedNodeAgentKubeConfig, 0600)
 		})
 	})
 })
 
-func getNodeAgentKubeConfig(caBundle []byte, server, clientCertificate string) string {
+func getNodeAgentKubeConfig(caFile, server, clientCertificate string) string {
 	return `apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(caBundle) + `
+    certificate-authority: ` + caFile + `
     server: ` + server + `
   name: node-agent
 contexts:
