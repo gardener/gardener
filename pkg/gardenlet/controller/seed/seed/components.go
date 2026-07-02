@@ -683,11 +683,7 @@ func (r *Reconciler) newPlutono(
 }
 
 func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, seedIsShoot bool) (component.DeployWaiter, error) {
-	additionalScrapeConfigs, err := cacheprometheus.AdditionalScrapeConfigs(seedIsShoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed getting additional scrape configs: %w", err)
-	}
-
+	additionalScrapeConfigs := cacheprometheus.AdditionalScrapeConfigs()
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,

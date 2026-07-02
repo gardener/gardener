@@ -5,10 +5,7 @@
 package cache
 
 import (
-	"bytes"
 	_ "embed"
-	"fmt"
-	"text/template"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -21,11 +18,6 @@ var (
 	//go:embed assets/scrapeconfigs/kubelet.yaml
 	kubelet string
 )
-
-// Data represents the data for the template.
-type Data struct {
-	SeedIsShoot bool
-}
 
 // CentralScrapeConfigs returns the central ScrapeConfig resources for the cache prometheus.
 func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
@@ -48,38 +40,6 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 }
 
 // AdditionalScrapeConfigs returns the additional scrape configs for the cache prometheus.
-func AdditionalScrapeConfigs(seedIsShoot bool) ([]string, error) {
-	var out []string
-
-	if result, err := process(cAdvisor, seedIsShoot); err != nil {
-		return nil, fmt.Errorf("failed processing cadvisor scrape config template: %w", err)
-	} else {
-		out = append(out, result)
-	}
-
-	if result, err := process(kubelet, seedIsShoot); err != nil {
-		return nil, fmt.Errorf("failed processing kubelet scrape config template: %w", err)
-	} else {
-		out = append(out, result)
-	}
-
-	return out, nil
-}
-
-func process(text string, seedIsShoot bool) (string, error) {
-	data := Data{
-		SeedIsShoot: seedIsShoot,
-	}
-
-	tmpl, err := template.New("Template").Parse(text)
-	if err != nil {
-		return "", fmt.Errorf("failed parsing template: %w", err)
-	}
-
-	var result bytes.Buffer
-	if err := tmpl.Execute(&result, data); err != nil {
-		return "", fmt.Errorf("failed rendering template: %w", err)
-	}
-
-	return result.String(), nil
+func AdditionalScrapeConfigs() []string {
+	return []string{cAdvisor, kubelet}
 }
