@@ -6,10 +6,14 @@ package health
 
 import (
 	"fmt"
+	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 func requiredConditionMissing(conditionType string) error {
@@ -41,3 +45,20 @@ func ObjectHasAnnotationWithValue(key, value string) Func {
 
 // ConditionerFunc to update a condition with type and message
 type conditionerFunc func(conditionType string, message string) gardencorev1beta1.Condition
+
+// Clock is an alias for the clock.Clock interface, which is used to get the current time. Exposed for tests.
+var Clock clock.Clock = clock.RealClock{}
+
+// IsSkippedUntil returns true when obj carries the AnnotationCareSkipHealthChecksUntil annotation
+// with a valid RFC3339 timestamp that lies in the future. An absent, invalid, or past value returns false.
+func IsSkippedUntil(obj metav1.Object) bool {
+	val, ok := obj.GetAnnotations()[v1beta1constants.AnnotationCareSkipHealthChecksUntil]
+	if !ok {
+		return false
+	}
+	t, err := time.Parse(time.RFC3339, val)
+	if err != nil {
+		return false
+	}
+	return Clock.Now().Before(t)
+}
