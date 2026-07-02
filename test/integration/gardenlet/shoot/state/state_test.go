@@ -5,6 +5,7 @@
 package state_test
 
 import (
+	"encoding/json"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -253,6 +255,51 @@ var _ = Describe("Shoot State controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 				g.Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", Not(Equal(lastBackup))))
 				g.Expect(shootState.Spec.Gardener).To(HaveLen(1))
+			}).Should(Succeed())
+		})
+
+		It("should update ShootState when persisted secret data is modified", func() {
+			secret.Data = map[string][]byte{"key": []byte("initial-value")}
+			createPersistableSecret()
+
+			By("Step clock to trigger first backup")
+			fakeClock.Step(2 * syncPeriod)
+
+			By("Ensure ShootState is created with initial secret data")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				g.Expect(shootState.Spec.Gardener).To(HaveLen(1))
+
+				var (
+					secretEntry = shootState.Spec.Gardener[0]
+					secretState shootstate.SecretState
+				)
+				g.Expect(json.Unmarshal(secretEntry.Data.Raw, &secretState)).To(Succeed())
+				g.Expect(secretState.Data).To(HaveKeyWithValue("key", []byte("initial-value")))
+			}).Should(Succeed())
+
+			lastBackup := shootState.Annotations["gardener.cloud/timestamp"]
+
+			By("Update secret data")
+			patch := client.MergeFrom(secret.DeepCopy())
+			secret.Data = map[string][]byte{"key": []byte("updated-value")}
+			Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
+
+			By("Step clock to trigger next backup")
+			fakeClock.Step(2 * syncPeriod)
+
+			By("Ensure ShootState is updated with new secret data")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				g.Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", Not(Equal(lastBackup))))
+				g.Expect(shootState.Spec.Gardener).To(HaveLen(1))
+
+				var (
+					secretEntry = shootState.Spec.Gardener[0]
+					secretState shootstate.SecretState
+				)
+				g.Expect(json.Unmarshal(secretEntry.Data.Raw, &secretState)).To(Succeed())
+				g.Expect(secretState.Data).To(HaveKeyWithValue("key", []byte("updated-value")))
 			}).Should(Succeed())
 		})
 	})

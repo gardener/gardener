@@ -51,7 +51,10 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
-	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, gardenClient, shootState, func() error {
+	// Use a regular merge patch here. A strategic merge patch fails when computing the diff over
+	// SecretState payloads inside the RawExtension entries of the Spec.Gardener with
+	// "unable to find api field in struct RawExtension for the json field \"data\"".
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, shootState, func() error {
 		metav1.SetMetaDataAnnotation(&shootState.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().UTC().Format(time.RFC3339))
 
 		if overwriteSpec {
