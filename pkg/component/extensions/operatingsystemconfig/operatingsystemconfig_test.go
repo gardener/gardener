@@ -97,7 +97,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			openTelemetryCollectorLogShipperEnabled = false
 
 			//nolint:unparam
-			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration, clusterCABundle []byte) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration, _ []byte) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: worker.Name},
 						{
