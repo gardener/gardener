@@ -20,7 +20,7 @@ require (
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management/pkg/apis v0.25.0
 	github.com/gardener/dependency-watchdog v1.8.0
-	github.com/gardener/etcd-druid/api v0.36.4
+	github.com/gardener/etcd-druid/api v0.37.0
 	github.com/gardener/gardener/pkg/apis v0.0.0
 	github.com/gardener/machine-controller-manager v0.61.3
 	github.com/gardener/pvc-autoscaler v0.2.0
@@ -87,7 +87,7 @@ require (
 	k8s.io/kubelet v0.35.5
 	k8s.io/metrics v0.35.5
 	k8s.io/pod-security-admission v0.35.5
-	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/yaml v1.6.0
 )

@@ -261,8 +261,8 @@ github.com/gardener/cert-management/pkg/apis v0.25.0 h1:+BSRLH1LwNTXujZmUguEIAuB
 github.com/gardener/cert-management/pkg/apis v0.25.0/go.mod h1:aj0PW4fBbZMLfC9hoJWzpePGkt+9KAji86r8ADkWts0=
 github.com/gardener/dependency-watchdog v1.8.0 h1:+3FE8sR1V6YM9JsGqX7m9oUjhr1wXhedQo29r6fsC+I=
 github.com/gardener/dependency-watchdog v1.8.0/go.mod h1:jRIyBZ4ySWy+EdQjfLm/N+90vBPdWJ7khiBN7CGQs18=
-github.com/gardener/etcd-druid/api v0.36.4 h1:o/17ciPrbh/w+igKMUuglW7N9XLjoMh7AvRKTzsBEVs=
-github.com/gardener/etcd-druid/api v0.36.4/go.mod h1:RwZzKp8K415AS0zg8VoODjBxYepCAUYyLgXnZc1bmbo=
+github.com/gardener/etcd-druid/api v0.37.0 h1:qnix78KixCHjKGYQ0tT2wGzgVyO996feIFtFqW0DlaQ=
+github.com/gardener/etcd-druid/api v0.37.0/go.mod h1:nFKkRStJEXoYE0xGf2Y5Ela1EayAdsfZAqfK+bBXV/M=
 github.com/gardener/machine-controller-manager v0.61.3 h1:w0JuHCKLmcK7B8E7mx3TvE3e0hSYwikchsMSiMhocqw=
 github.com/gardener/machine-controller-manager v0.61.3/go.mod h1:8eE1qLztrWIbOM71mHSQGaC6Q+pl5lvOyN08qP39D7o=
 github.com/gardener/pvc-autoscaler v0.2.0 h1:OuZCrP0OagXI8W8xfwPSvFbIpfvwVvBIAMhLC9jge64=
@@ -1138,8 +1138,8 @@ k8s.io/pod-security-admission v0.35.5/go.mod h1:36iCuuOBK1re5qU1/WGu3JsOytNRUWq/
 k8s.io/sample-controller v0.34.3 h1:JjbCTiXgD8LchRiam/5a9vOb5hxC3n8nfcwkTFlauV0=
 k8s.io/sample-controller v0.34.3/go.mod h1:jqrSJcXrXnz2b3vsd3kV1vPeHn6I5gzHNBmlONLuWB4=
 k8s.io/utils v0.0.0-20200729134348-d5654de09c73/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
-k8s.io/utils v0.0.0-20260507154919-ff6756f316d2 h1:wU4tMEhLGgIbLvXQb1cfN+EcM0wf7zC6CPF+C79jroc=
-k8s.io/utils v0.0.0-20260507154919-ff6756f316d2/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
+k8s.io/utils v0.0.0-20260626114624-be93311217bd h1:Ea7fgQ5we8Y9T0OX5o0dAHzQOBRI07D/dEYRaB9ZZEs=
+k8s.io/utils v0.0.0-20260626114624-be93311217bd/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 oras.land/oras-go/v2 v2.6.0 h1:X4ELRsiGkrbeox69+9tzTu492FMUu7zJQW6eJU+I2oc=
 oras.land/oras-go/v2 v2.6.0/go.mod h1:magiQDfG6H1O9APp+rOsvCPcW1GD2MM7vgnKY0Y+u1o=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
