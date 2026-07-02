@@ -12,11 +12,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/inplaceupdate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
@@ -39,6 +42,7 @@ func AddToManager(
 	gardenClusterIdentity string,
 	healthManager healthz.Manager,
 	seedName string,
+	selfHostedShoot *gardencorev1beta1.Shoot,
 ) error {
 	// The ShootState reconciler is only enabled when:
 	// (a) the gardenlet is responsible for a self-hosted shoot (we always want ShootStates for such clusters in the
@@ -100,6 +104,20 @@ func AddToManager(
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		if err := lease.AddToManager(mgr, gardenCluster, seedClientSet.RESTClient(), healthManager, nil); err != nil {
 			return fmt.Errorf("failed adding lease reconciler: %w", err)
+		}
+
+		if selfHostedShoot != nil && !v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
+			if err := indexer.AddPodNodeName(ctx, seedCluster.GetFieldIndexer()); err != nil {
+				return fmt.Errorf("failed adding pod node name indexer for in-place update controller: %w", err)
+			}
+
+			if err := (&inplaceupdate.Reconciler{
+				SeedClient:            seedClientSet.Client(),
+				Workers:               selfHostedShoot.Spec.Provider.Workers,
+				ControlPlaneNamespace: selfHostedShoot.Status.TechnicalID,
+			}).AddToManager(mgr, seedCluster); err != nil {
+				return fmt.Errorf("failed adding in-place update reconciler: %w", err)
+			}
 		}
 	}
 

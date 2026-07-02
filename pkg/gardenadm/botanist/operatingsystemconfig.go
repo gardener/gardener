@@ -24,6 +24,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
@@ -58,6 +59,13 @@ func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx co
 	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, poolName, false)
 	if err != nil {
 		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", poolName, err)
+	}
+
+	if poolName != "" {
+		if shoot := b.Shoot.GetInfo(); shoot != nil && !v1beta1helper.HasManagedInfrastructure(shoot) {
+			metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
+				v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
+		}
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)

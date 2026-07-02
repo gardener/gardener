@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
@@ -292,6 +293,11 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.GardenerNodeAgentSecretName, worker.Name, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
+	}
+
+	if !b.Shoot.HasManagedInfrastructure() {
+		metav1.SetMetaDataAnnotation(&oscSecret.ObjectMeta,
+			v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
 	}
 
 	resources, err := managedresources.

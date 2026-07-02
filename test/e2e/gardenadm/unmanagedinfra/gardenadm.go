@@ -306,6 +306,98 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					))
 				}
 			}, SpecTimeout(5*time.Minute))
+
+			// TODO(acumino): Enable this test once the shoot reconciler is enabled in the gardenlet for self-hosted shoots.
+			// It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
+			// 	initShootClientSet(ctx)
+			// }, SpecTimeout(time.Minute))
+
+			// Context("gardenlet in-place update orchestration", Ordered, Label("inplace-update"), func() {
+			// 	It("should trigger an in-place update by bumping the control-plane pool to the next minor Kubernetes version", func(ctx SpecContext) {
+			// 		Eventually(ctx, func(g Gomega) {
+			// 			g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			// 		}).Should(Succeed())
+
+			// 		cloudProfile := &gardencorev1beta1.CloudProfile{}
+			// 		Expect(gardenClientSet.Client().Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfile.Name}, cloudProfile)).To(Succeed())
+
+			// 		_, poolVersions, err := shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, shoot, nil, nil)
+			// 		Expect(err).NotTo(HaveOccurred())
+			// 		nextVersion, ok := poolVersions["control-plane"]
+			// 		Expect(ok).To(BeTrue(), "expected a next minor version for the control-plane pool")
+
+			// 		patch := client.MergeFrom(shoot.DeepCopy())
+			// 		for i, worker := range shoot.Spec.Provider.Workers {
+			// 			if worker.Name == "control-plane" {
+			// 				if shoot.Spec.Provider.Workers[i].Kubernetes == nil {
+			// 					shoot.Spec.Provider.Workers[i].Kubernetes = &gardencorev1beta1.WorkerKubernetes{}
+			// 				}
+			// 				shoot.Spec.Provider.Workers[i].Kubernetes.Version = &nextVersion
+			// 				break
+			// 			}
+			// 		}
+			// 		Eventually(ctx, func() error {
+			// 			return gardenClientSet.Client().Patch(ctx, shoot, patch)
+			// 		}).Should(Succeed())
+			// 	}, SpecTimeout(time.Minute))
+
+			// 	It("should cordon the control-plane node and set ReadyForUpdate", func(ctx SpecContext) {
+			// 		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(0)}}
+			// 		Eventually(ctx, func(g Gomega) {
+			// 			g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			// 			g.Expect(node.Spec.Unschedulable).To(BeTrue())
+			// 			var cond *corev1.NodeCondition
+			// 			for i := range node.Status.Conditions {
+			// 				if node.Status.Conditions[i].Type == machinev1alpha1.NodeInPlaceUpdate {
+			// 					cond = &node.Status.Conditions[i]
+			// 					break
+			// 				}
+			// 			}
+			// 			g.Expect(cond).NotTo(BeNil())
+			// 			g.Expect(cond.Reason).To(Equal(machinev1alpha1.ReadyForUpdate))
+			// 		}).WithPolling(10 * time.Second).Should(Succeed())
+			// 	}, SpecTimeout(10*time.Minute))
+
+			// 	It("should set UpdateSuccessful on the control-plane node after GNA completes the update", func(ctx SpecContext) {
+			// 		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(0)}}
+			// 		Eventually(ctx, func(g Gomega) {
+			// 			g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			// 			var cond *corev1.NodeCondition
+			// 			for i := range node.Status.Conditions {
+			// 				if node.Status.Conditions[i].Type == machinev1alpha1.NodeInPlaceUpdate {
+			// 					cond = &node.Status.Conditions[i]
+			// 					break
+			// 				}
+			// 			}
+			// 			g.Expect(cond).NotTo(BeNil())
+			// 			g.Expect(cond.Reason).To(Equal(machinev1alpha1.UpdateSuccessful))
+			// 		}).WithPolling(10 * time.Second).Should(Succeed())
+			// 	}, SpecTimeout(5*time.Minute))
+
+			// 	It("should wait for all control-plane nodes to apply the new operating system config", func(ctx SpecContext) {
+			// 		Eventually(ctx, func(g Gomega) {
+			// 			workerPoolToNodes, err := botanistpkg.WorkerPoolToNodesMap(ctx, shootClientSet.Client())
+			// 			g.Expect(err).NotTo(HaveOccurred())
+
+			// 			workerPoolToOSCSecretMeta, err := botanistpkg.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClientSet.Client(), v1beta1constants.GardenRoleOperatingSystemConfig)
+			// 			g.Expect(err).NotTo(HaveOccurred())
+
+			// 			g.Expect(botanistpkg.OperatingSystemConfigUpdatedForAllWorkerPools(
+			// 				shoot.Spec.Provider.Workers,
+			// 				workerPoolToNodes,
+			// 				workerPoolToOSCSecretMeta,
+			// 			)).To(Succeed())
+			// 		}).Should(Succeed())
+			// 	})
+
+			// 	It("should wait for the shoot reconciliation to complete after the version bump", func(ctx SpecContext) {
+			// 		Eventually(ctx, func(g Gomega) bool {
+			// 			g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			// 			completed, _ := shootoperation.ReconciliationSuccessful(shoot)
+			// 			return completed
+			// 		}).WithPolling(30 * time.Second).Should(BeTrue())
+			// 	}, SpecTimeout(15*time.Minute))
+			// })
 		})
 
 		Context("self-hosted shoot -> seed promotion", Ordered, Label("seed"), func() {

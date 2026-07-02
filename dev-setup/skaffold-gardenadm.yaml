@@ -725,6 +725,7 @@ build:
             - pkg/gardenlet/controller/seed/seed
             - pkg/gardenlet/controller/shoot
             - pkg/gardenlet/controller/shoot/care
+            - pkg/gardenlet/controller/shoot/inplaceupdate
             - pkg/gardenlet/controller/shoot/lease
             - pkg/gardenlet/controller/shoot/shoot
             - pkg/gardenlet/controller/shoot/shoot/helper
