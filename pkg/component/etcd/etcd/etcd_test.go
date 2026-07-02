@@ -306,17 +306,19 @@ var _ = Describe("Etcd", func() {
 					"networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2380": "allowed",
 					"networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-8080": "allowed",
 				})
-				obj.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
-					ServerTLSSecretRef: corev1.SecretReference{
-						Name:      secretNameServerPeer,
-						Namespace: testNamespace,
-					},
-					TLSCASecretRef: druidcorev1alpha1.SecretReference{
-						SecretReference: corev1.SecretReference{
-							Name:      secretNamePeerCA,
+				obj.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.PeerTLSConfig{
+					TLSConfig: druidcorev1alpha1.TLSConfig{
+						ServerTLSSecretRef: corev1.SecretReference{
+							Name:      secretNameServerPeer,
 							Namespace: testNamespace,
 						},
-						DataKey: new(secretsutils.DataKeyCertificateBundle),
+						TLSCASecretRef: druidcorev1alpha1.SecretReference{
+							SecretReference: corev1.SecretReference{
+								Name:      secretNamePeerCA,
+								Namespace: testNamespace,
+							},
+							DataKey: new(secretsutils.DataKeyCertificateBundle),
+						},
 					},
 				}
 			}
@@ -1340,8 +1342,10 @@ var _ = Describe("Etcd", func() {
 						Spec: druidcorev1alpha1.EtcdSpec{
 							Replicas: 3,
 							Etcd: druidcorev1alpha1.EtcdConfig{
-								PeerUrlTLS: &druidcorev1alpha1.TLSConfig{
-									ServerTLSSecretRef: corev1.SecretReference{Name: "peerServerSecretName", Namespace: testNamespace},
+								PeerUrlTLS: &druidcorev1alpha1.PeerTLSConfig{
+									TLSConfig: druidcorev1alpha1.TLSConfig{
+										ServerTLSSecretRef: corev1.SecretReference{Name: "peerServerSecretName", Namespace: testNamespace},
+									},
 								},
 							},
 						},
@@ -1730,13 +1734,15 @@ var _ = Describe("Etcd", func() {
 					},
 					Spec: druidcorev1alpha1.EtcdSpec{
 						Etcd: druidcorev1alpha1.EtcdConfig{
-							PeerUrlTLS: &druidcorev1alpha1.TLSConfig{
-								TLSCASecretRef: druidcorev1alpha1.SecretReference{
-									SecretReference: corev1.SecretReference{
-										Name:      caName,
-										Namespace: testNamespace,
+							PeerUrlTLS: &druidcorev1alpha1.PeerTLSConfig{
+								TLSConfig: druidcorev1alpha1.TLSConfig{
+									TLSCASecretRef: druidcorev1alpha1.SecretReference{
+										SecretReference: corev1.SecretReference{
+											Name:      caName,
+											Namespace: testNamespace,
+										},
+										DataKey: new(secretsutils.DataKeyCertificateBundle),
 									},
-									DataKey: new(secretsutils.DataKeyCertificateBundle),
 								},
 							},
 						},
