@@ -314,6 +314,8 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
+            - third_party/kube-state-metrics/pkg/customresourcestate
+            - third_party/kube-state-metrics/pkg/metric
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

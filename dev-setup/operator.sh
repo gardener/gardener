@@ -23,6 +23,7 @@ fi
 case "$COMMAND" in
   up)
     skaffold run \
+      ${BUILD_CONCURRENCY:+--build-concurrency "$BUILD_CONCURRENCY"} \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)"
    ;;
 
