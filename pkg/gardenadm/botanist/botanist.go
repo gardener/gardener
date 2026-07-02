@@ -24,13 +24,12 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/component/extensions/bastion"
-	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -57,31 +56,19 @@ type GardenadmBotanist struct {
 	FS       afero.Afero
 
 	Resources  gardenadm.Resources
-	Components Components
 	Extensions []Extension
 	// Zone is the availability zone in which the new node is being added. This is used to set the
 	// topology.kubernetes.io/zone label on the node resource.
 	// This field is only relevant for shoot with unmanaged infrastructure.
 	Zone *string
 
-	operatingSystemConfigSecret       *corev1.Secret
-	gardenerResourceManagerServiceIPs []string
-	useEtcdManagedByDruid             bool
+	operatingSystemConfigSecret *corev1.Secret
 
 	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
 	controlPlaneMachines []machinev1alpha1.Machine
 	// sshConnection is the SSH connection to the first control plane machine. It is set by ConnectToControlPlaneMachine
 	// during `gardenadm bootstrap`.
 	sshConnection *sshutils.Connection
-}
-
-// Components contains deployable components for self-hosted shoots.
-type Components struct {
-	// Bastion is only set for `gardenadm bootstrap`.
-	Bastion *bastion.Bastion
-	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in
-	// the garden namespace.
-	RuntimeResourceManager resourcemanager.Interface
 }
 
 // Extension contains the resources needed for an extension registration.
@@ -162,14 +149,7 @@ func NewGardenadmBotanist(
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	if gardenadmBotanist.Shoot.RunsControlPlane() {
-		gardenadmBotanist.Components.RuntimeResourceManager, err = gardenadmBotanist.NewRuntimeGardenerResourceManager()
-		if err != nil {
-			return nil, fmt.Errorf("failed creating runtime gardener resource manager: %w", err)
-		}
-	} else {
-		gardenadmBotanist.Components.Bastion = gardenadmBotanist.DefaultBastion()
-
+	if !gardenadmBotanist.Shoot.RunsControlPlane() {
 		// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
 		// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
 		gardenadmBotanist.Shoot.Components.Extensions.OperatingSystemConfig, err = gardenadmBotanist.ControlPlaneBootstrapOperatingSystemConfig()
@@ -201,9 +181,13 @@ func NewGardenadmBotanistWithoutResources(log logr.Logger) (*GardenadmBotanist, 
 }
 
 func newOperation(log logr.Logger, gardenClient client.Client, clientSet kubernetes.Interface) *operation.Operation {
+	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
+
 	return &operation.Operation{
 		Logger:         log,
 		Clock:          clock.RealClock{},
+		Config:         gardenletConfig,
 		GardenClient:   gardenClient,
 		SeedClientSet:  clientSet,
 		ShootClientSet: clientSet,

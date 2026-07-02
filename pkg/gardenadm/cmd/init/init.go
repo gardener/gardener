@@ -18,8 +18,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenadm/botanist"
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -144,7 +145,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
 			Fn: func(ctx context.Context) error {
-				b.Components.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
+				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 
 				if shootIsGarden {
@@ -152,7 +153,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Deploy,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
 			},
@@ -166,7 +167,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				)(ctx)
 			},
@@ -253,7 +254,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployGardenerResourceManagerIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying gardener-resource-manager into pod network",
 			Fn: func(ctx context.Context) error {
-				b.Components.RuntimeResourceManager.SetBootstrapControlPlaneNode(false)
+				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(false)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(false)
 
 				if shootIsGarden {
@@ -261,7 +262,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Deploy,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
 			},
@@ -276,7 +277,7 @@ func run(ctx context.Context, opts *Options) error {
 				}
 
 				return flow.Parallel(
-					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				)(ctx)
 			},
@@ -349,7 +350,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
-			Fn:           b.DeployEtcdDruid,
+			Fn:           b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
 			SkipIf:       opts.UseBootstrapEtcd || shootIsGarden,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
@@ -370,13 +371,15 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs have been reconciled",
-			Fn:           b.WaitUntilEtcdsReconciled,
+			Fn:           b.WaitUntilEtcdsReady,
 			SkipIf:       opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
-			Name:         "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
-			Fn:           b.DeployControlPlaneDeployments,
+			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
+			Fn: func(ctx context.Context) error {
+				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd)
+			},
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilEtcdsReady),
 		})
 		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
@@ -409,7 +412,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Waiting until components with webhooks are ready",
 			Fn: flow.Sequential(
 				flow.Parallel(
-					b.Components.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
 					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 				),
 				b.WaitUntilExtensionControllerInstallationsHealthy,
@@ -447,11 +450,19 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.WaitUntilGardenerNodeAgentLeaseIsRenewed,
 			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
 		})
+		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
+			Name: "Waiting until worker resource status is updated with latest machine deployments",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
+			},
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerNodeAgentLeaseIsRenewed),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",
 			Fn:           b.DeployClusterAutoscaler,
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerNodeAgentLeaseIsRenewed),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 	)
 
@@ -499,8 +510,8 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 	return nil
 }
 
-func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.GardenadmBotanist, error) {
-	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
+func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotanist.GardenadmBotanist, error) {
+	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
 	}
@@ -582,5 +593,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 		return nil, flow.Errors(err)
 	}
 
-	return botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
+	return gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
 }

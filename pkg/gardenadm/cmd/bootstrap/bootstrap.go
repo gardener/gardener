@@ -272,8 +272,8 @@ func run(ctx context.Context, opts *Options) error {
 		deployBastion = g.Add(flow.Task{
 			Name: "Deploying and connecting to bastion host",
 			Fn: func(ctx context.Context) error {
-				b.Components.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
-				return component.OpWait(b.Components.Bastion).Deploy(ctx)
+				b.Shoot.Components.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
+				return component.OpWait(b.Shoot.Components.Bastion).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})

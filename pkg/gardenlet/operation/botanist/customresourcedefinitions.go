@@ -22,7 +22,7 @@ import (
 )
 
 // ReconcileCustomResourceDefinitions reconciles the custom resource definitions.
-func (b *GardenadmBotanist) ReconcileCustomResourceDefinitions(ctx context.Context) error {
+func (b *Botanist) ReconcileCustomResourceDefinitions(ctx context.Context) error {
 	vpaCRDDeployer, err := vpa.NewCRD(b.SeedClientSet.Client(), nil)
 	if err != nil {
 		return fmt.Errorf("failed creating VPA CRD deployer: %w", err)
@@ -79,7 +79,7 @@ func (b *GardenadmBotanist) ReconcileCustomResourceDefinitions(ctx context.Conte
 }
 
 // EnsureCustomResourceDefinitionsReady ensures that the custom resource definitions are ready.
-func (b *GardenadmBotanist) EnsureCustomResourceDefinitionsReady(ctx context.Context) error {
+func (b *Botanist) EnsureCustomResourceDefinitionsReady(ctx context.Context) error {
 	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 	if err := b.SeedClientSet.Client().List(ctx, crdList); err != nil {
 		return fmt.Errorf("failed to list CustomResourceDefinitions: %w", err)

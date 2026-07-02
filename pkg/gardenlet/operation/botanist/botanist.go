@@ -173,6 +173,16 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	if o.Shoot.IsSelfHosted() {
+		o.Shoot.Components.ControlPlane.EtcdDruid, err = b.DefaultEtcdDruid()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.RuntimeResourceManager, err = b.DefaultRuntimeGardenerResourceManager()
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// system components
 	o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
@@ -226,6 +236,13 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 	if !o.Shoot.IsWorkerless {
 		o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
+	}
+	if o.Shoot.IsSelfHosted() {
+		o.Shoot.Components.BackupBucket = b.DefaultCoreBackupBucket()
+
+		if !o.Shoot.RunsControlPlane() {
+			o.Shoot.Components.Bastion = b.DefaultBastion()
+		}
 	}
 
 	// Addons

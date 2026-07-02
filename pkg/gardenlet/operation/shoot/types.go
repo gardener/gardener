@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	etcdcopybackupstask "github.com/gardener/gardener/pkg/component/etcd/copybackupstask"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	"github.com/gardener/gardener/pkg/component/extensions/bastion"
 	"github.com/gardener/gardener/pkg/component/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
@@ -30,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/selfhostedshootexposure"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
+	"github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/component/garden/backupentry"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -116,6 +118,7 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
+	BackupBucket             backupbucket.Interface
 	BackupEntry              backupentry.Interface
 	SourceBackupEntry        backupentry.Interface
 	ControlPlane             *ControlPlane
@@ -124,6 +127,7 @@ type Components struct {
 	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
+	Bastion                  *bastion.Bastion
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -131,6 +135,7 @@ type ControlPlane struct {
 	Alertmanager             alertmanager.Interface
 	BlackboxExporter         component.DeployWaiter
 	ClusterAutoscaler        clusterautoscaler.Interface
+	EtcdDruid                component.DeployWaiter
 	EtcdMain                 etcd.Interface
 	EtcdEvents               etcd.Interface
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
@@ -145,12 +150,15 @@ type ControlPlane struct {
 	MachineControllerManager machinecontrollermanager.Interface
 	Plutono                  plutono.Interface
 	Prometheus               prometheus.Interface
-	ResourceManager          resourcemanager.Interface
-	Vali                     vali.Interface
-	OtelCollector            collector.Interface
-	VictoriaLogs             component.DeployWaiter
-	VerticalPodAutoscaler    vpa.Interface
-	VPNSeedServer            vpnseedserver.Interface
+	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in
+	// the garden namespace (only set for self-hosted shoots).
+	RuntimeResourceManager resourcemanager.Interface
+	ResourceManager        resourcemanager.Interface
+	Vali                   vali.Interface
+	OtelCollector          collector.Interface
+	VictoriaLogs           component.DeployWaiter
+	VerticalPodAutoscaler  vpa.Interface
+	VPNSeedServer          vpnseedserver.Interface
 }
 
 // Extensions contains references to extension resources.

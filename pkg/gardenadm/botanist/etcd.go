@@ -7,7 +7,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -19,54 +18,15 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
-	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
-	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
-
-// DeployEtcdDruid deploys the etcd-druid component.
-func (b *GardenadmBotanist) DeployEtcdDruid(ctx context.Context) error {
-	var componentImageVectors imagevectorutils.ComponentImageVectors
-	if path := os.Getenv(imagevectorutils.ComponentOverrideEnv); path != "" {
-		var err error
-		componentImageVectors, err = imagevectorutils.ReadComponentOverwriteFile(path)
-		if err != nil {
-			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
-		}
-	}
-
-	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
-	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
-	gardenletConfig.ETCDConfig.FeatureGates = map[string]bool{"UpgradeEtcdVersion": true}
-
-	deployer, err := sharedcomponent.NewEtcdDruid(
-		b.SeedClientSet.Client(),
-		v1beta1constants.GardenNamespace,
-		b.Shoot.KubernetesVersion,
-		componentImageVectors,
-		gardenletConfig.ETCDConfig,
-		b.SecretsManager,
-		v1beta1constants.SecretNameCACluster,
-		v1beta1constants.PriorityClassNameSeedSystem800,
-		false,
-		true,
-	)
-	if err != nil {
-		return fmt.Errorf("failed creating etcd-druid deployer: %w", err)
-	}
-
-	return deployer.Deploy(ctx)
-}
 
 // ReconcileBackupBucket reconciles the core.gardener.cloud/v1beta1.BackupBucket resource for the shoot cluster.
 func (b *GardenadmBotanist) ReconcileBackupBucket(ctx context.Context) error {
@@ -93,19 +53,11 @@ func (b *GardenadmBotanist) ReconcileBackupBucket(ctx context.Context) error {
 }
 
 func (b *GardenadmBotanist) reconcileCoreBackupBucketResource(ctx context.Context) (*gardencorev1beta1.BackupBucket, error) {
-	component := corebackupbucket.New(b.Logger, b.GardenClient, &corebackupbucket.Values{
-		Name:          string(b.Shoot.GetInfo().Status.UID),
-		Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),
-		DefaultRegion: b.Shoot.GetInfo().Spec.Region,
-		Clock:         b.Clock,
-		Shoot:         b.Shoot.GetInfo(),
-	}, corebackupbucket.DefaultInterval, corebackupbucket.DefaultTimeout)
-
-	if err := component.Deploy(ctx); err != nil {
+	if err := b.Shoot.Components.BackupBucket.Deploy(ctx); err != nil {
 		return nil, fmt.Errorf("failed reconciling core.gardener.cloud/v1beta1.BackupBucket resource: %w", err)
 	}
 
-	return component.Get(ctx)
+	return b.Shoot.Components.BackupBucket.Get(ctx)
 }
 
 // ReconcileBackupEntry reconciles the core.gardener.cloud/v1beta1.BackupEntry resource for the shoot cluster.
@@ -160,17 +112,6 @@ func runReconcilerUntilCondition(ctx context.Context, logger logr.Logger, contro
 
 		return retry.Ok()
 	})
-}
-
-// WaitUntilEtcdsReconciled waits until the druid.gardener.cloud/v1alpha1.Etcd resources have been reconciled by
-// etcd-druid.
-func (b *GardenadmBotanist) WaitUntilEtcdsReconciled(ctx context.Context) error {
-	if err := b.WaitUntilEtcdsReady(ctx); err != nil {
-		return fmt.Errorf("failed waiting for etcd to become ready: %w", err)
-	}
-
-	b.useEtcdManagedByDruid = true
-	return nil
 }
 
 // FinalizeEtcdBootstrapTransition cleans up no longer needed directories for the bootstrap etcds. Those are not deleted
