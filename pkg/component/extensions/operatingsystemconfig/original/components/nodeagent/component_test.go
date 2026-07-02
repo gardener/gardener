@@ -44,8 +44,18 @@ var _ = Describe("Component", func() {
 		It("should return the expected units and files", func() {
 			key := "key"
 
-			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, nil))
+			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, nil))
 			Expect(err).NotTo(HaveOccurred())
+			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
+				Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
+				Permissions: new(uint32(0640)),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64(caBundle),
+					},
+				},
+			})
 
 			units, files, err := component.Config(components.Context{
 				Key:               key,
@@ -74,7 +84,7 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target`),
-					FilePaths: []string{fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion), "/opt/bin/gardener-node-agent"},
+					FilePaths: []string{fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion), nodeagentconfigv1alpha1.ClusterCAFilePath, "/opt/bin/gardener-node-agent"},
 				},
 			))
 			Expect(files).To(ConsistOf(append(expectedFiles, extensionsv1alpha1.File{
@@ -111,10 +121,10 @@ WantedBy=multi-user.target`))
 
 	Describe("#ComponentConfig", func() {
 		It("should return the expected result", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
-					Server:   apiServerURL,
-					CABundle: caBundle,
+					Server: apiServerURL,
+					CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
 				},
 				Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
 					OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
@@ -137,13 +147,13 @@ WantedBy=multi-user.target`))
 
 	Describe("#Files", func() {
 		It("should return the expected files", func() {
-			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs)
+			config := ComponentConfig(oscSecretName, nil, apiServerURL, additionalTokenSyncConfigs)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
 				Permissions: new(uint32(0600)),
 				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
-  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  caFile: ` + nodeagentconfigv1alpha1.ClusterCAFilePath + `
   server: ` + apiServerURL + `
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 clientConnection:

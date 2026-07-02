@@ -73,21 +73,32 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		})
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, additionalTokenSyncConfigs))
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, additionalTokenSyncConfigs))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
 
-	files = append(files, extensionsv1alpha1.File{
-		Path:        PathBinary,
-		Permissions: new(uint32(0755)),
-		Content: extensionsv1alpha1.FileContent{
-			ImageRef: &extensionsv1alpha1.FileContentImageRef{
-				Image:           ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
-				FilePathInImage: "/gardener-node-agent",
+	files = append(files,
+		extensionsv1alpha1.File{
+			Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
+			Permissions: new(uint32(0640)),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64(caBundle),
+				},
 			},
 		},
-	})
+		extensionsv1alpha1.File{
+			Path:        PathBinary,
+			Permissions: new(uint32(0755)),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
+					FilePathInImage: "/gardener-node-agent",
+				},
+			},
+		})
 
 	units := []extensionsv1alpha1.Unit{{
 		Name:      nodeagentconfigv1alpha1.UnitName,
@@ -122,13 +133,12 @@ func ComponentConfig(
 	oscSecretName string,
 	kubernetesVersion *semver.Version,
 	apiServerURL string,
-	caBundle []byte,
 	additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig,
 ) *nodeagentconfigv1alpha1.NodeAgentConfiguration {
 	return &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentconfigv1alpha1.APIServer{
-			Server:   apiServerURL,
-			CABundle: caBundle,
+			Server: apiServerURL,
+			CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
 		},
 		Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
 			OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
