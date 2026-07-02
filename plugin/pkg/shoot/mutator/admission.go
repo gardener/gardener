@@ -196,6 +196,7 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	mutationContext.defaultShootNetworks(helper.IsWorkerless(shoot))
 	allErrs = append(allErrs, mutationContext.defaultKubernetes()...)
 	allErrs = append(allErrs, mutationContext.defaultKubernetesVersionForWorkers()...)
+	mutationContext.defaultWorkerArchitectures()
 	allErrs = append(allErrs, mutationContext.ensureMachineImages()...)
 
 	if len(allErrs) > 0 {
@@ -479,6 +480,27 @@ func (c *mutationContext) defaultKubernetesVersionForWorker(idxPath *field.Path,
 		worker.Kubernetes.Version = defaultVersion
 	}
 	return nil
+}
+
+// defaultWorkerArchitectures sets the architecture for workers that have none specified.
+// It infers the architecture from the machine type in the cloud profile when the machine type
+// supports exactly one architecture; otherwise it falls back to amd64.
+func (c *mutationContext) defaultWorkerArchitectures() {
+	for i, worker := range c.shoot.Spec.Provider.Workers {
+		if worker.Machine.Architecture != nil {
+			continue
+		}
+
+		arch := v1beta1constants.ArchitectureAMD64
+
+		if machineType := v1beta1helper.FindMachineTypeByName(c.cloudProfileSpec.MachineTypes, worker.Machine.Type); machineType != nil {
+			if inferredArch := machineType.GetArchitecture(c.cloudProfileSpec.MachineCapabilities); inferredArch != "" {
+				arch = inferredArch
+			}
+		}
+
+		c.shoot.Spec.Provider.Workers[i].Machine.Architecture = &arch
+	}
 }
 
 func (c *mutationContext) ensureMachineImages() field.ErrorList {

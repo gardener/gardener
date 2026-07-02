@@ -768,6 +768,116 @@ var _ = Describe("mutator", func() {
 			})
 		})
 
+		Context("worker architecture defaulting", func() {
+			BeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			})
+
+			It("should not change architecture if it is already set", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureAMD64)))
+			})
+
+			It("should infer architecture from machine type when architecture is nil and machine type supports exactly one architecture", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = nil
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureAMD64)))
+			})
+
+			It("should infer arm64 architecture for an arm64-only machine type when architecture is nil", func() {
+				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
+					Name:         "arm64-only-type",
+					CPU:          resource.MustParse("2"),
+					GPU:          resource.MustParse("0"),
+					Memory:       resource.MustParse("8Gi"),
+					Architecture: new(v1beta1constants.ArchitectureARM64),
+					Usable:       new(true),
+					Capabilities: gardencorev1beta1.Capabilities{
+						"architecture": []string{v1beta1constants.ArchitectureARM64},
+					},
+				})
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.Provider.Workers[0].Machine.Type = "arm64-only-type"
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureARM64)))
+			})
+
+			It("should default to amd64 when machine type is not found in cloud profile and architecture is nil", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Type = "unknown-machine-type"
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureAMD64)))
+			})
+
+			It("should default to amd64 when machine type supports multiple architectures and architecture is nil", func() {
+				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
+					Name:   "multi-arch-type",
+					CPU:    resource.MustParse("2"),
+					GPU:    resource.MustParse("0"),
+					Memory: resource.MustParse("8Gi"),
+					Usable: new(true),
+					Capabilities: gardencorev1beta1.Capabilities{
+						"architecture": []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64},
+					},
+				})
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.Provider.Workers[0].Machine.Type = "multi-arch-type"
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureAMD64)))
+			})
+
+			It("should infer arm64 from legacy Architecture field when no capabilities are defined", func() {
+				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
+					Name:         "arm64-legacy-type",
+					CPU:          resource.MustParse("2"),
+					GPU:          resource.MustParse("0"),
+					Memory:       resource.MustParse("8Gi"),
+					Architecture: new(v1beta1constants.ArchitectureARM64),
+					Usable:       new(true),
+				})
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.Provider.Workers[0].Machine.Type = "arm64-legacy-type"
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureARM64)))
+			})
+
+			It("should default to amd64 when no capabilities and no legacy Architecture field are defined on the machine type", func() {
+				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
+					Name:   "no-arch-type",
+					CPU:    resource.MustParse("2"),
+					GPU:    resource.MustParse("0"),
+					Memory: resource.MustParse("8Gi"),
+					Usable: new(true),
+				})
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.Provider.Workers[0].Machine.Type = "no-arch-type"
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureAMD64)))
+			})
+		})
+
 		DescribeTableSubtree("machine image", func(isCapabilityCloudProfile bool) {
 			var (
 				classificationPreview = gardencorev1beta1.ClassificationPreview

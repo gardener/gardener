@@ -48,10 +48,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	for i, worker := range obj.Spec.Provider.Workers {
-		if worker.Machine.Architecture == nil {
-			obj.Spec.Provider.Workers[i].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
-		}
-
 		if worker.CRI == nil {
 			obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 		}
