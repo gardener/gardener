@@ -742,7 +742,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			expectedBootStrapConfig := `apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+    certificate-authority: ` + nodeAgentConfig.APIServer.CAFile + `
     server: ` + nodeAgentConfig.APIServer.Server + `
   name: default-cluster
 contexts:

@@ -16,7 +16,6 @@ import (
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent/bootstrappers"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -27,8 +26,8 @@ var _ = Describe("KubeletBootstrapKubeconfig", func() {
 
 		fakeFS          afero.Afero
 		apiServerConfig = nodeagentconfigv1alpha1.APIServer{
-			Server:   "server",
-			CABundle: []byte("ca-bundle"),
+			Server: "https://server",
+			CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
 		}
 		bootstrapToken = "bootstrap-token"
 		runnable       manager.Runnable
@@ -90,8 +89,8 @@ var _ = Describe("KubeletBootstrapKubeconfig", func() {
 				expectedBootstrapKubeconfig := `apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(apiServerConfig.CABundle) + `
-    server: https://` + apiServerConfig.Server + `
+    certificate-authority: ` + apiServerConfig.CAFile + `
+    server: ` + apiServerConfig.Server + `
   name: kubelet-bootstrap
 contexts:
 - context:

@@ -65,7 +65,7 @@ func (k *KubeletBootstrapKubeconfig) Start(_ context.Context) error {
 
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
 		"kubelet-bootstrap",
-		clientcmdv1.Cluster{Server: k.APIServerConfig.Server, CertificateAuthorityData: k.APIServerConfig.CABundle},
+		clientcmdv1.Cluster{Server: k.APIServerConfig.Server, CertificateAuthority: k.APIServerConfig.CAFile},
 		clientcmdv1.AuthInfo{Token: strings.TrimSpace(string(bootstrapToken))},
 	))
 	if err != nil {
