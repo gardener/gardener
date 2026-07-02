@@ -265,7 +265,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	// add peer certs if shoot has HA control plane
 	// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
 	//  PeerUrlTLS for all remaining clusters as well.
-	var peerUrlTLS *druidcorev1alpha1.TLSConfig
+	var peerUrlTLS *druidcorev1alpha1.PeerTLSConfig
 	if e.values.HighAvailabilityEnabled {
 		etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 		if !found {
@@ -277,17 +277,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return fmt.Errorf("failed to generate a peer certificate: %w", err)
 		}
 
-		peerUrlTLS = &druidcorev1alpha1.TLSConfig{
-			TLSCASecretRef: druidcorev1alpha1.SecretReference{
-				SecretReference: corev1.SecretReference{
-					Name:      etcdPeerCASecret.Name,
+		peerUrlTLS = &druidcorev1alpha1.PeerTLSConfig{
+			TLSConfig: druidcorev1alpha1.TLSConfig{
+				TLSCASecretRef: druidcorev1alpha1.SecretReference{
+					SecretReference: corev1.SecretReference{
+						Name:      etcdPeerCASecret.Name,
+						Namespace: e.namespace,
+					},
+					DataKey: new(secretsutils.DataKeyCertificateBundle),
+				},
+				ServerTLSSecretRef: corev1.SecretReference{
+					Name:      peerServerSecret.Name,
 					Namespace: e.namespace,
 				},
-				DataKey: new(secretsutils.DataKeyCertificateBundle),
-			},
-			ServerTLSSecretRef: corev1.SecretReference{
-				Name:      peerServerSecret.Name,
-				Namespace: e.namespace,
 			},
 		}
 	}
@@ -936,7 +938,7 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 		}
 
 		if e.etcd.Spec.Etcd.PeerUrlTLS == nil {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{}
+			e.etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.PeerTLSConfig{}
 		}
 
 		e.etcd.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidcorev1alpha1.SecretReference{
