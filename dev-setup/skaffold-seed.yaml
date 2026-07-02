@@ -208,6 +208,7 @@ build:
             - pkg/component/observability/opentelemetry/collector/constants
             - pkg/component/observability/opentelemetry/operator
             - pkg/component/observability/plutono
+            - pkg/component/observability/pvcautoscaler
             - pkg/component/seed/system
             - pkg/component/shared
             - pkg/component/shoot/namespaces

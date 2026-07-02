@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -1139,6 +1141,44 @@ tls_config:
 				})
 			})
 
+			DescribeTable("PVC autoscaler is enabled — should successfully deploy all resources",
+				func(maxCapacity resource.Quantity) {
+					values.PVCAutoscaler = pvcautoscaler.Values{
+						Enabled:                     true,
+						MaxCapacity:                 maxCapacity,
+						UtilizationThresholdPercent: new(70),
+						StepPercent:                 new(10),
+						MinStepAbsolute:             new(resource.MustParse("2Gi")),
+					}
+					deployer = New(logr.Discard(), fakeClient, namespace, values)
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusFor(nil, false),
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+						getPVCA(name, namespace, maxCapacity),
+					))
+				},
+				Entry("shoot max capacity", resource.MustParse("40Gi")),
+				Entry("seed max capacity", resource.MustParse("200Gi")),
+			)
+
 			When("there is more than 1 replica", func() {
 				BeforeEach(func() {
 					values.Replicas = 2
@@ -1659,3 +1699,35 @@ var (
 		},
 	}
 )
+
+func getPVCA(name, namespace string, maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus-" + name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":  "prometheus",
+				"role": "monitoring",
+				"name": name,
+				v1beta1constants.LabelObservabilityApplication: "prometheus-" + name,
+			},
+		},
+		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			TargetRef: autoscalingv1.CrossVersionObjectReference{
+				APIVersion: "monitoring.coreos.com/v1",
+				Kind:       "Prometheus",
+				Name:       name,
+			},
+			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
+				{
+					MaxCapacity: maxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: new(70),
+						StepPercent:                 new(10),
+						MinStepAbsolute:             new(resource.MustParse("2Gi")),
+					},
+				},
+			},
+		},
+	}
+}

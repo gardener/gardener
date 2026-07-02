@@ -11,6 +11,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 )
 
 // NewVictoriaLogs returns new VictoriaLogs deployer.
@@ -22,6 +23,7 @@ func NewVictoriaLogs(
 	priorityClassName string,
 	storage *resource.Quantity,
 	isGardenCluster bool,
+	pvcAutoscalerValues pvcautoscaler.Values,
 ) (
 	component.DeployWaiter,
 	error,
@@ -38,6 +40,7 @@ func NewVictoriaLogs(
 		ClusterType:       clusterType,
 		Replicas:          replicas,
 		PriorityClassName: priorityClassName,
+		PVCAutoscaler:     pvcAutoscalerValues,
 	})
 
 	return deployer, nil

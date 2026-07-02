@@ -374,12 +374,17 @@ var _ = Describe("PVCAutoscaler", func() {
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-						"pvc_autoscaler_resized_total",
-						"pvc_autoscaler_threshold_reached_total",
-						"pvc_autoscaler_max_capacity_reached_total",
-						"pvc_autoscaler_skipped_total",
-					),
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+							Regex:        "metrics",
+							Action:       "keep",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_pod_label_(.+)`,
+						},
+					},
 				}},
 			},
 		}

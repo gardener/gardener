@@ -7,6 +7,7 @@ package vali_test
 import (
 	"context"
 
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -35,6 +36,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/vali"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -374,6 +376,46 @@ var _ = Describe("Vali", func() {
 
 			test.PrometheusRule(getPrometheusRule("aggregate"), "testdata/aggregate-vali.prometheusrule.test.yaml")
 		})
+
+		DescribeTable("should deploy the PersistentVolumeClaimAutoscaler when PVCAutoscaler is enabled",
+			func(maxCapacity resource.Quantity) {
+				valiDeployer := New(
+					c,
+					namespace,
+					fakeSecretManager,
+					Values{
+						Replicas:                     1,
+						Storage:                      &storage,
+						ShootNodeLoggingEnabled:      true,
+						ValiImage:                    valiImage,
+						CuratorImage:                 curatorImage,
+						InitLargeDirImage:            initLargeDirImage,
+						TelegrafImage:                telegrafImage,
+						KubeRBACProxyImage:           kubeRBACProxyImage,
+						WithRBACProxy:                true,
+						PriorityClassName:            priorityClassName,
+						ClusterType:                  "shoot",
+						IngressHost:                  valiHost,
+						IstioIngressGatewayNamespace: "istio-ingress",
+						IsGardenCluster:              false,
+						PVCAutoscaler: pvcautoscaler.Values{
+							Enabled:                     true,
+							MaxCapacity:                 maxCapacity,
+							UtilizationThresholdPercent: new(70),
+							StepPercent:                 new(10),
+							MinStepAbsolute:             new(resource.MustParse("1Gi")),
+						},
+					},
+				)
+
+				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+
+				Expect(managedResource).To(NewManagedResourceContainsObjectsMatcher(c)(getPVCA(maxCapacity)))
+			},
+			Entry("shoot max capacity", resource.MustParse("40Gi")),
+			Entry("seed max capacity", resource.MustParse("200Gi")),
+		)
 	})
 
 	Describe("#ResizeOrDeleteValiDataVolumeIfStorageNotTheSame", func() {
@@ -463,6 +505,19 @@ var _ = Describe("Vali", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, managedResource)).To(Succeed())
 			Expect(managedResource.Annotations).NotTo(HaveKey(resourcesv1alpha1.Ignore))
+		})
+
+		It("shouldn't do anything when PVCAutoscaler is enabled", func() {
+			valiDeployer := New(fakeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity, PVCAutoscaler: pvcautoscaler.Values{Enabled: true}})
+
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+
+			pvcResult := &corev1.PersistentVolumeClaim{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: valiPVCName}, pvcResult)).To(Succeed())
+			Expect(pvcResult.Spec.Resources.Requests.Storage()).To(PointTo(Equal(resource.MustParse("100Gi"))))
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed())
+			Expect(sts.Spec.Replicas).To(PointTo(Equal(int32(2))))
 		})
 
 		It("shouldn't do anything when garden/vali's PVC is missing", func() {
@@ -1500,5 +1555,32 @@ func getLabels() map[string]string {
 		"gardener.cloud/role": "logging",
 		"role":                "logging",
 		"app":                 "vali",
+	}
+}
+
+func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName,
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			TargetRef: autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "StatefulSet",
+				Name:       valiName,
+			},
+			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
+				{
+					MaxCapacity: maxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: new(70),
+						StepPercent:                 new(10),
+						MinStepAbsolute:             new(resource.MustParse("1Gi")),
+					},
+				},
+			},
+		},
 	}
 }

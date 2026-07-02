@@ -10,14 +10,18 @@ import (
 	"slices"
 	"strconv"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/gardener/gardener/imagevector"
 	gardenlethelper "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -183,6 +187,13 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		false,
 		istioLabels,
 		istioNamespace,
+		pvcautoscaler.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("40Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		},
 	)
 }
 
@@ -240,6 +251,13 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		false,
+		pvcautoscaler.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("40Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		},
 	)
 	if err != nil {
 		return nil, err

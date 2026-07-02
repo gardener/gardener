@@ -69,6 +69,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
+	pvcautoscalervalues "github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -191,7 +192,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	if !pvcAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
+	if !v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings) {
 		c.pvcAutoscalerCRD = component.OpDestroyAndWait(c.pvcAutoscalerCRD)
 	}
 
@@ -265,7 +266,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(c.istioDefaultLabels, c.istioDefaultNamespace)
+	c.vali, err = r.newVali(seed, c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -305,7 +306,13 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs()
+	c.victoriaLogs, err = r.newVictoriaLogs(pvcautoscalervalues.Values{
+		Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		MaxCapacity:                 resource.MustParse("200Gi"),
+		UtilizationThresholdPercent: new(70),
+		StepPercent:                 new(10),
+		MinStepAbsolute:             new(resource.MustParse("1Gi")),
+	})
 	if err != nil {
 		return
 	}
@@ -576,7 +583,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed, seedIsSelfHostedSho
 	), nil
 }
 
-func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string, istioIngressGatewayNamespace string) (component.Deployer, error) {
+func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[string]string, istioIngressGatewayNamespace string) (component.Deployer, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
@@ -595,6 +602,13 @@ func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string, istioI
 		false,
 		istioIngressGatewayLabels,
 		istioIngressGatewayNamespace,
+		pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -614,7 +628,7 @@ func (r *Reconciler) newVali(istioIngressGatewayLabels map[string]string, istioI
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(pvcAutoscalerValues pvcautoscalervalues.Values) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
@@ -628,6 +642,7 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
 		false,
+		pvcAutoscalerValues,
 	)
 	if err != nil {
 		return nil, err
@@ -709,6 +724,11 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
 			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
 		},
+		// PVC autoscaling is intentionally not enabled for the cache Prometheus: it acts as a short-lived
+		// federation source (~1d retention) for the seed and aggregate Prometheuses, so growing its volume
+		// provides limited benefit. It would also introduce risks, since the cache Prometheus is the source
+		// of the metrics that drive the PVC Autoscaler itself.
+		PVCAutoscaler: pvcautoscalervalues.Values{Enabled: false},
 	})
 }
 
@@ -718,7 +738,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
 		Replicas:          1,
-		RetentionSize:     "85GB",
+		RetentionSize:     "160GB",
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
 		HealthCheckBy:     prometheus.Gardenlet,
 		AdditionalPodLabels: map[string]string{
@@ -734,6 +754,13 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			PodMonitors:     seedprometheus.CentralPodMonitors(),
 			ScrapeConfigs:   seedprometheus.CentralScrapeConfigs(),
 			PrometheusRules: seedprometheus.CentralPrometheusRules(),
+		},
+		PVCAutoscaler: pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
 		},
 	})
 }
@@ -756,7 +783,7 @@ func (r *Reconciler) newAggregatePrometheus(
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
 		Replicas:          1,
 		Retention:         new(monitoringv1.Duration("30d")),
-		RetentionSize:     "15GB",
+		RetentionSize:     "160GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		HealthCheckBy:     prometheus.Gardenlet,
@@ -777,6 +804,13 @@ func (r *Reconciler) newAggregatePrometheus(
 			SigningCA:                    v1beta1constants.SecretNameCASeed,
 			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
 			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
+		},
+		PVCAutoscaler: pvcautoscalervalues.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("200Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
 		},
 	}
 
@@ -869,7 +903,7 @@ func (r *Reconciler) newPVCAutoscaler(settings *gardencorev1beta1.SeedSettings) 
 	return sharedcomponent.NewPVCAutoscaler(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		pvcAutoscalerEnabled(settings),
+		v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(settings),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }

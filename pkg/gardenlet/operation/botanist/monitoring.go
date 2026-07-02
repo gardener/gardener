@@ -13,11 +13,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -117,7 +119,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		ClusterType:         component.ClusterTypeShoot,
 		Replicas:            b.Shoot.GetReplicas(1),
 		Retention:           new(monitoringv1.Duration("30d")),
-		RetentionSize:       "15GB",
+		RetentionSize:       "30GB",
 		RestrictToNamespace: true,
 		HealthCheckBy:       prometheus.Gardenlet,
 		ResourceRequests: &corev1.ResourceList{
@@ -153,6 +155,13 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		VPAMinAllowed: &corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("150m"),
 			corev1.ResourceMemory: resource.MustParse("100M"),
+		},
+		PVCAutoscaler: pvcautoscaler.Values{
+			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+			MaxCapacity:                 resource.MustParse("40Gi"),
+			UtilizationThresholdPercent: new(70),
+			StepPercent:                 new(10),
+			MinStepAbsolute:             new(resource.MustParse("2Gi")),
 		},
 	}
 

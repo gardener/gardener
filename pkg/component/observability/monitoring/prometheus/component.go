@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -25,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -134,6 +136,8 @@ type Values struct {
 	ResourceRequests *corev1.ResourceList
 	// HealthCheckBy is the value of the health-check-by label for the Prometheus resource.
 	HealthCheckBy string
+	// PVCAutoscaler configures whether and how the Prometheus PVC is autoscaled.
+	PVCAutoscaler pvcautoscaler.Values
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
@@ -266,6 +270,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		roleBinding        *rbacv1.RoleBinding
 		gardenRoleBinding  *rbacv1.RoleBinding
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		pvca               *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler
 	)
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
@@ -274,6 +279,10 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		gardenRoleBinding = p.gardenRoleBinding()
 	} else {
 		clusterRoleBinding = p.clusterRoleBinding()
+	}
+
+	if p.values.PVCAutoscaler.Enabled {
+		pvca = p.pvca(p.values.PVCAutoscaler)
 	}
 
 	objects := append([]client.Object{
@@ -290,6 +299,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.prometheus(cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
+		pvca,
 	}, istioResources...)
 
 	resources, err := registry.AddAllAndSerialize(objects...)
