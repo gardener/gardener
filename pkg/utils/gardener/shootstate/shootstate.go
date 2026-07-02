@@ -51,11 +51,8 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
-	// We must use a regular merge patch here instead of a strategic merge patch. Strategic merge
-	// patch would attempt to introspect the RawExtension payloads in ShootState.Spec.Gardener to
-	// resolve merge keys and strategies. The SecretState type stored in those payloads contains a
-	// nested "data" map, which causes the strategic merge patch schema lookup to descend into the
-	// RawExtension struct — but RawExtension has no exported JSON fields, so the lookup fails with
+	// Use a regular merge patch here. A strategic merge patch fails when computing the diff over
+	// SecretState payloads inside the RawExtension entries of the Spec.Gardener with
 	// "unable to find api field in struct RawExtension for the json field \"data\"".
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, shootState, func() error {
 		metav1.SetMetaDataAnnotation(&shootState.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().UTC().Format(time.RFC3339))
