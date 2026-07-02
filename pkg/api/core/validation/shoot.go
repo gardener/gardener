@@ -68,6 +68,7 @@ var (
 		v1beta1constants.ShootOperationMaintain,
 		v1beta1constants.ShootOperationRetry,
 		v1beta1constants.ShootOperationForceInPlaceUpdate,
+		v1beta1constants.GardenerOperationLiveMigrate,
 	).Union(availableShootMaintenanceOperations)
 	availableShootMaintenanceOperations = sets.New(
 		v1beta1constants.GardenerOperationReconcile,

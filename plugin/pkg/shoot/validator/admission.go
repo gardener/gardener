@@ -11,6 +11,7 @@ import (
 	"io"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -29,6 +30,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -42,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -63,6 +66,7 @@ type ValidateShoot struct {
 	*admission.Handler
 
 	authorizer                   authorizer.Authorizer
+	configMapLister              kubecorev1listers.ConfigMapLister
 	secretLister                 kubecorev1listers.SecretLister
 	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
 	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
@@ -142,16 +146,22 @@ func (v *ValidateShoot) SetSecurityInformerFactory(f securityinformers.SharedInf
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
 func (v *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+	configMapInformer := f.Core().V1().ConfigMaps()
+	v.configMapLister = configMapInformer.Lister()
+
 	secretInformer := f.Core().V1().Secrets()
 	v.secretLister = secretInformer.Lister()
 
-	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, configMapInformer.Informer().HasSynced, secretInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
 	if v.authorizer == nil {
 		return errors.New("missing authorizer")
+	}
+	if v.configMapLister == nil {
+		return errors.New("missing configMap lister")
 	}
 	if v.secretLister == nil {
 		return errors.New("missing secret lister")
@@ -327,6 +337,9 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 		return err
 	}
 	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister, v.seedLister); err != nil {
+		return err
+	}
+	if err := validationContext.validateLiveMigrationPrerequisites(a, v.seedLister, v.configMapLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -1861,4 +1874,177 @@ func getDefaultDomainsForSeed(seed *gardencorev1beta1.Seed) []string {
 	}
 
 	return defaultDomains
+}
+
+func (c *validationContext) validateLiveMigrationPrerequisites(
+	a admission.Attributes,
+	seedLister gardencorev1beta1listers.SeedLister,
+	configMapLister kubecorev1listers.ConfigMapLister,
+) error {
+	if a.GetOperation() != admission.Update {
+		return nil
+	}
+
+	operations := v1beta1helper.GetShootGardenerOperations(c.shoot.Annotations)
+	if !slices.Contains(operations, v1beta1constants.GardenerOperationLiveMigrate) {
+		return nil
+	}
+
+	if !features.DefaultFeatureGate.Enabled(features.LiveControlPlaneMigration) {
+		return admission.NewForbidden(a, fmt.Errorf("cannot set operation annotation %q because the %s feature gate is disabled", v1beta1constants.GardenerOperationLiveMigrate, features.LiveControlPlaneMigration))
+	}
+
+	if c.shoot.Spec.ControlPlane == nil || c.shoot.Spec.ControlPlane.HighAvailability == nil {
+		return admission.NewForbidden(a, fmt.Errorf("cannot trigger live migration for a non-HA shoot; the shoot control plane must be configured for high availability"))
+	}
+
+	specHibernated := ptr.Deref(ptr.Deref(c.shoot.Spec.Hibernation, core.Hibernation{}).Enabled, false)
+	if specHibernated || c.shoot.Status.IsHibernated {
+		return admission.NewForbidden(a, fmt.Errorf("cannot trigger live migration for a hibernated or waking-up shoot; use normal control plane migration instead"))
+	}
+
+	if c.oldShoot.Spec.SeedName == nil || c.shoot.Spec.SeedName == nil || *c.shoot.Spec.SeedName == *c.oldShoot.Spec.SeedName {
+		return nil
+	}
+
+	oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not find source seed: %w", err))
+	}
+
+	newSeed, err := seedLister.Get(*c.shoot.Spec.SeedName)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not find destination seed: %w", err))
+	}
+
+	if oldSeed.Spec.Provider.Type != newSeed.Spec.Provider.Type {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration between seeds of different provider types (%s -> %s)", oldSeed.Spec.Provider.Type, newSeed.Spec.Provider.Type))
+	}
+
+	if err := validateGardenletVersions(a, oldSeed, newSeed); err != nil {
+		return err
+	}
+
+	if c.shoot.Annotations[v1beta1constants.AnnotationMigrationAllowDistantRegions] == "true" {
+		return nil
+	}
+
+	return c.validateInterRegionDistance(a, oldSeed, newSeed, configMapLister)
+}
+
+func validateGardenletVersions(a admission.Attributes, oldSeed, newSeed *gardencorev1beta1.Seed) error {
+	oldVersion := ""
+	if oldSeed.Status.Gardener != nil {
+		oldVersion = oldSeed.Status.Gardener.Version
+	}
+
+	newVersion := ""
+	if newSeed.Status.Gardener != nil {
+		newVersion = newSeed.Status.Gardener.Version
+	}
+
+	if oldVersion == "" || newVersion == "" {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration: gardenlet version not reported for seed %q or %q", oldSeed.Name, newSeed.Name))
+	}
+
+	if oldVersion != newVersion {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration between seeds with different gardenlet versions (%s: %s, %s: %s)", oldSeed.Name, oldVersion, newSeed.Name, newVersion))
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateInterRegionDistance(
+	a admission.Attributes,
+	oldSeed, newSeed *gardencorev1beta1.Seed,
+	configMapLister kubecorev1listers.ConfigMapLister,
+) error {
+	sourceRegion := oldSeed.Spec.Provider.Region
+	destRegion := newSeed.Spec.Provider.Region
+
+	if sourceRegion == destRegion {
+		return nil
+	}
+
+	cloudProfileName := ""
+	if ref := gardenerutils.BuildCoreCloudProfileReference(c.shoot); ref != nil {
+		cloudProfileName = ref.Name
+	}
+	if cloudProfileName == "" {
+		return apierrors.NewInternalError(fmt.Errorf("could not determine cloud profile name for shoot %s/%s", c.shoot.Namespace, c.shoot.Name))
+	}
+
+	regionConfigMap, err := gardenerutils.GetRegionConfigMapFromLister(configMapLister, cloudProfileName)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	if regionConfigMap == nil {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration between seeds in different regions (%s -> %s): no scheduler region ConfigMap found for cloud profile %q",
+			sourceRegion, destRegion, cloudProfileName))
+	}
+
+	threshold, err := getDistanceThreshold(regionConfigMap)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	dist, found, err := getRegionDistances(regionConfigMap, sourceRegion)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	if !found {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration between seeds in different regions (%s -> %s): source region not configured in ConfigMap %q",
+			sourceRegion, destRegion, regionConfigMap.Name))
+	}
+
+	distance, ok := dist[destRegion]
+	if !ok {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration between seeds in different regions (%s -> %s): distance to destination region not configured in ConfigMap %q",
+			sourceRegion, destRegion, regionConfigMap.Name))
+	}
+
+	if distance > threshold {
+		return admission.NewForbidden(a, fmt.Errorf("cannot perform live migration between seeds in distant regions (%s -> %s): distance %d exceeds threshold %d",
+			sourceRegion, destRegion, distance, threshold))
+	}
+
+	return nil
+}
+
+const defaultInterRegionDistanceThreshold = 180
+
+func getDistanceThreshold(regionConfigMap *corev1.ConfigMap) (int, error) {
+	thresholdStr, ok := regionConfigMap.Annotations[v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold]
+	if !ok {
+		return defaultInterRegionDistanceThreshold, nil
+	}
+
+	threshold, err := strconv.Atoi(thresholdStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid value %q for annotation %q on ConfigMap %s/%s: %w",
+			thresholdStr, v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold, regionConfigMap.Namespace, regionConfigMap.Name, err)
+	}
+
+	if threshold < 0 {
+		return 0, fmt.Errorf("threshold must be non-negative, got %d for annotation %q on ConfigMap %s/%s",
+			threshold, v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold, regionConfigMap.Namespace, regionConfigMap.Name)
+	}
+
+	return threshold, nil
+}
+
+func getRegionDistances(regionConfigMap *corev1.ConfigMap, sourceRegion string) (map[string]int, bool, error) {
+	data := regionConfigMap.Data[sourceRegion]
+	if data == "" {
+		return nil, false, nil
+	}
+
+	regionDistances := make(map[string]int)
+	if err := yaml.Unmarshal([]byte(data), &regionDistances); err != nil {
+		return nil, false, fmt.Errorf("failed to parse region distances for region %q in ConfigMap %s/%s: %w",
+			sourceRegion, regionConfigMap.Namespace, regionConfigMap.Name, err)
+	}
+
+	return regionDistances, true, nil
 }

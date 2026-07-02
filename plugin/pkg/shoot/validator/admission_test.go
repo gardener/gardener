@@ -30,6 +30,8 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
@@ -6399,6 +6401,492 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
 
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+			})
+		})
+
+		Context("live migration prerequisite checks", func() {
+			var (
+				oldShoot *core.Shoot
+				newSeed  gardencorev1beta1.Seed
+			)
+
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.LiveControlPlaneMigration, true))
+
+				shoot = *shootBase.DeepCopy()
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+				oldShoot = shoot.DeepCopy()
+
+				seed = *seedBase.DeepCopy()
+				seed.Spec.Provider.Region = "eu-west-1"
+				seed.Spec.Provider.Type = "aws"
+				seed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.100.0"}
+
+				newSeed = *seedBase.DeepCopy()
+				newSeed.Name = newSeedName
+				newSeed.Spec.Backup = &gardencorev1beta1.Backup{}
+				newSeed.Spec.Provider.Region = "eu-central-1"
+				newSeed.Spec.Provider.Type = "aws"
+				newSeed.Spec.DNS.Internal = seed.Spec.DNS.Internal
+				newSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.100.0"}
+			})
+
+			It("should skip live migration validation on create operations", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject live-migrate operation on a hibernated shoot", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("cannot trigger live migration for a hibernated or waking-up shoot"))
+			})
+
+			It("should reject live-migrate operation on a waking-up shoot (spec hibernation false but status hibernated)", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+				shoot.Status.IsHibernated = true
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("hibernated or waking-up shoot"))
+			})
+
+			It("should allow live-migrate operation on a non-hibernated shoot without rescheduling", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should deny setting live-migrate annotation when LiveControlPlaneMigration feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.LiveControlPlaneMigration, false))
+
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("feature gate is disabled"))
+			})
+
+			It("should reject live-migrate operation on a non-HA shoot", func() {
+				shoot.Spec.ControlPlane = nil
+				oldShoot.Spec.ControlPlane = nil
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("non-HA shoot"))
+			})
+
+			Context("distance checks with rescheduling", func() {
+				BeforeEach(func() {
+					shoot.Spec.SeedName = ptr.To(newSeedName)
+					shoot.Status.SeedName = ptr.To(seedName)
+					oldShoot.Spec.SeedName = ptr.To(seedName)
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationLiveMigrate)
+				})
+
+				It("should allow rescheduling to the same region", func() {
+					newSeed.Spec.Provider.Region = "eu-west-1"
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should reject rescheduling to a seed with a different provider type", func() {
+					newSeed.Spec.Provider.Type = "gcp"
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("different provider types"))
+				})
+
+				It("should reject rescheduling when gardenlet versions differ between seeds", func() {
+					newSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.99.0"}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("different gardenlet versions"))
+				})
+
+				It("should reject rescheduling when gardenlet version is not reported on source seed", func() {
+					seed.Status.Gardener = nil
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("gardenlet version not reported"))
+				})
+
+				It("should reject rescheduling to a different region when no region ConfigMap exists", func() {
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("no scheduler region ConfigMap found"))
+				})
+
+				It("should use default threshold of 180 when distance threshold annotation is missing", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles: "profile",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "eu-central-1: 50",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should reject when distance exceeds default threshold of 180 and annotation is missing", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles: "profile",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "eu-central-1: 200",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("distance 200 exceeds threshold 180"))
+				})
+
+				It("should allow rescheduling when distance is within threshold", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles:               "profile",
+								v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold: "180",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "eu-central-1: 50",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should reject rescheduling when distance exceeds threshold", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles:               "profile",
+								v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold: "180",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "eu-central-1: 200",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("distance 200 exceeds threshold 180"))
+				})
+
+				It("should allow rescheduling to distant region when allow-distant-regions annotation is set", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationMigrationAllowDistantRegions, "true")
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should reject when destination region distance is not configured in ConfigMap", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles:               "profile",
+								v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold: "180",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "us-east-1: 300",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("distance to destination region not configured"))
+				})
+
+				It("should return an error when destination seed is not found", func() {
+					shoot.Spec.SeedName = ptr.To("non-existent-dest-seed")
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("non-existent-dest-seed"))
+				})
+
+				It("should return an error when distance threshold annotation has invalid value", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles:               "profile",
+								v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold: "not-a-number",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "eu-central-1: 50",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid value"))
+					Expect(err.Error()).To(ContainSubstring("not-a-number"))
+				})
+
+				It("should return an error when region distance data has invalid YAML format", func() {
+					regionConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "region-config",
+							Namespace: v1beta1constants.GardenNamespace,
+							Labels: map[string]string{
+								v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+							},
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationSchedulingCloudProfiles:               "profile",
+								v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold: "180",
+							},
+						},
+						Data: map[string]string{
+							"eu-west-1": "not: valid: yaml: [",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to parse region distances"))
 				})
 			})
 		})
