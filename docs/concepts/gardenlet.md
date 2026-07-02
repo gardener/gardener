@@ -382,6 +382,10 @@ A `ManagedResource` is considered "healthy" if the conditions `ResourcesApplied=
 If all `ManagedResource`s are healthy, then the `SeedSystemComponentsHealthy` condition of the `Seed` will be set to `True`.
 Otherwise, it will be set to `False`.
 
+Additionally, it maintains the `SeedHasIgnoredManagedResources` condition, which is set to `False` when at least one `ManagedResource` in the seed's namespaces is annotated with `resources.gardener.cloud/ignore=true`.
+The names of the affected resources are listed in the condition message.
+Operators should remove the annotation once manual intervention is complete to restore reconciliation and clear the condition.
+
 If at least one `ManagedResource` is unhealthy and there is threshold configuration for the conditions (in `.controllers.seedCare.conditionThresholds`), then the status of the `SeedSystemComponentsHealthy` condition will be set:
 
 - to `Progressing` if it was `True` before.
@@ -394,9 +398,10 @@ Only if the unhealthiness persists for at least the configured threshold duratio
 In order to compute the condition statuses, this reconciler considers `ManagedResource`s (in the `garden` and `istio-system` namespace) and their status, see [this document](resource-manager.md#conditions) for more information.
 The following table explains which `ManagedResource`s are considered for which condition type:
 
-| Condition Type                | `ManagedResource`s are considered when |
-|-------------------------------|----------------------------------------|
-| `SeedSystemComponentsHealthy` | `.spec.class` is set                   |
+| Condition Type                  | `ManagedResource`s are considered when                              |
+|---------------------------------|---------------------------------------------------------------------|
+| `SeedSystemComponentsHealthy`  | `.spec.class` is set                                                |
+| `SeedHasIgnoredManagedResources`| any `ManagedResource` annotated with `resources.gardener.cloud/ignore=true` |
 
 #### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 

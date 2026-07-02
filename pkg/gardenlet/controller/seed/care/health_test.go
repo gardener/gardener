@@ -364,6 +364,7 @@ var _ = Describe("Seed health", func() {
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
 					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedEmergencyStopShootReconciliations, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedHasIgnoredManagedResources, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -379,6 +380,7 @@ var _ = Describe("Seed health", func() {
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("SeedSystemComponentsHealthy"),
 					OfType("EmergencyStopShootReconciliations"),
+					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedHasIgnoredManagedResources, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -390,6 +392,7 @@ var _ = Describe("Seed health", func() {
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("SeedSystemComponentsHealthy"),
 					OfType("EmergencyStopShootReconciliations"),
+					OfType("SeedHasIgnoredManagedResources"),
 				))
 			})
 		})
@@ -401,6 +404,88 @@ var _ = Describe("Seed health", func() {
 				Expect(conditions.ConditionTypes()).To(HaveExactElements(
 					gardencorev1beta1.ConditionType("SeedSystemComponentsHealthy"),
 					gardencorev1beta1.ConditionType("EmergencyStopShootReconciliations"),
+					gardencorev1beta1.ConditionType("SeedHasIgnoredManagedResources"),
+				))
+			})
+		})
+
+		Describe("#checkIfManagedResourcesAreIgnored", func() {
+			var (
+				healthCheck HealthCheck
+				conditions  SeedConditions
+			)
+
+			JustBeforeEach(func() {
+				healthCheck = NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(log, c, fakeClock))
+				conditions = NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{})
+			})
+
+			It("should set condition to True when no ManagedResources exist", func() {
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(gardencorev1beta1.SeedHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason("NoManagedResourcesIgnored"),
+				))
+			})
+
+			It("should set condition to True when a ManagedResource has ignore=false", func() {
+				mr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: v1beta1constants.GardenNamespace,
+						Annotations: map[string]string{
+							resourcesv1alpha1.Ignore: "false",
+						},
+					},
+				}
+				Expect(c.Create(ctx, mr)).To(Succeed())
+
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(gardencorev1beta1.SeedHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason("NoManagedResourcesIgnored"),
+				))
+			})
+
+			It("should set condition to False when a ManagedResource has ignore=true", func() {
+				mr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: v1beta1constants.GardenNamespace,
+						Annotations: map[string]string{
+							resourcesv1alpha1.Ignore: "true",
+						},
+					},
+				}
+				Expect(c.Create(ctx, mr)).To(Succeed())
+
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(gardencorev1beta1.SeedHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("ManagedResourcesIgnored"),
+					WithMessageSubstrings("foo"),
+				))
+			})
+
+			It("should list multiple ignored ManagedResources sorted alphabetically", func() {
+				for _, name := range []string{"foo", "bar", "baz"} {
+					mr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      name,
+							Namespace: v1beta1constants.GardenNamespace,
+							Annotations: map[string]string{
+								resourcesv1alpha1.Ignore: "true",
+							},
+						},
+					}
+					Expect(c.Create(ctx, mr)).To(Succeed())
+				}
+
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(gardencorev1beta1.SeedHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("ManagedResourcesIgnored"),
+					WithMessageSubstrings("bar, baz, foo"),
 				))
 			})
 		})

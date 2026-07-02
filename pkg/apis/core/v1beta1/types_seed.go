@@ -540,6 +540,9 @@ const (
 	SeedSystemComponentsHealthy ConditionType = "SeedSystemComponentsHealthy"
 	// SeedEmergencyStopShootReconciliations is a constant for a condition type indicating disabled shoot reconciliations.
 	SeedEmergencyStopShootReconciliations ConditionType = "EmergencyStopShootReconciliations"
+	// SeedHasIgnoredManagedResources is a constant for a condition type indicating that one or more ManagedResources
+	// in the seed's namespaces have been annotated with resources.gardener.cloud/ignore=true.
+	SeedHasIgnoredManagedResources ConditionType = "SeedHasIgnoredManagedResources"
 )
 
 // Resource constants for Gardener object types
