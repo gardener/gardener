@@ -239,6 +239,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
 
+	// Strip the gardener-node-agent unit from Units.Commands and route its restart through the
+	// MustRestartNodeAgent flag. This keeps the self-restart out of executeUnitCommands, where
+	// a failing third-party unit could otherwise return an error and block it.
+	if slices.ContainsFunc(oscChanges.Units.Commands, func(c unitCommand) bool {
+		return c.Name == nodeagentconfigv1alpha1.UnitName
+	}) {
+		if err := oscChanges.setMustRestartNodeAgent(true); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed setting MustRestartNodeAgent: %w", err)
+		}
+		if err := oscChanges.completedUnitCommand(nodeagentconfigv1alpha1.UnitName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed clearing node-agent unit from commands list: %w", err)
+		}
+	}
+
 	// If the node-agent has restarted after OS update, we need to persist the change in oscChanges.
 	if osc.Spec.InPlaceUpdates != nil {
 		if osVersionUpToDate, err := IsOsVersionUpToDate(osVersion, osc); err != nil {
@@ -304,6 +318,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reloading systemd daemon: %w", err)
 	}
 
+	// Restart the node-agent before executeUnitCommands. A failing third-party unit there would
+	// otherwise return an error and prevent the restart from happening. The remaining steps
+	// (executeUnitCommands, waitForRegistries, removeDeletedFiles, in-place update) resume in
+	// the next reconcile pass from the persisted [operatingSystemConfigChanges] file.
+	if oscChanges.MustRestartNodeAgent && !r.SkipWritingStateFiles {
+		return r.restartNodeAgent(oscChanges, log)
+	}
+
 	log.Info("Executing unit commands (start/stop)", "unitCommands", len(oscChanges.Units.Commands))
 	if err := r.executeUnitCommands(ctx, log, node, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
@@ -313,12 +335,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if err := r.completeKubeletInPlaceUpdate(ctx, log, oscChanges, node); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed completing kubelet in-place update: %w", err)
 		}
-	}
-
-	// We restart the gardener-node-agent before removing the old files, so that the previous
-	// config is deleted only after there is no gardener-node-agent that is still using it.
-	if oscChanges.MustRestartNodeAgent {
-		return r.restartNodeAgent(oscChanges, log)
 	}
 
 	// After the node is prepared, we can wait for the registries to be configured.
@@ -357,7 +373,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	if oscChanges.MustRestartNodeAgent {
+	// Second restart site: catches MustRestartNodeAgent set by the CA-rotation path inside
+	// performInPlaceUpdate, which can only flip the flag after the new kubeconfig is on disk.
+	if oscChanges.MustRestartNodeAgent && !r.SkipWritingStateFiles {
 		return r.restartNodeAgent(oscChanges, log)
 	}
 
@@ -752,16 +770,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 
 	var containerdChanged bool
 	for _, unit := range slices.Clone(oscChanges.Units.Commands) {
-		switch unit.Name {
-		case nodeagentconfigv1alpha1.UnitName:
-			if err := oscChanges.setMustRestartNodeAgent(true); err != nil {
-				return err
-			}
-			if err := oscChanges.completedUnitCommand(unit.Name); err != nil {
-				return err
-			}
-			continue
-		case v1beta1constants.OperatingSystemConfigUnitNameContainerDService:
+		if unit.Name == v1beta1constants.OperatingSystemConfigUnitNameContainerDService {
 			containerdChanged = true
 		}
 

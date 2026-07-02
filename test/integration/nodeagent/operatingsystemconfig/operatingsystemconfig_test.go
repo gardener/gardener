@@ -886,6 +886,65 @@ units: {}
 		Eventually(cancelFunc.called).Should(BeTrue())
 	})
 
+	It("should still restart the node-agent when a third-party unit fails to start", func() {
+		// Regression guard: when an OSC update both changes the node-agent config and adds a
+		// third-party unit that fails to start, the self-restart must still happen. Without the
+		// fix, executeUnitCommands returns the failure and the reconcile bails out before the
+		// restart, leaving the node-agent running with the old config.
+		By("Wait until last-applied OSC file is persisted")
+		Eventually(func() error {
+			_, err := fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
+			return err
+		}).Should(Succeed())
+
+		fakeDBus.Actions = nil
+
+		By("Inject a failure for the upcoming restart of a third-party unit")
+		failingUnit := extensionsv1alpha1.Unit{
+			Name:    "failing-third-party.service",
+			Enable:  new(true),
+			Command: new(extensionsv1alpha1.CommandRestart),
+			Content: new("#failing"),
+		}
+		fakeDBus.InjectRestartFailure(fmt.Errorf("simulated failure: dependent state not ready"), failingUnit.Name)
+
+		By("Update Operating System Config with both the node-agent unit and the failing unit")
+		operatingSystemConfig.Spec.Units = append(operatingSystemConfig.Spec.Units, gnaUnit, failingUnit)
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Update Secret containing the operating system config")
+		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
+		oscSecret.Data["osc.yaml"] = oscRaw
+		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
+
+		By("Wait for the manager cache to observe the updated secret")
+		Eventually(func(g Gomega) []byte {
+			updatedSecret := &corev1.Secret{}
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), updatedSecret)).To(Succeed())
+			return updatedSecret.Data["osc.yaml"]
+		}).Should(Equal(oscSecret.Data["osc.yaml"]))
+
+		By("Expect that cancel func is called despite the failing third-party unit")
+		Eventually(func() bool { return cancelFunc.called }).Should(BeTrue())
+
+		By("Assert that the node-agent self-restart path was taken")
+		// The persisted changes file is used to detect that the node-agent unit is
+		// stripped from Units.Commands, and MustRestartNodeAgent is back to false
+		// (cleared by restartNodeAgent before signalling the cancel).
+		Eventually(func(g Gomega) string {
+			content, err := fakeFS.ReadFile("/var/lib/gardener-node-agent/last-computed-osc-changes.yaml")
+			g.Expect(err).NotTo(HaveOccurred())
+			return string(content)
+		}).Should(And(
+			ContainSubstring("mustRestartNodeAgent: false"),
+			Not(ContainSubstring("name: "+gnaUnit.Name)),
+		))
+	})
+
 	Context("when CRI is not containerd", func() {
 		BeforeEach(func() {
 			operatingSystemConfig.Spec.CRIConfig = nil
