@@ -867,7 +867,7 @@ This way, neither custom `NetworkPolicy`s nor custom labels must be provided.
 As an example, let's assume that istio ingress gateway is running in namespace `istio-ingress` and  above `gardener-resource-manager` `Service` was exposed via the following `VirtualService` and `Gateway` resources:
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: grm-gateway
@@ -883,7 +883,7 @@ spec:
       number: 443
       protocol: HTTPS
 ---
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: gardener-resource-manager
