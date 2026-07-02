@@ -195,3 +195,13 @@ etcdConfig:
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60
+# registryCABundle configures a CA bundle for a private container registry.
+# Exactly one of secretRef or inline must be set.
+# registryCABundle:
+#   secretRef:
+#     name: my-registry-ca
+#     namespace: <namespace>
+#   inline: |
+#     -----BEGIN CERTIFICATE-----
+#     MIIBxTCCAW...
+#     -----END CERTIFICATE-----

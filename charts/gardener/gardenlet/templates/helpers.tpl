@@ -358,6 +358,10 @@ etcdConfig:
 exposureClassHandlers:
 {{ toYaml .Values.config.exposureClassHandlers }}
 {{- end }}
+{{- if .Values.config.registryCABundle }}
+registryCABundle:
+{{ toYaml .Values.config.registryCABundle | indent 2 }}
+{{- end }}
 {{- if .Values.nodeToleration }}
 nodeToleration:
 {{ toYaml .Values.nodeToleration | indent 2 }}

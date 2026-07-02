@@ -21,6 +21,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
@@ -117,6 +118,32 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(nodeTolerationCfg.DefaultNotReadyTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultNotReadyTolerationSeconds"))...)
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(nodeTolerationCfg.DefaultUnreachableTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultUnreachableTolerationSeconds"))...)
+	}
+
+	if bundle := cfg.RegistryCABundle; bundle != nil {
+		bundlePath := fldPath.Child("registryCABundle")
+		if bundle.SecretRef != nil && bundle.Inline != nil {
+			allErrs = append(allErrs, field.Invalid(bundlePath, bundle, "secretRef and inline are mutually exclusive"))
+			return allErrs
+		}
+		if bundle.SecretRef == nil && bundle.Inline == nil {
+			allErrs = append(allErrs, field.Required(bundlePath, "either secretRef or inline must be set"))
+		}
+		if bundle.SecretRef != nil {
+			if bundle.SecretRef.Name == "" {
+				allErrs = append(allErrs, field.Required(bundlePath.Child("secretRef", "name"), "secret name must not be empty"))
+			}
+			if bundle.SecretRef.Namespace == "" {
+				allErrs = append(allErrs, field.Required(bundlePath.Child("secretRef", "namespace"), "secret namespace must not be empty"))
+			}
+		}
+		if bundle.Inline != nil {
+			if cert, err := utils.DecodeCertificate([]byte(*bundle.Inline)); err != nil {
+				allErrs = append(allErrs, field.Invalid(bundlePath.Child("inline"), *bundle.Inline, "caBundle is not a valid PEM-encoded certificate"))
+			} else if time.Now().Add(7 * 24 * time.Hour).After(cert.NotAfter) {
+				allErrs = append(allErrs, field.Invalid(bundlePath.Child("inline"), *bundle.Inline, "caBundle certificate is either expired or expires within 7 days"))
+			}
+		}
 	}
 
 	return allErrs

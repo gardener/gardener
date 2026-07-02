@@ -298,6 +298,39 @@ var _ = Describe("ValuesHelper", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(mergedGardenletConfig(false)))
 		})
+
+		It("should not inherit registryCABundle from parent even when child has none", func() {
+			parentConfig.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "parent-secret", Namespace: "garden"},
+				Inline:    new("parent-ca"),
+			}
+			vh = NewValuesHelper(parentConfig)
+
+			result, err := vh.MergeGardenletConfiguration(gardenletConfig)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.RegistryCABundle).To(BeNil())
+		})
+
+		It("should not merge registryCABundle sub-fields from parent when child specifies it", func() {
+			parentConfig.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "parent-secret", Namespace: "garden"},
+				Inline:    new("parent-ca"),
+			}
+			vh = NewValuesHelper(parentConfig)
+
+			childConfig := gardenletConfig.DeepCopy()
+			childConfig.RegistryCABundle = &gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "child-secret", Namespace: "garden"},
+				Inline:    new("child-ca"),
+			}
+
+			result, err := vh.MergeGardenletConfiguration(childConfig)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.RegistryCABundle).To(Equal(&gardenletconfigv1alpha1.RegistryCABundle{
+				SecretRef: &corev1.SecretReference{Name: "child-secret", Namespace: "garden"},
+				Inline:    new("child-ca"),
+			}))
+		})
 	})
 
 	Describe("#GetGardenletChartValues", func() {

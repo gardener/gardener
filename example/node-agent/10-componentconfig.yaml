@@ -18,7 +18,7 @@ debugging:
 featureGates: {}
 apiServer:
   server: https://localhost
-  caBundle: <some-base64-encoded-ca-bundle>
+  caFile: /path/to/ca/file
 #bootstrap:
 #  kubeletDataVolumeSize: 50Gi
 controllers:

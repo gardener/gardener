@@ -143,6 +143,11 @@ func (g *graph) handleManagedSeedCreateOrUpdateForSeeds(ctx context.Context, man
 		addSeedResources(seedTemplate.Spec, g, seedVertex)
 	}
 
+	if gardenletConfig != nil && gardenletConfig.RegistryCABundle != nil && gardenletConfig.RegistryCABundle.SecretRef != nil {
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, gardenletConfig.RegistryCABundle.SecretRef.Namespace, gardenletConfig.RegistryCABundle.SecretRef.Name)
+		g.addEdge(secretVertex, managedSeedVertex)
+	}
+
 	if gardenletConfig == nil || managedSeed.Spec.Gardenlet.Bootstrap == nil {
 		return
 	}

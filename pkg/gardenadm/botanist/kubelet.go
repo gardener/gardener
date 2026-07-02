@@ -18,7 +18,10 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-const kubeletTokenFilePermission = 0o600
+const (
+	kubeletTokenFilePermission    = 0o600
+	kubeletCABundleFilePermission = 0o644
+)
 
 // WriteKubeletBootstrapKubeconfig writes the kubelet bootstrap kubeconfig to the file system.
 func (b *GardenadmBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context) error {
@@ -47,12 +50,17 @@ func (b *GardenadmBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context)
 		return fmt.Errorf("failed to retrieve cluster CA secret")
 	}
 
+	caFilePath := nodeagentconfigv1alpha1.ClusterCAFilePath
+	if err := b.FS.WriteFile(caFilePath, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle], kubeletCABundleFilePermission); err != nil {
+		return fmt.Errorf("failed to write CA bundle to file (%q): %w", caFilePath, err)
+	}
+
 	kubeletBootstrapKubeconfigCreator := &bootstrappers.KubeletBootstrapKubeconfig{
 		Log: b.Logger,
 		FS:  b.FS,
 		APIServerConfig: nodeagentconfigv1alpha1.APIServer{
-			Server:   "localhost",
-			CABundle: caBundleSecret.Data[secretsutils.DataKeyCertificateBundle],
+			Server: "localhost",
+			CAFile: caFilePath,
 		},
 	}
 

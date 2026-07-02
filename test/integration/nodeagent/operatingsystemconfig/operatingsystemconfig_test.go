@@ -1169,14 +1169,18 @@ kubeReserved:
 				Permissions: new(uint32(0600)),
 			}
 
+			tempDir := GinkgoT().TempDir()
 			nodeAgentConfig = &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
-					CABundle: []byte("new-ca-bundle"),
-					Server:   "https://test-server",
+					CAFile: tempDir + "/ca-bundle.crt",
+					Server: "https://test-server",
 				},
 			}
+			Expect(fakeFS.WriteFile(nodeAgentConfig.APIServer.CAFile, []byte("ca-bundle"), 0600)).To(Succeed())
+			// clientcmd validates certificate-authority paths via os.Open, so the file must exist on the real OS filesystem too.
+			Expect(os.WriteFile(nodeAgentConfig.APIServer.CAFile, []byte("ca-bundle"), 0600)).To(Succeed())
 
-			nodeAgentKubeconfig := getNodeAgentKubeConfig([]byte("old-ca-bundle"), nodeAgentConfig.APIServer.Server, "old-cert")
+			nodeAgentKubeconfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CAFile, nodeAgentConfig.APIServer.Server, "old-cert")
 			Expect(fakeFS.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(nodeAgentKubeconfig), 0600)).To(Succeed())
 
 			nodeAgentConfigFile := extensionsv1alpha1.File{
@@ -1185,7 +1189,7 @@ kubeReserved:
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
 						Data: utils.EncodeBase64([]byte(`apiServer:
-  caBundle: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+  caFile: ` + nodeAgentConfig.APIServer.CAFile + `
   server: ` + nodeAgentConfig.APIServer.Server + `
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 kind: NodeAgentConfiguration
@@ -1214,14 +1218,7 @@ kind: NodeAgentConfiguration
 				&operatingsystemconfig.KubeletHealthCheckRetryInterval, 200*time.Millisecond,
 				&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL,
 				&operatingsystemconfig.RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, fs afero.Afero, restConfig *rest.Config, _ string) error {
-					nodeAgentConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{
-						APIServer: nodeagentconfigv1alpha1.APIServer{
-							CABundle: []byte("new-ca-bundle"),
-							Server:   "https://test-server",
-						},
-					}
-
-					newKubeConfig := getNodeAgentKubeConfig(restConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
+					newKubeConfig := getNodeAgentKubeConfig(restConfig.CAFile, nodeAgentConfig.APIServer.Server, "new-cert")
 
 					Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(newKubeConfig), 0600)).To(Succeed())
 
@@ -1454,7 +1451,7 @@ preferences: {}
 			expectedBootStrapConfig := `apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+    certificate-authority: ` + nodeAgentConfig.APIServer.CAFile + `
     server: ` + nodeAgentConfig.APIServer.Server + `
   name: default-cluster
 contexts:
@@ -1473,7 +1470,7 @@ users:
 			test.AssertFileOnDisk(fakeFS, kubelet.PathKubeconfigBootstrap, expectedBootStrapConfig, 0600)
 
 			// Verify the kubeconfig has the latest CA
-			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CABundle, nodeAgentConfig.APIServer.Server, "new-cert")
+			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CAFile, nodeAgentConfig.APIServer.Server, "new-cert")
 			test.AssertFileOnDisk(fakeFS, nodeagentconfigv1alpha1.KubeconfigFilePath, expectedNodeAgentKubeConfig, 0600)
 
 			By("Assert that unit actions have been applied")
@@ -1549,11 +1546,11 @@ func waitForUpdatedNodeLabelUpdateResultSuccessful(node *corev1.Node) {
 	}).Should(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
 }
 
-func getNodeAgentKubeConfig(caBundle []byte, server, clientCertificate string) string {
+func getNodeAgentKubeConfig(caFile, server, clientCertificate string) string {
 	return `apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(caBundle) + `
+    certificate-authority: ` + caFile + `
     server: ` + server + `
   name: node-agent
 contexts:

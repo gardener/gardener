@@ -6,6 +6,7 @@ package system_test
 
 import (
 	"context"
+	"encoding/base64"
 	"net"
 
 	"github.com/Masterminds/semver/v3"
@@ -625,9 +626,78 @@ var _ = Describe("ShootSystem", func() {
 				})
 			})
 		})
+
+		Context("registry-ca-bundle resources", func() {
+			var (
+				registryCABundle = "-----BEGIN CERTIFICATE-----\nfake-ca\n-----END CERTIFICATE-----\n"
+
+				expectedConfigMap = func(caBundle string) *corev1.ConfigMap {
+					return &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "registry-ca-bundle", Namespace: "kube-system"},
+						Data:       map[string]string{"ca.b64": base64.StdEncoding.EncodeToString([]byte(caBundle))},
+					}
+				}
+				expectedRole = &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{Name: "registry-ca-bundle", Namespace: "kube-system"},
+					Rules: []rbacv1.PolicyRule{{
+						APIGroups:     []string{""},
+						Resources:     []string{"configmaps"},
+						ResourceNames: []string{"registry-ca-bundle"},
+						Verbs:         []string{"get"},
+					}},
+				}
+				expectedRoleBinding = &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{Name: "registry-ca-bundle", Namespace: "kube-system"},
+					Subjects:   []rbacv1.Subject{{Kind: "Group", Name: "system:bootstrappers", APIGroup: "rbac.authorization.k8s.io"}},
+					RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "Role", Name: "registry-ca-bundle"},
+				}
+			)
+
+			When("RegistryCABundle is set and cluster has workers", func() {
+				BeforeEach(func() {
+					values.RegistryCABundle = &registryCABundle
+				})
+
+				It("should deploy the ConfigMap, Role, and RoleBinding in kube-system", func() {
+					Expect(managedResource).To(contain(
+						expectedConfigMap(registryCABundle),
+						expectedRole,
+						expectedRoleBinding,
+					))
+				})
+			})
+
+			When("RegistryCABundle is nil", func() {
+				It("should not deploy any registry-ca-bundle resources", func() {
+					manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, manifest := range manifests {
+						Expect(manifest).NotTo(ContainSubstring("registry-ca-bundle"))
+					}
+				})
+			})
+
+			When("shoot is workerless and RegistryCABundle is set", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+					values.RegistryCABundle = &registryCABundle
+				})
+
+				It("should not deploy any registry-ca-bundle resources", func() {
+					manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, manifest := range manifests {
+						Expect(manifest).NotTo(ContainSubstring("registry-ca-bundle"))
+					}
+				})
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
+
 		It("should successfully destroy all resources", func() {
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())

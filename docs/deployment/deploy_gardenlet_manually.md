@@ -136,6 +136,9 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
         namespace: garden
     ```
 
+5. If shoot worker nodes pull container images from a private registry that requires a custom CA, configure `registryCABundle` in your gardenlet configuration.
+   For details, see [Private Registry Configuration](#private-registry-configuration).
+
 ### Prepare Seed Specification
 
 When gardenlet  starts, it tries to register a `Seed` resource in the garden cluster based on the specification provided in `seedConfig` in its configuration.
@@ -575,6 +578,53 @@ This way, network connectivity to the cluster in which gardenlet runs is not req
 When you delete this resource, nothing happens: gardenlet remains running with the configuration as before.
 However, self-upgrades are obviously not possible anymore.
 In order to upgrade it, you have to either recreate the `Gardenlet` object, or redeploy the Helm chart.
+
+## Private Registry Configuration
+
+If your container images are hosted in a private registry that requires a custom (self-signed or corporate) certificate authority, you can configure the CA bundle via `config.registryCABundle` inside the `Gardenlet` resource's `spec.config` (a `GardenletConfiguration`).
+Once set, Gardener distributes the CA certificate to the worker nodes of every shoot managed by this seed, so that containerd on those nodes trusts the registry when pulling images.
+
+Exactly one of `secretRef` or `inline` must be set.
+
+**Reference to a Secret (recommended):**
+
+```yaml
+spec:
+  config:
+    registryCABundle:
+      secretRef:
+        name: my-registry-ca
+        namespace: <namespace>
+```
+
+The referenced Secret must exist in the virtual garden cluster and contain the PEM-encoded CA bundle under the key `bundle.crt`:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-registry-ca
+  namespace: <namespace>
+type: Opaque
+data:
+  bundle.crt: <base64-encoded-pem-ca-bundle>
+```
+
+**Inline PEM certificate:**
+
+```yaml
+spec:
+  config:
+    registryCABundle:
+      inline: |
+        -----BEGIN CERTIFICATE-----
+        MIIBxTCCAW...
+        -----END CERTIFICATE-----
+```
+
+For gardenlets deployed via `ManagedSeed`, set the same field under `spec.gardenlet.config.registryCABundle`.
+When `spec.gardenlet.mergeWithParent` is `true` (the default), the `ManagedSeed` inherits `registryCABundle` from the parent gardenlet's `GardenletConfiguration` if the `ManagedSeed` does not set it explicitly.
 
 ## Re-Bootstrap
 
