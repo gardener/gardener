@@ -134,6 +134,12 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.142.0
 	BackupEntryForGarden featuregate.Feature = "BackupEntryForGarden"
+
+	// RemoveHTTPProxyLegacyPort removes the old HTTP proxy network infrastructure on the seed side (ingress
+	// gateway port tls-tunnel, Gateway, EnvoyFilter, etc.) through the gardenlet, as described in GEP-0030.
+	// owner: @jamand @timebertt
+	// alpha: v1.146.0
+	RemoveHTTPProxyLegacyPort featuregate.Feature = "RemoveHTTPProxyLegacyPort"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -179,6 +185,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 	BackupEntryForGarden:           {Default: false, PreRelease: featuregate.Alpha},
+	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

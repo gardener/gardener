@@ -16,6 +16,7 @@ spec:
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true
       DisableNginxIngressInSeed: true
+      RemoveHTTPProxyLegacyPort: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true
