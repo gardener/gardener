@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -50,35 +52,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	// The deletionTimestamp labels the NamespacedCloudProfile as intended to get deleted. Before deletion, it has to be ensured that
-	// no Shoots and Seed are assigned to the NamespacedCloudProfile anymore. If this is the case then the controller will remove
-	// the finalizers from the NamespacedCloudProfile so that it can be garbage collected.
 	if namespacedCloudProfile.DeletionTimestamp != nil {
-		if !sets.New(namespacedCloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
-			return reconcile.Result{}, nil
-		}
-
-		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, namespacedCloudProfile)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		if len(associatedShoots) == 0 {
-			log.Info("No Shoots are referencing the NamespacedCloudProfile, deletion accepted")
-
-			if controllerutil.ContainsFinalizer(namespacedCloudProfile, gardencorev1beta1.GardenerName) {
-				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, namespacedCloudProfile, gardencorev1beta1.GardenerName); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-				}
-			}
-
-			return reconcile.Result{}, nil
-		}
-
-		message := fmt.Sprintf("Cannot delete NamespacedCloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.Recorder.Eventf(namespacedCloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionReconcile, message)
-		return reconcile.Result{}, fmt.Errorf("%s", message)
+		return r.delete(ctx, namespacedCloudProfile)
 	}
 
 	if !controllerutil.ContainsFinalizer(namespacedCloudProfile, gardencorev1beta1.GardenerName) {
@@ -101,7 +76,42 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{
+		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&namespacedCloudProfile.Status.CloudProfileSpec, time.Now()),
+	}, nil
+}
+
+// delete deletes the NamespacedCloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
+// no Shoots or Seeds, are assigned to the CloudProfile anymore.
+// If this is the case, the controller will remove the finalizers from the NamespacedCloudProfile so that it can be garbage collected.
+func (r *Reconciler) delete(ctx context.Context, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
+	if !sets.New(namespacedCloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+		return reconcile.Result{}, nil
+	}
+
+	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, namespacedCloudProfile)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if len(associatedShoots) == 0 {
+		log.Info("No Shoots are referencing the NamespacedCloudProfile, deletion accepted")
+
+		if controllerutil.ContainsFinalizer(namespacedCloudProfile, gardencorev1beta1.GardenerName) {
+			log.Info("Removing finalizer")
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, namespacedCloudProfile, gardencorev1beta1.GardenerName); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			}
+		}
+
+		return reconcile.Result{}, nil
+	}
+
+	message := fmt.Sprintf("Cannot delete NamespacedCloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
+	r.Recorder.Eventf(namespacedCloudProfile, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionReconcile, message)
+	return reconcile.Result{}, fmt.Errorf("%s", message)
 }
 
 func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile, parentCloudProfile *gardencorev1beta1.CloudProfile) error {
@@ -117,7 +127,7 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	namespacedCloudProfile.Status.CloudProfileSpec = cloudProfile.Spec
 
 	if namespacedCloudProfile.Spec.Kubernetes != nil {
-		namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, expirableVersionKeyFunc, mergeExpirationDates, false)
+		namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, expirableVersionKeyFunc, mergeExpirableVersions, false)
 	}
 
 	// TODO(Roncossek): Remove TransformSpecToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
@@ -182,16 +192,112 @@ func defaultMachineImageArchitectures(cloudProfile gardencore.CloudProfileSpec, 
 }
 
 var (
-	expirableVersionKeyFunc    = func(v gardencorev1beta1.ExpirableVersion) string { return v.Version }
-	machineImageKeyFunc        = func(i gardencorev1beta1.MachineImage) string { return i.Name }
-	machineImageVersionKeyFunc = func(v gardencorev1beta1.MachineImageVersion) string { return v.Version }
-	machineTypeKeyFunc         = func(t gardencorev1beta1.MachineType) string { return t.Name }
-	volumeTypeKeyFunc          = func(t gardencorev1beta1.VolumeType) string { return t.Name }
+	expirableVersionKeyFunc        = func(v gardencorev1beta1.ExpirableVersion) string { return v.Version }
+	classificationLifecycleKeyFunc = func(c gardencorev1beta1.LifecycleStage) string { return string(c.Classification) }
+	machineImageKeyFunc            = func(i gardencorev1beta1.MachineImage) string { return i.Name }
+	machineImageVersionKeyFunc     = func(v gardencorev1beta1.MachineImageVersion) string { return v.Version }
+	machineTypeKeyFunc             = func(t gardencorev1beta1.MachineType) string { return t.Name }
+	volumeTypeKeyFunc              = func(t gardencorev1beta1.VolumeType) string { return t.Name }
 )
 
-func mergeExpirationDates(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
-	base.ExpirationDate = override.ExpirationDate
+// mergeExpirableVersions merges one parent ExpirableVersion with a NamespacedCloudProfile override.
+// Old classification and ExpirationDate fields are first migrated to lifecycle classifications so
+// old classifications can be merged with lifecycle classifications from parent data.
+func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
+	migratedBase := migrateVersionToLifecycles(base)
+	migratedOverride := migrateVersionToLifecycles(override)
+
+	allowAdditionalLifecycleClassifications := v1beta1helper.IsUsingLegacyClassifications(override)
+
+	if allowAdditionalLifecycleClassifications && override.Classification != nil {
+		migratedBase.Lifecycle = removeImplicitLaterLifecycleClassifications(migratedBase.Lifecycle, migratedOverride.Lifecycle[0].Classification)
+	}
+
+	migratedBase.Lifecycle = mergeDeep(
+		migratedBase.Lifecycle,
+		migratedOverride.Lifecycle,
+		classificationLifecycleKeyFunc,
+		mergeClassificationLifecycles,
+		allowAdditionalLifecycleClassifications,
+	)
+
+	slices.SortFunc(migratedBase.Lifecycle, compareLifecycleStages)
+	adjustLifecycleStartTimes(migratedBase.Lifecycle, migratedOverride.Lifecycle)
+
+	return migratedBase
+}
+
+// removeImplicitLaterLifecycleClassifications removes implicit no-start lifecycle classifications that are later than the
+// old classification override. Without this, an old classification such as preview
+// would be immediately superseded by the parent default supported stage during migration.
+func removeImplicitLaterLifecycleClassifications(stages []gardencorev1beta1.LifecycleStage, classification gardencorev1beta1.VersionClassification) []gardencorev1beta1.LifecycleStage {
+	classificationStage := gardencorev1beta1.LifecycleStage{Classification: classification}
+	return slices.DeleteFunc(stages, func(stage gardencorev1beta1.LifecycleStage) bool {
+		isImplicitStage := stage.StartTime == nil
+		isLaterStage := compareLifecycleStages(stage, classificationStage) > 0
+		return isImplicitStage && isLaterStage
+	})
+}
+
+func adjustLifecycleStartTimes(base, override []gardencorev1beta1.LifecycleStage) {
+	for _, overrideStage := range override {
+		if overrideStage.StartTime == nil {
+			continue
+		}
+
+		for i := range base {
+			comparison := compareLifecycleStages(base[i], overrideStage)
+
+			switch {
+			case comparison < 0 && base[i].StartTime != nil && overrideStage.StartTime.Before(base[i].StartTime):
+				base[i].StartTime = overrideStage.StartTime
+			case comparison > 0 && (base[i].StartTime == nil || base[i].StartTime.Before(overrideStage.StartTime)):
+				base[i].StartTime = overrideStage.StartTime
+			}
+		}
+	}
+}
+
+func compareLifecycleStages(a, b gardencorev1beta1.LifecycleStage) int {
+	order := map[gardencorev1beta1.VersionClassification]int{
+		gardencorev1beta1.ClassificationUnavailable: 0,
+		gardencorev1beta1.ClassificationPreview:     1,
+		gardencorev1beta1.ClassificationSupported:   2,
+		gardencorev1beta1.ClassificationDeprecated:  3,
+		gardencorev1beta1.ClassificationExpired:     4,
+	}
+	return order[a.Classification] - order[b.Classification]
+}
+
+func mergeClassificationLifecycles(base, override gardencorev1beta1.LifecycleStage) gardencorev1beta1.LifecycleStage {
+	base.StartTime = override.StartTime
 	return base
+}
+
+// migrateVersionToLifecycles converts a legacy ExpirableVersion using Classification or ExpirationDate
+// to lifecycle classifications. If lifecycle classifications are already set, it returns the version unchanged.
+func migrateVersionToLifecycles(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
+	if len(version.Lifecycle) > 0 {
+		return version
+	}
+
+	result := gardencorev1beta1.ExpirableVersion{
+		Version: version.Version,
+		Lifecycle: []gardencorev1beta1.LifecycleStage{
+			{
+				Classification: v1beta1helper.CurrentLifecycleClassification(version),
+			},
+		},
+	}
+
+	if version.ExpirationDate != nil {
+		result.Lifecycle = append(result.Lifecycle, gardencorev1beta1.LifecycleStage{
+			Classification: gardencorev1beta1.ClassificationExpired,
+			StartTime:      version.ExpirationDate,
+		})
+	}
+
+	return result
 }
 
 func mergeMachineImages(base, override gardencorev1beta1.MachineImage) gardencorev1beta1.MachineImage {
@@ -211,10 +317,14 @@ func mergeMachineImageVersions(base, override gardencorev1beta1.MachineImageVers
 		// If the NamespacedCloudProfile machine image version has been there before, do not merge it with the parent CloudProfile machine image version.
 		return override
 	}
-	base.ExpirableVersion = mergeExpirationDates(base.ExpirableVersion, override.ExpirableVersion)
+	base.ExpirableVersion = mergeExpirableVersions(base.ExpirableVersion, override.ExpirableVersion)
 	return base
 }
 
+// mergeDeep merges override slice into baseArr slice by key.
+// Existing items are replaced, or merged with mergeFunc when provided.
+// New override items are added only if allowAdditional is true.
+// The original order from baseArr is preserved.
 func mergeDeep[T any](baseArr, override []T, keyFunc func(T) string, mergeFunc func(T, T) T, allowAdditional bool) []T {
 	existing := utils.CreateOrderedMapFromSlice(baseArr, keyFunc)
 	for _, value := range override {
