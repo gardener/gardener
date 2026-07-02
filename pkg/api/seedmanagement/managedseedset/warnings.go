@@ -27,7 +27,7 @@ func GetWarnings(managedseedset *seedmanagement.ManagedSeedSet) []string {
 
 	if dns := managedseedset.Spec.ShootTemplate.Spec.DNS; dns != nil {
 		path := field.NewPath("spec", "shootTemplate", "spec", "dns")
-		warnings = append(warnings, shoot.GetDNSProviderWarnings(dns, path)...)
+		warnings = append(warnings, shoot.GetDNSProviderWarnings(dns, path, nil)...)
 	}
 
 	return warnings

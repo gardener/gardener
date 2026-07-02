@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -40,11 +41,11 @@ var _ = Describe("Warnings", func() {
 		})
 
 		It("should return nil when shoot is nil", func() {
-			Expect(GetWarnings(ctx, nil, nil, credentialsRotationInterval)).To(BeEmpty())
+			Expect(GetWarnings(ctx, nil, nil, credentialsRotationInterval, nil)).To(BeEmpty())
 		})
 
 		It("should return nil when shoot does not have any problematic configuration", func() {
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
 		})
 
 		Context("credentials rotation", func() {
@@ -54,11 +55,11 @@ var _ = Describe("Warnings", func() {
 
 			It("should not return a warning when credentials rotation is due in case shoot is too young", func() {
 				shoot.CreationTimestamp = metav1.Now()
-				Expect(GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)).To(BeEmpty())
+				Expect(GetWarnings(ctx, shoot, shoot, credentialsRotationInterval, nil)).To(BeEmpty())
 			})
 
 			It("should return a warning when credentials rotation is due", func() {
-				Expect(GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you should consider rotating the shoot credentials")))
+				Expect(GetWarnings(ctx, shoot, shoot, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("you should consider rotating the shoot credentials")))
 			})
 
 			DescribeTable("warnings for specific credentials rotations",
@@ -77,7 +78,7 @@ var _ = Describe("Warnings", func() {
 					mutateRotation(rotation)
 					shoot.Status.Credentials = &core.ShootCredentials{Rotation: rotation}
 
-					Expect(GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)).To(matcher)
+					Expect(GetWarnings(ctx, shoot, shoot, credentialsRotationInterval, nil)).To(matcher)
 				},
 
 				Entry("ca nil", ContainElement(ContainSubstring("you should consider rotating the certificate authorities")), nil,
@@ -245,7 +246,7 @@ var _ = Describe("Warnings", func() {
 			shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
 				PodEvictionTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13 and is forbidden to be set starting from Kubernetes 1.33. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13 and is forbidden to be set starting from Kubernetes 1.33. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")))
 		})
 
 		It("should warn when maxEmptyBulkDelete is set for shoots using kubernetes < v1.33", func() {
@@ -253,27 +254,27 @@ var _ = Describe("Warnings", func() {
 			shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
 				MaxEmptyBulkDelete: new(int32(5)),
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
 		})
 
 		It("should warn when rotate-etcd-encryption-key-start operation annotation is set", func() {
 			shoot.Annotations = map[string]string{
 				"gardener.cloud/operation": "rotate-etcd-encryption-key-start",
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-start. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-start. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
 		})
 
 		It("should warn when rotate-etcd-encryption-key-complete operation annotation is set", func() {
 			shoot.Annotations = map[string]string{
 				"gardener.cloud/operation": "rotate-etcd-encryption-key-complete",
 			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-complete. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal("you are setting the operation annotation to rotate-etcd-encryption-key-complete. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the rotate-etcd-encryption-key annotation, which performs a full rotation of the ETCD encryption key.")))
 		})
 
 		DescribeTable("spec.secretBindingName",
 			func(secretBindingName *string, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.SecretBindingName = secretBindingName
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(matcher)
 			},
 
 			Entry("should return a warning when secretBindingName is set", new("my-secret-binding"),
@@ -285,18 +286,18 @@ var _ = Describe("Warnings", func() {
 			It("should not return a warning when cloudProfileName is set and the Kubernetes version is < v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.32.3"
 				shoot.Spec.CloudProfileName = new("local-profile")
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
 			})
 
 			It("should return a warning when cloudProfileName is set and the Kubernetes version is >= v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.33.1"
 				shoot.Spec.CloudProfileName = new("local-profile")
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.cloudProfileName field. The field is deprecated")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("you are setting the spec.cloudProfileName field. The field is deprecated")))
 			})
 
 			It("should not return a warning when cloudProfileName is empty and the Kubernetes version is >= v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.33.1"
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
 			})
 		})
 
@@ -304,7 +305,7 @@ var _ = Describe("Warnings", func() {
 			It("should print a warning when addons are set", func() {
 				shoot.Spec.Addons = &core.Addons{}
 
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.addons field. The field is deprecated and will be forbidden starting with Kubernetes 1.35.")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("you are setting the spec.addons field. The field is deprecated and will be forbidden starting with Kubernetes 1.35.")))
 			})
 		})
 
@@ -315,7 +316,7 @@ var _ = Describe("Warnings", func() {
 					Enabled: new(true),
 					Mode:    new(core.ProxyModeIPVS),
 				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are using IPVS mode for kube-proxy")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("you are using IPVS mode for kube-proxy")))
 			})
 
 			It("should not print a warning when kube-proxy mode is set to 'IPVS' and the Kubernetes version is < v1.35", func() {
@@ -324,7 +325,7 @@ var _ = Describe("Warnings", func() {
 					Enabled: new(true),
 					Mode:    new(core.ProxyModeIPVS),
 				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
 			})
 
 			It("should print a warning when kube-proxy mode is switched to 'IPVS' for Kubernetes versions < 1.35", func() {
@@ -339,7 +340,7 @@ var _ = Describe("Warnings", func() {
 					Mode:    new(core.ProxyModeIPTables),
 				}
 
-				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))
+				Expect(GetWarnings(ctx, shoot, oldShoot, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("you have switched to IPVS mode for kube-proxy")))
 			})
 		})
 
@@ -349,14 +350,14 @@ var _ = Describe("Warnings", func() {
 					KubeMaxPDVols: new("20"),
 				}
 
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("you are setting the spec.kubernetes.kubeScheduler.kubeMaxPDVols field")))
 			})
 		})
 
 		DescribeTable("spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication",
 			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(matcher)
 			},
 
 			Entry("should not return a warning when kubeAPIServerConfig is nil",
@@ -376,7 +377,7 @@ var _ = Describe("Warnings", func() {
 		DescribeTable("spec.kubernetes.kubeAPIServer.watchCacheSizes.default",
 			func(kubeAPIServerConfig *core.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.Kubernetes.KubeAPIServer = kubeAPIServerConfig
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(matcher)
 			},
 
 			Entry("should not return a warning when kubeAPIServerConfig is nil",
@@ -400,7 +401,7 @@ var _ = Describe("Warnings", func() {
 		DescribeTable("spec.dns.providers[].secretName",
 			func(dns *core.DNS, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.DNS = dns
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(matcher)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(matcher)
 			},
 			Entry("should not return a warning when dns is nil",
 				nil,
@@ -419,6 +420,19 @@ var _ = Describe("Warnings", func() {
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
 		)
+
+		It("should not return a suppressed secretName warning", func() {
+			shoot.Spec.DNS = &core.DNS{
+				Providers: []core.DNSProvider{
+					{
+						SecretName:     new("synced-secret"),
+						CredentialsRef: dnsSecretCredentialsRef("synced-secret"),
+					},
+				},
+			}
+
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, []int{0})).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
+		})
 	})
 
 	Describe("#GetKubeAPIServerWarnings", func() {
@@ -468,7 +482,7 @@ var _ = Describe("Warnings", func() {
 	Describe("#GetDNSProviderWarnings", func() {
 		DescribeTable("providers[].secretName",
 			func(dns *core.DNS, fldPath *field.Path, matcher gomegatypes.GomegaMatcher) {
-				Expect(GetDNSProviderWarnings(dns, fldPath)).To(matcher)
+				Expect(GetDNSProviderWarnings(dns, fldPath, nil)).To(matcher)
 			},
 
 			Entry("should not return a warning when dns.providers is nil",
@@ -513,11 +527,53 @@ var _ = Describe("Warnings", func() {
 					Not(ContainElement(ContainSubstring("spec.dns.providers[0].secretName"))),
 				),
 			),
+			Entry("should return warnings for all providers with secretName",
+				&core.DNS{Providers: []core.DNSProvider{
+					{
+						SecretName:     new("synced-secret"),
+						CredentialsRef: dnsSecretCredentialsRef("synced-secret"),
+					},
+					{SecretName: new("secret")},
+					{CredentialsRef: dnsSecretCredentialsRef("credentials-secret")},
+					{
+						SecretName:     new("mismatched-secret"),
+						CredentialsRef: dnsSecretCredentialsRef("other-secret"),
+					},
+				}},
+				field.NewPath("spec", "dns"),
+				ConsistOf(
+					Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead."),
+					Equal("you are setting the spec.dns.providers[1].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[1].credentialsRef instead."),
+					Equal("you are setting the spec.dns.providers[3].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[3].credentialsRef instead."),
+				),
+			),
 			Entry("should use custom field path in warning message",
 				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				field.NewPath("custom", "path"),
 				ContainElement(Equal("you are setting the custom.path.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use custom.path.providers[0].credentialsRef instead.")),
 			),
 		)
+
+		It("should not return warnings for suppressed provider indexes", func() {
+			dns := &core.DNS{
+				Providers: []core.DNSProvider{
+					{
+						SecretName:     new("synced-secret"),
+						CredentialsRef: dnsSecretCredentialsRef("synced-secret"),
+					},
+					{SecretName: new("secret")},
+				},
+			}
+
+			Expect(GetDNSProviderWarnings(dns, field.NewPath("spec", "dns"), []int{0})).To(ConsistOf(Equal("you are setting the spec.dns.providers[1].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[1].credentialsRef instead.")))
+		})
 	})
 })
+
+func dnsSecretCredentialsRef(name string) *autoscalingv1.CrossVersionObjectReference {
+	return &autoscalingv1.CrossVersionObjectReference{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Name:       name,
+	}
+}

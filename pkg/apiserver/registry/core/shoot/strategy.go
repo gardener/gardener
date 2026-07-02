@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -41,11 +42,28 @@ type shootStrategy struct {
 	names.NameGenerator
 
 	credentialsRotationInterval time.Duration
+
+	dnsProviderSecretNameWarningSuppressions *sync.Map
 }
+
+type dnsProviderSecretNameWarningSuppressionKey struct {
+	namespace       string
+	name            string
+	uid             string
+	resourceVersion string
+	generation      int64
+}
+
+const dnsProviderSecretNameWarningSuppressionTTL = time.Minute
 
 // NewStrategy returns a new storage strategy for Shoots.
 func NewStrategy(credentialsRotationInterval time.Duration) shootStrategy {
-	return shootStrategy{api.Scheme, names.SimpleNameGenerator, credentialsRotationInterval}
+	return shootStrategy{
+		ObjectTyper:                              api.Scheme,
+		NameGenerator:                            names.SimpleNameGenerator,
+		credentialsRotationInterval:              credentialsRotationInterval,
+		dnsProviderSecretNameWarningSuppressions: &sync.Map{},
+	}
 }
 
 // Strategy should implement rest.RESTCreateUpdateStrategy
@@ -55,8 +73,9 @@ func (shootStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
+func (s shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot := obj.(*core.Shoot)
+	syncedDNSProviderIndexes := dnsProviderIndexesSyncedFromCredentialsRef(newShoot)
 
 	newShoot.Generation = 1
 	newShoot.Status = core.ShootStatus{}
@@ -64,11 +83,13 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	gardenerutils.SyncCloudProfileFields(nil, newShoot)
 
 	SyncDNSProviderCredentials(newShoot)
+	s.storeDNSProviderSecretNameWarningSuppressions(newShoot, nil, syncedDNSProviderIndexes)
 }
 
-func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
+func (s shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
+	syncedDNSProviderIndexes := dnsProviderIndexesSyncedFromCredentialsRef(newShoot)
 
 	newShoot.Status = oldShoot.Status // can only be changed by shoots/status subresource
 
@@ -88,6 +109,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
 	capEventTTL(newShoot.Spec.Kubernetes.KubeAPIServer)
+
+	s.storeDNSProviderSecretNameWarningSuppressions(newShoot, oldShoot, syncedDNSProviderIndexes)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -227,13 +250,16 @@ func capEventTTL(kubeAPIServer *core.KubeAPIServerConfig) {
 	}
 }
 
-func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
+func (s shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
 	allErrs = append(allErrs, validation.ValidateForceDeletion(shoot, nil)...)
 	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
 	allErrs = append(allErrs, validation.ValidateInPlaceUpdateStrategyOnCreation(shoot)...)
+	if len(allErrs) > 0 {
+		s.clearDNSProviderSecretNameWarningSuppressions(shoot, nil)
+	}
 
 	return allErrs
 }
@@ -276,10 +302,15 @@ func (shootStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (shootStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (s shootStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newShoot := newObj.(*core.Shoot)
 	oldShoot := oldObj.(*core.Shoot)
-	return validation.ValidateShootUpdate(newShoot, oldShoot)
+	allErrs := validation.ValidateShootUpdate(newShoot, oldShoot)
+	if len(allErrs) > 0 {
+		s.clearDNSProviderSecretNameWarningSuppressions(newShoot, oldShoot)
+	}
+
+	return allErrs
 }
 
 func (shootStrategy) AllowUnconditionalUpdate() bool {
@@ -288,12 +319,85 @@ func (shootStrategy) AllowUnconditionalUpdate() bool {
 
 // WarningsOnCreate returns warnings to the client performing a create.
 func (s shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
-	return shoot.GetWarnings(ctx, obj.(*core.Shoot), nil, s.credentialsRotationInterval)
+	newShoot := obj.(*core.Shoot)
+	return shoot.GetWarnings(ctx, newShoot, nil, s.credentialsRotationInterval, s.consumeDNSProviderSecretNameWarningSuppressions(newShoot, nil))
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
-	return shoot.GetWarnings(ctx, obj.(*core.Shoot), old.(*core.Shoot), s.credentialsRotationInterval)
+	newShoot := obj.(*core.Shoot)
+	oldShoot := old.(*core.Shoot)
+	return shoot.GetWarnings(ctx, newShoot, oldShoot, s.credentialsRotationInterval, s.consumeDNSProviderSecretNameWarningSuppressions(newShoot, oldShoot))
+}
+
+func (s shootStrategy) storeDNSProviderSecretNameWarningSuppressions(shootObj, oldShoot *core.Shoot, suppressedIndexes []int) {
+	if s.dnsProviderSecretNameWarningSuppressions == nil || len(suppressedIndexes) == 0 {
+		return
+	}
+
+	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot)
+	s.dnsProviderSecretNameWarningSuppressions.Store(key, slices.Clone(suppressedIndexes))
+
+	time.AfterFunc(dnsProviderSecretNameWarningSuppressionTTL, func() {
+		s.dnsProviderSecretNameWarningSuppressions.Delete(key)
+	})
+}
+
+func (s shootStrategy) clearDNSProviderSecretNameWarningSuppressions(shootObj, oldShoot *core.Shoot) {
+	if s.dnsProviderSecretNameWarningSuppressions == nil {
+		return
+	}
+	s.dnsProviderSecretNameWarningSuppressions.Delete(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot))
+}
+
+func (s shootStrategy) consumeDNSProviderSecretNameWarningSuppressions(shootObj, oldShoot *core.Shoot) []int {
+	if s.dnsProviderSecretNameWarningSuppressions == nil {
+		return nil
+	}
+
+	value, ok := s.dnsProviderSecretNameWarningSuppressions.LoadAndDelete(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot))
+	if !ok {
+		return nil
+	}
+
+	indexes, ok := value.([]int)
+	if !ok {
+		return nil
+	}
+
+	return indexes
+}
+
+func dnsProviderIndexesSyncedFromCredentialsRef(shootObj *core.Shoot) []int {
+	if shootObj.Spec.DNS == nil {
+		return nil
+	}
+
+	var indexes []int
+	for i, provider := range shootObj.Spec.DNS.Providers {
+		if provider.SecretName == nil && isSecretDNSProviderCredentialsRef(provider.CredentialsRef) {
+			indexes = append(indexes, i)
+		}
+	}
+
+	return indexes
+}
+
+func dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot *core.Shoot) dnsProviderSecretNameWarningSuppressionKey {
+	uid := string(shootObj.UID)
+	resourceVersion := shootObj.ResourceVersion
+	if oldShoot != nil {
+		uid = string(oldShoot.UID)
+		resourceVersion = oldShoot.ResourceVersion
+	}
+
+	return dnsProviderSecretNameWarningSuppressionKey{
+		namespace:       shootObj.Namespace,
+		name:            shootObj.Name,
+		uid:             uid,
+		resourceVersion: resourceVersion,
+		generation:      shootObj.Generation,
+	}
 }
 
 type shootStatusStrategy struct {
@@ -470,7 +574,7 @@ func SyncDNSProviderCredentials(shoot *core.Shoot) {
 			continue
 		}
 
-		if provider.SecretName == nil && provider.CredentialsRef != nil && provider.CredentialsRef.APIVersion == "v1" && provider.CredentialsRef.Kind == "Secret" {
+		if provider.SecretName == nil && isSecretDNSProviderCredentialsRef(provider.CredentialsRef) {
 			shoot.Spec.DNS.Providers[idx].SecretName = &provider.CredentialsRef.Name
 			continue
 		}
@@ -480,4 +584,8 @@ func SyncDNSProviderCredentials(shoot *core.Shoot) {
 		// - both fields are set -> let the validation check if they are correct
 		// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 	}
+}
+
+func isSecretDNSProviderCredentialsRef(credentialsRef *autoscalingv1.CrossVersionObjectReference) bool {
+	return credentialsRef != nil && credentialsRef.APIVersion == "v1" && credentialsRef.Kind == "Secret"
 }
