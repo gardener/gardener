@@ -51,7 +51,9 @@ const Name = "gardener-resource-manager"
 
 // NewCommand creates a new cobra.Command for running gardener-resource-manager.
 func NewCommand() *cobra.Command {
-	opts := &options{}
+	opts := &options{
+		extraTargetNamespaces: make([]string, 0),
+	}
 
 	cmd := &cobra.Command{
 		Use:   Name,
