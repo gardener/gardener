@@ -16,10 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
-	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -271,10 +270,10 @@ var _ = Describe("Shoot State controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 				g.Expect(shootState.Spec.Gardener).To(HaveLen(1))
 
-				secretEntry := findGardenerEntry(shootState.Spec.Gardener, v1beta1constants.DataTypeSecret)
-				g.Expect(secretEntry).NotTo(BeNil())
-
-				var secretState shootstate.SecretState
+				var (
+					secretEntry = shootState.Spec.Gardener[0]
+					secretState shootstate.SecretState
+				)
 				g.Expect(json.Unmarshal(secretEntry.Data.Raw, &secretState)).To(Succeed())
 				g.Expect(secretState.Data).To(HaveKeyWithValue("key", []byte("initial-value")))
 			}).Should(Succeed())
@@ -295,22 +294,13 @@ var _ = Describe("Shoot State controller tests", func() {
 				g.Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", Not(Equal(lastBackup))))
 				g.Expect(shootState.Spec.Gardener).To(HaveLen(1))
 
-				secretEntry := findGardenerEntry(shootState.Spec.Gardener, v1beta1constants.DataTypeSecret)
-				g.Expect(secretEntry).NotTo(BeNil())
-
-				var secretState shootstate.SecretState
+				var (
+					secretEntry = shootState.Spec.Gardener[0]
+					secretState shootstate.SecretState
+				)
 				g.Expect(json.Unmarshal(secretEntry.Data.Raw, &secretState)).To(Succeed())
 				g.Expect(secretState.Data).To(HaveKeyWithValue("key", []byte("updated-value")))
 			}).Should(Succeed())
 		})
 	})
 })
-
-func findGardenerEntry(entries []gardencorev1beta1.GardenerResourceData, entryType string) *gardencorev1beta1.GardenerResourceData {
-	for i := range entries {
-		if entries[i].Type == entryType {
-			return &entries[i]
-		}
-	}
-	return nil
-}
