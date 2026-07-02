@@ -823,6 +823,10 @@ const (
 	// LabelCareConditionType is a key for a label on a ManagedResource indicating to which condition type its status
 	// should be aggregated.
 	LabelCareConditionType = "care.gardener.cloud/condition-type"
+	// AnnotationCareSkipHealthChecksUntil is an annotation on individual resources (Deployment, Etcd,
+	// ManagedResource). When present and its RFC3339 value is a future timestamp, the care health checker skips
+	// this resource during condition aggregation. An invalid or past timestamp is treated as absent.
+	AnnotationCareSkipHealthChecksUntil = "care.gardener.cloud/skip-health-checks-until"
 	// ObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
 	ObservabilityComponentsHealthy = "ObservabilityComponentsHealthy"
 
