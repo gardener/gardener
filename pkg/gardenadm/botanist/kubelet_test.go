@@ -6,6 +6,7 @@ package botanist_test
 
 import (
 	"context"
+	"io/fs"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -98,6 +99,10 @@ var _ = Describe("Kubelet", func() {
 				Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
 				Expect(b.FS.Exists("/var/lib/kubelet/kubeconfig-real")).To(BeFalse())
 				Expect(b.FS.Exists("/var/lib/kubelet/kubeconfig-bootstrap")).To(BeTrue())
+
+				info, err := b.FS.Stat("/var/lib/gardener-node-agent/cluster-ca.crt")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info.Mode().Perm()).To(Equal(fs.FileMode(0o644)))
 			},
 
 			Entry("with creation of token file", true),
