@@ -19,7 +19,11 @@ A preserved machine/node has the following properties:
 - **Scale-down preference:** When a MachineDeployment must scale down, preserved machines are de-prioritised and are the last to be removed.
 - **Replica counting:** Preserved machines count toward the desired replica count of their MachineDeployment.
 
-> **Note:** Preservation does not prevent explicit deletion. If you run `kubectl delete machine` or `kubectl delete node`, the machine and its backing VM will be deleted.
+> [!NOTE]
+> Preservation does not prevent explicit deletion. If you run `kubectl delete machine` or `kubectl delete node`, the machine and its backing VM will be deleted.
+
+> [!NOTE]
+> Preservation of backing machines for nodes that never registered (unregistered nodes) requires Kubernetes >= v1.34.
 
 ## Effect on Shoot Conditions
 
@@ -155,12 +159,11 @@ node.machine.sapcloud.io/preserve=false
 > **Warning:** When `autoPreserveFailedMachineMax > 0` is set on any worker pool, Gardener disables the Cluster Autoscaler's cluster health check (`--max-total-unready-percentage=100`). This allows unscheduled workload from preserved failed nodes to trigger scale-up, but it also means CA will continue scaling even when a large fraction of nodes are unready.
 
 ## Limitations
-
+- **Kubernetes version:** Preservation of backing machines for nodes that never registered (unregistered nodes) requires Kubernetes >= v1.34.
 - **Rolling updates:** Preservation is ignored during rolling updates. Failed machines are replaced as usual regardless of preservation settings.
 - **Shoot hibernation:** Hibernation overrides preservation. All machines are scaled down when a Shoot is hibernated.
 - **Race condition on `Failed`:** If a machine is annotated for preservation at the moment it enters `Failed` phase, MCM may not act on the annotation before the machine is terminated. For higher reliability, annotate the machine or node when the node is observed as `NotReady` or the machine is in `Unknown` phase, before the machine transitions fully to `Failed`.
 - **Race condition with CA:** If CA initiates a scale-down before MCM can apply the `scale-down-disabled` annotation as part of preservation, the machine may be removed before preservation takes effect.
-- **Kubernetes version:** Preservation of backing machines for nodes that never registered (unregistered nodes) requires Kubernetes >= v1.34.
 
 ## Viewing Preservation Status
 

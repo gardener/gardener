@@ -173,13 +173,13 @@ func (h *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes 
 	// kept) and signals an immediate return for non-preserved nodes.
 	// Returns (condition, shouldReturn).
 	handleFailure := func(isPreserved bool, c gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, bool) {
-		if isPreserved {
-			if firstPreservedFailure == nil {
-				firstPreservedFailure = &c
-			}
-			return nil, false
+		if !isPreserved {
+			return &c, true
 		}
-		return &c, true
+		if firstPreservedFailure == nil {
+			firstPreservedFailure = &c
+		}
+		return nil, false
 	}
 
 	for _, node := range nodes {
