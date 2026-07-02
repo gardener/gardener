@@ -38,12 +38,12 @@ var _ = Describe("Init", func() {
 
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{}
-			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, nil)
+			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, nil)
 		})
 
 		When("kubelet data volume is not configured", func() {
 			It("should return the expected units and files", func() {
-				units, files, err := Config(worker, image, config)
+				units, files, err := Config(worker, image, config, caBundle)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
@@ -69,6 +69,7 @@ StandardError=journal+console
 WantedBy=multi-user.target`),
 					FilePaths: []string{"/var/lib/gardener-node-agent/init.sh"},
 				}))
+
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/gardener-node-agent/credentials/bootstrap-token",
@@ -84,7 +85,7 @@ WantedBy=multi-user.target`),
 						Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
 						Permissions: new(uint32(0600)),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
-  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  caFile: ` + nodeagentconfigv1alpha1.ClusterCAFilePath + `
   server: ` + apiServerURL + `
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 bootstrap: {}
@@ -158,6 +159,16 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 							TransmitUnencoded: new(true),
 						},
 					},
+					extensionsv1alpha1.File{
+						Path:        "/var/lib/gardener-node-agent/cluster-ca.crt",
+						Permissions: new(uint32(0640)),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     utils.EncodeBase64(caBundle),
+							},
+						},
+					},
 				))
 			})
 		})
@@ -174,20 +185,20 @@ exec "/opt/bin/gardener-node-agent" bootstrap --config-dir="/var/lib/gardener-no
 			It("should return an error when the data volume cannot be found", func() {
 				*worker.KubeletDataVolumeName = "not-found"
 
-				units, files, err := Config(worker, image, config)
+				units, files, err := Config(worker, image, config, caBundle)
 				Expect(err).To(MatchError(ContainSubstring("failed finding data volume for kubelet in worker with name")))
 				Expect(units).To(BeNil())
 				Expect(files).To(BeNil())
 			})
 
 			It("should correctly configure the bootstrap configuration", func() {
-				_, files, err := Config(worker, image, config)
+				_, files, err := Config(worker, image, config, caBundle)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(files).To(ContainElement(extensionsv1alpha1.File{
 					Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
 					Permissions: new(uint32(0600)),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
-  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  caFile: ` + nodeagentconfigv1alpha1.ClusterCAFilePath + `
   server: ` + apiServerURL + `
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 bootstrap:
@@ -214,7 +225,7 @@ server: {}
 			})
 
 			It("should ensure the size of the configuration is not exceeding a certain limit", func() {
-				units, files, err := Config(worker, image, config)
+				units, files, err := Config(worker, image, config, caBundle)
 				Expect(err).NotTo(HaveOccurred())
 
 				writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(context.Background(), nil, "", files)

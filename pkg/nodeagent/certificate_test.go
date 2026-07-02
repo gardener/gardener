@@ -14,7 +14,6 @@ import (
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Certificate", func() {
@@ -29,13 +28,13 @@ var _ = Describe("Certificate", func() {
 			fs = afero.Afero{Fs: afero.NewMemMapFs()}
 			nodeAgentConfig = &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
-					CABundle: []byte("ca-bundle"),
-					Server:   "https://test-server",
+					CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
+					Server: "https://test-server",
 				},
 			}
 
 			nodeAgentConfigFile = []byte(`apiServer:
-  caBundle: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+  caFile: ` + nodeAgentConfig.APIServer.CAFile + `
   server: ` + nodeAgentConfig.APIServer.Server + `
 apiVersion: nodeagent.config.gardener.cloud/v1alpha1
 kind: NodeAgentConfiguration
@@ -67,7 +66,7 @@ kind: NodeAgentConfiguration
 			config, err := GetAPIServerConfig(fs, "/var/lib/gardener-node-agent")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config).NotTo(BeNil())
-			Expect(config.CABundle).To(Equal(nodeAgentConfig.APIServer.CABundle))
+			Expect(config.CAFile).To(Equal(nodeAgentConfig.APIServer.CAFile))
 			Expect(config.Server).To(Equal(nodeAgentConfig.APIServer.Server))
 		})
 	})

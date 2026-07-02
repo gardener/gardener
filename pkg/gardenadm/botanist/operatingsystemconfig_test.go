@@ -91,6 +91,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-node-init.service")}),
 			))
 			Expect(osc.Spec.Files).To(HaveExactElements(
+				MatchFields(IgnoreExtras, Fields{"Path": Equal("/var/lib/gardener-node-agent/cluster-ca.crt")}),
 				MatchFields(IgnoreExtras, Fields{
 					"Path": Equal("/var/lib/gardener-node-agent/credentials/bootstrap-token"),
 					"Content": MatchFields(IgnoreExtras, Fields{

@@ -8,7 +8,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"html/template"
+	"text/template"
 
 	machinecontroller "github.com/gardener/machine-controller-manager/pkg/util/provider/machinecontroller"
 
@@ -32,6 +32,7 @@ func Config(
 	worker gardencorev1beta1.Worker,
 	nodeAgentImage string,
 	config *nodeagentconfigv1alpha1.NodeAgentConfiguration,
+	clusterCABundle []byte,
 ) (
 	[]extensionsv1alpha1.Unit,
 	[]extensionsv1alpha1.File,
@@ -48,6 +49,16 @@ func Config(
 		}
 
 		nodeInitFiles = []extensionsv1alpha1.File{
+			{
+				Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
+				Permissions: new(uint32(0640)),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64(clusterCABundle),
+					},
+				},
+			},
 			{
 				Path:        nodeagentconfigv1alpha1.BootstrapTokenFilePath,
 				Permissions: new(uint32(0640)),

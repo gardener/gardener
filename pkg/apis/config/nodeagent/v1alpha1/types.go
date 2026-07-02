@@ -29,6 +29,8 @@ const (
 	TokenFilePath = CredentialsDir + "/token"
 	// KubeconfigFilePath is the file path on the worker node that contains the kubeconfig of the gardener-node-agent.
 	KubeconfigFilePath = CredentialsDir + "/kubeconfig"
+	// ClusterCAFilePath is the file path on the worker node that contains the cluster CA certificate.
+	ClusterCAFilePath = BaseDir + "/cluster-ca.crt"
 	// MachineNameFilePath is the file path on the worker node that contains the machine name.
 	MachineNameFilePath = BaseDir + "/machine-name"
 	// ZoneFilePath is the file path on the worker node that contains the zone name for the node.
@@ -94,8 +96,9 @@ type NodeAgentConfiguration struct {
 type APIServer struct {
 	// Server is the address of the API server.
 	Server string `json:"server"`
-	// CABundle is the certificate authority bundle for the API server.
-	CABundle []byte `json:"caBundle"`
+	// CAFile is the path on the node to the certificate authority file for the API server.
+	// +optional
+	CAFile string `json:"caFile,omitempty"`
 }
 
 // BootstrapConfiguration contains configuration for the bootstrap command.
