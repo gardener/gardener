@@ -42,7 +42,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pelletier/go-toml v1.9.5
 	github.com/perses/perses-operator v0.4.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.92.1
 	github.com/prometheus/blackbox_exporter v0.28.0
 	github.com/prometheus/client_golang v1.23.3-0.20260701095028-a2061d59e26c
 	github.com/prometheus/common v0.69.0
