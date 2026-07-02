@@ -328,6 +328,11 @@ func (in *NodeAgentAuthorizerWebhookConfig) DeepCopyInto(out *NodeAgentAuthorize
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ImagePullSecretNames != nil {
+		in, out := &in.ImagePullSecretNames, &out.ImagePullSecretNames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

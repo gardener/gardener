@@ -213,6 +213,11 @@ spec:
                               description: Image contains the container image repository
                                 with tag.
                               type: string
+                            pullSecretRef:
+                              description: |-
+                                PullSecretRef is the name of the pull secret.
+                                The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `kube-system` namespace.
+                              type: string
                           required:
                           - filePathInImage
                           - image
@@ -476,6 +481,11 @@ spec:
                             image:
                               description: Image contains the container image repository
                                 with tag.
+                              type: string
+                            pullSecretRef:
+                              description: |-
+                                PullSecretRef is the name of the pull secret.
+                                The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `kube-system` namespace.
                               type: string
                           required:
                           - filePathInImage

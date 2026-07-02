@@ -353,6 +353,10 @@ type NodeAgentAuthorizerWebhookConfig struct {
 	// AuthorizeWithSelectors defines whether authorization is allowed to use field selectors.
 	// +optional
 	AuthorizeWithSelectors *bool `json:"authorizeWithSelectors,omitempty"`
+	// ImagePullSecretNames are the names of the kubernetes.io/dockerconfigjson Secrets in kube-system
+	// that hold image pull credentials. When set, gardener-node-agent is authorized to read these secrets.
+	// +optional
+	ImagePullSecretNames []string `json:"imagePullSecretNames,omitempty"`
 }
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.

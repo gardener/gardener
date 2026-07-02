@@ -11,12 +11,14 @@ import (
 	"html/template"
 
 	machinecontroller "github.com/gardener/machine-controller-manager/pkg/util/provider/machinecontroller"
+	corev1 "k8s.io/api/core/v1"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/utils"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // PathInitScript is the path to the init script.
@@ -32,12 +34,13 @@ func Config(
 	worker gardencorev1beta1.Worker,
 	nodeAgentImage string,
 	config *nodeagentconfigv1alpha1.NodeAgentConfiguration,
+	imagePullSecret *corev1.Secret,
 ) (
 	[]extensionsv1alpha1.Unit,
 	[]extensionsv1alpha1.File,
 	error,
 ) {
-	initScript, err := generateInitScript(nodeAgentImage)
+	initScript, err := generateInitScript(nodeAgentImage, imagePullSecret)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating init script: %w", err)
 	}
@@ -110,14 +113,28 @@ func init() {
 	initScriptTpl = template.Must(template.New("init-script").Parse(initScriptTplContent))
 }
 
-func generateInitScript(nodeAgentImage string) ([]byte, error) {
+func generateInitScript(nodeAgentImage string, imagePullSecret *corev1.Secret) ([]byte, error) {
 	var initScript bytes.Buffer
-	if err := initScriptTpl.Execute(&initScript, map[string]any{
+
+	data := map[string]any{
 		"image":           nodeAgentImage,
 		"binaryName":      "gardener-node-agent",
 		"binaryDirectory": nodeagentconfigv1alpha1.BinaryDir,
 		"configDir":       nodeagentconfigv1alpha1.BaseDir,
-	}); err != nil {
+	}
+
+	if imagePullSecret != nil {
+		username, password, err := imagevectorutils.CredentialsFromDockerConfigJSON(imagePullSecret, nodeAgentImage)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing image pull secret %q: %w", imagePullSecret.Name, err)
+		}
+		if username != "" && password != "" {
+			data["registryUserName"] = username
+			data["registryPassword"] = password
+		}
+	}
+
+	if err := initScriptTpl.Execute(&initScript, data); err != nil {
 		return nil, err
 	}
 
