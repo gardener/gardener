@@ -28,6 +28,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -57,12 +58,38 @@ func (b *GardenadmBotanist) deployETCD(role string) func(context.Context) error 
 			return fmt.Errorf("failed fetching image %s: %w", imagevector.ContainerImageNameEtcd, err)
 		}
 
+		var etcdBackupRestore *backuprestore.Config
+
+		if role == v1beta1constants.ETCDRoleMain && b.BackupDataPath != "" {
+			etcdbrctlImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameEtcdBackupRestore)
+			if err != nil {
+				return fmt.Errorf("failed fetching image %s: %w", imagevector.ContainerImageNameEtcdBackupRestore, err)
+			}
+
+			// Path structure: <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2
+			// Strip the trailing version dir (e.g. "v2") to get the etcd-main dir.
+			etcdMainDir := filepath.Dir(b.BackupDataPath)                      // .../etcd-main
+			entryDir := filepath.Dir(etcdMainDir)                              // .../<namespace>--<uid>
+			bucketDir := filepath.Dir(entryDir)                                // .../<bucketName>
+			backupBucketsRoot := filepath.Dir(bucketDir)                       // <backupBucketsRoot>
+			storeContainer := filepath.Base(bucketDir)                         // <bucketName>
+			storePrefix := filepath.Join(filepath.Base(entryDir), "etcd-main") // <namespace>--<uid>/etcd-main
+
+			etcdBackupRestore = &backuprestore.Config{
+				EtcdbrctlImage:        etcdbrctlImage.String(),
+				StoreContainer:        storeContainer,
+				StorePrefix:           storePrefix,
+				BackupBucketsHostPath: backupBucketsRoot,
+			}
+		}
+
 		return bootstrapetcd.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, bootstrapetcd.Values{
-			Image:       image.String(),
-			Role:        role,
-			PortClient:  portClient,
-			PortPeer:    portPeer,
-			PortMetrics: portMetrics,
+			Image:         image.String(),
+			Role:          role,
+			BackupRestore: etcdBackupRestore,
+			PortClient:    portClient,
+			PortPeer:      portPeer,
+			PortMetrics:   portMetrics,
 		}).Deploy(ctx)
 	}
 }

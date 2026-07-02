@@ -17,6 +17,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
@@ -45,6 +46,8 @@ type Values struct {
 	Image string
 	// Role is the role of this etcd instance (main or events).
 	Role string
+	// BackupRestore configures an optional init container that runs `etcdbrctl initialize`.
+	BackupRestore *backuprestore.Config
 	// PortClient is the port for the client connections.
 	PortClient int32
 	// PortPeer is the port for the peer connections.
@@ -96,6 +99,18 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to generate etcd peer certificate: %w", err)
 	}
 
+	if e.values.BackupRestore.ShouldRun() {
+		configMap := e.values.BackupRestore.ConfigMap(e.namespace)
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, e.client, configMap, func() error {
+			configMap.Labels = e.labels()
+			configMap.Data = map[string]string{backuprestore.EtcdConfigFileName: e.values.BackupRestore.EtcdInitializeConfig()}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed creating or patching etcd initialize config ConfigMap: %w", err)
+		}
+	}
+
 	statefulSet := e.emptyStatefulSet()
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, e.client, statefulSet, func() error {
 		statefulSet.Labels = e.labels()
@@ -111,7 +126,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 						Command: []string{
 							"etcd",
 							"--name=" + statefulSet.Name,
-							"--data-dir=" + volumeMountPathData,
+							"--data-dir=" + volumeMountPathData + "/new.etcd",
 							"--experimental-initial-corrupt-check=true",
 							"--experimental-watch-progress-notify-interval=5s",
 							"--snapshot-count=10000",
@@ -208,7 +223,10 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 								HostPath: &corev1.HostPathVolumeSource{
 									// etcds managed by etcd-druid store their data in <data-dir>/new.etcd, so let's
 									// prepare for the take-over already now
-									Path: staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(e.values.Role)) + "/new.etcd",
+									// new.etcd is not part of path as backup-restore init container needs to do initial cleanup
+									// of the data directory before restoring the backup, and having new.etcd in the volume path
+									// causes the cleanup to fail
+									Path: staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(e.values.Role)),
 									Type: new(corev1.HostPathDirectoryOrCreate),
 								},
 							},
@@ -256,6 +274,11 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 					},
 				},
 			},
+		}
+
+		if e.values.BackupRestore.ShouldRun() {
+			statefulSet.Spec.Template.Spec.InitContainers = []corev1.Container{e.values.BackupRestore.InitContainer(e.values.Role, volumeNameData)}
+			statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, e.values.BackupRestore.Volumes()...)
 		}
 
 		return nil
