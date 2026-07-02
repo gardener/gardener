@@ -726,6 +726,7 @@ build:
             - pkg/gardenlet/controller/shoot
             - pkg/gardenlet/controller/shoot/care
             - pkg/gardenlet/controller/shoot/lease
+            - pkg/gardenlet/controller/shoot/selfhostedshootexposure
             - pkg/gardenlet/controller/shoot/shoot
             - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/controller/shoot/state

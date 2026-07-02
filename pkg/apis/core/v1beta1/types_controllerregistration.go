@@ -97,6 +97,10 @@ type ControllerResource struct {
 	// This field can only be set for resources of kind "Extension".
 	// +optional
 	ClusterCompatibility []ClusterType `json:"clusterCompatibility,omitempty" protobuf:"bytes,9,rep,name=clusterCompatibility,casttype=ClusterType"`
+	// ContinuousEndpointUpdate indicates whether the extension requires the SelfHostedShootExposure endpoints to be continuously
+	// updated with healthy/valid control plane endpoints.
+	// +optional
+	ContinuousEndpointUpdate *bool `json:"continuousEndpointUpdate,omitempty" protobuf:"varint,10,opt,name=continuousEndpointUpdate"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

@@ -3261,6 +3261,16 @@ func (m *ControllerResource) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.ContinuousEndpointUpdate != nil {
+		i--
+		if *m.ContinuousEndpointUpdate {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x50
+	}
 	if len(m.ClusterCompatibility) > 0 {
 		for iNdEx := len(m.ClusterCompatibility) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.ClusterCompatibility[iNdEx])
@@ -14575,6 +14585,9 @@ func (m *ControllerResource) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	if m.ContinuousEndpointUpdate != nil {
+		n += 2
+	}
 	return n
 }
 
@@ -19103,6 +19116,7 @@ func (this *ControllerResource) String() string {
 		`WorkerlessSupported:` + valueToStringGenerated(this.WorkerlessSupported) + `,`,
 		`AutoEnable:` + fmt.Sprintf("%v", this.AutoEnable) + `,`,
 		`ClusterCompatibility:` + fmt.Sprintf("%v", this.ClusterCompatibility) + `,`,
+		`ContinuousEndpointUpdate:` + valueToStringGenerated(this.ContinuousEndpointUpdate) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -29892,6 +29906,27 @@ func (m *ControllerResource) Unmarshal(dAtA []byte) error {
 			}
 			m.ClusterCompatibility = append(m.ClusterCompatibility, ClusterType(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ContinuousEndpointUpdate", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.ContinuousEndpointUpdate = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

@@ -3382,6 +3382,13 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 							},
 						},
 					},
+					"continuousEndpointUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ContinuousEndpointUpdate indicates whether the extension requires the SelfHostedShootExposure endpoints to be continuously updated with healthy/valid control plane endpoints.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"kind", "type"},
 			},

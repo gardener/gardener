@@ -386,3 +386,16 @@ Due to technical reasons, exceptions apply for different reconcile flows, for ex
 - The garden reconciliation doesn't distinguish between `AfterKubeAPIServer` and `AfterWorker`.
 - The seed reconciliation completely ignores the `lifecycle` field.
 - The lifecycle value `AfterWorker` is only available during `reconcile`. When specified, the extension resource will be reconciled after the workers are deployed. This is useful for extensions that want to deploy a workload in the shoot control plane and want to wait for the workload to run and get ready on a node. During shoot creation the extension will start its reconciliation before the first workers have joined the cluster, they will become available at some later point.
+
+#### `SelfHostedShootExposure` Endpoint Update
+
+For `ControllerResource`s of kind `SelfHostedShootExposure`, the `continuousEndpointUpdate` field controls whether `gardenlet` continuously keeps the `SelfHostedShootExposure` resource's endpoints in sync with the self-hosted shoot's control-plane node addresses (for extension-based exposure). It defaults to `true`. It does not affect DNS-based exposure, whose `DNSRecord` is always kept in sync.
+
+```yaml
+    ...
+    kind: SelfHostedShootExposure
+    type: foo
+    continuousEndpointUpdate: false
+```
+
+This field has no effect for other `kind` values and may not be set on them.

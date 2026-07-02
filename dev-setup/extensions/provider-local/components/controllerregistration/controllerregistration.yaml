@@ -26,6 +26,7 @@ spec:
       type: local
     - kind: SelfHostedShootExposure
       type: local
+      continuousEndpointUpdate: true
     - kind: Worker
       type: local
     - kind: Extension

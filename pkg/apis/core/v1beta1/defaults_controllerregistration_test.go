@@ -30,6 +30,10 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 						Kind: "Extension",
 						Type: "extension-foo",
 					},
+					{
+						Kind: "SelfHostedShootExposure",
+						Type: "provider-foo",
+					},
 				},
 				Deployment: &ControllerRegistrationDeployment{
 					DeploymentRefs: []DeploymentRef{{
@@ -143,6 +147,36 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 
 				Expect(obj.Spec.Resources[1].ClusterCompatibility).To(ConsistOf(ClusterType("seed")))
 			})
+		})
+
+		Context("kind == SelfHostedShootExposure", func() {
+			BeforeEach(func() {
+				obj.Spec.Resources = append(obj.Spec.Resources, ControllerResource{
+					Kind: "SelfHostedShootExposure",
+					Type: "provider-foo",
+				})
+			})
+
+			It("should default ContinuousEndpointUpdate to true", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[2].ContinuousEndpointUpdate).To(PointTo(BeTrue()))
+			})
+
+			It("should not overwrite ContinuousEndpointUpdate", func() {
+				obj.Spec.Resources[2].ContinuousEndpointUpdate = new(false)
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[2].ContinuousEndpointUpdate).To(PointTo(BeFalse()))
+			})
+		})
+
+		It("should not default ContinuousEndpointUpdate", func() {
+			SetObjectDefaults_ControllerRegistration(obj)
+
+			Expect(obj.Spec.Resources[0].ContinuousEndpointUpdate).To(BeNil())
+			Expect(obj.Spec.Resources[1].ContinuousEndpointUpdate).To(BeNil())
 		})
 	})
 

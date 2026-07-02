@@ -836,6 +836,9 @@ const (
 	// LabelWorkerPoolGardenerNodeAgentSecretName is the name of the secret used by the gardener node agent
 	LabelWorkerPoolGardenerNodeAgentSecretName = "worker.gardener.cloud/gardener-node-agent-secret-name"
 
+	// LabelNodeRoleControlPlane is a label key marking a node as a control-plane node.
+	LabelNodeRoleControlPlane = "node-role.kubernetes.io/control-plane"
+
 	// LabelUpdateRestriction is a constant for a label key that indicates
 	// that a resource must be only updated by the gardenlet.
 	LabelUpdateRestriction = "gardener.cloud/update-restriction"
