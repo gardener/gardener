@@ -19,7 +19,11 @@ import (
 // kubelet and containerd only support size-based log rotation, not time-based retention, so
 // logrotate is used to enforce daily rotation and a 14-day retention window on top of the
 // container runtime's own size-based rotation.
-// See https://github.com/gardener/gardener/issues/653 for the historical context.
+// See: https://github.com/gardener/gardener/issues/653 for the historical context.
+//
+// The timer is configured with jitter to avoid all nodes rotating logs at the same time
+// which can cause spikes on the storage backend.
+// See: https://github.com/gardener/gardener/issues/15149 for more context.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
