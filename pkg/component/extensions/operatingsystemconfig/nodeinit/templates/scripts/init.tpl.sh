@@ -17,7 +17,8 @@ image="$1"
 echo "> Prepare temporary directory for image pull and mount"
 tmp_dir="$(mktemp -d)"
 unmount() {
-  ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"
+  ctr images unmount "$tmp_dir" 2>/dev/null || true
+  rm -rf "$tmp_dir"
 }
 trap unmount EXIT
 
@@ -33,7 +34,28 @@ if [ "$CTR_MAJOR" -gt 1 ]; then
     CTR_EXTRA_ARGS="--skip-metadata"
 fi
 ctr images pull $CTR_EXTRA_ARGS --hosts-dir "/etc/containerd/certs.d" "$image"
-ctr images mount "$image" "$tmp_dir"
+
+{{- /*
+ctr images mount in containerd v2.x uses a new internal mount manager (io.containerd.mount-manager.v1.bolt)
+that creates a temporary bind mount which fails with "no such device" on FIPS kernels (e.g. 5.15.0-*-fips).
+For containerd v2.x we fall back to ctr images export + tar extraction which does not use the mount manager.
+Ref: https://github.com/containerd/containerd/pull/12831
+*/}}
+if [ "$CTR_MAJOR" -gt 1 ]; then
+    echo "> containerd v2.x detected: using export+extract instead of mount (ctr images mount fails on FIPS kernels)"
+    ctr images export "$tmp_dir/image.tar" "$image"
+    tar -xf "$tmp_dir/image.tar" -C "$tmp_dir"
+    for blob in "$tmp_dir"/blobs/sha256/*; do
+        if file "$blob" 2>/dev/null | grep -q "gzip\|tar"; then
+            if tar -tf "$blob" 2>/dev/null | grep -q "{{ .binaryName }}"; then
+                tar -xf "$blob" -C "$tmp_dir" 2>/dev/null
+                break
+            fi
+        fi
+    done
+else
+    ctr images mount "$image" "$tmp_dir"
+fi
 
 echo "> Copy {{ .binaryName }} binary to host ({{ .binaryDirectory }}) and make it executable"
 mkdir -p "{{ .binaryDirectory }}"
