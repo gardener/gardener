@@ -36,6 +36,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -444,6 +445,21 @@ func (r *Reconciler) reconcile(
 	}
 
 	managedResourceName := gardenerutils.ManagedResourceNameForControllerInstallation(controllerInstallation)
+
+	if len(imagevector.AllContainerImagePullCredentials()) > 0 {
+		if err := gardenerutils.MutateObjectsInSecretData(
+			secretData,
+			namespace.Name,
+			[]string{appsv1.GroupName, batchv1.GroupName},
+			func(obj runtime.Object) error {
+				return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+					kubernetesutils.InjectImagePullSecret(podSpec)
+				})
+			},
+		); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to inject image pull secret: %w", err)
+		}
+	}
 
 	if err := managedresources.Create(
 		seedCtx,

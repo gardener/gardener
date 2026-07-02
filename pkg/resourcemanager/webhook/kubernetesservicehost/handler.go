@@ -40,6 +40,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 	log.Info("Injecting KUBERNETES_SERVICE_HOST environment variable into all containers in the pod")
 	kubernetesutils.InjectKubernetesServiceHostEnv(pod.Spec.InitContainers, h.Host)
 	kubernetesutils.InjectKubernetesServiceHostEnv(pod.Spec.Containers, h.Host)
+	kubernetesutils.InjectImagePullSecret(&pod.Spec)
 
 	return nil
 }

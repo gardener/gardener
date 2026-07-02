@@ -90,7 +90,7 @@ func validateComponentImageVector(componentImageVector *ComponentImageVector, fl
 	}
 
 	// Read (and validate) imageVectorOverwrite as image vector
-	imageVector, err := Read([]byte(componentImageVector.ImageVectorOverwrite))
+	imageVector, _, err := Read([]byte(componentImageVector.ImageVectorOverwrite))
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("imageVectorOverwrite"), imageVector, err.Error()))
 	}

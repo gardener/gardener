@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -258,6 +259,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 			},
 		}
 
+		kubernetesutils.InjectImagePullSecret(&statefulSet.Spec.Template.Spec)
 		return nil
 	})
 

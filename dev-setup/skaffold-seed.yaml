@@ -244,6 +244,7 @@ build:
             - pkg/gardenlet/controller/networkpolicy
             - pkg/gardenlet/controller/seed
             - pkg/gardenlet/controller/seed/care
+            - pkg/gardenlet/controller/seed/imagepullsecret
             - pkg/gardenlet/controller/seed/lease
             - pkg/gardenlet/controller/seed/seed
             - pkg/gardenlet/controller/shoot
@@ -349,6 +350,7 @@ build:
             - cmd/gardener-resource-manager/app
             - cmd/utils
             - cmd/utils/initrun
+            - imagevector
             - pkg/api
             - pkg/api/config/resourcemanager/v1alpha1/validation
             - pkg/api/core/helper
@@ -439,6 +441,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client

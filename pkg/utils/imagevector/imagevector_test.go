@@ -298,15 +298,17 @@ images:
 
 		Describe("#Read", func() {
 			It("should successfully read a JSON image vector", func() {
-				vector, err := Read([]byte(image1Src1VectorJSON))
+				vector, imagePullSecretName, err := Read([]byte(image1Src1VectorJSON))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
+				Expect(imagePullSecretName).To(BeNil())
 			})
 
 			It("should successfully read a YAML image vector", func() {
-				vector, err := Read([]byte(image1Src1VectorYAML))
+				vector, imagePullSecretName, err := Read([]byte(image1Src1VectorYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
+				Expect(imagePullSecretName).To(BeNil())
 			})
 		})
 
@@ -315,9 +317,10 @@ images:
 				tmpFile, cleanup := withTempFile("imagevector", []byte(image1Src1VectorJSON))
 				defer cleanup()
 
-				vector, err := ReadFile(tmpFile.Name())
+				vector, imagePullSecretName, err := ReadFile(tmpFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
+				Expect(imagePullSecretName).To(BeNil())
 			})
 		})
 
@@ -346,11 +349,52 @@ images:
 				defer cleanup()
 				defer test.WithEnvVar(OverrideEnv, file.Name())()
 
-				Expect(WithEnvOverride(vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(ImageVector{image1Src1, image2Src1}))
+				mergedVector, imagePullSecretName, err := WithEnvOverride(vector, "IMAGEVECTOR_OVERWRITE")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
+				Expect(imagePullSecretName).To(BeNil())
+			})
+
+			It("should override the ImageVector and return imagePullCredential from override file", func() {
+				var (
+					vector       = ImageVector{image1Src3, image2Src1}
+					overrideJSON = `
+{
+	"imagePullCredential": {
+		"type": "StaticSecret",
+		"secretName": "my-image-pull-secret"
+	},
+	"images": [
+		{
+			"name": "image1",
+			"repository": "repo1",
+			"tag": "tag1",
+			"version": "tag1",
+			"runtimeVersion": ">= 1.6, < 1.8"
+		}
+	]
+}`
+				)
+
+				file, cleanup := withTempFile("imagevector", []byte(overrideJSON))
+
+				defer cleanup()
+				defer test.WithEnvVar(OverrideEnv, file.Name())()
+
+				mergedVector, imagePullCredential, err := WithEnvOverride(vector, "IMAGEVECTOR_OVERWRITE")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
+				Expect(imagePullCredential).To(PointTo(Equal(ImagePullCredential{
+					Type:       ImagePullCredentialTypeStaticSecret,
+					SecretName: "my-image-pull-secret",
+				})))
 			})
 
 			It("should keep the vector as-is if the env variable is not set", func() {
-				Expect(WithEnvOverride(image1Src1Vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(image1Src1Vector))
+				vector, imagePullSecretName, err := WithEnvOverride(image1Src1Vector, "IMAGEVECTOR_OVERWRITE")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vector).To(Equal(image1Src1Vector))
+				Expect(imagePullSecretName).To(BeNil())
 			})
 		})
 

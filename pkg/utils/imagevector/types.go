@@ -4,6 +4,24 @@
 
 package imagevector
 
+// ImagePullCredentialType defines the mechanism used to provide image pull credentials.
+type ImagePullCredentialType string
+
+const (
+	// ImagePullCredentialTypeStaticSecret uses a static dockerconfigjson Secret.
+	ImagePullCredentialTypeStaticSecret ImagePullCredentialType = "StaticSecret"
+)
+
+// ImagePullCredential defines how image pull credentials are provided.
+type ImagePullCredential struct {
+	// Type is the credential delivery mechanism.
+	Type ImagePullCredentialType `json:"type" yaml:"type"`
+	// SecretName is the name of the dockerconfigjson Secret.
+	// Required when Type is StaticSecret.
+	// +optional
+	SecretName string `json:"secretName,omitempty" yaml:"secretName,omitempty"`
+}
+
 // ImageSource contains the repository and the tag of a Docker container image. If the respective
 // image is only valid for a specific Kubernetes runtime version, then it must also contain the
 // 'runtimeVersion' field describing for which versions it can be used. Similarly, if it is only
@@ -26,6 +44,11 @@ type ImageSource struct {
 	// Version is a human-readable version of the image (helpful in case the ref/tag does not specify it because only a
 	// digest is used).
 	Version *string `json:"version,omitempty" yaml:"version,omitempty"`
+
+	// ImagePullCredential specifies how to authenticate when pulling this image.
+	// When set, it overrides the global imagePullCredential for this specific image.
+	// +optional
+	ImagePullCredential *ImagePullCredential `json:"imagePullCredential,omitempty" yaml:"imagePullCredential,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
@@ -35,6 +58,9 @@ type Image struct {
 	Repository *string
 	Tag        *string
 	Version    *string
+
+	// ImagePullCredential is the per-image pull credential, if configured.
+	ImagePullCredential *ImagePullCredential
 }
 
 // ImageVector is a list of image sources.
