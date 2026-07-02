@@ -121,6 +121,10 @@ func (h *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Con
 
 func (h *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, objects []appsv1.Deployment) *gardencorev1beta1.Condition {
 	for _, object := range objects {
+		if health.IsSkippedUntil(&object.ObjectMeta) {
+			return nil
+		}
+
 		if err := health.CheckDeployment(&object); err != nil {
 			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
@@ -141,6 +145,10 @@ func (h *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition
 
 func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []druidcorev1alpha1.Etcd) *gardencorev1beta1.Condition {
 	for _, object := range objects {
+		if health.IsSkippedUntil(&object.ObjectMeta) {
+			return nil
+		}
+
 		if err := health.CheckEtcd(&object); err != nil {
 			var (
 				message = fmt.Sprintf("Etcd extension resource %q is unhealthy: %v", object.Name, err.Error())
@@ -272,6 +280,10 @@ func (h *HealthChecker) CheckManagedResources(
 	for _, managedResource := range managedResources {
 		if !filterFunc(managedResource) {
 			continue
+		}
+
+		if health.IsSkippedUntil(&managedResource.ObjectMeta) {
+			return nil
 		}
 
 		if exitCondition := h.CheckManagedResource(condition, &managedResource, progressingThreshold); exitCondition != nil {
@@ -602,6 +614,10 @@ func (h *HealthChecker) CheckPrometheuses(
 	)
 
 	for i, prometheus := range prometheusesSorted.Items {
+		if health.IsSkippedUntil(&prometheus.ObjectMeta) {
+			return nil
+		}
+
 		if filterFunc != nil && !filterFunc(&prometheus) {
 			continue
 		}

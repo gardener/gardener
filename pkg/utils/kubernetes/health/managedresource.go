@@ -15,6 +15,10 @@ import (
 // CheckManagedResource checks if all conditions of a ManagedResource ('ResourcesApplied' and 'ResourcesHealthy')
 // are True and .status.observedGeneration matches the current .metadata.generation
 func CheckManagedResource(mr *resourcesv1alpha1.ManagedResource) error {
+	if IsSkippedUntil(&mr.ObjectMeta) {
+		return nil
+	}
+
 	if err := CheckManagedResourceApplied(mr); err != nil {
 		return err
 	}

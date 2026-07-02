@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -253,6 +255,38 @@ var _ = Describe("HealthChecker", func() {
 				PointTo(beConditionWithFalseStatusReasonAndMsg("Unknown", "bar is unknown"))),
 		)
 
+		Describe("#CheckManagedResources", func() {
+			It("should skip unhealthy managed resource with future skip annotation", func() {
+				DeferCleanup(test.WithVar(&health.Clock, fakeClock))
+
+				checker := NewHealthChecker(log, fakeClient, fakeClock)
+
+				skipped := resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "skipped",
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationCareSkipHealthChecksUntil: fakeClock.Now().Add(10 * time.Minute).Format(time.RFC3339),
+						},
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						Conditions: []gardencorev1beta1.Condition{
+							{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionFalse, Reason: "Broken"},
+							{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionFalse, Reason: "Broken"},
+							{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, Reason: "Broken"},
+						},
+					},
+				}
+
+				exitCondition := checker.CheckManagedResources(
+					condition,
+					[]resourcesv1alpha1.ManagedResource{skipped},
+					func(resourcesv1alpha1.ManagedResource) bool { return true },
+					nil,
+				)
+				Expect(exitCondition).To(BeNil())
+			})
+		})
+
 		var (
 			eventLoggerDepployment = newDeployment(namespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, true)
 
@@ -295,6 +329,21 @@ var _ = Describe("HealthChecker", func() {
 				BeNil(),
 			),
 		)
+
+		It("should skip unhealthy deployment with future skip annotation", func() {
+			DeferCleanup(test.WithVar(&health.Clock, fakeClock))
+
+			unhealthyDeployment := newDeployment(namespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, false)
+			unhealthyDeployment.Annotations = map[string]string{
+				v1beta1constants.AnnotationCareSkipHealthChecksUntil: fakeClock.Now().Add(10 * time.Minute).Format(time.RFC3339),
+			}
+			Expect(fakeClient.Create(ctx, unhealthyDeployment)).To(Succeed())
+
+			checker := NewHealthChecker(log, fakeClient, fakeClock)
+			exitCondition, err := checker.CheckLoggingControlPlane(ctx, namespace, true, condition)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCondition).To(BeNil())
+		})
 
 		// CheckExtensionCondition
 		DescribeTable("#CheckExtensionCondition - HealthCheckReport",
@@ -472,6 +521,38 @@ var _ = Describe("HealthChecker", func() {
 				},
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		)
+
+		It("should skip unhealthy etcd with future skip annotation", func() {
+			DeferCleanup(test.WithVar(&health.Clock, fakeClock))
+
+			unhealthyEtcd := &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-main",
+					Namespace: namespace,
+					Labels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+					},
+					Annotations: map[string]string{
+						v1beta1constants.AnnotationCareSkipHealthChecksUntil: fakeClock.Now().Add(10 * time.Minute).Format(time.RFC3339),
+					},
+				},
+				Status: druidcorev1alpha1.EtcdStatus{
+					Ready: new(false),
+				},
+			}
+			Expect(fakeClient.Create(ctx, unhealthyEtcd)).To(Succeed())
+
+			checker := NewHealthChecker(log, fakeClient, fakeClock)
+			exitCondition, err := checker.CheckControlPlane(
+				ctx,
+				namespace,
+				sets.New[string](),
+				sets.New[string](),
+				condition,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCondition).To(BeNil())
+		})
 
 		DescribeTable("#CheckControllerInstallation",
 			func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
@@ -887,6 +968,21 @@ var _ = Describe("HealthChecker", func() {
 				}
 
 				prometheuses.Items[0].Spec.Replicas = new(int32(0))
+				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
+				Expect(result).To(BeNil())
+			})
+
+			It("should skip unhealthy prometheus with future skip annotation", func() {
+				DeferCleanup(test.WithVar(&health.Clock, fakeClock))
+
+				testPrometheusHealthChecker = func(_ context.Context, _ string, _ int) (health.PrometheusHealthCheckResult, error) {
+					return unhealthy()
+				}
+
+				prometheuses.Items[0].Annotations = map[string]string{
+					v1beta1constants.AnnotationCareSkipHealthChecksUntil: fakeClock.Now().Add(10 * time.Minute).Format(time.RFC3339),
+				}
+
 				result := healthChecker.CheckPrometheuses(ctx, condition, prometheuses, filterTrueFunc)
 				Expect(result).To(BeNil())
 			})
