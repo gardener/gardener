@@ -1216,7 +1216,8 @@ ClusterSpec is the spec for a Cluster resource.
 </em>
 </td>
 <td>
-<p>Seed is a raw extension field that contains the seed resource referenced by the shoot that<br />has to be reconciled.</p>
+<em>(Optional)</em>
+<p>Seed is a raw extension field that contains the seed resource referenced by the shoot that<br />has to be reconciled. It is not set for self-hosted shoots (see GEP-28).</p>
 </td>
 </tr>
 <tr>

@@ -220,7 +220,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 				Shoot: runtime.RawExtension{
 					Object: shoot,
 				},
-				Seed: runtime.RawExtension{
+				Seed: &runtime.RawExtension{
 					Object: &gardencorev1beta1.Seed{},
 				},
 				CloudProfile: runtime.RawExtension{

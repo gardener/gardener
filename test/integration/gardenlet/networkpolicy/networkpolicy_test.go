@@ -101,7 +101,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		cluster = &extensionsv1alpha1.Cluster{
 			Spec: extensionsv1alpha1.ClusterSpec{
 				CloudProfile: runtime.RawExtension{Raw: []byte("{}")},
-				Seed:         runtime.RawExtension{Raw: []byte("{}")},
+				Seed:         &runtime.RawExtension{Raw: []byte("{}")},
 				Shoot: runtime.RawExtension{Object: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: &gardencorev1beta1.Networking{

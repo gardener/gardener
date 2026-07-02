@@ -154,7 +154,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			CloudProfile: runtime.RawExtension{
 				Raw: encode(&gardencorev1beta1.CloudProfile{}),
 			},
-			Seed: runtime.RawExtension{
+			Seed: &runtime.RawExtension{
 				Raw: encode(&gardencorev1beta1.Seed{}),
 			},
 		},

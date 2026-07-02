@@ -33,7 +33,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
 		return err
 	}
 
-	if cluster.Seed.Spec.Networks.Nodes == nil {
+	if cluster.Seed == nil || cluster.Seed.Spec.Networks.Nodes == nil {
 		return nil
 	}
 
