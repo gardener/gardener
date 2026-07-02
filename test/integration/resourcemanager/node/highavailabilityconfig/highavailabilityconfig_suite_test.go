@@ -149,7 +149,7 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 							Path: &path,
 						},
 					}
-				}),
+				}, nil),
 			},
 		},
 	}
