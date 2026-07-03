@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"time"
 
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,6 +100,17 @@ func (h *health) Check(ctx context.Context, conditions GardenConditions) []garde
 			return nil
 		})
 	}
+
+	log := logf.FromContext(ctx)
+	kuberneteshealth.RemoveExpiredSkipAnnotations(ctx, log, h.runtimeClient, h.gardenNamespace,
+		appsv1.SchemeGroupVersion.WithKind("DeploymentList"),
+		druidcorev1alpha1.SchemeGroupVersion.WithKind("EtcdList"),
+		monitoringv1.SchemeGroupVersion.WithKind("PrometheusList"),
+		resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
+	)
+	kuberneteshealth.RemoveExpiredSkipAnnotations(ctx, log, h.runtimeClient, v1beta1constants.IstioSystemNamespace,
+		resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
+	)
 
 	_ = flow.Parallel(taskFns...)(ctx)
 

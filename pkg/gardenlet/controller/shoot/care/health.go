@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -175,6 +176,13 @@ func (h *Health) Check(
 			return nil
 		})
 	}
+
+	health.RemoveExpiredSkipAnnotations(ctx, h.log, h.seedClient.Client(), h.shoot.ControlPlaneNamespace,
+		appsv1.SchemeGroupVersion.WithKind("DeploymentList"),
+		druidcorev1alpha1.SchemeGroupVersion.WithKind("EtcdList"),
+		resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
+		monitoringv1.SchemeGroupVersion.WithKind("PrometheusList"),
+	)
 
 	// Health checks with dependencies to the Kube-Apiserver.
 	shootClient, apiServerRunning, err := h.initializeShootClients()

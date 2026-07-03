@@ -5,15 +5,19 @@
 package health
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 func requiredConditionMissing(conditionType string) error {
@@ -61,4 +65,39 @@ func IsSkippedUntil(obj metav1.Object) bool {
 		return false
 	}
 	return Clock.Now().Before(t)
+}
+
+// RemoveExpiredSkipAnnotations lists all resources of the given GVKs (which must be list kinds, e.g.
+// appsv1.SchemeGroupVersion.WithKind("DeploymentList")) in namespace using partial metadata and removes the
+// AnnotationCareSkipHealthChecksUntil annotation from any object whose timestamp has already passed.
+func RemoveExpiredSkipAnnotations(ctx context.Context, log logr.Logger, c client.Client, namespace string, gvks ...schema.GroupVersionKind) {
+	tasks := make([]flow.TaskFn, 0, len(gvks))
+	for _, gvk := range gvks {
+		tasks = append(tasks, func(ctx context.Context) error {
+			list := &metav1.PartialObjectMetadataList{}
+			list.SetGroupVersionKind(gvk)
+			if err := c.List(ctx, list, client.InNamespace(namespace)); err != nil {
+				log.Error(err, "Failed to list resources for skip annotation cleanup", "gvk", gvk)
+				return nil
+			}
+			for i := range list.Items {
+				item := &list.Items[i]
+				val, ok := item.Annotations[v1beta1constants.AnnotationCareSkipHealthChecksUntil]
+				if !ok {
+					continue
+				}
+				t, err := time.Parse(time.RFC3339, val)
+				if err != nil || Clock.Now().Before(t) {
+					continue
+				}
+				patch := client.MergeFrom(item.DeepCopy())
+				delete(item.Annotations, v1beta1constants.AnnotationCareSkipHealthChecksUntil)
+				if err := c.Patch(ctx, item, patch); err != nil {
+					log.Error(err, "Failed to remove expired skip-health-checks annotation", "object", client.ObjectKeyFromObject(item))
+				}
+			}
+			return nil
+		})
+	}
+	_ = flow.Parallel(tasks...)(ctx)
 }

@@ -12,6 +12,7 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -19,6 +20,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	commonprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/features"
+	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
@@ -53,6 +55,8 @@ func (h *health) Check(
 	ctx context.Context,
 	conditions SeedConditions,
 ) []gardencorev1beta1.Condition {
+	log := logf.FromContext(ctx)
+
 	managedResources, err := h.listManagedResources(ctx)
 	if err != nil {
 		conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, nil, err)
@@ -64,6 +68,14 @@ func (h *health) Check(
 		conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, nil, err)
 		return conditions.ConvertToSlice()
 	}
+
+	kuberneteshealth.RemoveExpiredSkipAnnotations(ctx, log, h.seedClient, ptr.Deref(h.namespace, v1beta1constants.GardenNamespace),
+		monitoringv1.SchemeGroupVersion.WithKind("PrometheusList"),
+		resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
+	)
+	kuberneteshealth.RemoveExpiredSkipAnnotations(ctx, log, h.seedClient, ptr.Deref(h.namespace, v1beta1constants.IstioSystemNamespace),
+		resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
+	)
 
 	var checkedConditions []gardencorev1beta1.Condition
 	checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, h.checkSystemComponents(ctx, conditions.systemComponentsHealthy, managedResources, prometheuses), nil))
