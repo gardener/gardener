@@ -148,7 +148,12 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Create", func() {
-			It("should return true", func() {
+			It("should return false when the cache is not synced yet", func() {
+				Expect(pred.Create(event.CreateEvent{Object: service})).To(BeFalse())
+			})
+
+			It("should return true once the cache is synced", func() {
+				reconciler.CacheSynced = true
 				Expect(pred.Create(event.CreateEvent{Object: service})).To(BeTrue())
 			})
 		})

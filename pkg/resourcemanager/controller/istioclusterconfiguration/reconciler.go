@@ -51,6 +51,7 @@ const (
 type Reconciler struct {
 	TargetClient client.Client
 	Config       resourcemanagerconfigv1alpha1.IstioClusterConfigurationControllerConfig
+	CacheSynced  bool
 }
 
 // Reconcile performs the reconciliation for a source namespace containing DestinationRules.
