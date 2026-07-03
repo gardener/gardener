@@ -72,6 +72,14 @@ function install_previous_release() {
 }
 
 function upgrade_to_next_release() {
+  # Cap parallel Skaffold builds during the upgrade to avoid starving the kind host.
+  # `make gardener-up` builds all Gardener artifacts with SKAFFOLD_BUILD_CONCURRENCY=0 (unlimited) by default.
+  # In HA test setups, this saturated the host so heavily that kubelet housekeeping stalled for >2 minutes
+  # and all shoot kube-apiserver replicas simultaneously failed their liveness probes, tripping the
+  # zero-downtime validator. Limiting concurrency
+  # keeps enough headroom for the running shoot control planes during the rolling update.
+  export SKAFFOLD_BUILD_CONCURRENCY=4
+
   # downloads and upgrades to GARDENER_NEXT_RELEASE release if GARDENER_NEXT_RELEASE is not same as version mentioned in VERSION file.
   # if GARDENER_NEXT_RELEASE is same as version mentioned in VERSION file then it is considered as local release and install gardener from local repo.
   if [[ -n $GARDENER_NEXT_RELEASE && $GARDENER_NEXT_RELEASE != $VERSION ]]; then
