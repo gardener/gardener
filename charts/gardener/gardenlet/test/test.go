@@ -668,6 +668,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+			CacheSyncTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 			BackupBucket: &gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},

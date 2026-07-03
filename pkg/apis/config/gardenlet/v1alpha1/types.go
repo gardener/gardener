@@ -154,6 +154,9 @@ type ShootClientConnection struct {
 
 // GardenletControllerConfiguration defines the configuration of the controllers.
 type GardenletControllerConfiguration struct {
+	// CacheSyncTimeout is the duration that is used for the timeout when waiting for the caches to sync (defaults to 2m).
+	// +optional
+	CacheSyncTimeout *metav1.Duration `json:"cacheSyncTimeout,omitempty"`
 	// BackupBucket defines the configuration of the BackupBucket controller.
 	// +optional
 	BackupBucket *BackupBucketControllerConfiguration `json:"backupBucket,omitempty"`

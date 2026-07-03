@@ -179,6 +179,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.VPAEvictionRequirements == nil {
 		obj.VPAEvictionRequirements = &VPAEvictionRequirementsControllerConfiguration{}
 	}
+	if obj.CacheSyncTimeout == nil {
+		obj.CacheSyncTimeout = &metav1.Duration{Duration: 2 * time.Minute}
+	}
 }
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.

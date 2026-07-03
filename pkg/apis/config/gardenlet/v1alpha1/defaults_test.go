@@ -567,6 +567,23 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("GardenletControllerConfiguration CacheSyncTimeout defaulting", func() {
+		It("should default the cache sync timeout", func() {
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.CacheSyncTimeout).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+		})
+
+		It("should not overwrite already set cache sync timeout", func() {
+			obj.Controllers = &GardenletControllerConfiguration{
+				CacheSyncTimeout: &metav1.Duration{Duration: time.Minute},
+			}
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.CacheSyncTimeout).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+		})
+	})
+
 	Describe("LeaderElectionConfiguration defaulting", func() {
 		It("should correctly default the leader election configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)

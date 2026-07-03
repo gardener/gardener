@@ -15,6 +15,7 @@ shootClientConnection:
   qps: 25
   burst: 50
 controllers:
+# cacheSyncTimeout: 2m
   bastion:
     concurrentSyncs: 20
   backupBucket:
