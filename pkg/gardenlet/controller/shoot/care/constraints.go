@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,7 +51,7 @@ func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1bet
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
 		// Not applicable during hibernation — skip entirely.
-		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated {
+		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated || cond.Type == gardencorev1beta1.ShootHasPreservedFailedMachines {
 			continue
 		}
 		// Optional constraint computed before the hibernation guard.
@@ -127,6 +128,12 @@ func (c *Constraint) constraintsChecks(
 	} else {
 		constraints.hasIgnoredManagedResources = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hasIgnoredManagedResources, status, reason, message)
 	}
+	status, reason, message, err = c.checkPreservation(ctx)
+	if err != nil {
+		constraints.hasPreservedFailedMachines = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.hasPreservedFailedMachines, err)
+	} else {
+		constraints.hasPreservedFailedMachines = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hasPreservedFailedMachines, status, reason, message)
+	}
 
 	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
 		return shootHibernatedConstraints(c.clock, constraints.ConvertToSlice()...)
@@ -154,14 +161,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConditions(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConditions(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -184,7 +191,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConditions(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
 	)
 }
 
@@ -346,6 +353,26 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 		nil
 }
 
+// checkPreservation checks whether the shoot has preserved failed machines and returns the corresponding condition.
+func (c *Constraint) checkPreservation(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
+	if c.shoot.IsWorkerless || (c.shoot.IsSelfHosted() && !c.shoot.HasManagedInfrastructure()) {
+		return gardencorev1beta1.ConditionTrue, "NoPreservationApplicable", "No machine preservation applies to this shoot.", nil
+	}
+	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+	if err := c.seedClient.List(ctx, machineDeploymentList, client.InNamespace(c.shoot.ControlPlaneNamespace)); err != nil {
+		return "", "", "", err
+	}
+	var totalPreserved int32
+	for _, mcd := range machineDeploymentList.Items {
+		totalPreserved += mcd.Status.PreservedFailedReplicas
+	}
+	if totalPreserved > 0 {
+		return gardencorev1beta1.ConditionFalse, "FailedMachinesPreserved",
+			fmt.Sprintf("Cluster has %d preserved failed machine(s).", totalPreserved), nil
+	}
+	return gardencorev1beta1.ConditionTrue, "NoFailedMachinesPreserved", "No failed machines are being preserved.", nil
+}
+
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
 func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, []gardencorev1beta1.ErrorCode, error) {
@@ -490,6 +517,7 @@ type ShootConstraints struct {
 	crdsWithProblematicConversionWebhooks gardencorev1beta1.Condition
 	manualInPlaceWorkersUpdated           gardencorev1beta1.Condition
 	hasIgnoredManagedResources            gardencorev1beta1.Condition
+	hasPreservedFailedMachines            gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot constraints as a slice.
@@ -501,6 +529,7 @@ func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.crdsWithProblematicConversionWebhooks,
 		g.manualInPlaceWorkersUpdated,
 		g.hasIgnoredManagedResources,
+		g.hasPreservedFailedMachines,
 	}
 }
 
@@ -513,6 +542,7 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 		g.crdsWithProblematicConversionWebhooks.Type,
 		g.manualInPlaceWorkersUpdated.Type,
 		g.hasIgnoredManagedResources.Type,
+		g.hasPreservedFailedMachines.Type,
 	}
 }
 
@@ -526,5 +556,6 @@ func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoo
 		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
 		manualInPlaceWorkersUpdated:           v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
 		hasIgnoredManagedResources:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHasIgnoredManagedResources),
+		hasPreservedFailedMachines:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHasPreservedFailedMachines),
 	}
 }

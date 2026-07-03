@@ -639,15 +639,10 @@ func containConditionsInUnknownStatus(message string, isWorkerless bool) types.G
 	)
 
 	if !isWorkerless {
-		expectedLength = 7
+		expectedLength = 6
 		matcher = And(matcher,
 			ContainCondition(
 				OfType(gardencorev1beta1.ShootEveryNodeReady),
-				WithStatus(gardencorev1beta1.ConditionUnknown),
-				WithMessage(message),
-			),
-			ContainCondition(
-				OfType(gardencorev1beta1.ShootNoPreservedFailedMachines),
 				WithStatus(gardencorev1beta1.ConditionUnknown),
 				WithMessage(message),
 			),
@@ -658,7 +653,7 @@ func containConditionsInUnknownStatus(message string, isWorkerless bool) types.G
 }
 
 func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
-	var expectedLength = 7
+	var expectedLength = 8
 	matcher := And(
 		ContainCondition(
 			OfType(gardencorev1beta1.ShootHibernationPossible),
@@ -684,6 +679,10 @@ func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			WithMessage(message),
 		), ContainCondition(
 			OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		), ContainCondition(
+			OfType(gardencorev1beta1.ShootHasPreservedFailedMachines),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
 		),
