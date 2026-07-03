@@ -26,11 +26,10 @@ import (
 )
 
 const (
-	configMapNamePrefix       = "gardener-dashboard-config"
-	configMapAssetsNamePrefix = "gardener-dashboard-assets"
-	dataKeyConfig             = "config.yaml"
-	dataKeyFrontendConfig     = "frontend-config.yaml"
-	dataKeyLoginConfig        = "login-config.json"
+	configMapNamePrefix   = "gardener-dashboard-config"
+	dataKeyConfig         = "config.yaml"
+	dataKeyFrontendConfig = "frontend-config.yaml"
+	dataKeyLoginConfig    = "login-config.json"
 )
 
 func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, error) {
