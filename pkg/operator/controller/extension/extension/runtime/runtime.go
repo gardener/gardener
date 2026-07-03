@@ -108,15 +108,9 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 		}
 	}
 
-	if len(extension.Spec.Deployment.Resources) > 0 && helmValues != nil {
-		resources, err := chartutils.ResolveResources(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, extension.Spec.Deployment.Resources)
-		if err != nil {
-			return fmt.Errorf("failed resolving resource references: %w", err)
-		}
-		helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
-		if err != nil {
-			return fmt.Errorf("failed substituting resource references in extension runtimeClusterValues: %w", err)
-		}
+	helmValues, err = chartutils.RenderHelmValues(ctx, d.runtimeClientSet.Client(), helmValues, d.gardenNamespace, extension.Spec.Deployment.Resources)
+	if err != nil {
+		return fmt.Errorf("failed rendering Helm values for extension deployment: %w", err)
 	}
 
 	namespace := operator.ExtensionRuntimeNamespaceName(extension.Name)

@@ -53,7 +53,7 @@ func getReferencedSecretNames(obj client.Object) []string {
 
 	return append(
 		namesForReferencedResources(extension, corev1.SchemeGroupVersion.String(), "Secret"),
-		namesForPullRequestSecrets(extension)...,
+		namesForOCISecrets(extension)...,
 	)
 }
 
@@ -76,7 +76,7 @@ func namesForReferencedResources(extension *operatorv1alpha1.Extension, apiVersi
 	return names
 }
 
-func namesForPullRequestSecrets(extension *operatorv1alpha1.Extension) []string {
+func namesForOCISecrets(extension *operatorv1alpha1.Extension) []string {
 	names := sets.New[string]()
 
 	if deployment := extension.Spec.Deployment; deployment != nil {

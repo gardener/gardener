@@ -155,3 +155,21 @@ func ResourceNamesFromValues(values *apiextensionsv1.JSON) (sets.Set[string], er
 	}
 	return result, nil
 }
+
+// RenderHelmValues resolves the given resource references and substitutes them into the provided Helm values.
+func RenderHelmValues(ctx context.Context, c client.Client, helmValues map[string]any, sourceNamespace string, refs []gardencorev1.NamedResourceReference) (map[string]any, error) {
+	if helmValues == nil || len(refs) == 0 {
+		return helmValues, nil
+	}
+
+	resources, err := ResolveResources(ctx, c, sourceNamespace, refs)
+	if err != nil {
+		return nil, fmt.Errorf("failed resolving resource references: %w", err)
+	}
+	helmValuesRendered, err := SubstituteTemplateInValues(helmValues, resources)
+	if err != nil {
+		return nil, fmt.Errorf("failed substituting resource references in extension runtimeClusterValues: %w", err)
+	}
+
+	return helmValuesRendered, nil
+}

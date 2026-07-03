@@ -642,7 +642,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 					return controllerInstallation.Status.Conditions
 				}).Should(
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourceReferencesInvalid")),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("RenderingHelmValuesFailed")),
 				)
 			})
 		})

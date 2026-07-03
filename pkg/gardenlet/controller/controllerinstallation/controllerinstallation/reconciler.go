@@ -199,19 +199,10 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	if len(controllerDeployment.Resources) > 0 {
-		resources, err := chartutils.ResolveResources(gardenCtx, r.GardenClient, v1beta1constants.GardenNamespace, controllerDeployment.Resources)
-		if err != nil {
-			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ResourceReferencesInvalid", fmt.Sprintf("resource references cannot be resolved: %+v", err))
-			return reconcile.Result{}, err
-		}
-		if helmValues != nil {
-			helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
-			if err != nil {
-				conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("chart values cannot be templated: %+v", err))
-				return reconcile.Result{}, err
-			}
-		}
+	helmValues, err := chartutils.RenderHelmValues(gardenCtx, r.GardenClient, helmValues, v1beta1constants.GardenNamespace, controllerDeployment.Resources)
+	if err != nil {
+		conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "RenderingHelmValuesFailed", fmt.Sprintf("helm values cannot be rendered: %+v", err))
+		return reconcile.Result{}, err
 	}
 
 	seedIsGarden, err := gardenletutils.ClusterIsGarden(seedCtx, r.SeedClientSet.Client())

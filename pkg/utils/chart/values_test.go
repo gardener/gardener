@@ -249,4 +249,66 @@ var _ = Describe("Values", func() {
 			Expect(ResourceNamesFromValues(values)).To(Equal(sets.New[string]()))
 		})
 	})
+
+	Describe("#RenderHelmValues", func() {
+		It("should resolve references and substitute them into the values", func() {
+			helmValues := map[string]any{
+				"user":     "{{ .resources.creds.data.username }}",
+				"password": "{{ .resources.creds.data.password }}",
+				"config": map[string]any{
+					"foo": "{{ .resources.cfg.data.foo }}",
+				},
+			}
+			refs := []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "my-secret"}},
+				{Name: "cfg", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "my-config"}},
+			}
+
+			result, err := RenderHelmValues(ctx, c, helmValues, namespace, refs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(map[string]any{
+				"user":     "admin",
+				"password": "s3cret",
+				"config":   map[string]any{"foo": "bar"},
+			}))
+		})
+
+		It("should return nil helm values unchanged", func() {
+			refs := []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "my-secret"}},
+			}
+
+			result, err := RenderHelmValues(ctx, c, nil, namespace, refs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("should return helm values unchanged when no references are given", func() {
+			helmValues := map[string]any{"user": "foo"}
+
+			result, err := RenderHelmValues(ctx, c, helmValues, namespace, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(helmValues))
+		})
+
+		It("should return an error when a referenced resource cannot be resolved", func() {
+			helmValues := map[string]any{"user": "{{ .resources.creds.data.username }}"}
+			refs := []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "absent"}},
+			}
+
+			_, err := RenderHelmValues(ctx, c, helmValues, namespace, refs)
+			Expect(err).To(MatchError(ContainSubstring("failed resolving resource references")))
+		})
+
+		It("should return an error when the template substitution fails", func() {
+			helmValues := map[string]any{"user": "{{ .resources.unknown.data.username }}"}
+			refs := []gardencorev1.NamedResourceReference{
+				{Name: "creds", ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "my-secret"}},
+			}
+
+			_, err := RenderHelmValues(ctx, c, helmValues, namespace, refs)
+			Expect(err).To(MatchError(ContainSubstring("failed substituting resource references")))
+		})
+	})
 })

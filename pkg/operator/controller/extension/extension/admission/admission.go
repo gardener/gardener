@@ -119,15 +119,9 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		}
 	}
 
-	if len(extension.Spec.Deployment.Resources) > 0 && helmValues != nil {
-		resources, err := chartutils.ResolveResources(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, extension.Spec.Deployment.Resources)
-		if err != nil {
-			return fmt.Errorf("failed resolving resource references: %w", err)
-		}
-		helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
-		if err != nil {
-			return fmt.Errorf("failed substituting resource references in admission values: %w", err)
-		}
+	helmValues, err = chartutils.RenderHelmValues(ctx, d.runtimeClientSet.Client(), helmValues, d.gardenNamespace, extension.Spec.Deployment.Resources)
+	if err != nil {
+		return fmt.Errorf("failed rendering Helm values for admission deployment: %w", err)
 	}
 
 	renderedChart, err := d.runtimeClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
@@ -217,16 +211,11 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		}
 	}
 
-	if len(extension.Spec.Deployment.Resources) > 0 && helmValues != nil {
-		resources, err := chartutils.ResolveResources(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, extension.Spec.Deployment.Resources)
-		if err != nil {
-			return fmt.Errorf("failed resolving resource references: %w", err)
-		}
-		helmValues, err = chartutils.SubstituteTemplateInValues(helmValues, resources)
-		if err != nil {
-			return fmt.Errorf("failed substituting resource references in chart values: %w", err)
-		}
+	helmValues, err = chartutils.RenderHelmValues(ctx, d.runtimeClientSet.Client(), helmValues, d.gardenNamespace, extension.Spec.Deployment.Resources)
+	if err != nil {
+		return fmt.Errorf("failed rendering Helm values for virtual cluster resources for admission: %w", err)
 	}
+
 	namespace := virtualNamespace(extension)
 	registry := managedresources.NewRegistry(kubernetes.GardenScheme, kubernetes.GardenCodec, kubernetes.GardenSerializer)
 	if err := registry.Add(namespace); err != nil {
