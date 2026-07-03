@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -290,6 +291,14 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 			MountPath: rootMountPath,
 		})
 	}
+
+	// Sort volumes and volume mounts to prevent unnecessary updates to the deployment.
+	slices.SortFunc(volumes, func(a, b corev1.Volume) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	slices.SortFunc(volumeMounts, func(a, b corev1.VolumeMount) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	return volumes, volumeMounts, configPatches, nil
 }

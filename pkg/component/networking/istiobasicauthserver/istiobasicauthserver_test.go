@@ -6,6 +6,8 @@ package istiobasicauthserver_test
 
 import (
 	"context"
+	"slices"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -59,6 +61,11 @@ var _ = Describe("IstioBasicAuthServer", func() {
 		deployment = func(isGarden bool, prefixToSecret []prefixToSecretMapping) string {
 			volumes := ""
 			volumeMounts := ""
+
+			slices.SortFunc(prefixToSecret, func(a, b prefixToSecretMapping) int {
+				return strings.Compare(a.prefix, b.prefix)
+			})
+
 			for _, entry := range prefixToSecret {
 				prefix := entry.prefix
 				secret := entry.secret
@@ -140,20 +147,20 @@ spec:
             drop:
             - ALL
         volumeMounts:
-        - mountPath: /tls
+` + volumeMounts + `        - mountPath: /tls
           name: tls-server-certificate
           readOnly: true
-` + volumeMounts + `      priorityClassName: some-priority-class
+      priorityClassName: some-priority-class
       securityContext:
         fsGroup: 65532
         runAsGroup: 65532
         runAsNonRoot: true
         runAsUser: 65532
       volumes:
-      - name: tls-server-certificate
+` + volumes + `      - name: tls-server-certificate
         secret:
           secretName: ` + prefix + `istio-basic-auth-server
-` + volumes + `status: {}
+status: {}
 `
 		}
 		destinationRule = func(isGarden bool) string {
