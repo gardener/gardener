@@ -86,12 +86,6 @@ spec:
                       description: Architecture is the CPU architecture of the worker
                         pool machines and machine image.
                       type: string
-                    autoPreserveFailedMachineMax:
-                      description: |-
-                        AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
-                        This value is distributed across zones like Minimum and Maximum.
-                      format: int32
-                      type: integer
                     clusterAutoscaler:
                       description: ClusterAutoscaler contains the cluster autoscaler
                         configurations for the worker pool.
@@ -482,6 +476,12 @@ spec:
                       description: MachineControllerManagerSettings contains configurations
                         for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
                       properties:
+                        autoPreserveFailedMachineMax:
+                          description: |-
+                            AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+                            This value is distributed across zones like Minimum and Maximum.
+                          format: int32
+                          type: integer
                         disableHealthTimeout:
                           description: |-
                             DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.

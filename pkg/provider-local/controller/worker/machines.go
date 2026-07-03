@@ -195,7 +195,11 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 					},
 				}
 			}
-
+			// compute autoPreserveFailedMachineMax for deployment, if specified
+			var preserveMax int32
+			if pool.MachineControllerManagerSettings != nil {
+				preserveMax = worker.DistributeOverZones(zoneIdx, ptr.Deref(pool.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0), zoneLen)
+			}
 			machineDeployments = append(machineDeployments, worker.MachineDeployment{
 				Name:                         deploymentName,
 				ClassName:                    className,
@@ -210,7 +214,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				Taints:                       pool.Taints,
 				MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
 				ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
-				AutoPreserveFailedMachineMax: worker.DistributeOverZones(zoneIdx, ptr.Deref(pool.AutoPreserveFailedMachineMax, 0), zoneLen),
+				AutoPreserveFailedMachineMax: preserveMax,
 			})
 		}
 	}

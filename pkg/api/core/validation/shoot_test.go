@@ -9294,136 +9294,170 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
-		})
-		It("should fail when priority is set to value less than -1", func() {
-			worker := core.Worker{
-				Name: "worker",
-				Machine: core.Machine{
-					Type: "xlarge",
-					Image: &core.ShootMachineImage{
-						Name:    "image-name",
-						Version: "1.0.0",
-					},
-				},
-				MaxUnavailable: new(intstr.FromInt(1)),
-				Priority:       new(int32(-2)),
-			}
 
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
-			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("priority"),
-				"Detail": Equal("can not be less than -1"),
-			}))))
-		})
+			It("should allow setting autoPreserveFailedMachineMax to maximum if system components are not allowed", func() {
+				worker.SystemComponents = &core.WorkerSystemComponents{Allow: false}
+				worker.Maximum = 4
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					AutoPreserveFailedMachineMax: new(worker.Maximum),
+				}
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
 
-		DescribeTable("sysctl setting validation", func(sysctls map[string]string, matcher gomegatypes.GomegaMatcher) {
-			errList := ValidateSysctls(sysctls, field.NewPath("sysctls"))
-			Expect(errList).To(matcher)
-		},
-			Entry("accept valid sysctl keys",
-				map[string]string{
-					"foo.bar":                        "123",
-					"fs.aio-nr":                      "192",
-					"fs.binfmt_misc.python3/13":      "enabled",
-					"net.ipv4.conf.eth0.forwarding":  "1",
-					"net.ipv4.tcp_mem":               "374874	499832	749748",
-					"-net.ipv4.conf.all.proxy_arp":   "0",
-					"net.ipv4.conf.*.route_localnet": "1",
-				},
-				BeEmpty(),
-			),
-			Entry("reject invalid sysctl keys not matching regex",
-				map[string]string{
-					".foo.bar":   "123",
-					"foo..bar":   "abc",
-					"foo.bar.":   "123",
-					"foo.bar_":   "abc",
-					"foo.bar/":   "123",
-					"foo.bar-":   "abc",
-					"foo\"bar":   "123",
-					"foo=bar":    "abc",
-					"foo;bar":    "123",
-					"foo.**.bar": "abc",
-					"foo.bar*":   "123",
-					"foo.bar.*":  "abc",
-					"_foo.bar":   "123",
-					"/foo.bar":   "abc",
-				}, SatisfyAll(
-					HaveLen(14),
-					HaveEach(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  ContainSubstring("sysctls."),
-						"Detail": ContainSubstring("sysctl key must must match regex"),
-					}))),
-				),
-			),
-			Entry("reject sysctl keys with too long subkeys",
-				map[string]string{
-					func(size int) string {
-						// create a very long string
-						var b strings.Builder
-						for range size {
-							fmt.Fprint(&b, "s")
-						}
-						return b.String()
-					}(256): "abc",
-				}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			It("should allow setting autoPreserveFailedMachineMax to maximum-1 if system components are allowed", func() {
+				worker.SystemComponents = &core.WorkerSystemComponents{Allow: true}
+				worker.Maximum = 4
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					AutoPreserveFailedMachineMax: new(worker.Maximum - 1),
+				}
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should not allow setting autoPreserveFailedMachineMax > maximum if system components are not allowed", func() {
+				worker.SystemComponents = &core.WorkerSystemComponents{Allow: false}
+				worker.Maximum = 4
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					AutoPreserveFailedMachineMax: new(worker.Maximum + 1),
+				}
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  ContainSubstring("sysctls.sss"),
-					"Detail": Equal("sub key of sysctl must not exceed 255 bytes"),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Detail": Equal("must not be greater than maximum value"),
+				}))))
+			})
+
+			It("should not allow setting autoPreserveFailedMachineMax > maximum -1 if system components are allowed", func() {
+				worker.SystemComponents = &core.WorkerSystemComponents{Allow: true}
+				worker.Maximum = 4
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					AutoPreserveFailedMachineMax: new(worker.Maximum + 1),
+				}
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Detail": Equal("must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"),
+				}))))
+			})
+
+			It("should allow setting autoPreserveFailedMachineMax to 0", func() {
+				worker.SystemComponents = &core.WorkerSystemComponents{Allow: true}
+				worker.Maximum = 4
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					AutoPreserveFailedMachineMax: new(int32(0)),
+				}
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should not allow setting autoPreserveFailedMachineMax to negative value", func() {
+				worker.SystemComponents = &core.WorkerSystemComponents{Allow: true}
+				worker.Maximum = 4
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					AutoPreserveFailedMachineMax: new(int32(-1)),
+				}
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Detail": Equal("must not be negative"),
+				}))))
+			})
+		})
+	})
+	It("should fail when priority is set to value less than -1", func() {
+		worker := core.Worker{
+			Name: "worker",
+			Machine: core.Machine{
+				Type: "xlarge",
+				Image: &core.ShootMachineImage{
+					Name:    "image-name",
+					Version: "1.0.0",
+				},
+			},
+			MaxUnavailable: new(intstr.FromInt(1)),
+			Priority:       new(int32(-2)),
+		}
+
+		errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+		Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal(field.ErrorTypeInvalid),
+			"Field":  Equal("priority"),
+			"Detail": Equal("can not be less than -1"),
+		}))))
+	})
+
+	DescribeTable("sysctl setting validation", func(sysctls map[string]string, matcher gomegatypes.GomegaMatcher) {
+		errList := ValidateSysctls(sysctls, field.NewPath("sysctls"))
+		Expect(errList).To(matcher)
+	},
+		Entry("accept valid sysctl keys",
+			map[string]string{
+				"foo.bar":                        "123",
+				"fs.aio-nr":                      "192",
+				"fs.binfmt_misc.python3/13":      "enabled",
+				"net.ipv4.conf.eth0.forwarding":  "1",
+				"net.ipv4.tcp_mem":               "374874	499832	749748",
+				"-net.ipv4.conf.all.proxy_arp":   "0",
+				"net.ipv4.conf.*.route_localnet": "1",
+			},
+			BeEmpty(),
+		),
+		Entry("reject invalid sysctl keys not matching regex",
+			map[string]string{
+				".foo.bar":   "123",
+				"foo..bar":   "abc",
+				"foo.bar.":   "123",
+				"foo.bar_":   "abc",
+				"foo.bar/":   "123",
+				"foo.bar-":   "abc",
+				"foo\"bar":   "123",
+				"foo=bar":    "abc",
+				"foo;bar":    "123",
+				"foo.**.bar": "abc",
+				"foo.bar*":   "123",
+				"foo.bar.*":  "abc",
+				"_foo.bar":   "123",
+				"/foo.bar":   "abc",
+			}, SatisfyAll(
+				HaveLen(14),
+				HaveEach(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  ContainSubstring("sysctls."),
+					"Detail": ContainSubstring("sysctl key must must match regex"),
 				}))),
 			),
-			Entry("reject empty sysctl values",
-				map[string]string{
-					"foo": "",
-				}, ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("sysctls.foo"),
-					})),
-				),
+		),
+		Entry("reject sysctl keys with too long subkeys",
+			map[string]string{
+				func(size int) string {
+					// create a very long string
+					var b strings.Builder
+					for range size {
+						fmt.Fprint(&b, "s")
+					}
+					return b.String()
+				}(256): "abc",
+			}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  ContainSubstring("sysctls.sss"),
+				"Detail": Equal("sub key of sysctl must not exceed 255 bytes"),
+			}))),
+		),
+		Entry("reject empty sysctl values",
+			map[string]string{
+				"foo": "",
+			}, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("sysctls.foo"),
+				})),
 			),
-		)
-
-		DescribeTable("validate AutoPreserveFailedMachineMax",
-			func(allowSystemComponents bool, autoPreserveFailedMachineMax int32, expectedDetail string) {
-				maximum := int32(5)
-				worker := core.Worker{
-					Name: "worker-name",
-					Machine: core.Machine{
-						Type: "large",
-						Image: &core.ShootMachineImage{
-							Name:    "image-name",
-							Version: "1.0.0",
-						},
-						Architecture: new("amd64"),
-					},
-					MaxSurge:                     new(intstr.FromInt32(1)),
-					MaxUnavailable:               new(intstr.FromInt32(0)),
-					Maximum:                      maximum,
-					SystemComponents:             &core.WorkerSystemComponents{Allow: allowSystemComponents},
-					AutoPreserveFailedMachineMax: &autoPreserveFailedMachineMax,
-				}
-
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
-				if expectedDetail == "" {
-					Expect(errList).To(BeEmpty())
-				} else {
-					Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("autoPreserveFailedMachineMax"),
-						"Detail": Equal(expectedDetail),
-					}))))
-				}
-			},
-			Entry("system components allowed, value equals maximum", true, int32(5), "must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"),
-			Entry("system components not allowed, value exceeds maximum", false, int32(6), "must not be greater than maximum value"),
-			Entry("value is less than zero", false, int32(-1), "must not be negative"),
-			Entry("system components not allowed, value equals maximum", false, int32(5), ""),
-			Entry("system components allowed, value equals maximum-1", true, int32(4), ""),
-		)
-	})
+		),
+	)
 
 	Describe("#ValidateWorkers", func() {
 		It("should succeed checking workers", func() {

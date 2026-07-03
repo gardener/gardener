@@ -721,8 +721,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 				if withAutoPreservation {
 					autoPreserveWorkerConfig := []gardencorev1beta1.Worker{{
-						Name:                         machineDeployment1Name,
-						AutoPreserveFailedMachineMax: new(int32(1)),
+						Name:                             machineDeployment1Name,
+						MachineControllerManagerSettings: &gardencorev1beta1.MachineControllerManagerSettings{AutoPreserveFailedMachineMax: new(int32(1))},
 					}}
 					shootWorkerConfig = autoPreserveWorkerConfig
 				}

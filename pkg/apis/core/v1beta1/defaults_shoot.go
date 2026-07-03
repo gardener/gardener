@@ -343,7 +343,7 @@ func SetDefaults_Worker(obj *Worker) {
 			}
 		}
 		if obj.MachineControllerManagerSettings == nil {
-			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}
+			obj.MachineControllerManagerSettings = new(MachineControllerManagerSettings)
 		}
 		if obj.MachineControllerManagerSettings.DisableHealthTimeout == nil {
 			obj.MachineControllerManagerSettings.DisableHealthTimeout = new(true)
@@ -362,10 +362,6 @@ func SetDefaults_Worker(obj *Worker) {
 		obj.SystemComponents = &WorkerSystemComponents{
 			Allow: DefaultWorkerSystemComponentsAllow,
 		}
-	}
-
-	if obj.AutoPreserveFailedMachineMax == nil {
-		obj.AutoPreserveFailedMachineMax = new(int32(0))
 	}
 }
 

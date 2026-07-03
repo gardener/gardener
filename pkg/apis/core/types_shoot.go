@@ -1375,9 +1375,6 @@ type Worker struct {
 	// ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
 	// This is only relevant for self-hosted shoot clusters.
 	ControlPlane *WorkerControlPlane
-	// AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
-	// This value is distributed across zones like Minimum and Maximum.
-	AutoPreserveFailedMachineMax *int32
 }
 
 // WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
@@ -1464,6 +1461,9 @@ type MachineControllerManagerSettings struct {
 	// alter the current phase, and normal behavior and phase transitions continue as usual.
 	// However, the Cluster Autoscaler (CA) may scale down the machine if required.
 	MachinePreserveTimeout *metav1.Duration
+	// AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+	// This value is distributed across zones like Minimum and Maximum.
+	AutoPreserveFailedMachineMax *int32
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

@@ -2269,17 +2269,6 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 
-	if worker.AutoPreserveFailedMachineMax != nil {
-		autoPreserveFailedMachineMax := *worker.AutoPreserveFailedMachineMax
-		if autoPreserveFailedMachineMax < 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be negative"))
-		} else if helper.SystemComponentsAllowed(&worker) && worker.Maximum > 0 && (autoPreserveFailedMachineMax > (worker.Maximum - 1)) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"))
-		} else if autoPreserveFailedMachineMax > (worker.Maximum) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum value"))
-		}
-	}
-
 	if ptr.Deref(worker.UpdateStrategy, "") == core.ManualInPlaceUpdate {
 		if worker.MaxSurge != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxSurge"), worker.MaxSurge, "should not be set when `updateStrategy` is `ManualInPlaceUpdate`"))
@@ -2373,7 +2362,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 	}
 
 	if worker.MachineControllerManagerSettings != nil {
-		allErrs = append(allErrs, ValidateMachineControllerManagerSettingsOptions(worker.MachineControllerManagerSettings, worker.UpdateStrategy, fldPath.Child("machineControllerManagerSettings"))...)
+		allErrs = append(allErrs, ValidateMachineControllerManagerSettingsOptions(worker.MachineControllerManagerSettings, worker.UpdateStrategy, worker.Maximum, helper.SystemComponentsAllowed(&worker), fldPath.Child("machineControllerManagerSettings"))...)
 	}
 
 	if worker.UpdateStrategy != nil {
@@ -2414,7 +2403,7 @@ func validateVolumeName(name string, fldPath *field.Path) field.ErrorList {
 }
 
 // ValidateMachineControllerManagerSettingsOptions validates the machine controller manager setting options of worker pools
-func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineControllerManagerSettings, machineUpdateStrategy *core.MachineUpdateStrategy, fldPath *field.Path) field.ErrorList {
+func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineControllerManagerSettings, machineUpdateStrategy *core.MachineUpdateStrategy, maximum int32, systemComponentsAllowed bool, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineDrainTimeout, fldPath.Child("machineDrainTimeout"))...)
@@ -2437,6 +2426,17 @@ func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineCon
 	}
 
 	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachinePreserveTimeout, fldPath.Child("machinePreserveTimeout"))...)
+
+	if mcmOptions.AutoPreserveFailedMachineMax != nil {
+		autoPreserveFailedMachineMax := *mcmOptions.AutoPreserveFailedMachineMax
+		if autoPreserveFailedMachineMax < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be negative"))
+		} else if systemComponentsAllowed && maximum > 0 && (autoPreserveFailedMachineMax > (maximum - 1)) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"))
+		} else if autoPreserveFailedMachineMax > (maximum) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum value"))
+		}
+	}
 
 	return allErrs
 }

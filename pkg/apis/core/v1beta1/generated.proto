@@ -2084,6 +2084,11 @@ message MachineControllerManagerSettings {
   // However, the Cluster Autoscaler (CA) may scale down the machine if required.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration machinePreserveTimeout = 8;
+
+  // AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+  // This value is distributed across zones like Minimum and Maximum.
+  // +optional
+  optional int32 autoPreserveFailedMachineMax = 9;
 }
 
 // MachineImage defines the name and multiple versions of the machine image in any environment.
@@ -4045,11 +4050,6 @@ message Worker {
   // This is only relevant for self-hosted shoot clusters.
   // +optional
   optional WorkerControlPlane controlPlane = 24;
-
-  // AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
-  // This value is distributed across zones like Minimum and Maximum.
-  // +optional
-  optional int32 autoPreserveFailedMachineMax = 25;
 }
 
 // WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.

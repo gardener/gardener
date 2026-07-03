@@ -270,7 +270,6 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			ClusterAutoscaler:                autoscalerOptions,
 			Priority:                         workerPool.Priority,
 			UpdateStrategy:                   workerPool.UpdateStrategy,
-			AutoPreserveFailedMachineMax:     workerPool.AutoPreserveFailedMachineMax,
 		})
 	}
 

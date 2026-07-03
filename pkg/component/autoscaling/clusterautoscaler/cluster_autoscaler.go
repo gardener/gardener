@@ -550,7 +550,7 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 	// The isClusterHealthy check disables scaling if more than maxTotalUnreadyPercentage of nodes are not Ready.
 	// Disabling this check allows unscheduled workload from these failed preserved nodes to trigger scale up.
 	for _, workerConfig := range c.workerConfig {
-		if ptr.Deref(workerConfig.AutoPreserveFailedMachineMax, 0) > 0 {
+		if workerConfig.MachineControllerManagerSettings != nil && ptr.Deref(workerConfig.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0) > 0 {
 			command = append(command, "--max-total-unready-percentage=100")
 			break
 		}

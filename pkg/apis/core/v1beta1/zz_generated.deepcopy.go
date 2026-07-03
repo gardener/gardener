@@ -3546,6 +3546,11 @@ func (in *MachineControllerManagerSettings) DeepCopyInto(out *MachineControllerM
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.AutoPreserveFailedMachineMax != nil {
+		in, out := &in.AutoPreserveFailedMachineMax, &out.AutoPreserveFailedMachineMax
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 
@@ -6778,11 +6783,6 @@ func (in *Worker) DeepCopyInto(out *Worker) {
 		in, out := &in.ControlPlane, &out.ControlPlane
 		*out = new(WorkerControlPlane)
 		(*in).DeepCopyInto(*out)
-	}
-	if in.AutoPreserveFailedMachineMax != nil {
-		in, out := &in.AutoPreserveFailedMachineMax, &out.AutoPreserveFailedMachineMax
-		*out = new(int32)
-		**out = **in
 	}
 	return
 }
