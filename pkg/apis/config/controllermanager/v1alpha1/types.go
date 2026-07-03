@@ -119,6 +119,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ShootState defines the configuration of the ShootState finalizer controller.
 	// +optional
 	ShootState *ShootStateControllerConfiguration `json:"shootState,omitempty"`
+	// CacheSyncTimeout is the duration that is used for the timeout when waiting for the caches to sync (defaults to 2m).
+	// +optional
+	CacheSyncTimeout *metav1.Duration `json:"cacheSyncTimeout,omitempty"`
 }
 
 // BastionControllerConfiguration defines the configuration of the Bastion

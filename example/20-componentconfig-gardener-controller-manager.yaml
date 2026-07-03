@@ -5,6 +5,7 @@ gardenClientConnection:
   qps: 100
   burst: 130
 controllers:
+# cacheSyncTimeout: 2m
   bastion:
     maxLifetime: 24h
     concurrentSyncs: 5

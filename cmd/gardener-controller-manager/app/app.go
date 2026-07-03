@@ -20,6 +20,7 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -88,7 +89,9 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 		Logger:                  log,
 		Scheme:                  kubernetes.GardenScheme,
 		GracefulShutdownTimeout: new(5 * time.Second),
-
+		Controller: controllerconfig.Controller{
+			CacheSyncTimeout: cfg.Controllers.CacheSyncTimeout.Duration,
+		},
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		Metrics: metricsserver.Options{
 			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),

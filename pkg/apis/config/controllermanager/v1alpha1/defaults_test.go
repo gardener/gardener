@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
@@ -889,6 +890,21 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
 			Expect(obj.Controllers.ShootState).To(Equal(expected))
+		})
+	})
+
+	Describe("ControllerManagerControllerConfiguration CacheSyncTimeout defaulting", func() {
+		It("should default the cache sync timeout", func() {
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CacheSyncTimeout).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+		})
+
+		It("should not overwrite an already set cache sync timeout", func() {
+			obj.Controllers.CacheSyncTimeout = &metav1.Duration{Duration: time.Minute}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CacheSyncTimeout).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 	})
 })

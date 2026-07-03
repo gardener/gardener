@@ -391,4 +391,7 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 	if obj.ShootState == nil {
 		obj.ShootState = &ShootStateControllerConfiguration{}
 	}
+	if obj.CacheSyncTimeout == nil {
+		obj.CacheSyncTimeout = &metav1.Duration{Duration: 2 * time.Minute}
+	}
 }
