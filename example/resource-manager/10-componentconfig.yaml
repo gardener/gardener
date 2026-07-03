@@ -36,6 +36,7 @@ debugging:
 controllers:
 # clusterID: foo
 # resourceClass: bar
+# cacheSyncTimeout: 2m
   garbageCollector:
     enabled: true
     syncPeriod: 1h

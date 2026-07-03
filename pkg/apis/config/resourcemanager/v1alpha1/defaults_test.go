@@ -185,18 +185,21 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			Expect(obj.Controllers.ClusterID).To(PointTo(Equal("")))
 			Expect(obj.Controllers.ResourceClass).To(PointTo(Equal("resources")))
+			Expect(obj.Controllers.CacheSyncTimeout).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 		})
 
 		It("should not overwrite already set values for ResourceManagerControllerConfiguration", func() {
 			obj.Controllers = ResourceManagerControllerConfiguration{
-				ClusterID:     new("foo"),
-				ResourceClass: new("bar"),
+				ClusterID:        new("foo"),
+				ResourceClass:    new("bar"),
+				CacheSyncTimeout: &metav1.Duration{Duration: time.Minute},
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
 			Expect(obj.Controllers.ClusterID).To(PointTo(Equal("foo")))
 			Expect(obj.Controllers.ResourceClass).To(PointTo(Equal("bar")))
+			Expect(obj.Controllers.CacheSyncTimeout).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 	})
 

@@ -97,6 +97,9 @@ type ResourceManagerControllerConfiguration struct {
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	// +optional
 	ResourceClass *string `json:"resourceClass,omitempty"`
+	// CacheSyncTimeout is the duration that is used for the timeout when waiting for the caches to sync (defaults to 2m).
+	// +optional
+	CacheSyncTimeout *metav1.Duration `json:"cacheSyncTimeout,omitempty"`
 
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig `json:"garbageCollector"`

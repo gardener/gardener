@@ -88,6 +88,9 @@ func SetDefaults_ResourceManagerControllerConfiguration(obj *ResourceManagerCont
 	if obj.ResourceClass == nil {
 		obj.ResourceClass = new(DefaultResourceClass)
 	}
+	if obj.CacheSyncTimeout == nil {
+		obj.CacheSyncTimeout = &metav1.Duration{Duration: 2 * time.Minute}
+	}
 }
 
 // SetDefaults_CSRApproverControllerConfig sets defaults for the CSRApproverControllerConfig object.
