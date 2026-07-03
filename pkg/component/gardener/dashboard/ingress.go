@@ -38,7 +38,7 @@ func (g *gardenerDashboard) istioResources(ctx context.Context, secretCARuntime 
 			CommonName:                  deploymentName,
 			DNSNames:                    g.values.Ingress.Domains,
 			CertType:                    secretsutils.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
+			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(operatorv1alpha1.SecretNameCAGardener))
 		if err != nil {
