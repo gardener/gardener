@@ -86,7 +86,7 @@ var _ = BeforeSuite(func() {
 			Enabled:         true,
 			ConcurrentSyncs: new(5),
 		},
-	}).AddToManager(mgr, mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 

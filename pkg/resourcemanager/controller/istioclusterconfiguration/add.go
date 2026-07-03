@@ -39,7 +39,9 @@ import (
 const ControllerName = "istio-cluster-configuration"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
+	logger := mgr.GetLogger().WithValues("controller", ControllerName)
+
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
@@ -53,9 +55,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		if !meta.IsNoMatchError(err) {
 			return err
 		}
-		mgr.GetLogger().WithValues("controller", ControllerName).Info("No watches will be added because Istio CRDs are not installed")
+		logger.Info("No watches will be added because Istio CRDs are not installed")
 		return nil
 	}
+
+	go func() {
+		if mgr.GetCache().WaitForCacheSync(ctx) {
+			r.CacheSynced = true
+			logger.Info("Cache is synced. Controller starts handling service create events")
+		}
+	}()
 
 	_, err = builder.
 		ControllerManagedBy(mgr).
@@ -182,8 +191,11 @@ func (r *Reconciler) DestinationRulePredicate() predicate.Predicate {
 // ServicePredicate filters Service events to port name changes.
 func (r *Reconciler) ServicePredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(_ event.CreateEvent) bool { return true },
-		DeleteFunc: func(_ event.DeleteEvent) bool { return true },
+		// MapServiceToNamespaces is expensive so we enqueue based on create events only after the caches are synced to
+		// avoid cache sync timeouts. When the controller is starting all namespaces will be enqueued by
+		// DestinationRules anyway. We do not want to skip create events while the controller is running because a
+		// Service might be created after a DestinationRule.
+		CreateFunc: func(_ event.CreateEvent) bool { return r.CacheSynced },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			newService, ok := e.ObjectNew.(*corev1.Service)
 			if !ok {
