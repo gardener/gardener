@@ -291,6 +291,11 @@ func (in *ControllerManagerControllerConfiguration) DeepCopyInto(out *Controller
 		*out = new(ShootStateControllerConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CacheSyncTimeout != nil {
+		in, out := &in.CacheSyncTimeout, &out.CacheSyncTimeout
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

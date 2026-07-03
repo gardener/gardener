@@ -520,6 +520,11 @@ func (in *ResourceManagerControllerConfiguration) DeepCopyInto(out *ResourceMana
 		*out = new(string)
 		**out = **in
 	}
+	if in.CacheSyncTimeout != nil {
+		in, out := &in.CacheSyncTimeout, &out.CacheSyncTimeout
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	in.GarbageCollector.DeepCopyInto(&out.GarbageCollector)
 	in.Health.DeepCopyInto(&out.Health)
 	in.CSRApprover.DeepCopyInto(&out.CSRApprover)
