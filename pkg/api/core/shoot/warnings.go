@@ -22,7 +22,7 @@ import (
 )
 
 // GetWarnings returns warnings for the given Shoot.
-func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRotationInterval time.Duration, suppressedDNSProviderSecretNameWarningIndexes []int) []string {
+func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRotationInterval time.Duration, ignoreWarningsForDNSIndexes []int) []string {
 	if shoot == nil {
 		return nil
 	}
@@ -83,18 +83,18 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	}
 
 	if shoot.Spec.DNS != nil {
-		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), suppressedDNSProviderSecretNameWarningIndexes)...)
+		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), ignoreWarningsForDNSIndexes)...)
 	}
 
 	return warnings
 }
 
 // GetDNSProviderWarnings returns warnings for the given DNS configuration.
-func GetDNSProviderWarnings(dns *core.DNS, fldPath *field.Path, suppressedSecretNameWarningIndexes []int) []string {
+func GetDNSProviderWarnings(dns *core.DNS, fldPath *field.Path, ignoreWarningsForDNSIndexes []int) []string {
 	var warnings []string
 
 	for i, provider := range dns.Providers {
-		if provider.SecretName == nil || slices.Contains(suppressedSecretNameWarningIndexes, i) {
+		if provider.SecretName == nil || slices.Contains(ignoreWarningsForDNSIndexes, i) {
 			continue
 		}
 
