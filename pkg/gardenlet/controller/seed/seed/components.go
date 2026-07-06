@@ -726,11 +726,6 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, see
 			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
 			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
 		},
-		// PVC autoscaling is intentionally not enabled for the cache Prometheus: it acts as a short-lived
-		// federation source (~1d retention) for the seed and aggregate Prometheuses, so growing its volume
-		// provides limited benefit. It would also introduce risks, since the cache Prometheus is the source
-		// of the metrics that drive the PVC Autoscaler itself.
-		PVCAutoscaler: pvcautoscalervalues.Values{Enabled: false},
 	})
 }
 
@@ -740,7 +735,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
 		Replicas:          1,
-		RetentionSize:     "160GB",
+		RetentionSize:     "85GB",
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
 		HealthCheckBy:     prometheus.Gardenlet,
 		AdditionalPodLabels: map[string]string{
@@ -756,13 +751,6 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			PodMonitors:     seedprometheus.CentralPodMonitors(),
 			ScrapeConfigs:   seedprometheus.CentralScrapeConfigs(),
 			PrometheusRules: seedprometheus.CentralPrometheusRules(),
-		},
-		PVCAutoscaler: pvcautoscalervalues.Values{
-			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
-			MaxCapacity:                 resource.MustParse("200Gi"),
-			UtilizationThresholdPercent: new(70),
-			StepPercent:                 new(10),
-			MinStepAbsolute:             new(resource.MustParse("2Gi")),
 		},
 	})
 }
@@ -785,7 +773,7 @@ func (r *Reconciler) newAggregatePrometheus(
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
 		Replicas:          1,
 		Retention:         new(monitoringv1.Duration("30d")),
-		RetentionSize:     "160GB",
+		RetentionSize:     "15GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		HealthCheckBy:     prometheus.Gardenlet,
@@ -806,13 +794,6 @@ func (r *Reconciler) newAggregatePrometheus(
 			SigningCA:                    v1beta1constants.SecretNameCASeed,
 			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
 			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
-		},
-		PVCAutoscaler: pvcautoscalervalues.Values{
-			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
-			MaxCapacity:                 resource.MustParse("200Gi"),
-			UtilizationThresholdPercent: new(70),
-			StepPercent:                 new(10),
-			MinStepAbsolute:             new(resource.MustParse("2Gi")),
 		},
 	}
 
