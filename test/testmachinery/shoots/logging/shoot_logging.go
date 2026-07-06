@@ -6,6 +6,7 @@ package logging
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -72,7 +73,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			seedClient.Get(ctx,
 				types.NamespacedName{
 					Namespace: shootFramework.ShootSeedNamespace(),
-					Name:      v1beta1constants.DeploymentNamePlutono},
+					Name:      fmt.Sprintf("%s-%s", v1beta1constants.DeploymentNamePlutono, shootFramework.ShootSeedNamespace()),
+				},
 				plutonoVirtualService,
 			),
 		)
