@@ -30,6 +30,8 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
@@ -6399,6 +6401,240 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
 
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+			})
+		})
+
+		Context("live control plane migration", func() {
+			var (
+				oldShoot        core.Shoot
+				sourceSeed      gardencorev1beta1.Seed
+				destSeed        gardencorev1beta1.Seed
+				regionConfigMap *corev1.ConfigMap
+			)
+
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.LiveControlPlaneMigration, true))
+
+				// Shoot must be HA and non-hibernated to satisfy the live-migration prerequisites. The binding
+				// subresource rejects any spec change other than seedName, so both shoot and oldShoot must carry
+				// the same HA config and hibernation state.
+				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{}}
+				shoot.Spec.CloudProfileName = new("profile")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationMigrationLiveMigrate, "true")
+
+				oldShoot = *shoot.DeepCopy()
+				// The trigger requires spec.seedName to change on the binding subresource.
+				shoot.Spec.SeedName = new(newSeedName)
+
+				sourceSeed = *seedBase.DeepCopy()
+				sourceSeed.Name = seedName
+				sourceSeed.Spec.Provider = gardencorev1beta1.SeedProvider{Type: "unknown", Region: "eu-west-1"}
+				sourceSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "v1.100.0"}
+
+				destSeed = *seedBase.DeepCopy()
+				destSeed.Name = newSeedName
+				destSeed.Spec.Provider = gardencorev1beta1.SeedProvider{Type: "unknown", Region: "eu-west-1"}
+				destSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "v1.100.0"}
+
+				regionConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "scheduler-region-config",
+						Namespace: v1beta1constants.GardenNamespace,
+						Labels: map[string]string{
+							v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
+						},
+						Annotations: map[string]string{
+							v1beta1constants.AnnotationSchedulingCloudProfiles: "profile",
+						},
+					},
+					Data: map[string]string{"eu-west-1": "eu-central-1: 50\nus-east-1: 999\n"},
+				}
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&sourceSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&destSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			bindingAttrs := func(op admission.Operation) admission.Attributes {
+				return admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", op, &metav1.UpdateOptions{}, false, userInfo)
+			}
+
+			It("should allow a valid live migration request", func() {
+				Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
+			})
+
+			It("should be a no-op on Create", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				// The Create path fails for other reasons (unresolved cloud profile), but MUST NOT reference live migration.
+				if err := admissionHandler.Validate(ctx, attrs, nil); err != nil {
+					Expect(err.Error()).NotTo(ContainSubstring("live control plane migration"))
+				}
+			})
+
+			It("should be a no-op on Update without the binding subresource (validateScheduling rejects the seedName change first)", func() {
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("please use the shoots/binding subresource")))
+			})
+
+			It("should be a no-op when the annotation is missing (falls through to classic migration path)", func() {
+				delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+				delete(oldShoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				if err != nil {
+					Expect(err.Error()).NotTo(ContainSubstring("live control plane migration"))
+				}
+			})
+
+			It("should be a no-op when the annotation value is not truthy", func() {
+				shoot.Annotations[v1beta1constants.AnnotationMigrationLiveMigrate] = "false"
+				oldShoot.Annotations[v1beta1constants.AnnotationMigrationLiveMigrate] = "false"
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				if err != nil {
+					Expect(err.Error()).NotTo(ContainSubstring("live control plane migration"))
+				}
+			})
+
+			It("should be a no-op when seedName is unchanged", func() {
+				shoot.Spec.SeedName = oldShoot.Spec.SeedName
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				if err != nil {
+					Expect(err.Error()).NotTo(ContainSubstring("live control plane migration"))
+				}
+			})
+
+			It("should reject when the feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.LiveControlPlaneMigration, false))
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("feature gate is disabled in gardener-apiserver")))
+			})
+
+			It("should reject a non-HA shoot", func() {
+				shoot.Spec.ControlPlane = nil
+				oldShoot.Spec.ControlPlane = nil
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("non-HA shoot")))
+			})
+
+			It("should reject a hibernated shoot (spec)", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("hibernated or waking-up")))
+			})
+
+			It("should reject a waking-up shoot (status hibernated but spec not)", func() {
+				shoot.Status.IsHibernated = true
+				oldShoot.Status.IsHibernated = true
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("hibernated or waking-up")))
+			})
+
+			It("should reject mismatched provider types", func() {
+				destSeed.Spec.Provider.Type = "different"
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("different provider types")))
+			})
+
+			It("should reject when the destination seed has no reported gardenlet version", func() {
+				destSeed.Status.Gardener = nil
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("gardenlet version not reported")))
+			})
+
+			It("should reject mismatched gardenlet versions", func() {
+				destSeed.Status.Gardener.Version = "v1.101.0"
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("different gardenlet versions")))
+			})
+
+			Context("inter-region distance", func() {
+				BeforeEach(func() {
+					destSeed.Spec.Provider.Region = "eu-central-1"
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(regionConfigMap)).To(Succeed())
+				})
+
+				It("should pass when the distance is within the default threshold (180)", func() {
+					Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
+				})
+
+				It("should reject when the distance exceeds the threshold", func() {
+					destSeed.Spec.Provider.Region = "us-east-1"
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("distance 999 exceeds threshold 180")))
+				})
+
+				It("should honour the per-ConfigMap threshold override annotation", func() {
+					metav1.SetMetaDataAnnotation(&regionConfigMap.ObjectMeta, v1beta1constants.AnnotationMigrationInterRegionDistanceThreshold, "40")
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Update(regionConfigMap)).To(Succeed())
+					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("distance 50 exceeds threshold 40")))
+				})
+
+				It("should reject when no region ConfigMap references the cloud profile", func() {
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Delete(regionConfigMap)).To(Succeed())
+					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("no scheduler region ConfigMap found")))
+				})
+
+				It("should reject when the source region is not configured in the ConfigMap", func() {
+					sourceSeed.Spec.Provider.Region = "unknown-region"
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&sourceSeed)).To(Succeed())
+					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("source region not configured")))
+				})
+
+				It("should reject when the destination region is not configured", func() {
+					destSeed.Spec.Provider.Region = "no-such-region"
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("distance to destination region not configured")))
+				})
+
+				It("should bypass the distance check when allow-distant-regions=true", func() {
+					destSeed.Spec.Provider.Region = "us-east-1"
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationMigrationAllowDistantRegions, "true")
+					metav1.SetMetaDataAnnotation(&oldShoot.ObjectMeta, v1beta1constants.AnnotationMigrationAllowDistantRegions, "true")
+					Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
+				})
+
+				It("should reject when duplicate region ConfigMaps reference the same cloud profile", func() {
+					duplicate := regionConfigMap.DeepCopy()
+					duplicate.Name = "scheduler-region-config-2"
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(duplicate)).To(Succeed())
+					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+					Expect(err).To(MatchError(ContainSubstring("multiple scheduler region ConfigMaps")))
+				})
+
+				It("should skip the distance check when source and destination regions are equal", func() {
+					destSeed.Spec.Provider.Region = sourceSeed.Spec.Provider.Region
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+					// No region ConfigMap needed for same-region case.
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Delete(regionConfigMap)).To(Succeed())
+					Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
 				})
 			})
 		})

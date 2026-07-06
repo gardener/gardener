@@ -15,6 +15,7 @@ func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.InPlaceNodeUpdates,
 		features.CloudProfileCapabilities,
+		features.LiveControlPlaneMigration,
 		features.VersionClassificationLifecycle,
 		features.DisableNginxIngressInShoot,
 	)))

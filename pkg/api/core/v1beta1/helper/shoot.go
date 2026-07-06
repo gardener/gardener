@@ -599,6 +599,12 @@ func ShouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
 }
 
+// HasLiveMigrationAnnotation returns true if the live control plane migration intent annotation is set to a truthy value.
+func HasLiveMigrationAnnotation(annotations map[string]string) bool {
+	liveMigrate, _ := strconv.ParseBool(annotations[v1beta1constants.AnnotationMigrationLiveMigrate])
+	return liveMigrate
+}
+
 // LastInitiationTimeForWorkerPool returns the last initiation time for the worker pool when found in the given list of
 // pending workers rollouts. If the worker pool is not found in the list, the global last initiation time is returned.
 func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []gardencorev1beta1.PendingWorkersRollout, globalLastInitiationTime *metav1.Time) *metav1.Time {

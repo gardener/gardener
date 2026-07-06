@@ -749,6 +749,18 @@ const (
 	// the linked cloudprofiles containing the region distances.
 	AnnotationSchedulingCloudProfiles = "scheduling.gardener.cloud/cloudprofiles"
 
+	// AnnotationMigrationLiveMigrate is a constant for an annotation key on a Shoot resource whose value must be set to
+	// "true" to declare intent for live control plane migration. It is combined with a spec.seedName change via the
+	// shoots/binding subresource to trigger a live control plane migration.
+	AnnotationMigrationLiveMigrate = "migration.gardener.cloud/live-migrate"
+	// AnnotationMigrationInterRegionDistanceThreshold is a constant for an annotation key on a scheduler region ConfigMap
+	// which defines the maximum allowed inter-region distance for live control plane migration.
+	AnnotationMigrationInterRegionDistanceThreshold = "migration.gardener.cloud/inter-region-distance-threshold"
+	// AnnotationMigrationAllowDistantRegions is a constant for an annotation key on a Shoot resource whose value must
+	// be set to "true" to allow live control plane migration between seeds in distant regions despite exceeding the
+	// configured distance threshold.
+	AnnotationMigrationAllowDistantRegions = "migration.gardener.cloud/allow-distant-regions"
+
 	// AnnotationConfirmationForceDeletion is a constant for an annotation on a Shoot resource whose value must be set to "true" in order to
 	// trigger force-deletion of the cluster. It can only be set if the Shoot has a deletion timestamp and contains an ErrorCode in the Shoot Status.
 	AnnotationConfirmationForceDeletion = "confirmation.gardener.cloud/force-deletion"

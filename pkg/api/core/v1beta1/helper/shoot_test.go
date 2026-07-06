@@ -198,6 +198,31 @@ var _ = Describe("Helper", func() {
 			BeTrue()),
 	)
 
+	DescribeTable("#HasLiveMigrationAnnotation",
+		func(objectMeta metav1.ObjectMeta, match gomegatypes.GomegaMatcher) {
+			Expect(HasLiveMigrationAnnotation(objectMeta.Annotations)).To(match)
+		},
+
+		Entry("annotations not set",
+			metav1.ObjectMeta{},
+			BeFalse()),
+		Entry("live-migrate annotation not present",
+			metav1.ObjectMeta{Annotations: map[string]string{}},
+			BeFalse()),
+		Entry("live-migrate annotation present but value is false",
+			metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "false"}},
+			BeFalse()),
+		Entry("live-migrate annotation present but value is unparsable",
+			metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "yes"}},
+			BeFalse()),
+		Entry("live-migrate annotation present and value is true",
+			metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "true"}},
+			BeTrue()),
+		Entry("live-migrate annotation present and value is 1",
+			metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "1"}},
+			BeTrue()),
+	)
+
 	var profile = gardencorev1beta1.SchedulingProfileBinPacking
 
 	DescribeTable("#ShootSchedulingProfile",
