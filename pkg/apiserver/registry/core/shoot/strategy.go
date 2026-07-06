@@ -234,7 +234,7 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
 }
 
-func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
+func (s shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
@@ -314,7 +314,7 @@ func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Ob
 	return shoot.GetWarnings(ctx, newShoot, oldShoot, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot, oldShoot))
 }
 
-func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, oldShoot *core.Shoot, ignoredIndexes []int) {
+func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, _ *core.Shoot, ignoredIndexes []int) {
 	if len(ignoredIndexes) == 0 {
 		return
 	}
@@ -327,11 +327,11 @@ func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, oldShoot *core.Shoot, i
 	})
 }
 
-func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj, oldShoot *core.Shoot) {
+func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj, _ *core.Shoot) {
 	s.dnsProviderSecretNameWarningSuppressions.Delete(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
 }
 
-func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj, oldShoot *core.Shoot) []int {
+func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj, _ *core.Shoot) []int {
 	value, ok := s.dnsProviderSecretNameWarningSuppressions.LoadAndDelete(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
 	if !ok {
 		return nil
