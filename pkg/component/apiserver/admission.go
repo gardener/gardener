@@ -129,19 +129,14 @@ func computeRelevantAdmissionPluginRawConfig(plugin AdmissionPluginConfig) ([]by
 kind: WebhookAdmissionConfiguration`, webhookadmissionv1.SchemeGroupVersion.String())
 			}
 		}
-
-		configObj, err := runtime.Decode(admissionCodec, plugin.Config.Raw)
+		config := &webhookadmissionv1.WebhookAdmission{}
+		err := runtime.DecodeInto(admissionCodec, plugin.Config.Raw, config)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decode config for admission plugin %s: %w", plugin.Name, err)
 		}
 
-		switch config := configObj.(type) {
-		case *webhookadmissionv1.WebhookAdmission:
-			config.KubeConfigFile = kubeconfigFilePath
-			return runtime.Encode(admissionCodec, config)
-		default:
-			return nil, fmt.Errorf("expected apiserver.config.k8s.io/v1.WebhookAdmissionConfiguration in %s plugin configuration but got %T", plugin.Name, config)
-		}
+		config.KubeConfigFile = kubeconfigFilePath
+		return runtime.Encode(admissionCodec, config)
 
 	case "ImagePolicyWebhook":
 		// The configuration for this admission plugin is not backed by the API machinery, hence we have to use

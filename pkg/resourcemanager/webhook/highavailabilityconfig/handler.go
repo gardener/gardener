@@ -235,31 +235,26 @@ func (h *Handler) handleStatefulSet(
 }
 
 func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
-	switch req.Kind.Version {
-	case autoscalingv2.SchemeGroupVersion.Version:
-		hpa := &autoscalingv2.HorizontalPodAutoscaler{}
-		if err := h.Decoder.Decode(req, hpa); err != nil {
-			return nil, err
-		}
-
-		log := h.Logger.WithValues("hpa", kubernetesutils.ObjectKeyForCreateWebhooks(hpa, req))
-
-		if err := mutateAutoscalingReplicas(
-			log,
-			failureToleranceType,
-			hpa,
-			func() *int32 { return hpa.Spec.MinReplicas },
-			func(n *int32) { hpa.Spec.MinReplicas = n },
-			func() int32 { return hpa.Spec.MaxReplicas },
-			func(n int32) { hpa.Spec.MaxReplicas = n },
-		); err != nil {
-			return nil, err
-		}
-
-		return hpa, nil
-	default:
-		return nil, fmt.Errorf("autoscaling version %q in request is not supported", req.Kind.Version)
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	if err := h.Decoder.Decode(req, hpa); err != nil {
+		return nil, err
 	}
+
+	log := h.Logger.WithValues("hpa", kubernetesutils.ObjectKeyForCreateWebhooks(hpa, req))
+
+	if err := mutateAutoscalingReplicas(
+		log,
+		failureToleranceType,
+		hpa,
+		func() *int32 { return hpa.Spec.MinReplicas },
+		func(n *int32) { hpa.Spec.MinReplicas = n },
+		func() int32 { return hpa.Spec.MaxReplicas },
+		func(n int32) { hpa.Spec.MaxReplicas = n },
+	); err != nil {
+		return nil, err
+	}
+
+	return hpa, nil
 }
 
 func mutateReplicas(
