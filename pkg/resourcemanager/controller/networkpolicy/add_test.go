@@ -441,14 +441,21 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Create", func() {
-			It("should return false for pod without netpol labels", func() {
+			It("should return false for pod without netpol labels when cache is synced", func() {
+				reconciler.CacheSynced = true
 				pod.Labels = map[string]string{"app": "foo"}
 				Expect(p.Create(event.CreateEvent{Object: pod})).To(BeFalse())
 			})
 
-			It("should return true for pod with netpol to-label", func() {
+			It("should return true for pod with netpol to-label when cache is synced", func() {
+				reconciler.CacheSynced = true
 				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
 				Expect(p.Create(event.CreateEvent{Object: pod})).To(BeTrue())
+			})
+
+			It("should return false for pod with netpol to-label when cache is not synced", func() {
+				pod.Labels = map[string]string{"networking.resources.gardener.cloud/to-foo-tcp-8080": "allowed"}
+				Expect(p.Create(event.CreateEvent{Object: pod})).To(BeFalse())
 			})
 		})
 
