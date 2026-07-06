@@ -32,7 +32,7 @@ Three feature gates control the nginx-ingress deployment across the different cl
 The `DisableNginxIngressInShoot` feature gate has differentiated behavior depending on the component it is set for:
 
 - **`gardener-apiserver`**: Blocks creation of new Shoot clusters with the nginx-ingress addon enabled. Existing Shoot clusters can only disable the addon, not enable it again.
-- **`gardener-controller-manager`**: During the next scheduled maintenance window, automatically sets `.spec.addons.nginxIngress.enabled: false` on all Shoot clusters that still have the addon enabled. The shoot status will reflect the change with the message: `.spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator`.
+- **`gardener-controller-manager`**: During the next scheduled maintenance window, automatically sets `.spec.addons.nginxIngress.enabled: false` on all Shoot clusters that still have the addon enabled. The shoot status will reflect the change with the message: `.spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator`. Existing `Ingress` resources remain in the cluster.
 
 ### Enabling the Feature Gates
 
@@ -91,7 +91,7 @@ The following checklist helps identify remaining dependencies.
 
    Ingresses using `nginx-ingress-gardener` (the Garden/Seed ingress class) depend on nginx-ingress.
 
-2. **Check installed extensions** in the Garden cluster for any that create Ingress resources. Known extensions that may use ingress resources include:
+2. **Check installed extensions** in the Garden cluster for any that create `Ingress` resources. Known extensions that may use `Ingress` resources include:
    - [gardener-extension-shoot-falco](https://github.com/gardener/gardener-extension-shoot-falco)
    - [oidc-apps-controller](https://github.com/gardener/oidc-apps-controller)
 
@@ -109,7 +109,7 @@ The following checklist helps identify remaining dependencies.
 
 The same checks apply to each Seed cluster. The nginx ingress class for Seeds is `nginx-ingress-gardener`.
 
-1. **List all Ingress resources** across relevant namespaces in the Seed:
+1. **List all `Ingress` resources** across relevant namespaces in the Seed:
 
    ```bash
    kubectl get ingress --all-namespaces -o wide
@@ -138,10 +138,10 @@ The same checks apply to each Seed cluster. The nginx ingress class for Seeds is
 To minimize risk, follow this order when disabling nginx-ingress across a landscape:
 
 1. **Identify dependencies**: Run the checks above for all cluster types.
-2. **Migrate extensions**: Ensure all extensions that create Ingress resources have been updated to use an alternative (e.g., Istio `VirtualService`, Traefik `IngressRoute`, or Gateway API resources).
+2. **Migrate extensions**: Ensure all extensions that create `Ingress` resources have been updated to use an alternative (e.g., Istio `VirtualService`, Traefik `IngressRoute`, or Gateway API resources).
 3. **Communicate with shoot owners**: Give shoot owners time to migrate their workloads (see [Shoot Cluster Owner Guide](#shoot-cluster-owner-guide)).
-4. **Disable in Garden runtime**: Enable `DisableNginxIngressInGarden` for `gardener-operator` after verifying no Garden-level Ingress resources remain.
-5. **Disable in Seeds**: Enable `DisableNginxIngressInSeed` for the gardenlet after verifying no Seed-level Ingress resources remain.
+4. **Disable in Garden runtime**: Enable `DisableNginxIngressInGarden` for `gardener-operator` after verifying no Garden-level `Ingress` resources remain.
+5. **Disable in Seeds**: Enable `DisableNginxIngressInSeed` for the gardenlet after verifying no Seed-level `Ingress` resources remain.
 6. **Disable in Shoots for new cluster**: Enable `DisableNginxIngressInShoot` for `gardener-apiserver`. 
 7. **Disable in Shoots for all clusters**: Enable `DisableNginxIngressInShoot` for `gardener-controller-manager`.
    - Wait for all shoots to go through maintenance.
@@ -164,13 +164,13 @@ When the nginx-ingress addon is enabled, Gardener:
 2. Creates a `LoadBalancer` Service that exposes ports 80 (HTTP) and 443 (HTTPS).
 3. Creates a wildcard DNS record `*.ingress.<shoot-domain>` pointing to the load balancer's IP or hostname.
 
-Your Ingress resources use ingress class `nginx` (either via `spec.ingressClassName: nginx` or the annotation `kubernetes.io/ingress.class: nginx`).
+Your `Ingress` resources use ingress class `nginx` (either via `spec.ingressClassName: nginx` or the annotation `kubernetes.io/ingress.class: nginx`).
 
-### Migration to gardener-extension-shoot-traefik
+### Migration to `gardener-extension-shoot-traefik`
 
-The recommended migration path for shoot cluster owners is to use the [gardener-extension-shoot-traefik](https://github.com/gardener/gardener-extension-shoot-traefik), which deploys [Traefik v3](https://traefik.io) as a replacement ingress controller.
+The recommended migration path for shoot cluster owners is to use the [`gardener-extension-shoot-traefik`](https://github.com/gardener/gardener-extension-shoot-traefik), which deploys [Traefik v3](https://traefik.io) as a replacement ingress controller.
 
-Traefik offers an NGINX-compatible mode (`ingressProvider: KubernetesIngressNGINX`) that allows most existing Ingress resources to work without modification.
+Traefik offers an NGINX-compatible mode (`ingressProvider: KubernetesIngressNGINX`) that allows most existing `Ingress` resources to work without modification.
 
 While Traefik is almost compatible with nginx-ingress, some advanced nginx annotations may not be supported. Review the [Traefik documentation](https://doc.traefik.io/traefik/reference/routing-configuration/kubernetes/ingress-nginx/) for any specific features/annotations you rely on.
 
@@ -187,16 +187,18 @@ kubectl get controllerregistrations
 
 Look for a registration with `extension-shoot-traefik` or similar in the name.
 
-#### Step 2: Plan for Zero-Downtime Migration
+#### Step 2: Plan for Migration
 
-A zero-downtime migration runs both nginx-ingress (existing) and Traefik (new) in parallel during the transition. Traffic is cut over per-Ingress resource by changing the `ingressClassName`.
+A migration with minimal downtime runs both nginx-ingress (existing) and Traefik (new) in parallel during the transition. Traffic is cut over per `Ingress` resource by changing the `ingressClassName`.
 
 The high-level steps are:
 
 1. Enable the `shoot-traefik` extension (Traefik is deployed alongside nginx-ingress).
-2. Migrate Ingress resources one by one or in batches by changing their ingress class.
+2. Migrate `Ingress` resources one by one or in batches by changing their ingress class.
 3. Verify each migrated service is working correctly with Traefik.
-4. Disable the nginx-ingress addon once all Ingress resources are migrated.
+4. Disable the nginx-ingress addon once all `Ingress` resources are migrated.
+
+Take special note about how you want to migrate DNS as it may cause downtime during the migration (see step 4 below).
 
 #### Step 3: Enable the shoot-traefik Extension
 
@@ -249,7 +251,10 @@ The nginx-ingress addon creates a wildcard DNS record `*.ingress.<shoot-domain>`
 
 If you want all `*.ingress.<shoot-domain>` traffic to move to Traefik at once, you need to update the wildcard DNS record. This is typically managed by Gardener — disabling the nginx-ingress addon will remove the record, and you will need to re-create it pointing to Traefik using the `shoot-dns-service` extension or your cloud DNS provider directly.
 
-If your landscape has the [shoot-dns-service extension](https://github.com/gardener/gardener-extension-shoot-dns-service) available, you can create a `DNSEntry` resource:
+> [!NOTE]
+> Please that this approach may incur downtime depending on the DNS TTL and propagation time. If you want to avoid downtime, consider Option B below if your DNS provider supports it.
+
+If your landscape has the [`gardener-extension-shoot-dns-service`](https://github.com/gardener/gardener-extension-shoot-dns-service) available, you can create a `DNSEntry` resource:
 
 ```yaml
 apiVersion: dns.gardener.cloud/v1alpha1
@@ -273,11 +278,11 @@ For a more gradual migration without changing the wildcard DNS record, use diffe
 
 #### Step 5: Handle Certificates
 
-**If you use cert-manager or the shoot-cert-service extension:**
+**If you use [`cert-manager`](https://cert-manager.io/) or the [`gardener-extension-shoot-cert-service`](https://github.com/gardener/gardener-extension-shoot-cert-service):**
 
-Both cert-manager and the [shoot-cert-service](https://github.com/gardener/gardener-extension-shoot-cert-service) watch Ingress resources for certificate requests. After changing the `ingressClassName`, the certificate controller should continue to manage the certificates automatically, since they watch all Ingress resources regardless of class.
+Both [`cert-manager`](https://cert-manager.io/) and the [`gardener-extension-shoot-cert-service`](https://github.com/gardener/gardener-extension-shoot-cert-service) watch `Ingress` resources for certificate requests. After changing the `ingressClassName`, the certificate controller should continue to manage the certificates automatically, since they watch all `Ingress` resources regardless of class.
 
-Verify that your certificate annotations are present on the Ingress resources after migration:
+Verify that your certificate annotations are present on the `Ingress` resources after migration:
 
 ```yaml
 metadata:
@@ -287,7 +292,7 @@ metadata:
     cert-manager.io/cluster-issuer: my-issuer  # for cert-manager
 ```
 
-**If you use TLS secrets referenced in Ingress resources:**
+**If you use TLS secrets referenced in `Ingress` resources:**
 
 No change is needed — the TLS secret reference in `spec.tls` works the same way with Traefik.
 
@@ -299,9 +304,9 @@ spec:
     secretName: my-app-tls
 ```
 
-#### Step 6: Migrate Ingress Resources
+#### Step 6: Migrate `Ingress` Resources
 
-For each Ingress resource, change the ingress class from `nginx` to `traefik`.
+For each `Ingress` resource, change the ingress class from `nginx` to `traefik`.
 
 **Before (nginx-ingress):**
 
@@ -368,11 +373,11 @@ kubectl apply -f ingress.yaml
 curl -H "Host: my-app.ingress.my-shoot.example.com" http://<traefik-lb-ip>/
 ```
 
-Repeat for each Ingress resource.
+Repeat for each `Ingress` resource.
 
 #### Step 7: Disable the Nginx Ingress Addon
 
-Once all Ingress resources have been migrated to Traefik and verified:
+Once all `Ingress` resources have been migrated to Traefik and verified:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -401,7 +406,7 @@ Apply and wait for reconciliation. Gardener will remove the nginx-ingress contro
 |---|---|---|
 | 1 | Enable `shoot-traefik` extension alongside nginx-ingress | None |
 | 2 | Update DNS to point to Traefik LoadBalancer (if using wildcard cutover) | Brief (TTL-dependent) |
-| 3 | Migrate Ingress resources to `ingressClassName: traefik` one by one | None per Ingress (both controllers run in parallel) |
+| 3 | Migrate `Ingress` resources to `ingressClassName: traefik` one by one | None per Ingress (both controllers run in parallel) |
 | 4 | Verify certificate issuance and HTTPS still works | None |
 | 5 | Disable nginx-ingress addon | None (Traefik already serving traffic) |
 
@@ -424,15 +429,15 @@ For complex nginx configurations without direct Traefik equivalents, consider mi
 
 ### Frequently Asked Questions
 
-**Q: What happens to my Ingress resources if the landscape operator forcibly disables the addon?**
+**Q: What happens to my `Ingress` resources if the landscape operator forcibly disables the addon?**
 
-When `DisableNginxIngressInShoot` is set for `gardener-controller-manager`, the addon is disabled during your next maintenance window. The nginx-ingress controller is then removed by the gardenlet. Your Ingress resources remain in the cluster, but they will no longer be served. Applications using those Ingress resources will become unreachable.
+When `DisableNginxIngressInShoot` is set for `gardener-controller-manager`, the addon is disabled during your next maintenance window. The nginx-ingress controller is then removed by the gardenlet. Your `Ingress` resources remain in the cluster, but they will no longer be served. Applications using those `Ingress` resources will become unreachable.
 
 Make sure to migrate before your landscape operator enforces the disable, or contact your landscape operator to request more time.
 
 **Q: Can I use the nginx-ingress addon on production or development purpose shoots?**
 
-No. The nginx-ingress addon (and all Shoot addons) can only be enabled on shoots with `spec.purpose: evaluation`. For production workloads, use the `shoot-traefik` extension or deploy your own ingress controller.
+No. The nginx-ingress addon (and all Shoot addons) can only be enabled on shoots with `spec.purpose: evaluation`. For production workloads, i.e, clusters with `spec.purpose: production`, use the `shoot-traefik` extension or deploy your own ingress controller.
 
 **Q: My Kubernetes version is 1.35 or newer. Can I still use nginx-ingress?**
 
