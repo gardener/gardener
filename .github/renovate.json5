@@ -190,6 +190,7 @@
       matchPackageNames: [
         '/.*open-telemetry/opentelemetry-operator$/',
         '/github\\.com/open-telemetry/opentelemetry-operator$/',
+        '/github\\.com/open-telemetry/opentelemetry-operator/apis$/',
       ],
     },
     {
