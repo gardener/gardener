@@ -378,8 +378,7 @@ func (r *Reconciler) MapIngressToServices(_ context.Context, obj client.Object) 
 func (r *Reconciler) PodPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		// EventHandlerForPod is expensive so we enqueue based on create events only after the caches are synced to
-		// avoid cache sync timeouts. When the controller is starting all namespaces will be enqueued by
-		// Services anyway.
+		// avoid cache sync timeouts. When the controller is starting pods will be considered by services anyway.
 		CreateFunc: func(e event.CreateEvent) bool {
 			return r.CacheSynced && hasNetworkPolicyToLabels(e.Object.GetLabels())
 		},
