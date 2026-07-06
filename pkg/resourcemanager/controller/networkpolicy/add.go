@@ -47,7 +47,9 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
+	logger := mgr.GetLogger().WithValues("controller", ControllerName)
+
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
@@ -104,18 +106,25 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		WatchesRawSource(source.Kind[client.Object](
 			targetCluster.GetCache(),
 			namespace,
-			r.EventHandlerForNamespace(mgr.GetLogger().WithValues("controller", ControllerName)),
+			r.EventHandlerForNamespace(logger),
 		)).
 		WatchesRawSource(source.Kind[client.Object](
 			targetCluster.GetCache(),
 			pod,
-			r.EventHandlerForPod(mgr.GetLogger().WithValues("controller", ControllerName)),
+			r.EventHandlerForPod(logger),
 			r.PodPredicate(),
 		)).
 		Build(r)
 	if err != nil {
 		return err
 	}
+
+	go func() {
+		if targetCluster.GetCache().WaitForCacheSync(ctx) {
+			r.CacheSynced = true
+			logger.Info("Cache is synced. Controller starts handling pod create events")
+		}
+	}()
 
 	if r.Config.IngressControllerSelector != nil {
 		if err := c.Watch(source.Kind[client.Object](
@@ -137,7 +146,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		if !meta.IsNoMatchError(err) {
 			return err
 		}
-		mgr.GetLogger().WithValues("controller", ControllerName).Info("VirtualService watch will not be added because Istio CRDs are not installed")
+		logger.Info("VirtualService watch will not be added because Istio CRDs are not installed")
 		return nil
 	}
 	r.istioCRDsFound = true
@@ -368,8 +377,10 @@ func (r *Reconciler) MapIngressToServices(_ context.Context, obj client.Object) 
 // PodPredicate returns a predicate which filters for pods with `networking.resources.gardener.cloud/to-*` labels.
 func (r *Reconciler) PodPredicate() predicate.Predicate {
 	return predicate.Funcs{
+		// EventHandlerForPod is expensive so we enqueue based on create events only after the caches are synced to
+		// avoid cache sync timeouts. When the controller is starting pods will be considered by services anyway.
 		CreateFunc: func(e event.CreateEvent) bool {
-			return hasNetworkPolicyToLabels(e.Object.GetLabels())
+			return r.CacheSynced && hasNetworkPolicyToLabels(e.Object.GetLabels())
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return !maps.Equal(getNetworkPolicyToLabels(e.ObjectOld.GetLabels()), getNetworkPolicyToLabels(e.ObjectNew.GetLabels()))

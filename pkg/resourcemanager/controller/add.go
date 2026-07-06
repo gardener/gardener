@@ -70,7 +70,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 	if cfg.Controllers.NetworkPolicy.Enabled {
 		if err := (&networkpolicy.Reconciler{
 			Config: cfg.Controllers.NetworkPolicy,
-		}).AddToManager(mgr, targetCluster); err != nil {
+		}).AddToManager(ctx, mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
 		}
 	}
@@ -78,7 +78,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 	if cfg.Controllers.IstioClusterConfiguration.Enabled {
 		if err := (&istioclusterconfiguration.Reconciler{
 			Config: cfg.Controllers.IstioClusterConfiguration,
-		}).AddToManager(mgr, targetCluster); err != nil {
+		}).AddToManager(ctx, mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding istio cluster configuration controller: %w", err)
 		}
 	}

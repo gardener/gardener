@@ -42,6 +42,7 @@ type Reconciler struct {
 	TargetClient client.Client
 	Config       resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig
 	Recorder     events.EventRecorder
+	CacheSynced  bool
 
 	selectors      []labels.Selector
 	istioCRDsFound bool
