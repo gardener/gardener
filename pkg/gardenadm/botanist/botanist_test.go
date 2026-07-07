@@ -118,31 +118,55 @@ metadata:
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("kube-system"))
 			})
 
-			It("should generate a UID for the shoot and write it to the host", func() {
-				fs := afero.NewMemMapFs()
-				DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
+			When("the Shoot does not have status UID set", func() {
+				It("should generate a UID for the shoot and write it to the host", func() {
+					fs := afero.NewMemMapFs()
+					DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
 
-				By("Generate new shoot UID and write it to the host")
-				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
-				Expect(err).NotTo(HaveOccurred())
+					By("Generate new shoot UID and write it to the host")
+					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
 
-				uid := b.Shoot.GetInfo().Status.UID
-				Expect(uid).NotTo(BeEmpty())
+					uid := b.Shoot.GetInfo().Status.UID
+					Expect(uid).NotTo(BeEmpty())
 
-				path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
-				content, err := b.FS.ReadFile(path)
-				Expect(err).NotTo(HaveOccurred())
+					path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+					content, err := b.FS.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(content)).To(Equal(string(uid)))
+					Expect(string(content)).To(Equal(string(uid)))
 
-				By("Do not regenerate shoot UID when file is present on host")
-				b, err = NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
-				Expect(err).NotTo(HaveOccurred())
+					By("Do not regenerate shoot UID when file is present on host")
+					b, err = NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
-				content, err = b.FS.ReadFile(path)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal(string(uid)))
+					Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
+					content, err = b.FS.ReadFile(path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(content)).To(Equal(string(uid)))
+				})
+			})
+
+			When("the Shoot has status UID set", func() {
+				It("should not overwrite the already set UID", func() {
+					const uid = "some-uid"
+					shootFile := fsys[configDir+"/shoot.yaml"]
+					shootFile.Data = append(shootFile.Data, []byte(`status:
+  uid: `+uid+`
+`)...)
+
+					fs := afero.NewMemMapFs()
+					DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
+
+					By("Ensure the shoot UID is preserved")
+					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(string(b.Shoot.GetInfo().Status.UID)).To(Equal(uid))
+
+					path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+					Expect(b.FS.ReadFile(path)).Error().To(MatchError(os.IsNotExist, "IsNotExist"))
+				})
 			})
 		})
 
