@@ -18,11 +18,9 @@ import (
 )
 
 var (
-	// TODO(ialidzhikov): Switch back to the generated CustomResourceDefinitions, once https://github.com/gardener/gardener/issues/14734 is resolved and `k8s.io/autoscaler/vertical-pod-autoscaler` is updated to v1.7.0.
-	//
-	//go:embed third_party/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
+	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
 	verticalPodAutoscalerCRD string
-	//go:embed third_party/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
+	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
 	verticalPodAutoscalerCheckpointCRD string
 
 	crdResources map[string]string
