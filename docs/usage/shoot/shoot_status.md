@@ -128,9 +128,7 @@ If it's visible, operators should be aware that the annotated resources may dive
 
 **`HasPreservedFailedMachines`**:
 
-This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis.
-It is only evaluated for non-workerless shoots with managed infrastructure (i.e., shoots with a `credentialsBindingName` or `secretBindingName`).
-It will not be added to `.status.constraints` when no failed machines are currently preserved.
+This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis. It will not be added to `.status.constraints` when no failed machines are currently preserved.
 See [Machine Preservation](shoot_machine_preservation.md) for more details.
 
 
