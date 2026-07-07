@@ -70,14 +70,6 @@ const (
 	// alpha: v1.137.0
 	VictoriaLogsBackend featuregate.Feature = "VictoriaLogsBackend"
 
-	// VPAInPlaceUpdates enables the usage of in-place Pod resource updates in the Vertical Pod Autoscaler resources
-	// to perform in-place Pod resource updates.
-	// owner: @vitanovs @ialidzhikov
-	// alpha: v1.133.0
-	// beta: v1.138.0
-	// GA: 1.146.0
-	VPAInPlaceUpdates featuregate.Feature = "VPAInPlaceUpdates"
-
 	// CustomDNSServerInNodeLocalDNS enables custom server block support for NodeLocalDNS in the custom CoreDNS configuration of Shoot clusters.
 	// owner: @docktofuture
 	// beta: v1.133.0
@@ -169,7 +161,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},
 	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
-	VPAInPlaceUpdates:              {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.Beta},
 	VPNBondingModeRoundRobin:       {Default: false, PreRelease: featuregate.Alpha},
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},

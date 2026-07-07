@@ -24,7 +24,6 @@ func GetFeatures() []featuregate.Feature {
 		features.DoNotCopyBackupCredentials,
 		features.OpenTelemetryCollector,
 		features.VictoriaLogsBackend,
-		features.VPAInPlaceUpdates,
 		features.CustomDNSServerInNodeLocalDNS,
 		features.VPNBondingModeRoundRobin,
 		features.PrometheusHealthChecks,
