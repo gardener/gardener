@@ -25,17 +25,17 @@ A preserved machine/node has the following properties:
 > [!NOTE]
 > Preservation of backing machines for nodes that never registered (unregistered nodes) requires Kubernetes >= v1.34.
 
-## Effect on Shoot Conditions
+## Effect on Shoot Conditions and Constraints
 
-Preserved failed machines affect three Shoot conditions: `NoPreservedFailedMachines`, `EveryNodeReady`, and `SystemComponentsHealthy`.
+Preservation affects the following Shoot conditions and constraints:
 
-### `NoPreservedFailedMachines`
+### `HasPreservedFailedMachines`
 
-When auto-preservation is enabled (i.e., `autoPreserveFailedMachineMax > 0`) for any worker pool in the Shoot, Gardener tracks preserved failed machines and exposes a `NoPreservedFailedMachines` condition in the Shoot status.
+When the shoot has preserved failed machines, Gardener tracks preserved failed machines and exposes a `HasPreservedFailedMachines` constraint in the Shoot status.
 
-| Condition status | Meaning |
+| Constraint status | Meaning |
 |---|---|
-| `True` | No failed machines are currently preserved. |
+| Not present / `True` | No failed machines are currently preserved. |
 | `False` | One or more failed machines are currently being preserved. |
 
 ### `EveryNodeReady`
@@ -49,7 +49,7 @@ The `EveryNodeReady` condition reflects whether all registered nodes are ready a
 
 ### `SystemComponentsHealthy`
 
-When `NoPreservedFailedMachines` is `False`, Gardener suppresses `SystemComponentsHealthy` failures that are attributable solely to DaemonSet pods running on the preserved (unhealthy) nodes. This prevents a single preserved failed node from blocking the overall health of the cluster. Specifically:
+When the `HasPreservedFailedMachines` constraint is `False`, Gardener suppresses `SystemComponentsHealthy` failures that are attributable solely to DaemonSet pods running on the preserved (unhealthy) nodes. This prevents a single preserved failed node from blocking the overall health of the cluster. Specifically:
 
 - For each unhealthy ManagedResource, suppression is evaluated per resource type:
   - **DaemonSet:** failures caused entirely by pods on preserved nodes are suppressed.
@@ -61,7 +61,7 @@ When `NoPreservedFailedMachines` is `False`, Gardener suppresses `SystemComponen
 
 Preservation is configured per worker pool in the Shoot spec. Two fields control it:
 
-- **`spec.provider.workers[].autoPreserveFailedMachineMax`:** the maximum number of `Failed` machines MCM may auto-preserve concurrently in this worker pool.
+- **`spec.provider.workers[].machineControllerManager.autoPreserveFailedMachineMax`:** the maximum number of `Failed` machines MCM may auto-preserve concurrently in this worker pool.
 - **`spec.provider.workers[].machineControllerManager.machinePreserveTimeout`:** how long a machine stays preserved before MCM automatically stops preservation. Defaults to `96h` (4 days) if not set. Must be a positive duration.
 
 ### Constraints on `autoPreserveFailedMachineMax`
@@ -87,9 +87,9 @@ spec:
     - name: worker-pool-1
       minimum: 1
       maximum: 5
-      autoPreserveFailedMachineMax: 2
       machineControllerManager:
         machinePreserveTimeout: 72h
+        autoPreserveFailedMachineMax: 2
 ```
 
 > **Note:** Changes to `machinePreserveTimeout` apply only to preservations that start after the change. Existing preserved machines are not affected. If you need to extend or shorten the preservation window of a currently preserved machine, edit the `preserveExpiryTime` field in the machine's status directly.

@@ -136,7 +136,6 @@ spec:
     # zones: # optional, only relevant if the provider supports availability zones
     # - europe-central-1a
     # - europe-central-1b
-    # autoPreserveFailedMachineMax: 0 (i.e., no failed machine will be auto-preserved)
     # machineControllerManager: # optional, it allows to configure the machine-controller settings.
     #   machineDrainTimeout: 2h
     #   machineHealthTimeout: 10m
@@ -145,6 +144,7 @@ spec:
     #   inPlaceUpdateTimeout: 20m (only relevant for in-place update strategy)
     #   disableHealthTimeout: true (only relevant for in-place update strategy)
     #   machinePreserveTimeout: 96h (only relevant for preservation of machines)
+    #   autoPreserveFailedMachineMax: 0 (i.e., no failed machine will be auto-preserved)
     #   nodeConditions:
     #   - ReadonlyFilesystem
     #   - KernelDeadlock

@@ -27,7 +27,6 @@ Currently, the available Shoot condition types are:
 - `EveryNodeReady`
 - `ObservabilityComponentsHealthy`
 - `SystemComponentsHealthy`
-- `NoPreservedFailedMachines`
 
 The Shoot conditions are maintained by the [shoot care reconciler](../../../pkg/gardenlet/controller/shoot/care/reconciler.go) of the gardenlet.
 Find more information in the [gardenlet documentation](../../concepts/gardenlet.md#shoot-controller).
@@ -126,6 +125,13 @@ Once the user manually labels all the relevant nodes with `node.machine.sapcloud
 This constraint indicates that at least one `ManagedResource` in the Shoot's control plane namespace has been annotated with `resources.gardener.cloud/ignore=true`, meaning its reconciliation has been disabled.
 It will not be added to `.status.constraints` if no such `ManagedResource` exists.
 If it's visible, operators should be aware that the annotated resources may diverge from the desired state and should remove the annotation once the manual intervention is complete.
+
+**`HasPreservedFailedMachines`**:
+
+This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis.
+It is only evaluated for non-workerless shoots with managed infrastructure (i.e., shoots with a `credentialsBindingName` or `secretBindingName`).
+It will not be added to `.status.constraints` when no failed machines are currently preserved.
+See [Machine Preservation](shoot_machine_preservation.md) for more details.
 
 
 ### Last Operation
