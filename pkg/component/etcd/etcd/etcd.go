@@ -1042,7 +1042,7 @@ func (e *etcd) computeReplicas(existingEtcd *druidcorev1alpha1.Etcd) int32 {
 func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidcorev1alpha1.Etcd) *string {
 	defragmentationSchedule := e.values.DefragmentationSchedule
 	if existingEtcd != nil && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil &&
-		!isEveryThreeDaysScheduleExist(*existingEtcd.Spec.Etcd.DefragmentationSchedule) {
+		!isEveryNDaysSchedule(*existingEtcd.Spec.Etcd.DefragmentationSchedule) {
 		defragmentationSchedule = existingEtcd.Spec.Etcd.DefragmentationSchedule
 	}
 	return defragmentationSchedule
@@ -1068,10 +1068,10 @@ func Name(role string) string {
 	return "etcd-" + role
 }
 
-// isEveryThreeDaysScheduleExist reports whether the defrag schedule cron expression uses a "- - */3 * *" day-of-month field,
-// which was the old defragmentation schedule.
-// Existing Etcd resource with this pattern should be updated to the new defrag schedule.
-func isEveryThreeDaysScheduleExist(schedule string) bool {
+// isEveryNDaysSchedule reports whether the cron expression schedules on every Nth day-of-month
+// (i.e. the day-of-month field matches "*/N"). Such schedules were used as the old defragmentation
+// schedule and should be updated to the new daily schedule on existing Etcd resources.
+func isEveryNDaysSchedule(schedule string) bool {
 	fields := strings.Fields(schedule)
-	return len(fields) == 5 && fields[2] == "*/3"
+	return len(fields) == 5 && strings.HasPrefix(fields[2], "*/")
 }
