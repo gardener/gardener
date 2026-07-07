@@ -6,25 +6,14 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/gardener/gardener/cmd/internal/migration"
 )
 
-func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manager.RunnableFunc {
+func runMigrations(_ context.Context, _ client.Client, _ logr.Logger) manager.RunnableFunc {
 	return func(context.Context) error {
-		// The below migration is preserved in order to cover the migration when upgrading from
-		// VPAInPlaceUpdates feature gate disabled to VPAInPlaceUpdates enabled unconditionally.
-		//
-		// TODO(ialidzhikov): Clean up the migration below when cleaning up the VPAInPlaceUpdates feature gate.
-		if err := migration.MigrateVPAEmptyPatch(ctx, c, log); err != nil {
-			return fmt.Errorf("failed to migrate VerticalPodAutoscaler with 'MigrateVPAEmptyPatch' migration: %w", err)
-		}
-
 		return nil
 	}
 }

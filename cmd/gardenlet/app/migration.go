@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/cmd/internal/migration"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -21,14 +20,6 @@ import (
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	seedClient := g.mgr.GetClient()
-
-	// The below migration is preserved in order to cover the migration when upgrading from
-	// VPAInPlaceUpdates feature gate disabled to VPAInPlaceUpdates enabled unconditionally.
-	//
-	// TODO(ialidzhikov): Clean up the migration below when cleaning up the VPAInPlaceUpdates feature gate.
-	if err := migration.MigrateVPAEmptyPatch(ctx, seedClient, log); err != nil {
-		return fmt.Errorf("failed to migrate VerticalPodAutoscaler with 'MigrateVPAEmptyPatch' migration: %w", err)
-	}
 
 	// TODO(shafeeqes): Remove this function in gardener v1.148
 	log.Info("Cleaning up OSC hash versioning secrets in shoot namespaces")
