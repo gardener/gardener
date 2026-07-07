@@ -4467,6 +4467,55 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("maxBinpackingTime"),
 					"Detail": Equal("must be non-negative"),
 				})))),
+				Entry("valid with autoscaling minAllowed", core.ClusterAutoscaler{
+					Autoscaling: &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("500Mi"),
+						},
+					},
+				}, version_1_32, BeEmpty()),
+				Entry("invalid autoscaling with empty minAllowed", core.ClusterAutoscaler{
+					Autoscaling: &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{},
+					},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("autoscaling.minAllowed"),
+					"Detail": Equal("must provide minAllowed"),
+				})))),
+				Entry("invalid autoscaling with unsupported resource in minAllowed", core.ClusterAutoscaler{
+					Autoscaling: &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{
+							"hugepages-1Gi": resource.MustParse("1"),
+						},
+					},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("autoscaling.minAllowed.hugepages-1Gi"),
+				})))),
+				Entry("invalid autoscaling with below minRequired cpu resource in minAllowed", core.ClusterAutoscaler{
+					Autoscaling: &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("5m"),
+							corev1.ResourceMemory: resource.MustParse("500Mi"),
+						},
+					},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("autoscaling.minAllowed.cpu"),
+				})))),
+				Entry("invalid autoscaling with below minRequired memory resource in minAllowed", core.ClusterAutoscaler{
+					Autoscaling: &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("5Mi"),
+						},
+					},
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("autoscaling.minAllowed.memory"),
+				})))),
 			)
 
 			Describe("taint validation", func() {

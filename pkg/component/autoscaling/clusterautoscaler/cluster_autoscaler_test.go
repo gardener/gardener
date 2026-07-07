@@ -778,6 +778,31 @@ var _ = Describe("ClusterAutoscaler", func() {
 			It("w/ config, k8s v1.35", func() { test(true, false, false, true) })
 			It("w/ config, w/ workerConfig", func() { test(true, true, false, false) })
 			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true, false) })
+
+			It("w/ config, w/ minAllowed in VPA", func() {
+				config := configFull.DeepCopy()
+				config.Autoscaling = &gardencorev1beta1.ControlPlaneAutoscaling{
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("100m"),
+						corev1.ResourceMemory: resource.MustParse("500Mi"),
+					},
+				}
+
+				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, nil, semver.MustParse("1.33.1"), semver.MustParse("1.33.1"))
+				clusterAutoscaler.SetNamespaceUID(namespaceUID)
+				clusterAutoscaler.SetMachineDeployments(machineDeployments)
+
+				Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
+
+				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: vpaName, Namespace: namespace}, actualVPA)).To(Succeed())
+				Expect(actualVPA.Spec.ResourcePolicy.ContainerPolicies).To(HaveLen(2))
+				Expect(actualVPA.Spec.ResourcePolicy.ContainerPolicies[0].ContainerName).To(Equal(containerName))
+				Expect(actualVPA.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed).To(Equal(corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("500Mi"),
+				}))
+			})
 		})
 	})
 

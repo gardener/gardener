@@ -794,6 +794,9 @@ type ClusterAutoscaler struct {
 	// If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).
 	// +optional
 	MaxBinpackingTime *metav1.Duration `json:"maxBinpackingTime,omitempty" protobuf:"bytes,23,opt,name=maxBinpackingTime"`
+	// Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,24,opt,name=autoscaling"`
 }
 
 // ExpanderMode is type used for Expander values

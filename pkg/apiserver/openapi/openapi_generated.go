@@ -2664,11 +2664,17 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.",
+							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			metav1.Duration{}.OpenAPIModelName()},
+			v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName(), metav1.Duration{}.OpenAPIModelName()},
 	}
 }
 

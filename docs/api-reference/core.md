@@ -2213,6 +2213,18 @@ boolean
 <p>MaxBinpackingTime is the maximum time spent on binpacking for a single scale-up.<br />If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#controlplaneautoscaling">ControlPlaneAutoscaling</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
@@ -2542,7 +2554,7 @@ ControlPlane holds information about the general settings for the control plane 
 
 
 <p>
-(<em>Appears on:</em><a href="#etcdconfig">ETCDConfig</a>, <a href="#kubeapiserverconfig">KubeAPIServerConfig</a>)
+(<em>Appears on:</em><a href="#clusterautoscaler">ClusterAutoscaler</a>, <a href="#etcdconfig">ETCDConfig</a>, <a href="#kubeapiserverconfig">KubeAPIServerConfig</a>)
 </p>
 
 <p>

@@ -337,6 +337,10 @@ spec:
   #   ignoreDaemonsetsUtilization: false
   #   emitPerNodeGroupMetrics: false
   #   verbosity: 2
+  #   autoscaling:
+  #     minAllowed:
+  #       cpu: "2"
+  #       memory: 6Gi
   # verticalPodAutoscaler:
   #   enabled: true
   #   evictAfterOOMThreshold: 10m0s

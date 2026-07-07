@@ -1597,6 +1597,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MaxNodeGroupBackoffDuration, fldPath.Child("maxNodeGroupBackoffDuration"))...)
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.NodeGroupBackoffResetTimeout, fldPath.Child("nodeGroupBackoffResetTimeout"))...)
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MaxBinpackingTime, fldPath.Child("maxBinpackingTime"))...)
+	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(autoScaler.Autoscaling, corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10m"), corev1.ResourceMemory: resource.MustParse("30M")}, fldPath.Child("autoscaling"))...)
 
 	return allErrs
 }
