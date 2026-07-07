@@ -392,13 +392,19 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
 
 	if runsControlPlane {
-		// This UID is used to compute the name of the BackupEntry object. Persist the generated UID on the machine in case
-		// `gardenadm init` is retried/executed multiple times (otherwise, we'd always generate a new one).
-		uid, err := shootUID(fs)
-		if err != nil {
-			return fmt.Errorf("failed fetching shoot UID: %w", err)
+		// The Shoot UID determines the BackupBucket/BackupEntry names and thus the etcd backup location,
+		// so it must stay stable across invocations.
+		//
+		// - `gardenadm restore`: UID comes from the Shoot status exported by `gardenadm discover existing`; preserve it.
+		// - `gardenadm init`: no UID on the Shoot, so reuse the one persisted at /var/lib/gardenadm/shoot-uid,
+		//   or generate and persist a new one (keeps retries of `gardenadm init` idempotent).
+		if shoot.Status.UID == "" {
+			uid, err := shootUID(fs)
+			if err != nil {
+				return fmt.Errorf("failed fetching shoot UID: %w", err)
+			}
+			shoot.Status.UID = uid
 		}
-		shoot.Status.UID = uid
 
 		if v1beta1helper.HasManagedInfrastructure(resources.Shoot) && resources.ShootState == nil {
 			return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
