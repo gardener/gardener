@@ -1109,6 +1109,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.Autoscaling != nil {
+		in, out := &in.Autoscaling, &out.Autoscaling
+		*out = new(ControlPlaneAutoscaling)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

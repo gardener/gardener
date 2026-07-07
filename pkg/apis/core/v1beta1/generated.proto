@@ -613,6 +613,10 @@ message ClusterAutoscaler {
   // If binpacking is limited by this, scale-up continues with the already calculated scale-up options (default: 5m).
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxBinpackingTime = 23;
+
+  // Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 24;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
