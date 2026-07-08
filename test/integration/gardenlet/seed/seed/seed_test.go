@@ -704,6 +704,18 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(victoriaCRD.Destroy(ctx)).To(Succeed())
 						Expect(extensionCRD.Destroy(ctx)).To(Succeed())
 						Expect(openTelemetryCRD.Destroy(ctx)).To(Succeed())
+
+						// Wait for CRDs to be fully removed before re-deploying them. Without this, a CRD still
+						// in Terminating state causes Deploy to be a no-op (content already matches desired), and
+						// the subsequent Wait races the API server's finalizer removal, observing NotFound.
+						Expect(istioCRDs.WaitCleanup(ctx)).To(Succeed())
+						Expect(vpaCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(fluentCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(prometheusCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(persesCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(victoriaCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(extensionCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(openTelemetryCRD.WaitCleanup(ctx)).To(Succeed())
 					})
 					// We need to check it after the CRDs are deployed.
 					// We cannot check it in the general case beforehand, as the VPA CRDs are needed.
@@ -1034,6 +1046,18 @@ var _ = Describe("Seed controller tests", func() {
 						Expect(victoriaCRD.Destroy(ctx)).To(Succeed())
 						Expect(extensionCRD.Destroy(ctx)).To(Succeed())
 						Expect(openTelemetryCRD.Destroy(ctx)).To(Succeed())
+
+						// Wait for CRDs to be fully removed before re-deploying them. Without this, a CRD still
+						// in Terminating state causes Deploy to be a no-op (content already matches desired), and
+						// the subsequent Wait races the API server's finalizer removal, observing NotFound.
+						Expect(istioCRDs.WaitCleanup(ctx)).To(Succeed())
+						Expect(vpaCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(fluentCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(prometheusCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(persesCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(victoriaCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(extensionCRD.WaitCleanup(ctx)).To(Succeed())
+						Expect(openTelemetryCRD.WaitCleanup(ctx)).To(Succeed())
 					})
 				})
 
