@@ -146,5 +146,6 @@ func DefaultOnPlugins() sets.Set[string] {
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
 		validating.PluginName,                     // ValidatingAdmissionPolicy
 		resourcequota.PluginName,                  // ResourceQuota
+		mutating.PluginName,                       // MutatingAdmissionPolicy
 	)
 }
