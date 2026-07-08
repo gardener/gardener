@@ -535,6 +535,11 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
 					MaxCapacity: maxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: new(70),
+						StepPercent:                 new(10),
+						MinStepAbsolute:             new(resource.MustParse("1Gi")),
+					},
 				},
 			},
 		},

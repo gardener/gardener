@@ -259,6 +259,11 @@ func (v *victoriaLogs) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alph
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
 					MaxCapacity: values.MaxCapacity,
+					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
+						UtilizationThresholdPercent: new(70),
+						StepPercent:                 new(10),
+						MinStepAbsolute:             new(resource.MustParse("1Gi")),
+					},
 				},
 			},
 		},
