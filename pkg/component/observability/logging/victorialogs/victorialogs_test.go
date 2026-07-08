@@ -104,7 +104,7 @@ var _ = Describe("VictoriaLogs", func() {
 				PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Labels: getLabels(),
 				},
-				CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
+				CommonAppsParams: victoriametricsv1beta1.CommonAppsParams{
 					DisableSelfServiceScrape: new(true),
 					UseStrictSecurity:        new(true),
 					UseDefaultResources:      new(false),
@@ -119,8 +119,6 @@ var _ = Describe("VictoriaLogs", func() {
 							corev1.ResourceMemory: resource.MustParse("100M"),
 						},
 					},
-				},
-				CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
 					ReplicaCount: new(int32(0)),
 				},
 				RetentionPeriod: "15d",

@@ -204,8 +204,8 @@ spec:
                         with target labels.
                       type: boolean
                     honorTimestamps:
-                      description: HonorTimestamps controls whether vmagent respects
-                        the timestamps present in scraped data.
+                      description: HonorTimestamps controls whether vmagent or vmsingle
+                        respects the timestamps present in scraped data.
                       type: boolean
                     interval:
                       description: Interval at which metrics should be scraped
@@ -269,7 +269,7 @@ spec:
                             description: |-
                               UnderScoreSourceLabels - additional form of source labels source_labels
                               for compatibility with original relabel config.
-                              if set  both sourceLabels and source_labels, sourceLabels has priority.
+                              if set both sourceLabels and source_labels, sourceLabels has priority.
                               for details https://github.com/VictoriaMetrics/operator/issues/131
                             items:
                               type: string
@@ -286,7 +286,7 @@ spec:
                             description: |-
                               UnderScoreTargetLabel - additional form of target label - target_label
                               for compatibility with original relabel config.
-                              if set  both targetLabel and target_label, targetLabel has priority.
+                              if set both targetLabel and target_label, targetLabel has priority.
                               for details https://github.com/VictoriaMetrics/operator/issues/131
                             type: string
                           targetLabel:
@@ -388,7 +388,6 @@ spec:
                         proxy_url:
                           description: |-
                             The proxy URL for token_url connection
-                            ( available from v0.55.0).
                             Is only supported by Scrape objects family
                           type: string
                         scopes:
@@ -399,7 +398,6 @@ spec:
                         tls_config:
                           description: |-
                             TLSConfig for token_url connection
-                            ( available from v0.55.0).
                             Is only supported by Scrape objects family
                           x-kubernetes-preserve-unknown-fields: true
                         token_url:
@@ -474,7 +472,7 @@ spec:
                             description: |-
                               UnderScoreSourceLabels - additional form of source labels source_labels
                               for compatibility with original relabel config.
-                              if set  both sourceLabels and source_labels, sourceLabels has priority.
+                              if set both sourceLabels and source_labels, sourceLabels has priority.
                               for details https://github.com/VictoriaMetrics/operator/issues/131
                             items:
                               type: string
@@ -491,7 +489,7 @@ spec:
                             description: |-
                               UnderScoreTargetLabel - additional form of target label - target_label
                               for compatibility with original relabel config.
-                              if set  both targetLabel and target_label, targetLabel has priority.
+                              if set both targetLabel and target_label, targetLabel has priority.
                               for details https://github.com/VictoriaMetrics/operator/issues/131
                             type: string
                           targetLabel:
@@ -706,7 +704,7 @@ spec:
                             must be in of semicolon separated header with it's value
                             eg:
                             headerName: headerValue
-                            vmagent supports since 1.79.0 version
+                            vmagent and vmsingle support since 1.79.0 version
                           items:
                             type: string
                           type: array
@@ -717,8 +715,43 @@ spec:
                             ProxyClientConfig configures proxy auth settings for scraping
                             See feature description https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy
                           properties:
+                            authorization:
+                              description: Authorization with http header Authorization
+                              properties:
+                                credentials:
+                                  description: Reference to the secret with value
+                                    for authorization
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                credentialsFile:
+                                  description: File with value for authorization
+                                  type: string
+                                type:
+                                  description: Type of authorization, default to bearer
+                                  type: string
+                              type: object
                             basic_auth:
-                              description: BasicAuth allow an endpoint to authenticate
+                              description: BasicAuth allows proxy to authenticate
                                 over basic authentication
                               properties:
                                 password:
@@ -780,7 +813,11 @@ spec:
                                   x-kubernetes-map-type: atomic
                               type: object
                             bearer_token:
-                              description: SecretKeySelector selects a key of a Secret.
+                              description: |-
+                                Secret to mount to read bearer token for scraping targets proxy auth. The secret
+                                needs to be in the same namespace as the scrape object and accessible by
+                                the victoria-metrics operator.
+                              nullable: true
                               properties:
                                 key:
                                   description: The key of the secret to select from.  Must
@@ -804,8 +841,126 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                             bearer_token_file:
+                              description: BearerTokenFile defines file to read bearer
+                                token from for proxy auth.
                               type: string
+                            oauth2:
+                              description: OAuth2 defines auth configuration
+                              properties:
+                                client_id:
+                                  description: The secret or configmap containing
+                                    the OAuth2 client id
+                                  properties:
+                                    configMap:
+                                      description: ConfigMap containing data to use
+                                        for the targets.
+                                      properties:
+                                        key:
+                                          description: The key to select.
+                                          type: string
+                                        name:
+                                          default: ""
+                                          description: |-
+                                            Name of the referent.
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                        optional:
+                                          description: Specify whether the ConfigMap
+                                            or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    secret:
+                                      description: Secret containing data to use for
+                                        the targets.
+                                      properties:
+                                        key:
+                                          description: The key of the secret to select
+                                            from.  Must be a valid secret key.
+                                          type: string
+                                        name:
+                                          default: ""
+                                          description: |-
+                                            Name of the referent.
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                        optional:
+                                          description: Specify whether the Secret
+                                            or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                  type: object
+                                client_secret:
+                                  description: The secret containing the OAuth2 client
+                                    secret
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                client_secret_file:
+                                  description: ClientSecretFile defines path for client
+                                    secret file.
+                                  type: string
+                                endpoint_params:
+                                  additionalProperties:
+                                    type: string
+                                  description: Parameters to append to the token URL
+                                  type: object
+                                proxy_url:
+                                  description: |-
+                                    The proxy URL for token_url connection
+                                    Is only supported by Scrape objects family
+                                  type: string
+                                scopes:
+                                  description: OAuth2 scopes used for the token request
+                                  items:
+                                    type: string
+                                  type: array
+                                tls_config:
+                                  description: |-
+                                    TLSConfig for token_url connection
+                                    Is only supported by Scrape objects family
+                                  x-kubernetes-preserve-unknown-fields: true
+                                token_url:
+                                  description: The URL to fetch the token from
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - client_id
+                              - token_url
+                              type: object
                             tls_config:
+                              description: TLSConfig configuration to use when scraping
+                                the endpoint
                               x-kubernetes-preserve-unknown-fields: true
                           type: object
                         scrape_align_interval:

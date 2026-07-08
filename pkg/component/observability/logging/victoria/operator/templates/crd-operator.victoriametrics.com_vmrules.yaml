@@ -76,15 +76,6 @@ spec:
                         Optional
                         Group will be evaluated at the exact offset in the range of [0...interval].
                       type: string
-                    extra_filter_labels:
-                      additionalProperties:
-                        type: string
-                      description: |-
-                        ExtraFilterLabels optional list of label filters applied to every rule's
-                        request within a group. Is compatible only with VM datasource.
-                        See more details [here](https://docs.victoriametrics.com/victoriametrics/#prometheus-querying-api-enhancements)
-                        Deprecated: use params instead
-                      type: object
                     headers:
                       description: |-
                         Headers contains optional HTTP headers added to each rule request
@@ -136,11 +127,14 @@ spec:
                         rule request
                       type: object
                     rules:
-                      description: Rules list of alert rules
+                      description: |-
+                        Rules list of alert rules.
+                        Rules are merged by record and alert fields.
                       items:
                         description: Rule describes an alerting or recording rule.
                         properties:
                           alert:
+                            default: ""
                             description: Alert is a name for alert
                             type: string
                           annotations:
@@ -174,6 +168,7 @@ spec:
                             description: Labels will be added to rule configuration
                             type: object
                           record:
+                            default: ""
                             description: Record represents a query, that will be recorded
                               to dataSource
                             type: string
@@ -199,6 +194,9 @@ spec:
                   - rules
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             required:
             - groups
             type: object

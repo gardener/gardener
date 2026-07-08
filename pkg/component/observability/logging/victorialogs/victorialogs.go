@@ -156,7 +156,7 @@ func (v *victoriaLogs) vlSingle() *victoriametricsv1.VLSingle {
 			PodMetadata: &victoriametricsv1beta1.EmbeddedObjectMetadata{
 				Labels: getLabels(),
 			},
-			CommonDefaultableParams: victoriametricsv1beta1.CommonDefaultableParams{
+			CommonAppsParams: victoriametricsv1beta1.CommonAppsParams{
 				DisableSelfServiceScrape: new(true),
 				UseStrictSecurity:        new(true),
 				Image: victoriametricsv1beta1.Image{
@@ -171,10 +171,8 @@ func (v *victoriaLogs) vlSingle() *victoriametricsv1.VLSingle {
 					},
 				},
 				UseDefaultResources: new(false),
-			},
-			CommonApplicationDeploymentParams: victoriametricsv1beta1.CommonApplicationDeploymentParams{
-				ReplicaCount:      new(v.values.Replicas),
-				PriorityClassName: v.values.PriorityClassName,
+				ReplicaCount:        new(v.values.Replicas),
+				PriorityClassName:   v.values.PriorityClassName,
 			},
 			RetentionPeriod: "15d",
 			Storage: &corev1.PersistentVolumeClaimSpec{
