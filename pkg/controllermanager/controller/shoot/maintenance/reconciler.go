@@ -318,12 +318,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			workerToKubernetesUpdate,
 			workerToMachineImageUpdate,
 			credentialsToRotationUpdate,
+			operations,
 		)
-
-		// append also other maintenance operation
-		if len(operations) > 0 {
-			description = fmt.Sprintf("%s, %s", description, strings.Join(operations, ", "))
-		}
 
 		shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
 			Description:   description,
@@ -420,7 +416,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 // buildMaintenanceMessages builds a combined message containing the performed maintenance operations over all worker pools. If the maintenance operation failed, the description
 // contains an indication for the failure and the reason the update was triggered. Details for failed maintenance operations are returned in the second return string.
-func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate, workerToMachineImageUpdate, credentialsToRotationUpdate map[string]updateResult) (string, string) {
+func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate, workerToMachineImageUpdate, credentialsToRotationUpdate map[string]updateResult, operations []string) (string, string) {
 	countSuccessfulOperations := 0
 	countFailedOperations := 0
 	description := ""
@@ -473,14 +469,18 @@ func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, worker
 		failureReason = fmt.Sprintf("%s, Credentials %q: Automatic rotation failure due to: %s", failureReason, credentials, result.description)
 	}
 
+	if len(operations) > 0 {
+		description = fmt.Sprintf("%s, %s", description, strings.Join(operations, ", "))
+	}
+
 	description = strings.TrimPrefix(description, ", ")
 	failureReason = strings.TrimPrefix(failureReason, ", ")
 
 	if countFailedOperations == 0 {
-		return fmt.Sprintf("All maintenance operations successful. %s", description), failureReason
+		return strings.TrimRight(fmt.Sprintf("All maintenance operations successful. %s", description), " "), failureReason
 	}
 
-	return fmt.Sprintf("(%d/%d) maintenance operations successful. %s", countSuccessfulOperations, countSuccessfulOperations+countFailedOperations, description), failureReason
+	return strings.TrimRight(fmt.Sprintf("(%d/%d) maintenance operations successful. %s", countSuccessfulOperations, countSuccessfulOperations+countFailedOperations, description), " "), failureReason
 }
 
 // recordMaintenanceEventsForPool records dedicated events for each failed/succeeded maintenance operation per pool

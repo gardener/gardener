@@ -2298,6 +2298,128 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(quotasEqual(slice1, slice2)).To(BeTrue())
 		})
 	})
+
+	Describe("#buildMaintenanceMessages", func() {
+		type entry struct {
+			cpUpdate        *updateResult
+			workerK8s       map[string]updateResult
+			workerImage     map[string]updateResult
+			credentials     map[string]updateResult
+			operations      []string
+			expectedDesc    string
+			expectedFailure string
+		}
+
+		DescribeTable("should build the correct description and failureReason",
+			func(e entry) {
+				description, failureReason := buildMaintenanceMessages(e.cpUpdate, e.workerK8s, e.workerImage, e.credentials, e.operations)
+				Expect(description).To(Equal(e.expectedDesc))
+				Expect(failureReason).To(Equal(e.expectedFailure))
+			},
+			Entry("no updates and no operations",
+				entry{
+					expectedDesc: "All maintenance operations successful.",
+				},
+			),
+			Entry("no updates, operations only",
+				entry{
+					operations:   []string{`Added "rotate-credentials-start;reconcile" operation annotation`},
+					expectedDesc: `All maintenance operations successful. Added "rotate-credentials-start;reconcile" operation annotation`,
+				},
+			),
+			Entry("successful control plane k8s update",
+				entry{
+					cpUpdate:     &updateResult{isSuccessful: true, description: `Updated Kubernetes version from "1.0.0" to "1.0.1"`, reason: "Kubernetes version expired - force update required"},
+					expectedDesc: `All maintenance operations successful. Control Plane: Updated Kubernetes version from "1.0.0" to "1.0.1". Reason: Kubernetes version expired - force update required`,
+				},
+			),
+			Entry("failed control plane k8s update",
+				entry{
+					cpUpdate:        &updateResult{isSuccessful: false, description: "no higher patch version available", reason: "Kubernetes version expired - force update required"},
+					expectedDesc:    "(0/1) maintenance operations successful. Control Plane: Kubernetes version update failed. Reason for update: Kubernetes version expired - force update required",
+					expectedFailure: "Control Plane: Kubernetes maintenance failure due to: no higher patch version available",
+				},
+			),
+			Entry("successful worker k8s update",
+				entry{
+					workerK8s:    map[string]updateResult{"cpu-worker": {isSuccessful: true, description: `Updated Kubernetes version from "1.0.0" to "1.0.1"`, reason: "Kubernetes version expired - force update required"}},
+					expectedDesc: `All maintenance operations successful. Worker pool "cpu-worker": Updated Kubernetes version from "1.0.0" to "1.0.1". Reason: Kubernetes version expired - force update required`,
+				},
+			),
+			Entry("failed worker k8s update",
+				entry{
+					workerK8s:       map[string]updateResult{"cpu-worker": {isSuccessful: false, description: "no higher patch version available", reason: "Kubernetes version expired - force update required"}},
+					expectedDesc:    `(0/1) maintenance operations successful. Worker pool "cpu-worker": Kubernetes version maintenance failed. Reason for update: Kubernetes version expired - force update required`,
+					expectedFailure: `Worker pool "cpu-worker": Kubernetes maintenance failure due to: no higher patch version available`,
+				},
+			),
+			Entry("successful machine image update",
+				entry{
+					workerImage:  map[string]updateResult{"cpu-worker": {isSuccessful: true, description: `Updated machine image version from "1.0.0" to "1.0.1"`, reason: "Machine image version expired - force update required"}},
+					expectedDesc: `All maintenance operations successful. Worker pool "cpu-worker": Updated machine image version from "1.0.0" to "1.0.1". Reason: Machine image version expired - force update required`,
+				},
+			),
+			Entry("failed machine image update",
+				entry{
+					workerImage:     map[string]updateResult{"cpu-worker": {isSuccessful: false, description: "no higher version available", reason: "Machine image version expired - force update required"}},
+					expectedDesc:    `(0/1) maintenance operations successful. Worker pool "cpu-worker": machine image version maintenance failed. Reason for update: Machine image version expired - force update required`,
+					expectedFailure: `Worker pool "cpu-worker": no higher version available`,
+				},
+			),
+			Entry("successful credentials rotation",
+				entry{
+					credentials:  map[string]updateResult{"ssh-keypair": {isSuccessful: true, description: "Rotated SSH keypair", reason: "Rotation period elapsed"}},
+					expectedDesc: `All maintenance operations successful. Credentials "ssh-keypair": Rotated SSH keypair. Reason: Rotation period elapsed`,
+				},
+			),
+			Entry("failed credentials rotation",
+				entry{
+					credentials:     map[string]updateResult{"ssh-keypair": {isSuccessful: false, description: "rotation prerequisites not met", reason: "Rotation period elapsed"}},
+					expectedDesc:    `(0/1) maintenance operations successful. Credentials "ssh-keypair": Automatic rotation failed. Reason for update: Rotation period elapsed`,
+					expectedFailure: `Credentials "ssh-keypair": Automatic rotation failure due to: rotation prerequisites not met`,
+				},
+			),
+			Entry("multiple operations",
+				entry{
+					operations: []string{
+						".spec.kubernetes.kubeControllerManager.podEvictionTimeout is set to nil. Reason: deprecated",
+						".spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: deprecated",
+						`Added "reconcile" operation annotation`,
+					},
+					expectedDesc: `All maintenance operations successful. .spec.kubernetes.kubeControllerManager.podEvictionTimeout is set to nil. Reason: deprecated, .spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: deprecated, Added "reconcile" operation annotation`,
+				},
+			),
+			Entry("successful cp update combined with operations",
+				entry{
+					cpUpdate:     &updateResult{isSuccessful: true, description: `Updated Kubernetes version from "1.0.0" to "1.0.1"`, reason: "Kubernetes version expired - force update required"},
+					operations:   []string{`Added "rotate-ssh-keypair;reconcile" operation annotation`},
+					expectedDesc: `All maintenance operations successful. Control Plane: Updated Kubernetes version from "1.0.0" to "1.0.1". Reason: Kubernetes version expired - force update required, Added "rotate-ssh-keypair;reconcile" operation annotation`,
+				},
+			),
+		)
+
+		It("should correctly combine typed updates, failed updates, and multiple operations", func() {
+			description, failureReason := buildMaintenanceMessages(
+				&updateResult{isSuccessful: true, description: `Updated Kubernetes version from "1.34.0" to "1.35.0"`, reason: "Kubernetes version expired - force update required"},
+				map[string]updateResult{
+					"gpu-worker": {isSuccessful: false, description: "no higher patch version available", reason: "Kubernetes version expired - force update required"},
+				},
+				nil, nil,
+				[]string{
+					".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication was removed. Reason: not supported for 1.35+",
+					`Added "rotate-ssh-keypair;reconcile" operation annotation`,
+				},
+			)
+
+			// Uses ContainSubstring because two worker map entries have non-deterministic iteration order.
+			Expect(description).To(ContainSubstring("(1/2) maintenance operations successful."))
+			Expect(description).To(ContainSubstring("Control Plane: Updated Kubernetes version"))
+			Expect(description).To(ContainSubstring(`Worker pool "gpu-worker": Kubernetes version maintenance failed`))
+			Expect(description).To(ContainSubstring(".spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication was removed"))
+			Expect(description).To(ContainSubstring(`Added "rotate-ssh-keypair;reconcile" operation annotation`))
+			Expect(failureReason).To(Equal(`Worker pool "gpu-worker": Kubernetes maintenance failure due to: no higher patch version available`))
+		})
+	})
 })
 
 func assertWorkerMachineImageVersion(worker *gardencorev1beta1.Worker, imageName string, imageVersion string) {
