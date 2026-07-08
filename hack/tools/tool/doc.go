@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package tools
+package tool
 
 // Import controller-runtime to get version from this go.mod (synced via go.work).
 import _ "sigs.k8s.io/controller-runtime"

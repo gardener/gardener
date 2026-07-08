@@ -1,4 +1,4 @@
-module github.com/gardener/gardener/pkg/internal/tools
+module github.com/gardener/gardener/hack/tools/tool
 
 go 1.26.0
 
