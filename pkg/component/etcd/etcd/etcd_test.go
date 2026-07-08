@@ -939,37 +939,13 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Annotations).To(HaveKeyWithValue("foo", "bar"))
 		})
 
-		It("should successfully deploy (normal etcd) and keep the existing defragmentation schedule when it is not a every-N-days schedule", func() {
-			existingDefragmentationSchedule := "24 3 * * *"
-
-			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{
-				ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace},
-				Spec: druidcorev1alpha1.EtcdSpec{
-					Etcd: druidcorev1alpha1.EtcdConfig{
-						DefragmentationSchedule: &existingDefragmentationSchedule,
-					},
-				},
-				Status: druidcorev1alpha1.EtcdStatus{
-					Etcd: &druidcorev1alpha1.CrossVersionObjectReference{Name: etcdName},
-				},
-			})).To(Succeed())
-
-			Expect(etcd.Deploy(ctx)).To(Succeed())
-
-			etcd := &druidcorev1alpha1.Etcd{}
-			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
-			Expect(etcd.Spec.Etcd.DefragmentationSchedule).To(HaveValue(Equal(existingDefragmentationSchedule)))
-		})
-
-		It("should successfully deploy (normal etcd) and update the existing defragmentation schedule when it is an every-N-days schedule", func() {
-			for _, existingDefragmentationSchedule := range []string{"24 3 */2 * *", "24 3 */3 * *", "24 3 */4 * *"} {
-				Expect(c.Delete(ctx, &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}})).To(Or(Succeed(), MatchError(ContainSubstring("not found"))))
-
+		DescribeTable("should correctly handle the existing defragmentation schedule",
+			func(existingSchedule string, expectedSchedule string) {
 				Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace},
 					Spec: druidcorev1alpha1.EtcdSpec{
 						Etcd: druidcorev1alpha1.EtcdConfig{
-							DefragmentationSchedule: &existingDefragmentationSchedule,
+							DefragmentationSchedule: &existingSchedule,
 						},
 					},
 					Status: druidcorev1alpha1.EtcdStatus{
@@ -981,9 +957,13 @@ var _ = Describe("Etcd", func() {
 
 				deployed := &druidcorev1alpha1.Etcd{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, deployed)).To(Succeed())
-				Expect(deployed.Spec.Etcd.DefragmentationSchedule).To(HaveValue(Equal(defragmentationSchedule)), "expected schedule to be updated for existing schedule %q", existingDefragmentationSchedule)
-			}
-		})
+				Expect(deployed.Spec.Etcd.DefragmentationSchedule).To(HaveValue(Equal(expectedSchedule)))
+			},
+			Entry("should keep daily defrag schedule", "24 3 * * *", "24 3 * * *"),
+			Entry("should keep daily defrag schedule (*/1)", "24 3 */1 * *", "24 3 */1 * *"),
+			Entry("should update every-Two-days defrag schedule to daily", "24 3 */2 * *", defragmentationSchedule),
+			Entry("should update every-Three-days defrag schedule to daily", "24 3 */3 * *", defragmentationSchedule),
+		)
 
 		It("should successfully deploy (normal etcd) and not keep the existing resource request settings", func() {
 			existingResourceRequests := &corev1.ResourceRequirements{
