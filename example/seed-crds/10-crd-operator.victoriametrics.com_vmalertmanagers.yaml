@@ -973,6 +973,15 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              arbitraryFSAccessThroughSMs:
+                description: |-
+                  ArbitraryFSAccessThroughSMs configures whether configuration
+                  can contain paths to arbitrary files on the file system
+                  e.g bearer token files, basic auth password files, tls certs file paths
+                properties:
+                  deny:
+                    type: boolean
+                type: object
               claimTemplates:
                 description: ClaimTemplates allows adding additional VolumeClaimTemplates
                   for StatefulSet
@@ -1092,7 +1101,7 @@ spec:
                         resources:
                           description: |-
                             resources represents the minimum resources the volume should have.
-                            If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                            Users are allowed to specify resource requirements
                             that are lower than previous value but must still be higher than capacity recorded in the
                             status field of the claim.
                             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -1250,9 +1259,7 @@ spec:
                             ignore the update for the purpose it was designed. For
                             example - a controller that\nonly is responsible for resizing
                             capacity of the volume, should ignore PVC updates that
-                            change other valid\nresources associated with PVC.\n\nThis
-                            is an alpha field and requires enabling RecoverVolumeExpansionFailure
-                            feature."
+                            change other valid\nresources associated with PVC."
                           type: object
                           x-kubernetes-map-type: granular
                         allocatedResources:
@@ -1283,9 +1290,7 @@ spec:
                             the update for the purpose it was designed. For example
                             - a controller that\nonly is responsible for resizing
                             capacity of the volume, should ignore PVC updates that
-                            change other valid\nresources associated with PVC.\n\nThis
-                            is an alpha field and requires enabling RecoverVolumeExpansionFailure
-                            feature."
+                            change other valid\nresources associated with PVC."
                           type: object
                         capacity:
                           additionalProperties:
@@ -1394,6 +1399,11 @@ spec:
                   aka .cluster.local
                   used to build pod peer addresses for in-cluster communication
                 type: string
+              componentVersion:
+                description: |-
+                  ComponentVersion defines default images tag for all components.
+                  it can be overwritten with component specific image.tag value.
+                type: string
               configMaps:
                 description: |-
                   ConfigMaps is a list of ConfigMaps in the same namespace as the Application
@@ -1490,8 +1500,12 @@ spec:
                   type: string
                 description: |-
                   ConfigReloaderExtraArgs that will be passed to  VMAuths config-reloader container
-                  for example resyncInterval: "30s"
+                  for example resync-interval: "30s"
                 type: object
+              configReloaderImage:
+                description: ConfigReloaderImage defines image:tag for config-reloader
+                  container
+                type: string
               configReloaderImageTag:
                 description: ConfigReloaderImageTag defines image:tag for config-reloader
                   container
@@ -2488,7 +2502,9 @@ spec:
                           type: integer
                       type: object
                     resizePolicy:
-                      description: Resources resize policy for the container.
+                      description: |-
+                        Resources resize policy for the container.
+                        This field cannot be set on ephemeral containers.
                       items:
                         description: ContainerResizePolicy represents resource resize
                           policy for the container.
@@ -2717,7 +2733,6 @@ spec:
                             procMount denotes the type of proc mount to use for the containers.
                             The default value is Default which uses the container runtime defaults for
                             readonly paths and masked paths.
-                            This requires the ProcMountType feature flag to be enabled.
                             Note that this field cannot be set when spec.os.name is windows.
                           type: string
                         readOnlyRootFilesystem:
@@ -3142,7 +3157,7 @@ spec:
                 type: array
               disableAutomountServiceAccountToken:
                 description: |-
-                  DisableAutomountServiceAccountToken whether to disable serviceAccount auto mount by Kubernetes (available from v0.54.0).
+                  DisableAutomountServiceAccountToken whether to disable serviceAccount auto mount by Kubernetes
                   Operator will conditionally create volumes and volumeMounts for containers if it requires k8s API access.
                   For example, vmagent and vm-config-reloader requires k8s API access.
                   Operator creates volumes with name: "kube-api-access", which can be used as volumeMount for extraContainers if needed.
@@ -3212,6 +3227,12 @@ spec:
               dnsPolicy:
                 description: DNSPolicy sets DNS policy for the pod
                 type: string
+              enableServiceLinks:
+                description: |-
+                  EnableServiceLinks indicates whether information about services should be injected into pod's
+                  environment variables, matching the syntax of Docker links.
+                  Optional: Defaults to true.
+                type: boolean
               enforcedNamespaceLabel:
                 description: |-
                   EnforcedNamespaceLabel defines the namespace label key for top route matcher for VMAlertmanagerConfig
@@ -3771,7 +3792,7 @@ spec:
                 description: |-
                   ImagePullSecrets An optional list of references to secrets in the same namespace
                   to use for pulling images from registries
-                  see https://kubernetes.io/docs/concepts/containers/images/#referring-to-an-imagepullsecrets-on-a-pod
+                  see https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
                 items:
                   description: |-
                     LocalObjectReference contains enough information to let you locate the
@@ -4661,7 +4682,9 @@ spec:
                           type: integer
                       type: object
                     resizePolicy:
-                      description: Resources resize policy for the container.
+                      description: |-
+                        Resources resize policy for the container.
+                        This field cannot be set on ephemeral containers.
                       items:
                         description: ContainerResizePolicy represents resource resize
                           policy for the container.
@@ -4890,7 +4913,6 @@ spec:
                             procMount denotes the type of proc mount to use for the containers.
                             The default value is Default which uses the container runtime defaults for
                             readonly paths and masked paths.
-                            This requires the ProcMountType feature flag to be enabled.
                             Note that this field cannot be set when spec.os.name is windows.
                           type: string
                         readOnlyRootFilesystem:
@@ -5320,7 +5342,7 @@ spec:
                   UI, not the gossip communication.
                 type: boolean
               livenessProbe:
-                description: LivenessProbe that will be added CRD pod
+                description: LivenessProbe that will be added to CR pod
                 properties:
                   exec:
                     description: Exec specifies a command to execute in the container.
@@ -5586,7 +5608,6 @@ spec:
                       Valid policies are IfHealthyBudget and AlwaysAllow.
                       If no policy is specified, the default behavior will be used,
                       which corresponds to the IfHealthyBudget policy.
-                      Available from operator v0.64.0
                     enum:
                     - IfHealthyBudget
                     - AlwaysAllow
@@ -5632,6 +5653,13 @@ spec:
                   PortName used for the pods and governing service.
                   This defaults to web
                 type: string
+              preStopSleepSeconds:
+                description: |-
+                  PreStopSleepSeconds defines the number of seconds to sleep in the preStop lifecycle hook.
+                  It gives time for load balancers to remove the pod from rotation before the pod is terminated.
+                  Defaults to 15 for applicable components. Set to 0 to disable.
+                format: int32
+                type: integer
               priorityClassName:
                 description: PriorityClassName class assigned to the Pods
                 type: string
@@ -5649,7 +5677,7 @@ spec:
                   type: object
                 type: array
               readinessProbe:
-                description: ReadinessProbe that will be added CRD pod
+                description: ReadinessProbe that will be added to CR pod
                 properties:
                   exec:
                     description: Exec specifies a command to execute in the container.
@@ -6211,9 +6239,14 @@ spec:
                     description: AttachMetadata configures metadata attaching from
                       service discovery
                     properties:
+                      namespace:
+                        description: |-
+                          Namespace instructs vmagent or vmsingle to add namespace specific metadata from service discovery
+                          Valid for roles: pod, service, endpoints, endpointslice, ingress.
+                        type: boolean
                       node:
                         description: |-
-                          Node instructs vmagent to add node specific metadata from service discovery
+                          Node instructs vmagent or vmsingle to add node specific metadata from service discovery
                           Valid for roles: pod, endpoints, endpointslice.
                         type: boolean
                     type: object
@@ -6228,6 +6261,7 @@ spec:
                     - endpoints
                     - service
                     - endpointslices
+                    - endpointslice
                     type: string
                   endpoints:
                     description: A list of endpoints allowed as part of this ServiceScrape.
@@ -6239,9 +6273,14 @@ spec:
                           description: AttachMetadata configures metadata attaching
                             from service discovery
                           properties:
+                            namespace:
+                              description: |-
+                                Namespace instructs vmagent or vmsingle to add namespace specific metadata from service discovery
+                                Valid for roles: pod, service, endpoints, endpointslice, ingress.
+                              type: boolean
                             node:
                               description: |-
-                                Node instructs vmagent to add node specific metadata from service discovery
+                                Node instructs vmagent or vmsingle to add node specific metadata from service discovery
                                 Valid for roles: pod, endpoints, endpointslice.
                               type: boolean
                           type: object
@@ -6381,8 +6420,8 @@ spec:
                             collisions with target labels.
                           type: boolean
                         honorTimestamps:
-                          description: HonorTimestamps controls whether vmagent respects
-                            the timestamps present in scraped data.
+                          description: HonorTimestamps controls whether vmagent or
+                            vmsingle respects the timestamps present in scraped data.
                           type: boolean
                         interval:
                           description: Interval at which metrics should be scraped
@@ -6441,7 +6480,7 @@ spec:
                                 description: |-
                                   UnderScoreSourceLabels - additional form of source labels source_labels
                                   for compatibility with original relabel config.
-                                  if set  both sourceLabels and source_labels, sourceLabels has priority.
+                                  if set both sourceLabels and source_labels, sourceLabels has priority.
                                   for details https://github.com/VictoriaMetrics/operator/issues/131
                                 items:
                                   type: string
@@ -6458,7 +6497,7 @@ spec:
                                 description: |-
                                   UnderScoreTargetLabel - additional form of target label - target_label
                                   for compatibility with original relabel config.
-                                  if set  both targetLabel and target_label, targetLabel has priority.
+                                  if set both targetLabel and target_label, targetLabel has priority.
                                   for details https://github.com/VictoriaMetrics/operator/issues/131
                                 type: string
                               targetLabel:
@@ -6562,7 +6601,6 @@ spec:
                             proxy_url:
                               description: |-
                                 The proxy URL for token_url connection
-                                ( available from v0.55.0).
                                 Is only supported by Scrape objects family
                               type: string
                             scopes:
@@ -6573,7 +6611,6 @@ spec:
                             tls_config:
                               description: |-
                                 TLSConfig for token_url connection
-                                ( available from v0.55.0).
                                 Is only supported by Scrape objects family
                               x-kubernetes-preserve-unknown-fields: true
                             token_url:
@@ -6651,7 +6688,7 @@ spec:
                                 description: |-
                                   UnderScoreSourceLabels - additional form of source labels source_labels
                                   for compatibility with original relabel config.
-                                  if set  both sourceLabels and source_labels, sourceLabels has priority.
+                                  if set both sourceLabels and source_labels, sourceLabels has priority.
                                   for details https://github.com/VictoriaMetrics/operator/issues/131
                                 items:
                                   type: string
@@ -6668,7 +6705,7 @@ spec:
                                 description: |-
                                   UnderScoreTargetLabel - additional form of target label - target_label
                                   for compatibility with original relabel config.
-                                  if set  both targetLabel and target_label, targetLabel has priority.
+                                  if set both targetLabel and target_label, targetLabel has priority.
                                   for details https://github.com/VictoriaMetrics/operator/issues/131
                                 type: string
                               targetLabel:
@@ -6887,7 +6924,7 @@ spec:
                                 must be in of semicolon separated header with it's value
                                 eg:
                                 headerName: headerValue
-                                vmagent supports since 1.79.0 version
+                                vmagent and vmsingle support since 1.79.0 version
                               items:
                                 type: string
                               type: array
@@ -6898,8 +6935,44 @@ spec:
                                 ProxyClientConfig configures proxy auth settings for scraping
                                 See feature description https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-targets-via-a-proxy
                               properties:
+                                authorization:
+                                  description: Authorization with http header Authorization
+                                  properties:
+                                    credentials:
+                                      description: Reference to the secret with value
+                                        for authorization
+                                      properties:
+                                        key:
+                                          description: The key of the secret to select
+                                            from.  Must be a valid secret key.
+                                          type: string
+                                        name:
+                                          default: ""
+                                          description: |-
+                                            Name of the referent.
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                        optional:
+                                          description: Specify whether the Secret
+                                            or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    credentialsFile:
+                                      description: File with value for authorization
+                                      type: string
+                                    type:
+                                      description: Type of authorization, default
+                                        to bearer
+                                      type: string
+                                  type: object
                                 basic_auth:
-                                  description: BasicAuth allow an endpoint to authenticate
+                                  description: BasicAuth allows proxy to authenticate
                                     over basic authentication
                                   properties:
                                     password:
@@ -6961,8 +7034,11 @@ spec:
                                       x-kubernetes-map-type: atomic
                                   type: object
                                 bearer_token:
-                                  description: SecretKeySelector selects a key of
-                                    a Secret.
+                                  description: |-
+                                    Secret to mount to read bearer token for scraping targets proxy auth. The secret
+                                    needs to be in the same namespace as the scrape object and accessible by
+                                    the victoria-metrics operator.
+                                  nullable: true
                                   properties:
                                     key:
                                       description: The key of the secret to select
@@ -6986,8 +7062,129 @@ spec:
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 bearer_token_file:
+                                  description: BearerTokenFile defines file to read
+                                    bearer token from for proxy auth.
                                   type: string
+                                oauth2:
+                                  description: OAuth2 defines auth configuration
+                                  properties:
+                                    client_id:
+                                      description: The secret or configmap containing
+                                        the OAuth2 client id
+                                      properties:
+                                        configMap:
+                                          description: ConfigMap containing data to
+                                            use for the targets.
+                                          properties:
+                                            key:
+                                              description: The key to select.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the ConfigMap
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        secret:
+                                          description: Secret containing data to use
+                                            for the targets.
+                                          properties:
+                                            key:
+                                              description: The key of the secret to
+                                                select from.  Must be a valid secret
+                                                key.
+                                              type: string
+                                            name:
+                                              default: ""
+                                              description: |-
+                                                Name of the referent.
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              type: string
+                                            optional:
+                                              description: Specify whether the Secret
+                                                or its key must be defined
+                                              type: boolean
+                                          required:
+                                          - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    client_secret:
+                                      description: The secret containing the OAuth2
+                                        client secret
+                                      properties:
+                                        key:
+                                          description: The key of the secret to select
+                                            from.  Must be a valid secret key.
+                                          type: string
+                                        name:
+                                          default: ""
+                                          description: |-
+                                            Name of the referent.
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                        optional:
+                                          description: Specify whether the Secret
+                                            or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    client_secret_file:
+                                      description: ClientSecretFile defines path for
+                                        client secret file.
+                                      type: string
+                                    endpoint_params:
+                                      additionalProperties:
+                                        type: string
+                                      description: Parameters to append to the token
+                                        URL
+                                      type: object
+                                    proxy_url:
+                                      description: |-
+                                        The proxy URL for token_url connection
+                                        Is only supported by Scrape objects family
+                                      type: string
+                                    scopes:
+                                      description: OAuth2 scopes used for the token
+                                        request
+                                      items:
+                                        type: string
+                                      type: array
+                                    tls_config:
+                                      description: |-
+                                        TLSConfig for token_url connection
+                                        Is only supported by Scrape objects family
+                                      x-kubernetes-preserve-unknown-fields: true
+                                    token_url:
+                                      description: The URL to fetch the token from
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - client_id
+                                  - token_url
+                                  type: object
                                 tls_config:
+                                  description: TLSConfig configuration to use when
+                                    scraping the endpoint
                                   x-kubernetes-preserve-unknown-fields: true
                               type: object
                             scrape_align_interval:
@@ -7480,7 +7677,7 @@ spec:
                 - spec
                 type: object
               startupProbe:
-                description: StartupProbe that will be added to CRD pod
+                description: StartupProbe that will be added to CR pod
                 properties:
                   exec:
                     description: Exec specifies a command to execute in the container.
@@ -7635,11 +7832,6 @@ spec:
                   Storage is the definition of how storage will be used by the VMAlertmanager
                   instances.
                 properties:
-                  disableMountSubPath:
-                    description: |-
-                      Deprecated: subPath usage will be disabled by default in a future release, this option will become unnecessary.
-                      DisableMountSubPath allows to remove any subPath usage in volume mounts.
-                    type: boolean
                   emptyDir:
                     description: |-
                       EmptyDirVolumeSource to be used by the Prometheus StatefulSets. If specified, used in place of any volumeClaimTemplate. More
@@ -7808,7 +8000,7 @@ spec:
                           resources:
                             description: |-
                               resources represents the minimum resources the volume should have.
-                              If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                              Users are allowed to specify resource requirements
                               that are lower than previous value but must still be higher than capacity recorded in the
                               status field of the claim.
                               More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -7967,9 +8159,7 @@ spec:
                               ignore the update for the purpose it was designed. For
                               example - a controller that\nonly is responsible for
                               resizing capacity of the volume, should ignore PVC updates
-                              that change other valid\nresources associated with PVC.\n\nThis
-                              is an alpha field and requires enabling RecoverVolumeExpansionFailure
-                              feature."
+                              that change other valid\nresources associated with PVC."
                             type: object
                             x-kubernetes-map-type: granular
                           allocatedResources:
@@ -8001,9 +8191,7 @@ spec:
                               ignore the update for the purpose it was designed. For
                               example - a controller that\nonly is responsible for
                               resizing capacity of the volume, should ignore PVC updates
-                              that change other valid\nresources associated with PVC.\n\nThis
-                              is an alpha field and requires enabling RecoverVolumeExpansionFailure
-                              feature."
+                              that change other valid\nresources associated with PVC."
                             type: object
                           capacity:
                             additionalProperties:
@@ -8150,9 +8338,10 @@ spec:
                     operator:
                       description: |-
                         Operator represents a key's relationship to the value.
-                        Valid operators are Exists and Equal. Defaults to Equal.
+                        Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                         Exists is equivalent to wildcard for value, so that a pod can
                         tolerate all taints of a particular category.
+                        Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                       type: string
                     tolerationSeconds:
                       description: |-
@@ -8347,10 +8536,154 @@ spec:
                   - whenUnsatisfiable
                   type: object
                 type: array
+              tracingConfig:
+                description: TracingConfig defines tracing configuration for Alertmanager
+                properties:
+                  client_type:
+                    description: ClientType defines tracing client protocol
+                    enum:
+                    - http
+                    - grpc
+                    type: string
+                  compression:
+                    description: Compression defines compression algorithm for tracing
+                    type: string
+                  endpoint:
+                    description: Endpoint defines tracing URL where traces will be
+                      sent
+                    type: string
+                  headers:
+                    additionalProperties:
+                      type: string
+                    description: Headers defines custom HTTP headers for tracing
+                    type: object
+                  insecure:
+                    description: Insecure allows TLS configuration to be omitted
+                    type: boolean
+                  sampling_fraction:
+                    description: SamplingFraction defines fraction of the requests
+                      that should be sampled
+                    type: string
+                  timeout:
+                    description: Timeout defines tracing connection timeout
+                    type: string
+                  tls_config:
+                    description: TLSConfig defines tracing TLS config
+                    properties:
+                      ca_file:
+                        description: |-
+                          CAFile defines path to the pre-mounted file with CA
+                          mutually exclusive with CASecretRef
+                        type: string
+                      ca_secret_ref:
+                        description: |-
+                          CA defines reference for secret with CA content under given key
+                          mutually exclusive with CAFile
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      cert_file:
+                        description: |-
+                          CertFile defines path to the pre-mounted file with certificate
+                          mutually exclusive with CertSecretRef
+                        type: string
+                      cert_secret_ref:
+                        description: |-
+                          CertSecretRef defines reference for secret with certificate content under given key
+                          mutually exclusive with CertFile
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      insecure_skip_verify:
+                        description: |-
+                          Cert defines reference for secret with CA content under given key
+                          mutually exclusive with CertFile
+                        type: boolean
+                      key_file:
+                        description: |-
+                          KeyFile defines path to the pre-mounted file with certificate key
+                          mutually exclusive with KeySecretRef
+                        type: string
+                      key_secret_ref:
+                        description: |-
+                          Key defines reference for secret with certificate key content under given key
+                          mutually exclusive with KeyFile
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      server_name:
+                        description: ServerName indicates a name of a server
+                        type: string
+                    type: object
+                required:
+                - endpoint
+                type: object
               useDefaultResources:
                 description: |-
                   UseDefaultResources controls resource settings
                   By default, operator sets built-in resource requirements
+                type: boolean
+              useLegacyNaming:
+                description: |-
+                  UseLegacyNaming uses standalone Helm chart naming for managed resources:
+                  the CR name is used directly instead of the default "<type>-<name>" convention.
                 type: boolean
               useStrictSecurity:
                 description: |-
@@ -8364,6 +8697,7 @@ spec:
                   UseVMConfigReloader replaces prometheus-like config-reloader
                   with vm one. It uses secrets watch instead of file watch
                   which greatly increases speed of config updates
+                  Removed since v0.67.0: this property is ignored and no longer needed
                 type: boolean
               volumeMounts:
                 description: |-
@@ -8435,7 +8769,6 @@ spec:
                 description: |-
                   Volumes allows configuration of additional volumes on the output Deployment/StatefulSet definition.
                   Volumes specified will be appended to other volumes that are generated.
-                  / +optional
                 items:
                   description: Volume represents a named volume in a pod that may
                     be accessed by any container in the pod.
@@ -9019,7 +9352,7 @@ spec:
                                 resources:
                                   description: |-
                                     resources represents the minimum resources the volume should have.
-                                    If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                    Users are allowed to specify resource requirements
                                     that are lower than previous value but must still be higher than capacity recorded in the
                                     status field of the claim.
                                     More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -9351,7 +9684,7 @@ spec:
                         A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                        The volume will be mounted read-only (ro) and non-executable files (noexec).
+                        The volume will be mounted read-only (ro).
                         Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                       properties:
@@ -9523,8 +9856,7 @@ spec:
                       description: |-
                         portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                         Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                        is on.
+                        are redirected to the pxd.portworx.com CSI driver.
                       properties:
                         fsType:
                           description: |-
@@ -9898,6 +10230,24 @@ spec:
                                     description: Kubelet's generated CSRs will be
                                       addressed to this signer.
                                     type: string
+                                  userAnnotations:
+                                    additionalProperties:
+                                      type: string
+                                    description: |-
+                                      userAnnotations allow pod authors to pass additional information to
+                                      the signer implementation.  Kubernetes does not restrict or validate this
+                                      metadata in any way.
+
+                                      These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                      the PodCertificateRequest objects that Kubelet creates.
+
+                                      Entries are subject to the same validation as object metadata annotations,
+                                      with the addition that all keys must be domain-prefixed. No restrictions
+                                      are placed on values, except an overall size limitation on the entire field.
+
+                                      Signers should document the keys and values they support. Signers should
+                                      deny requests that contain keys they do not recognize.
+                                    type: object
                                 required:
                                 - keyType
                                 - signerName
@@ -10318,6 +10668,247 @@ spec:
                   - name
                   type: object
                 type: array
+              vpa:
+                description: Configures vertical pod autoscaling.
+                properties:
+                  recommenders:
+                    description: Recommenders specifies custom VPA recommender names.
+                    items:
+                      description: |-
+                        VerticalPodAutoscalerRecommenderSelector points to a specific Vertical Pod Autoscaler recommender.
+                        In the future it might pass parameters to the recommender.
+                      properties:
+                        name:
+                          description: Name of the recommender responsible for generating
+                            recommendation for this object.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  resourcePolicy:
+                    description: ResourcePolicy controls how the autoscaler computes
+                      recommended resources per container.
+                    properties:
+                      containerPolicies:
+                        description: Per-container resource policies.
+                        items:
+                          description: |-
+                            ContainerResourcePolicy controls how autoscaler computes the recommended
+                            resources for a specific container.
+                          properties:
+                            containerName:
+                              description: |-
+                                Name of the container or DefaultContainerResourcePolicy, in which
+                                case the policy is used by the containers that don't have their own
+                                policy specified.
+                              type: string
+                            controlledResources:
+                              description: |-
+                                Specifies the type of recommendations that will be computed
+                                (and possibly applied) by VPA.
+                                If not specified, the default of [ResourceCPU, ResourceMemory] will be used.
+                              items:
+                                description: ResourceName is the name identifying
+                                  various resources in a ResourceList.
+                                type: string
+                              type: array
+                            controlledValues:
+                              description: |-
+                                Specifies which resource values should be controlled.
+                                The default is "RequestsAndLimits".
+                              enum:
+                              - RequestsAndLimits
+                              - RequestsOnly
+                              type: string
+                            maxAllowed:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: |-
+                                Specifies the maximum amount of resources that will be recommended
+                                for the container. The default is no maximum.
+                              type: object
+                            memoryAggregationIntervalCount:
+                              description: |-
+                                memoryAggregationIntervalCount is the number of consecutive
+                                memoryAggregationIntervals which make up the memory aggregation window.
+                                The total window length is:
+                                MemoryAggregationIntervalSeconds * MemoryAggregationIntervalCount.
+                              format: int64
+                              minimum: 1
+                              type: integer
+                            memoryAggregationIntervalSeconds:
+                              description: |-
+                                memoryAggregationIntervalSeconds is the length of a single interval
+                                (in seconds) for which the peak memory usage is computed.
+                                Memory usage peaks are aggregated in multiples of this interval.
+                                In other words, there is one memory usage sample per interval
+                                (the maximum usage over that interval).
+                              format: int32
+                              minimum: 1
+                              type: integer
+                            minAllowed:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: |-
+                                Specifies the minimal amount of resources that will be recommended
+                                for the container. The default is no minimum.
+                              type: object
+                            mode:
+                              description: Whether autoscaler is enabled for the container.
+                                The default is "Auto".
+                              enum:
+                              - Auto
+                              - "Off"
+                              type: string
+                            oomBumpUpRatio:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: oomBumpUpRatio is the ratio to increase
+                                memory when OOM is detected.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            oomMinBumpUp:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: oomMinBumpUp is the minimum increase in
+                                memory when OOM is detected.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            startupBoost:
+                              description: |-
+                                startupBoost specifies the startup boost policy for the container.
+                                This overrides any pod-level startup boost policy.
+                                The startup boost policy takes precedence over the rest of the fields in
+                                this struct, except for ContainerName and ControlledValues.
+                              properties:
+                                cpu:
+                                  description: |-
+                                    cpu specifies the CPU startup boost policy.
+                                    If this field is not set, no startup boost is applied.
+                                  properties:
+                                    durationSeconds:
+                                      description: |-
+                                        durationSeconds indicates for how long to keep the pod boosted after it goes to Ready.
+                                        Defaults to 0.
+                                      format: int32
+                                      type: integer
+                                    factor:
+                                      description: |-
+                                        factor specifies the factor to apply to the resource request.
+                                        This field is required when Type is "Factor".
+                                      format: int32
+                                      type: integer
+                                    quantity:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      description: |-
+                                        quantity specifies the absolute resource quantity to be used as the
+                                        resource request and limit during the boost phase.
+                                        This field is required when Type is "Quantity".
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                    type:
+                                      description: |-
+                                        type specifies the kind of boost to apply.
+                                        Supported values are: "Factor", "Quantity".
+                                        No startupboost will be applied for unrecognized values.
+                                      enum:
+                                      - Factor
+                                      - Quantity
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: factor is required when type is Factor
+                                      and forbidden otherwise
+                                    rule: (self.type == 'Factor') == has(self.factor)
+                                  - message: quantity is required when type is Quantity
+                                      and forbidden otherwise
+                                    rule: (self.type == 'Quantity') == has(self.quantity)
+                              type: object
+                          type: object
+                        type: array
+                    type: object
+                  updatePolicy:
+                    description: UpdatePolicy controls how the autoscaler applies
+                      changes to pod resources.
+                    properties:
+                      evictAfterOOMSeconds:
+                        description: |-
+                          evictAfterOOMSeconds specifies the time in seconds to wait after an OOM event before
+                          considering the pod for eviction. Pods that have OOMed in less than this time
+                          since start will be evicted.
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      evictionRequirements:
+                        description: |-
+                          EvictionRequirements is a list of EvictionRequirements that need to
+                          evaluate to true in order for a Pod to be evicted. If more than one
+                          EvictionRequirement is specified, all of them need to be fulfilled to allow eviction.
+                        items:
+                          description: |-
+                            EvictionRequirement defines a single condition which needs to be true in
+                            order to evict a Pod
+                          properties:
+                            changeRequirement:
+                              description: EvictionChangeRequirement refers to the
+                                relationship between the new target recommendation
+                                for a Pod and its current requests, what kind of change
+                                is necessary for the Pod to be evicted
+                              enum:
+                              - TargetHigherThanRequests
+                              - TargetLowerThanRequests
+                              type: string
+                            resources:
+                              description: |-
+                                Resources is a list of one or more resources that the condition applies
+                                to. If more than one resource is given, the EvictionRequirement is fulfilled
+                                if at least one resource meets `changeRequirement`.
+                              items:
+                                description: ResourceName is the name identifying
+                                  various resources in a ResourceList.
+                                type: string
+                              type: array
+                          required:
+                          - changeRequirement
+                          - resources
+                          type: object
+                        type: array
+                      minReplicas:
+                        description: |-
+                          Minimal number of replicas which need to be alive for Updater to attempt
+                          pod eviction (pending other checks like PDB). Only positive values are
+                          allowed. Overrides global '--min-replicas' flag.
+                        format: int32
+                        type: integer
+                      updateMode:
+                        description: |-
+                          Controls when autoscaler applies changes to the pod resources.
+                          The default is 'Recreate'.
+                        enum:
+                        - "Off"
+                        - Initial
+                        - Recreate
+                        - InPlaceOrRecreate
+                        - InPlace
+                        - Auto
+                        type: string
+                    type: object
+                type: object
               webConfig:
                 description: |-
                   WebConfig defines configuration for webserver
@@ -10561,6 +11152,8 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastAppliedSpec:
+                x-kubernetes-preserve-unknown-fields: true
               observedGeneration:
                 description: |-
                   ObservedGeneration defines current generation picked by operator for the

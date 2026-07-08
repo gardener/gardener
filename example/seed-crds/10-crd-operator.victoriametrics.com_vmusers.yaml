@@ -49,6 +49,28 @@ spec:
           spec:
             description: VMUserSpec defines the desired state of VMUser
             properties:
+              access_log:
+                description: |-
+                  AccessLog configures per-user access logging.
+                  When set, vmauth logs each request for this user with fields including
+                  request_uri, status_code, duration_ms, username, etc.
+                  See https://docs.victoriametrics.com/victoriametrics/vmauth/#access-log
+
+                  available since v1.138.0 vmauth version
+                properties:
+                  filters:
+                    description: Filters defines optional filters that control which
+                      requests are logged.
+                    properties:
+                      skip_status_codes:
+                        description: |-
+                          SkipStatusCodes lists HTTP status codes whose responses are excluded from the access log.
+                          For example, [200, 204] suppresses logging of successful responses.
+                        items:
+                          type: integer
+                        type: array
+                    type: object
+                type: object
               bearerToken:
                 description: BearerToken Authorization header value for accessing
                   protected endpoint.
@@ -109,6 +131,62 @@ spec:
                     items:
                       type: string
                     type: array
+                type: object
+              jwt:
+                description: JWT defines JWT based auth for a user
+                properties:
+                  matchClaims:
+                    additionalProperties:
+                      type: string
+                    description: MatchClaims enables claim based routing
+                    type: object
+                  oidc:
+                    description: OIDC defines OIDC configuration section
+                    properties:
+                      issuer:
+                        description: Issuer defines issuer URL for OIDC
+                        type: string
+                    required:
+                    - issuer
+                    type: object
+                  publicKeyRefs:
+                    description: PublicKeyRefs defines a list of Secret selectors
+                      that reference public keys
+                    items:
+                      description: SecretKeySelector selects a key of a Secret.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    type: array
+                  publicKeys:
+                    description: PublicKeys defines a list of public keys that are
+                      used for signature verification
+                    items:
+                      type: string
+                    type: array
+                  skipVerify:
+                    description: SkipVerify skips signature verification for testing
+                      purposes
+                    type: boolean
                 type: object
               load_balancing_policy:
                 description: |-
@@ -218,7 +296,7 @@ spec:
                         kind:
                           description: |-
                             Kind one of:
-                            VMAgent,VMAlert, VMSingle, VMCluster/vmselect, VMCluster/vmstorage,VMCluster/vminsert,VMAlertManager, VLSingle, VLCluster/vlinsert, VLCluster/vlselect, VLCluster/vlstorage, VTSingle, VTCluster/vtinsert, VTCluster/vtselect, VTCluster/vtstorage and VLAgent
+                            VMAgent,VMAlert, VMSingle, VMCluster/vmselect, VMCluster/vmstorage,VMCluster/vminsert,VMAlertManager, VLSingle, VLCluster/vlinsert, VLCluster/vlselect, VLCluster/vlstorage, VTSingle, VTCluster/vtinsert, VTCluster/vtselect, VTCluster/vtstorage VMAnomaly and VLAgent
                           enum:
                           - VMAgent
                           - VMAlert
@@ -238,13 +316,42 @@ spec:
                           - VTCluster/vtselect
                           - VTCluster/vtstorage
                           - VTSingle
+                          - VMAnomaly
                           type: string
                         name:
-                          description: Name target CRD object name
+                          description: Name of the target Kubernetes object
                           type: string
                         namespace:
-                          description: Namespace target CRD object namespace.
+                          description: Namespace of the target Kubernetes object
                           type: string
+                        objects:
+                          description: Objects defines list of name/namespace pairs
+                            that define existing k8s object
+                          items:
+                            description: NamespacedName defines name and namespace
+                              pairs to reference k8s object
+                            properties:
+                              name:
+                                description: Name of the target Kubernetes object
+                                type: string
+                              namespace:
+                                description: Namespace of the target Kubernetes object
+                                type: string
+                              useExtraService:
+                                description: |-
+                                  UseExtraService instructs the operator to prefer the CR's additional service
+                                  (created via spec.serviceSpec) over the default service when building the target URL.
+                                type: boolean
+                            required:
+                            - name
+                            - namespace
+                            type: object
+                          type: array
+                        useExtraService:
+                          description: |-
+                            UseExtraService instructs the operator to prefer the CR's additional service
+                            (created via spec.serviceSpec) over the default service when building the target URL.
+                          type: boolean
                       required:
                       - kind
                       - name
@@ -281,6 +388,10 @@ spec:
                       enum:
                       - least_loaded
                       - first_available
+                      type: string
+                    name:
+                      description: Name references item at VMAuths spec.defaultTargetRefs
+                        map, with name set other attributes are skipped
                       type: string
                     paths:
                       description: Paths - matched path to route.
@@ -593,9 +704,14 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              useLegacyNaming:
+                description: |-
+                  UseLegacyNaming uses standalone Helm chart naming for managed resources:
+                  the CR name is used directly instead of the default "<type>-<name>" convention.
+                type: boolean
               username:
                 description: |-
-                  UserName basic auth user name for accessing protected endpoint,
+                  Username basic auth user name for accessing protected endpoint,
                   will be replaced with metadata.name of VMUser if omitted.
                 type: string
             required:

@@ -97,12 +97,12 @@ spec:
                           avatar_url:
                             description: |-
                               AvatarURL defines message avatar URL
-                              Available from operator v0.55.0 and alertmanager v0.28.0
+                              Available from alertmanager v0.28.0
                             type: string
                           content:
                             description: |-
                               Content defines message content template
-                              Available from operator v0.55.0 and alertmanager v0.28.0
+                              Available from alertmanager v0.28.0
                             maxLength: 2000
                             type: string
                           http_config:
@@ -237,6 +237,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -334,7 +343,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -346,7 +354,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -357,8 +364,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -532,7 +577,7 @@ spec:
                           username:
                             description: |-
                               Username defines message username
-                              Available from operator v0.55.0 and alertmanager v0.28.0
+                              Available from alertmanager v0.28.0
                             type: string
                           webhook_url:
                             description: |-
@@ -828,14 +873,14 @@ spec:
                     incidentio_configs:
                       items:
                         description: |-
-                          IncidentIOConfig configures notifications via incident.io.
+                          IncidentioConfig configures notifications via incident.io.
                           https://prometheus.io/docs/alerting/latest/configuration/#incidentio_config
-                          available from v0.66.0 operator version
-                          and v0.29.0 alertmanager version
+                          Available from v0.29.0 alertmanager version
                         properties:
                           alert_source_token:
-                            description: AlertSourceToken is used to authenticate
-                              with incident.io
+                            description: |-
+                              AlertSourceToken is used to authenticate with incident.io.
+                              Mutually exclusive with AlertSourceTokenFile.
                             properties:
                               key:
                                 description: The key of the secret to select from.  Must
@@ -858,6 +903,11 @@ spec:
                             - key
                             type: object
                             x-kubernetes-map-type: atomic
+                          alert_source_token_file:
+                            description: |-
+                              AlertSourceTokenFile defines the path to a file that contains the alert source token.
+                              Mutually exclusive with AlertSourceToken.
+                            type: string
                           http_config:
                             x-kubernetes-preserve-unknown-fields: true
                           max_alerts:
@@ -876,6 +926,12 @@ spec:
                             description: |-
                               The URL to send the incident.io alert. This would typically be provided by the
                               incident.io team when setting up an alert source.
+                              Mutually exclusive with URLFile.
+                            type: string
+                          url_file:
+                            description: |-
+                              URLFile defines the path to a file that holds the incident.io alert URL.
+                              Mutually exclusive with URL.
                             type: string
                         type: object
                       type: array
@@ -884,8 +940,7 @@ spec:
                         description: |-
                           JiraConfig represent alertmanager's jira_config entry
                           https://prometheus.io/docs/alerting/latest/configuration/#jira_config
-                          available from v0.55.0 operator version
-                          and v0.28.0 alertmanager version
+                          Available from v0.28.0 alertmanager version
                         properties:
                           api_url:
                             description: |-
@@ -954,6 +1009,132 @@ spec:
                         required:
                         - issue_type
                         - project
+                        type: object
+                      type: array
+                    mattermost_configs:
+                      description: MattermostConfigs defines Mattermost notification
+                        configurations.
+                      items:
+                        description: MattermostConfig configures notifications via
+                          Mattermost.
+                        properties:
+                          attachments:
+                            description: Attachments defines richer formatting options
+                            items:
+                              properties:
+                                author_icon:
+                                  type: string
+                                author_link:
+                                  type: string
+                                author_name:
+                                  type: string
+                                color:
+                                  type: string
+                                fallback:
+                                  type: string
+                                fields:
+                                  items:
+                                    properties:
+                                      short:
+                                        type: boolean
+                                      title:
+                                        type: string
+                                      value:
+                                        type: string
+                                    type: object
+                                  type: array
+                                footer:
+                                  type: string
+                                footer_icon:
+                                  type: string
+                                image_url:
+                                  type: string
+                                pretext:
+                                  type: string
+                                text:
+                                  type: string
+                                thumb_url:
+                                  type: string
+                                title:
+                                  type: string
+                                title_link:
+                                  type: string
+                              type: object
+                            type: array
+                          channel:
+                            description: Channel overrides the channel the message
+                              posts in.
+                            type: string
+                          http_config:
+                            x-kubernetes-preserve-unknown-fields: true
+                          icon_emoji:
+                            description: IconEmoji overrides the profile picture and
+                              icon_url parameter.
+                            type: string
+                          icon_url:
+                            description: IconURL overrides the profile picture the
+                              message posts with.
+                            type: string
+                          priority:
+                            properties:
+                              persistent_notifications:
+                                type: boolean
+                              priority:
+                                type: string
+                              requested_ack:
+                                type: boolean
+                            type: object
+                          props:
+                            properties:
+                              card:
+                                type: string
+                            type: object
+                          send_resolved:
+                            description: SendResolved controls notify about resolved
+                              alerts.
+                            type: boolean
+                          text:
+                            description: Text defines markdown-formatted message to
+                              display in the post.
+                            type: string
+                          url:
+                            description: |-
+                              URL to send requests to,
+                              one of `urlSecret` and `url` must be defined.
+                            type: string
+                          url_secret:
+                            description: |-
+                              URLSecret defines secret name and key at the CRD namespace.
+                              It must contain the Mattermost URL.
+                              one of `urlSecret` and `url` must be defined.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          username:
+                            description: Username overrides the username the message
+                              posts as
+                            type: string
+                        required:
+                        - text
                         type: object
                       type: array
                     msteams_configs:
@@ -1091,6 +1272,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -1188,7 +1378,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -1200,7 +1389,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -1211,8 +1399,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -1422,8 +1648,7 @@ spec:
                         description: |-
                           MSTeamsV2Config sends notifications using the new message format with adaptive cards as required by flows.
                           https://support.microsoft.com/en-gb/office/create-incoming-webhooks-with-workflows-for-microsoft-teams-8ae491c7-0394-4861-ba59-055e33f75498
-                          available from v0.55.0 operator version
-                          and v0.28.0 alertmanager version
+                          Available from v0.28.0 alertmanager version
                         properties:
                           http_config:
                             x-kubernetes-preserve-unknown-fields: true
@@ -1663,6 +1888,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -1760,7 +1994,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -1772,7 +2005,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -1783,8 +2015,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -2162,6 +2432,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -2259,7 +2538,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -2271,7 +2549,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -2282,8 +2559,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -2449,7 +2764,7 @@ spec:
                             items:
                               description: |-
                                 ImageConfig is used to attach images to the incident.
-                                See https://developer.pagerduty.com/docs/ZG9jOjExMDI5NTgx-send-an-alert-event#the-images-property
+                                See https://developer.pagerduty.com/docs/send-alert-event#the-images-property
                                 for more information.
                               properties:
                                 alt:
@@ -2467,7 +2782,7 @@ spec:
                             items:
                               description: |-
                                 LinkConfig is used to attach text links to the incident.
-                                See https://developer.pagerduty.com/docs/ZG9jOjExMDI5NTgx-send-an-alert-event#the-links-property
+                                See https://developer.pagerduty.com/docs/send-alert-event#the-links-property
                                 for more information.
                               properties:
                                 href:
@@ -2694,6 +3009,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -2791,7 +3115,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -2803,7 +3126,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -2814,8 +3136,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -3065,8 +3425,7 @@ spec:
                         description: |-
                           RocketchatConfig configures notifications via Rocketchat.
                           https://prometheus.io/docs/alerting/latest/configuration/#rocketchat_config
-                          available from v0.55.0 operator version
-                          and v0.28.0 alertmanager version
+                          Available from v0.28.0 alertmanager version
                         properties:
                           actions:
                             items:
@@ -3098,7 +3457,7 @@ spec:
                             items:
                               description: |-
                                 RocketchatAttachmentField defines API fields
-                                https://developer.rocket.chat/reference/api/rest-api/endpoints/messaging/chat-endpoints/postmessage#attachment-field-objects
+                                https://developer.rocket.chat/apidocs/post-message
                               properties:
                                 short:
                                   type: boolean
@@ -3157,7 +3516,7 @@ spec:
                           token_id:
                             description: |-
                               The sender token and token_id
-                              See https://docs.rocket.chat/use-rocket.chat/user-guides/user-panel/my-account#personal-access-tokens
+                              See https://docs.rocket.chat/docs/manage-personal-access-tokens
                             properties:
                               key:
                                 description: The key of the secret to select from.  Must
@@ -3196,7 +3555,7 @@ spec:
                               description: |-
                                 SlackAction configures a single Slack action that is sent with each
                                 notification.
-                                See https://api.slack.com/docs/message-attachments#action_fields and
+                                See https://docs.slack.dev/legacy/legacy-messaging/legacy-interactive-message-field-guide/#action_fields and
                                 https://api.slack.com/docs/message-buttons for more information.
                               properties:
                                 confirm:
@@ -3281,7 +3640,7 @@ spec:
                             items:
                               description: |-
                                 SlackField configures a single Slack field that is sent with each notification.
-                                See https://api.slack.com/docs/message-attachments#fields for more information.
+                                See https://docs.slack.dev/legacy/legacy-messaging/legacy-secondary-message-attachments/#field_objects for more information.
                               properties:
                                 short:
                                   type: boolean
@@ -3430,6 +3789,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -3527,7 +3895,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -3539,7 +3906,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -3550,8 +3916,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -3740,6 +4144,12 @@ spec:
                             type: string
                           title_link:
                             type: string
+                          update_message:
+                            description: |-
+                              Whether to update the original message in-place instead of sending a new one.
+                              Requires Slack Bot API and chat:write scope.
+                              Available since alertmanager v0.32.0.
+                            type: boolean
                           username:
                             type: string
                         type: object
@@ -3887,6 +4297,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -3984,7 +4403,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -3996,7 +4414,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -4007,8 +4424,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -4441,6 +4896,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -4538,7 +5002,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -4550,7 +5013,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -4561,8 +5023,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -4924,6 +5424,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -5021,7 +5530,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -5033,7 +5541,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -5044,8 +5551,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -5369,6 +5914,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -5466,7 +6020,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -5478,7 +6031,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -5489,8 +6041,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -5805,6 +6395,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -5902,7 +6501,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -5914,7 +6512,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -5925,8 +6522,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -6138,10 +6773,10 @@ spec:
                         type: object
                       type: array
                     wechat_configs:
-                      description: WeChatConfigs defines wechat notification configurations.
+                      description: WechatConfigs defines wechat notification configurations.
                       items:
                         description: |-
-                          WeChatConfig configures notifications via WeChat.
+                          WechatConfig configures notifications via Wechat.
                           See https://prometheus.io/docs/alerting/latest/configuration/#wechat_config
                         properties:
                           agent_id:
@@ -6315,6 +6950,15 @@ spec:
                                 - key
                                 type: object
                                 x-kubernetes-map-type: atomic
+                              follow_redirects:
+                                description: FollowRedirects controls redirects for
+                                  scraping.
+                                type: boolean
+                              noProxy:
+                                description: |-
+                                  NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+                                  IP and domain names can contain port numbers.
+                                type: string
                               oauth2:
                                 description: OAuth2 client credentials used to fetch
                                   a token for the targets.
@@ -6412,7 +7056,6 @@ spec:
                                   proxy_url:
                                     description: |-
                                       The proxy URL for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     type: string
                                   scopes:
@@ -6424,7 +7067,6 @@ spec:
                                   tls_config:
                                     description: |-
                                       TLSConfig for token_url connection
-                                      ( available from v0.55.0).
                                       Is only supported by Scrape objects family
                                     x-kubernetes-preserve-unknown-fields: true
                                   token_url:
@@ -6435,8 +7077,46 @@ spec:
                                 - client_id
                                 - token_url
                                 type: object
+                              proxyConnectHeader:
+                                additionalProperties:
+                                  items:
+                                    description: SecretKeySelector selects a key of
+                                      a Secret.
+                                    properties:
+                                      key:
+                                        description: The key of the secret to select
+                                          from.  Must be a valid secret key.
+                                        type: string
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                      optional:
+                                        description: Specify whether the Secret or
+                                          its key must be defined
+                                        type: boolean
+                                    required:
+                                    - key
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  type: array
+                                description: ProxyConnectHeader optionally specifies
+                                  headers to send to proxies during CONNECT requests.
+                                type: object
+                              proxyFromEnvironment:
+                                description: ProxyFromEnvironment defines whether
+                                  to use the proxy configuration defined by environment
+                                  variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+                                type: boolean
                               proxyURL:
-                                description: Optional proxy URL.
+                                description: ProxyUrl defines the HTTP proxy server
+                                  to use.
+                                pattern: ^(http|https|socks5)://.+$
                                 type: string
                               tls_config:
                                 description: TLS configuration for the client.
@@ -6749,9 +7429,6 @@ spec:
                   - time_intervals
                   type: object
                 type: array
-            required:
-            - receivers
-            - route
             type: object
           status:
             description: VMAlertmanagerConfigStatus defines the observed state of
