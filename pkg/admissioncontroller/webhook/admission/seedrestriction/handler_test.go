@@ -1244,7 +1244,7 @@ var _ = Describe("handler", func() {
 								},
 							),
 							Entry(
-								"missing authentication.gardener.cloud/public-keys label",
+								"missing discovery.gardener.cloud/public label",
 								&corev1.Secret{
 									ObjectMeta: metav1.ObjectMeta{
 										Labels: map[string]string{
@@ -1255,23 +1255,23 @@ var _ = Describe("handler", func() {
 								},
 								&metav1.Status{
 									Code:    int32(http.StatusUnprocessableEntity),
-									Message: `label "authentication.gardener.cloud/public-keys" is missing`,
+									Message: `label "discovery.gardener.cloud/public" is missing`,
 								},
 							),
 							Entry(
-								"label authentication.gardener.cloud/public-keys has wrong value",
+								"label discovery.gardener.cloud/public has wrong value",
 								&corev1.Secret{
 									ObjectMeta: metav1.ObjectMeta{
 										Labels: map[string]string{
-											"shoot.gardener.cloud/name":                 "foo",
-											"shoot.gardener.cloud/namespace":            "foo",
-											"authentication.gardener.cloud/public-keys": "foo",
+											"shoot.gardener.cloud/name":       "foo",
+											"shoot.gardener.cloud/namespace":  "foo",
+											"discovery.gardener.cloud/public": "foo",
 										},
 									},
 								},
 								&metav1.Status{
 									Code:    int32(http.StatusUnprocessableEntity),
-									Message: `label "authentication.gardener.cloud/public-keys" value must be set to "serviceaccount"`,
+									Message: `label "discovery.gardener.cloud/public" value must be set to "serviceaccount"`,
 								},
 							),
 						)
@@ -1281,9 +1281,9 @@ var _ = Describe("handler", func() {
 								secret := &corev1.Secret{
 									ObjectMeta: metav1.ObjectMeta{
 										Labels: map[string]string{
-											"shoot.gardener.cloud/name":                 name,
-											"shoot.gardener.cloud/namespace":            namespace,
-											"authentication.gardener.cloud/public-keys": "serviceaccount",
+											"shoot.gardener.cloud/name":       name,
+											"shoot.gardener.cloud/namespace":  namespace,
+											"discovery.gardener.cloud/public": "serviceaccount",
 										},
 									},
 								}
