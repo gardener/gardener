@@ -20,8 +20,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -187,12 +187,9 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		false,
 		istioLabels,
 		istioNamespace,
-		pvcautoscaler.Values{
-			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
-			MaxCapacity:                 resource.MustParse("40Gi"),
-			UtilizationThresholdPercent: new(70),
-			StepPercent:                 new(10),
-			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		vali.PVCAutoscalingConfig{
+			Enabled:     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+			MaxCapacity: resource.MustParse("40Gi"),
 		},
 	)
 }
@@ -251,12 +248,9 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		false,
-		pvcautoscaler.Values{
-			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
-			MaxCapacity:                 resource.MustParse("40Gi"),
-			UtilizationThresholdPercent: new(70),
-			StepPercent:                 new(10),
-			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		victorialogs.PVCAutoscalingConfig{
+			Enabled:     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(b.Seed.GetInfo().Spec.Settings),
+			MaxCapacity: resource.MustParse("40Gi"),
 		},
 	)
 	if err != nil {

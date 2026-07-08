@@ -11,7 +11,6 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -29,7 +28,7 @@ func NewVali(
 	isGardenCluster bool,
 	istioIngressGatewayLabels map[string]string,
 	istioIngressGatewayNamespace string,
-	pvcAutoscalerValues pvcautoscaler.Values,
+	pvcAutoscalerValues vali.PVCAutoscalingConfig,
 ) (
 	vali.Interface,
 	error,

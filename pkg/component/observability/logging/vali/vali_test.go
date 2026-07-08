@@ -36,7 +36,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/vali"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -398,12 +397,9 @@ var _ = Describe("Vali", func() {
 						IngressHost:                  valiHost,
 						IstioIngressGatewayNamespace: "istio-ingress",
 						IsGardenCluster:              false,
-						PVCAutoscaler: pvcautoscaler.Values{
-							Enabled:                     true,
-							MaxCapacity:                 maxCapacity,
-							UtilizationThresholdPercent: new(70),
-							StepPercent:                 new(10),
-							MinStepAbsolute:             new(resource.MustParse("1Gi")),
+						PVCAutoscaler: PVCAutoscalingConfig{
+							Enabled:     true,
+							MaxCapacity: maxCapacity,
 						},
 					},
 				)
@@ -508,7 +504,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("shouldn't do anything when PVCAutoscaler is enabled", func() {
-			valiDeployer := New(fakeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity, PVCAutoscaler: pvcautoscaler.Values{Enabled: true}})
+			valiDeployer := New(fakeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity, PVCAutoscaler: PVCAutoscalingConfig{Enabled: true}})
 
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
 
@@ -1574,11 +1570,6 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
 					MaxCapacity: maxCapacity,
-					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
-						UtilizationThresholdPercent: new(70),
-						StepPercent:                 new(10),
-						MinStepAbsolute:             new(resource.MustParse("1Gi")),
-					},
 				},
 			},
 		},

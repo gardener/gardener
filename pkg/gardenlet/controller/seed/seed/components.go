@@ -55,7 +55,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
@@ -69,7 +71,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
-	pvcautoscalervalues "github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -306,13 +307,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(pvcautoscalervalues.Values{
-		Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
-		MaxCapacity:                 resource.MustParse("200Gi"),
-		UtilizationThresholdPercent: new(70),
-		StepPercent:                 new(10),
-		MinStepAbsolute:             new(resource.MustParse("1Gi")),
-	})
+	c.victoriaLogs, err = r.newVictoriaLogs(seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return
 	}
@@ -604,12 +599,9 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 		false,
 		istioIngressGatewayLabels,
 		istioIngressGatewayNamespace,
-		pvcautoscalervalues.Values{
-			Enabled:                     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
-			MaxCapacity:                 resource.MustParse("200Gi"),
-			UtilizationThresholdPercent: new(70),
-			StepPercent:                 new(10),
-			MinStepAbsolute:             new(resource.MustParse("1Gi")),
+		vali.PVCAutoscalingConfig{
+			Enabled:     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+			MaxCapacity: resource.MustParse("200Gi"),
 		},
 	)
 	if err != nil {
@@ -630,7 +622,7 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs(pvcAutoscalerValues pvcautoscalervalues.Values) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(seedSettings *gardencorev1beta1.SeedSettings) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
@@ -644,7 +636,10 @@ func (r *Reconciler) newVictoriaLogs(pvcAutoscalerValues pvcautoscalervalues.Val
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
 		false,
-		pvcAutoscalerValues,
+		victorialogs.PVCAutoscalingConfig{
+			Enabled:     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seedSettings),
+			MaxCapacity: resource.MustParse("200Gi"),
+		},
 	)
 	if err != nil {
 		return nil, err

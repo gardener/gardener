@@ -69,7 +69,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
@@ -83,7 +85,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -1439,7 +1440,7 @@ func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) 
 		true,
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
-		pvcautoscaler.Values{Enabled: false},
+		vali.PVCAutoscalingConfig{},
 	)
 	if err != nil {
 		return nil, err
@@ -1463,7 +1464,7 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		true,
-		pvcautoscaler.Values{Enabled: false},
+		victorialogs.PVCAutoscalingConfig{},
 	)
 	if err != nil {
 		return nil, err

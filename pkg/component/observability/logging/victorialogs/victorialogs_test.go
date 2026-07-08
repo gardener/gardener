@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -263,12 +262,9 @@ var _ = Describe("VictoriaLogs", func() {
 			func(maxCapacity resource.Quantity) {
 				values = Values{
 					Image: image,
-					PVCAutoscaler: pvcautoscaler.Values{
-						Enabled:                     true,
-						MaxCapacity:                 maxCapacity,
-						UtilizationThresholdPercent: new(70),
-						StepPercent:                 new(10),
-						MinStepAbsolute:             new(resource.MustParse("1Gi")),
+					PVCAutoscaler: PVCAutoscalingConfig{
+						Enabled:     true,
+						MaxCapacity: maxCapacity,
 					},
 				}
 				component = New(c, namespace, values)
@@ -539,11 +535,6 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
 					MaxCapacity: maxCapacity,
-					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
-						UtilizationThresholdPercent: new(70),
-						StepPercent:                 new(10),
-						MinStepAbsolute:             new(resource.MustParse("1Gi")),
-					},
 				},
 			},
 		},

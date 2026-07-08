@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -130,7 +129,15 @@ type Values struct {
 	IstioIngressGatewayNamespace string
 	ShootNodeLoggingEnabled      bool
 	Storage                      *resource.Quantity
-	PVCAutoscaler                pvcautoscaler.Values
+	PVCAutoscaler                PVCAutoscalingConfig
+}
+
+// PVCAutoscalingConfig configures whether and up to what capacity the Vali PVC is autoscaled.
+type PVCAutoscalingConfig struct {
+	// Enabled controls whether the component creates a PersistentVolumeClaimAutoscaler resource.
+	Enabled bool
+	// MaxCapacity is the upper bound up to which the PVC may be scaled.
+	MaxCapacity resource.Quantity
 }
 
 // Interface is the interface for the Vali deployer.
@@ -344,7 +351,7 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return vpa
 }
 
-func (v *vali) getPVCA(values pvcautoscaler.Values) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (v *vali) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	pvca := &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiconstants.ManagedResourceNameRuntime,
@@ -360,11 +367,6 @@ func (v *vali) getPVCA(values pvcautoscaler.Values) *pvcautoscalerv1alpha1.Persi
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
 					MaxCapacity: values.MaxCapacity,
-					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
-						UtilizationThresholdPercent: values.UtilizationThresholdPercent,
-						StepPercent:                 values.StepPercent,
-						MinStepAbsolute:             values.MinStepAbsolute,
-					},
 				},
 			},
 		},

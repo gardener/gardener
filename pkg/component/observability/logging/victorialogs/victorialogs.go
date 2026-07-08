@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	"github.com/gardener/gardener/pkg/component/observability/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -57,7 +56,15 @@ type Values struct {
 	// PriorityClassName is the name of the priority class for the VictoriaLogs pods.
 	PriorityClassName string
 	// PVCAutoscaler configures whether and how the VictoriaLogs PVC is autoscaled.
-	PVCAutoscaler pvcautoscaler.Values
+	PVCAutoscaler PVCAutoscalingConfig
+}
+
+// PVCAutoscalingConfig configures whether and up to what capacity the VictoriaLogs PVC is autoscaled.
+type PVCAutoscalingConfig struct {
+	// Enabled controls whether the component creates a PersistentVolumeClaimAutoscaler resource.
+	Enabled bool
+	// MaxCapacity is the upper bound up to which the PVC may be scaled.
+	MaxCapacity resource.Quantity
 }
 
 type victoriaLogs struct {
@@ -236,7 +243,7 @@ func (v *victoriaLogs) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	}
 }
 
-func (v *victoriaLogs) getPVCA(values pvcautoscaler.Values) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (v *victoriaLogs) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VLSingleResourceName,
@@ -252,11 +259,6 @@ func (v *victoriaLogs) getPVCA(values pvcautoscaler.Values) *pvcautoscalerv1alph
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
 					MaxCapacity: values.MaxCapacity,
-					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
-						UtilizationThresholdPercent: values.UtilizationThresholdPercent,
-						StepPercent:                 values.StepPercent,
-						MinStepAbsolute:             values.MinStepAbsolute,
-					},
 				},
 			},
 		},
