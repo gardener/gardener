@@ -17,6 +17,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ClusterToWorkerMapper returns a mapper that returns requests for Worker whose
@@ -26,8 +27,8 @@ func ClusterToWorkerMapper(reader client.Reader, predicates []predicate.Predicat
 }
 
 // MachineToWorkerMapper returns a mapper that returns requests for the Worker referenced by the machine.
-func MachineToWorkerMapper() handler.MapFunc {
-	return func(_ context.Context, obj client.Object) []reconcile.Request {
+func MachineToWorkerMapper(reader client.Reader, predicates []predicate.Predicate) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		machine, ok := obj.(*machinev1alpha1.Machine)
 		if !ok {
 			return nil
@@ -35,6 +36,15 @@ func MachineToWorkerMapper() handler.MapFunc {
 
 		workerName, ok := machine.Labels[v1beta1constants.LabelWorkerName]
 		if !ok {
+			return nil
+		}
+
+		worker := &extensionsv1alpha1.Worker{}
+		if err := reader.Get(ctx, types.NamespacedName{Name: workerName, Namespace: machine.Namespace}, worker); err != nil {
+			return nil
+		}
+
+		if !predicateutils.EvalGeneric(worker, predicates...) {
 			return nil
 		}
 
