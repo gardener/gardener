@@ -142,10 +142,10 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameManagedSeedShoot,                // ManagedSeedShoot
 		PluginNameBastion,                         // Bastion
 		PluginNameBackupBucketValidator,           // BackupBucketValidator
+		mutating.PluginName,                       // MutatingAdmissionPolicy
 		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
 		validating.PluginName,                     // ValidatingAdmissionPolicy
 		resourcequota.PluginName,                  // ResourceQuota
-		mutating.PluginName,                       // MutatingAdmissionPolicy
 	)
 }

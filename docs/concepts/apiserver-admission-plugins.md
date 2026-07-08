@@ -90,10 +90,10 @@ This prevents misconfigurations that would otherwise allow users to create such 
 
 **Type**: Validating. **Enabled by default**: Yes.
 
-This admission controller reacts on `UPDATE` operations for `CredentialsBinding`s, `SecretBinding`s, `Shoot`s. 
+This admission controller reacts on `UPDATE` operations for `CredentialsBinding`s, `SecretBinding`s, `Shoot`s.
 It ensures that the finalizers of these resources are not removed by users, as long as the affected resource is still in use.
 For `CredentialsBinding`s and `SecretBinding`s this means, that the `gardener` finalizer can only be removed if the binding is not referenced by any `Shoot`.
-In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion. 
+In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion.
 
 ## `ManagedSeed`
 
@@ -113,7 +113,7 @@ It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed`
 
 ## `MutatingAdmissionPolicy`
 
-**Type**: Mutating. **Enabled by default**: No.
+**Type**: Mutating. **Enabled by default**: Yes.
 
 This admission controller is defined in the generic API server library (`k8s.io/apiserver`). See the [Mutating Admission Policy page](https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy).
 
