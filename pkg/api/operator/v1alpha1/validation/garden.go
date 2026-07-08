@@ -648,7 +648,7 @@ func validateGardenerFeatureGates(featureGates map[string]bool, fldPath *field.P
 	allErrs := field.ErrorList{}
 
 	for featureGate := range featureGates {
-		spec, supported := features.AllowedFeatureGates[featuregate.Feature(featureGate)]
+		spec, supported := features.AllFeatureGates[featuregate.Feature(featureGate)]
 		if !supported {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), "not supported by Gardener"))
 		} else if spec.LockToDefault && featureGates[featureGate] != spec.Default {

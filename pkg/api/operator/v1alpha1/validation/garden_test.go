@@ -1727,20 +1727,6 @@ var _ = Describe("Validation Tests", func() {
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.featureGates.Foo"),
 							}))))
 						})
-
-						It("should allow MutatingAdmissionPolicy from the apiserver-extension", func() {
-							garden.Spec.VirtualCluster.Gardener.APIServer.FeatureGates = map[string]bool{"MutatingAdmissionPolicy": true}
-							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
-						})
-
-						It("should disallow unregisterred apiserver-extension feature gate, e.g. OpenAPIEnums", func() {
-							garden.Spec.VirtualCluster.Gardener.APIServer.FeatureGates = map[string]bool{"OpenAPIEnums": true}
-							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(field.ErrorTypeForbidden),
-								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.featureGates.OpenAPIEnums"),
-								"Detail": Equal("not supported by Gardener"),
-							}))))
-						})
 					})
 
 					Context("Admission plugins", func() {

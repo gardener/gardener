@@ -5,9 +5,6 @@
 package features
 
 import (
-	"maps"
-
-	apiserverfeatures "k8s.io/apiserver/pkg/features"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 )
@@ -195,19 +192,4 @@ func GetFeatures(featureGates ...featuregate.Feature) map[featuregate.Feature]fe
 	}
 
 	return out
-}
-
-// AllowedFeatureGates is the collection of the allowed feature gates.
-// They can be Gardener owned feature gates originating from [AllFeatureGates], or
-// 3rd party feature gates, e.g. originating from k8s SDK.
-var AllowedFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{}
-
-func init() {
-	// TODO(vpnachev): Unregister `MutatingAdmissionPolicy` feature gate once k8s.io/* deps are update to >= v1.36.0
-	// This feature gate is inherited from the apiserver-extension SDK, but needs to be explicitly enabled on the gardener-apiserver
-	// in order mutatingadmissionpolicies to work.
-	AllowedFeatureGates[apiserverfeatures.MutatingAdmissionPolicy] = DefaultFeatureGate.GetAll()[apiserverfeatures.MutatingAdmissionPolicy]
-
-	// Let Gardener own feature gates overwrite any 3rd party one.
-	maps.Copy(AllowedFeatureGates, AllFeatureGates)
 }
