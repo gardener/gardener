@@ -106,8 +106,8 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: &gardencorev1beta1.Networking{
 							Pods:     new("10.150.0.0/16"),
-							Services: new("192.168.1.0/17"),
-							Nodes:    new("172.16.2.0/18"),
+							Services: new("192.168.0.0/17"),
+							Nodes:    new("172.16.0.0/18"),
 						},
 						Provider: gardencorev1beta1.Provider{
 							Workers: []gardencorev1beta1.Worker{},
@@ -440,8 +440,8 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 				if strings.HasPrefix(namespaceName, "shoot--") {
 					out.Egress[0].To[0].IPBlock.Except = append(out.Egress[0].To[0].IPBlock.Except, "10.150.0.0/16")
-					out.Egress[0].To[1].IPBlock.Except = append(out.Egress[0].To[1].IPBlock.Except, "172.16.2.0/18")
-					out.Egress[0].To[2].IPBlock.Except = append(out.Egress[0].To[2].IPBlock.Except, "192.168.1.0/17")
+					out.Egress[0].To[1].IPBlock.Except = append(out.Egress[0].To[1].IPBlock.Except, "172.16.0.0/18")
+					out.Egress[0].To[2].IPBlock.Except = append(out.Egress[0].To[2].IPBlock.Except, "192.168.0.0/17")
 				}
 
 				return out

@@ -1001,8 +1001,9 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						ObjectMeta: objectMeta,
 						Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 							ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-								Kind: "someKind",
-								Name: "someName",
+								APIVersion: "apps/v1",
+								Kind:       "someKind",
+								Name:       "someName",
 							},
 						},
 					}
