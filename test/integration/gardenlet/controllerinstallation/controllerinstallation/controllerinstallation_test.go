@@ -645,6 +645,53 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("RenderingHelmValuesFailed")),
 				)
 			})
+
+			It("should fail reconciliation when a referenced resource is missing the resource-reference label", func() {
+				By("Remove the resource-reference label from the referenced Secret")
+				delete(referencedSecret.Labels, v1beta1constants.GardenRole)
+				Expect(testClient.Update(ctx, referencedSecret)).To(Succeed())
+
+				By("Retrigger reconciliation")
+				Eventually(func() error {
+					patch := client.MergeFrom(controllerInstallation.DeepCopy())
+					controllerInstallation.Spec.DeploymentRef.ResourceVersion = "reconcile-again"
+					return testClient.Patch(ctx, controllerInstallation, patch)
+				}).Should(Succeed())
+
+				By("Ensure Valid condition reports invalid resource references")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("RenderingHelmValuesFailed")),
+				)
+			})
+
+			It("should fail reconciliation when the Helm values template references a non-existent data key", func() {
+				By("Update ControllerDeployment values to reference a non-existent data key")
+				Eventually(func() error {
+					patch := client.MergeFrom(controllerDeployment.DeepCopy())
+					controllerDeployment.Helm.Values = &apiextensionsv1.JSON{
+						Raw: []byte(`{"auth":{"token":"{{ .resources.creds.data.missing }}"}}`),
+					}
+					return testClient.Patch(ctx, controllerDeployment, patch)
+				}).Should(Succeed())
+
+				By("Retrigger reconciliation")
+				Eventually(func() error {
+					patch := client.MergeFrom(controllerInstallation.DeepCopy())
+					controllerInstallation.Spec.DeploymentRef.ResourceVersion = "reconcile-again"
+					return testClient.Patch(ctx, controllerInstallation, patch)
+				}).Should(Succeed())
+
+				By("Ensure Valid condition reports invalid resource references")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("RenderingHelmValuesFailed")),
+				)
+			})
 		})
 
 		When("reconciler is configured for a self-hosted shoot with `ShootRef`-based `ControllerInstallation`", func() {

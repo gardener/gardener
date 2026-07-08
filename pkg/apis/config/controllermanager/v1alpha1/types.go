@@ -58,7 +58,7 @@ type ControllerManagerControllerConfiguration struct {
 	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
 	// +optional
 	ControllerDeployment *ControllerDeploymentControllerConfiguration `json:"controllerDeployment,omitempty"`
-	// ControllerDeploymentReference defines the configuration of the ControllerDeploymentReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// ControllerDeploymentReference defines the configuration of the ControllerDeploymentReference controller.
 	// +optional
 	ControllerDeploymentReference *ControllerDeploymentReferenceControllerConfiguration `json:"controllerDeploymentReference,omitempty"`
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
