@@ -1069,9 +1069,13 @@ func Name(role string) string {
 }
 
 // isEveryNDaysSchedule reports whether the cron expression schedules on every Nth day-of-month
-// (i.e. the day-of-month field matches "*/N"). Such schedules were used as the old defragmentation
-// schedule and should be updated to the new daily schedule on existing Etcd resources.
+// where N > 1 (i.e. the day-of-month field matches "*/N" with N > 1). Such schedules were used
+// as the old defragmentation schedule and should be updated to the new daily schedule on existing Etcd resources.
 func isEveryNDaysSchedule(schedule string) bool {
 	fields := strings.Fields(schedule)
-	return len(fields) == 5 && strings.HasPrefix(fields[2], "*/")
+	if len(fields) != 5 || !strings.HasPrefix(fields[2], "*/") {
+		return false
+	}
+	n, err := strconv.Atoi(strings.TrimPrefix(fields[2], "*/"))
+	return err == nil && n > 1
 }
