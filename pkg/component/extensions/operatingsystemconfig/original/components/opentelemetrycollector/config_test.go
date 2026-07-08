@@ -93,9 +93,13 @@ extensions:
     create_directory: true
   bearertokenauth:
     filename: /var/lib/opentelemetry-collector/auth-token
-  health_check:
-    endpoint: 0.0.0.0:13133
-    path: /healthz
+  # TODO(rrhubenov): health check can be enabled when ` + "`sd_notify`" + ` integration is implemented: https://github.com/open-telemetry/opentelemetry-collector/issues/15128
+  # The 13133 port should be changed to something else in the future,
+  # since it's the default value and might conflict with other instances of
+  # otel collector from shoot owners.
+  # health_check:
+  #   endpoint: 0.0.0.0:13133
+  #   path: /healthz
 
 receivers:
   journald/journal:
@@ -219,7 +223,7 @@ service:
       level: INFO
       encoding: json
 
-  extensions: [file_storage, bearertokenauth, health_check]
+  extensions: [file_storage, bearertokenauth]
   pipelines:
     logs/journal:
       receivers: [journald/journal]
