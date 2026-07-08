@@ -64,7 +64,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
-	helm.sh/helm/v4 v4.1.4
+	helm.sh/helm/v4 v4.2.2
 	istio.io/api v1.29.5
 	istio.io/client-go v1.29.2
 	k8s.io/api v0.36.2
@@ -119,7 +119,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/PaesslerAG/gval v1.2.4 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.2-0.20240726212847-3a740cf7976f // indirect
-	github.com/ProtonMail/go-crypto v1.3.0 // indirect
+	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d // indirect
 	github.com/VictoriaMetrics/VictoriaMetrics v1.131.0 // indirect
 	github.com/VictoriaMetrics/easyproto v0.1.4 // indirect
@@ -345,7 +345,7 @@ require (
 	k8s.io/controller-manager v0.36.2 // indirect
 	k8s.io/kms v0.36.2 // indirect
 	k8s.io/streaming v0.36.2 // indirect
-	oras.land/oras-go/v2 v2.6.0 // indirect
+	oras.land/oras-go/v2 v2.6.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 // indirect
 	sigs.k8s.io/gateway-api v1.5.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
