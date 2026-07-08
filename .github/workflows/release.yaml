@@ -35,6 +35,8 @@ jobs:
       github-tag-template: '${version}'
       github-additional-tag-templates: |-
         pkg/apis/${version}
+        hack/tools/tool/${version}
+        hack/tools/logcheck/${version}
       next-version: ${{ inputs.next-version }}
       slack-channel-id: C9CEBQPGE # #sap-tech-gardener
       assets: |
