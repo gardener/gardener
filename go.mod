@@ -44,7 +44,7 @@ require (
 	github.com/perses/perses-operator v0.4.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.92.1
 	github.com/prometheus/blackbox_exporter v0.28.0
-	github.com/prometheus/client_golang v1.23.3-0.20260702112354-832cec72badf
+	github.com/prometheus/client_golang v1.23.3-0.20260708163044-20355eb4487c
 	github.com/prometheus/common v0.69.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.15.0
@@ -228,7 +228,7 @@ require (
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
+	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/labstack/echo/v4 v4.15.1 // indirect
