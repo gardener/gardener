@@ -50,9 +50,11 @@ var _ = Describe("VictoriaLogs", func() {
 	var (
 		ctx = context.Background()
 
-		image  = "europe-docker.pkg.dev/gardener-project/releases/some-image:some-tag"
-		values = Values{
-			Image: image,
+		imageRepository = "europe-docker.pkg.dev/gardener-project/releases/some-image"
+		imageTag        = "some-tag"
+		values          = Values{
+			ImageRepository: imageRepository,
+			ImageTag:        imageTag,
 		}
 
 		c         client.Client
@@ -288,8 +290,9 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in seed cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					Image:       image,
-					ClusterType: componentpkg.ClusterTypeSeed,
+					ImageRepository: imageRepository,
+					ImageTag:        imageTag,
+					ClusterType:     componentpkg.ClusterTypeSeed,
 				}
 				component = New(c, namespace, values)
 			})
@@ -330,7 +333,8 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in garden cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					Image:           image,
+					ImageRepository: imageRepository,
+					ImageTag:        imageTag,
 					ClusterType:     componentpkg.ClusterTypeSeed,
 					IsGardenCluster: true,
 				}
@@ -371,8 +375,9 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in shoot cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					Image:       image,
-					ClusterType: componentpkg.ClusterTypeShoot,
+					ImageRepository: imageRepository,
+					ImageTag:        imageTag,
+					ClusterType:     componentpkg.ClusterTypeShoot,
 				}
 				component = New(c, namespace, values)
 			})

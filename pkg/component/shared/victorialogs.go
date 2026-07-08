@@ -5,6 +5,8 @@
 package shared
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,9 +33,13 @@ func NewVictoriaLogs(
 	if err != nil {
 		return nil, err
 	}
+	if victoriaLogsImage.Repository == nil || victoriaLogsImage.Tag == nil {
+		return nil, fmt.Errorf("image %q from imagevector has no repository or tag set", imagevector.ContainerImageNameVictoriaLogs)
+	}
 
 	deployer := victorialogs.New(c, namespace, victorialogs.Values{
-		Image:             victoriaLogsImage.String(),
+		ImageRepository:   *victoriaLogsImage.Repository,
+		ImageTag:          *victoriaLogsImage.Tag,
 		Storage:           storage,
 		IsGardenCluster:   isGardenCluster,
 		ClusterType:       clusterType,
