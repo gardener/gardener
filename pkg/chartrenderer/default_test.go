@@ -89,7 +89,7 @@ var _ = Describe("ChartRenderer", func() {
 			Expect(files["alpine/templates/alpine-resources.yaml"]).To(HaveKeyWithValue("pod/alpine", alpinePod))
 			Expect(files["alpine/templates/alpine-resources.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
 			Expect(files).To(HaveKey("alpine/templates/secret.yaml"))
-			Expect(files["alpine/templates/secret.yaml"]).To(HaveKeyWithValue("secret/test", testSecret))
+			Expect(files["alpine/templates/secret.yaml"]).To(HaveKeyWithValue("secret/test", testSecret+"\n"))
 		})
 	})
 
@@ -107,10 +107,10 @@ var _ = Describe("ChartRenderer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			actual := chart.FileContent("alpine-resources.yaml")
-			Expect(actual).To(Equal(testSecret + "\n---\n" + testClusterRole + "\n---\n" + alpinePod + "\n---\n" + license))
+			Expect(actual).To(Equal(testSecret + "\n---\n" + testClusterRole + "\n\n---\n" + alpinePod + "\n---\n" + license))
 
 			actual = chart.FileContent("secret.yaml")
-			Expect(actual).To(Equal(testSecret))
+			Expect(actual).To(Equal(testSecret + "\n"))
 		})
 	})
 
@@ -131,10 +131,10 @@ var _ = Describe("ChartRenderer", func() {
 
 			data := chart.AsSecretData()
 			Expect(data).To(Not(BeNil()))
-			Expect(string(data["alpine_templates_secret.yaml"])).To(Equal(testSecret))
+			Expect(string(data["alpine_templates_secret.yaml"])).To(Equal(testSecret + "\n"))
 			Expect(string(data["alpine_templates_alpine-resources_secret_test.yaml"])).To(Equal(testSecret))
 			Expect(string(data["alpine_templates_alpine-resources_pod_alpine.yaml"])).To(Equal(alpinePod))
-			Expect(string(data["alpine_templates_alpine-resources_clusterrole_gardener.cloud_test.yaml"])).To(Equal(testClusterRole))
+			Expect(string(data["alpine_templates_alpine-resources_clusterrole_gardener.cloud_test.yaml"])).To(Equal(testClusterRole + "\n"))
 		})
 	})
 })
