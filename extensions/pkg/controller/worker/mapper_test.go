@@ -13,16 +13,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 var _ = Describe("Mapper", func() {
 	var (
 		ctx = context.TODO()
+
+		fakeClient client.Client
 
 		namespace = "some-namespace"
 
@@ -31,10 +38,17 @@ var _ = Describe("Mapper", func() {
 	)
 
 	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
 		worker = &extensionsv1alpha1.Worker{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "worker",
 				Namespace: namespace,
+			},
+			Spec: extensionsv1alpha1.WorkerSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Type: "local",
+				},
 			},
 		}
 
@@ -43,7 +57,7 @@ var _ = Describe("Mapper", func() {
 				Name:      "machine",
 				Namespace: namespace,
 				Labels: map[string]string{
-					"worker.gardener.cloud/name": worker.Name,
+					v1beta1constants.LabelWorkerName: worker.Name,
 				},
 			},
 		}
@@ -53,7 +67,9 @@ var _ = Describe("Mapper", func() {
 		var mapper handler.MapFunc
 
 		BeforeEach(func() {
-			mapper = MachineToWorkerMapper()
+			mapper = MachineToWorkerMapper(fakeClient, nil)
+
+			Expect(fakeClient.Create(ctx, worker)).To(Succeed())
 		})
 
 		It("should return nil when the object is not a Machine", func() {
@@ -61,12 +77,26 @@ var _ = Describe("Mapper", func() {
 		})
 
 		It("should return nil when the machine does not have a worker label", func() {
-			delete(machine.Labels, "worker.gardener.cloud/name")
+			delete(machine.Labels, v1beta1constants.LabelWorkerName)
+
+			Expect(mapper(ctx, machine)).To(BeNil())
+		})
+
+		It("should return nil when the worker cannot be found", func() {
+			Expect(fakeClient.Delete(ctx, worker)).To(Succeed())
+
+			Expect(mapper(ctx, machine)).To(BeNil())
+		})
+
+		It("should return nil when the predicates do not match", func() {
+			mapper = MachineToWorkerMapper(fakeClient, predicateutils.AddTypeAndClassPredicates(nil, nil, "local2"))
 
 			Expect(mapper(ctx, machine)).To(BeNil())
 		})
 
 		It("should map the machine to the worker", func() {
+			mapper = MachineToWorkerMapper(fakeClient, predicateutils.AddTypeAndClassPredicates(nil, nil, "local"))
+
 			Expect(mapper(ctx, machine)).To(ConsistOf(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{

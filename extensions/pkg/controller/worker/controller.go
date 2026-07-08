@@ -92,7 +92,7 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 		if err := c.Watch(source.Kind[client.Object](
 			mgr.GetCache(),
 			&machinev1alpha1.Machine{},
-			handler.EnqueueRequestsFromMapFunc(MachineToWorkerMapper()),
+			handler.EnqueueRequestsFromMapFunc(MachineToWorkerMapper(mgr.GetClient(), predicates)),
 			MachineConditionChangedPredicate(ctx, mgr.GetLogger().WithValues("controller", ControllerName), mgr.GetClient()),
 		)); err != nil {
 			return err
