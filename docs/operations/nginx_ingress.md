@@ -82,7 +82,7 @@ The following checklist helps identify remaining dependencies.
 
 #### Garden Runtime Cluster
 
-1. **List all `Ingress` resources** in the Garden runtime cluster and check if any still rely on on nginx-ingress, e.g. by checking the `ingressClassName`:
+1. **List all `Ingress` resources** in the Garden runtime cluster and check if any still rely on nginx-ingress, e.g. by checking the `ingressClassName`:
 
    ```bash
    kubectl get ingress --all-namespaces -o wide
@@ -252,7 +252,7 @@ The nginx-ingress addon creates a wildcard DNS record `*.ingress.<shoot-domain>`
 If you want all `*.ingress.<shoot-domain>` traffic to move to Traefik at once, you need to update the wildcard DNS record. This is typically managed by Gardener — disabling the nginx-ingress addon will remove the record, and you will need to re-create it pointing to Traefik using the `shoot-dns-service` extension or your cloud DNS provider directly.
 
 > [!NOTE]
-> Please that this approach may incur downtime depending on the DNS TTL and propagation time. If you want to avoid downtime, consider Option B below if your DNS provider supports it.
+> Please note that this approach may incur downtime depending on the DNS TTL and propagation time. If you want to avoid downtime, consider Option B below if your DNS provider supports it.
 
 If your landscape has the [`gardener-extension-shoot-dns-service`](https://github.com/gardener/gardener-extension-shoot-dns-service) available, you can create a `DNSEntry` resource:
 
