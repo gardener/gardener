@@ -133,6 +133,7 @@ const (
 	// etcd-backup secret, aligning the garden with the same extension contract that shoot clusters use.
 	// owner: @rfranzke
 	// alpha: v1.142.0
+	// beta: v1.147.0
 	BackupEntryForGarden featuregate.Feature = "BackupEntryForGarden"
 )
 
@@ -178,7 +179,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInSeed:      {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
-	BackupEntryForGarden:           {Default: false, PreRelease: featuregate.Alpha},
+	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.Beta},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
