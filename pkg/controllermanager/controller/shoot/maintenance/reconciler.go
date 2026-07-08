@@ -691,6 +691,7 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 	}
 
 	if etcdEncryptionKeyRotationEnabled &&
+		!v1beta1helper.HibernationIsEnabled(shoot) && // etcd encryption key rotation is not possible for hibernated shoots
 		etcdEncryptionKeyRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
 		if len(etcdEncryptionKeyRotationPhase) == 0 || etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleted {
 			reason := "Automatic rotation of etcd encryption key configured"

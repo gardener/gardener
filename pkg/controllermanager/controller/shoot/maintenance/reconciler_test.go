@@ -133,17 +133,18 @@ var _ = Describe("Shoot Maintenance", func() {
 							MachineImageVersion: new(true),
 						},
 					},
-					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-						{
-							Name: "cpu-worker",
-							Machine: gardencorev1beta1.Machine{
-								Image:        shootCurrentImage,
-								Architecture: new("amd64"),
-								Type:         "someMachineType",
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "cpu-worker",
+								Machine: gardencorev1beta1.Machine{
+									Image:        shootCurrentImage,
+									Architecture: new("amd64"),
+									Type:         "someMachineType",
+								},
+								UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
 							},
-							UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
 						},
-					},
 					},
 				},
 			}
@@ -1015,7 +1016,8 @@ var _ = Describe("Shoot Maintenance", func() {
 							"architecture":   []string{v1beta1constants.ArchitectureAMD64},
 							"someCapability": []string{"value2"},
 						},
-					}, {
+					},
+					{
 						Name: "anotherMachineType",
 						Capabilities: gardencorev1beta1.Capabilities{
 							"architecture":   []string{v1beta1constants.ArchitectureAMD64},
@@ -1274,7 +1276,6 @@ var _ = Describe("Shoot Maintenance", func() {
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 			Expect(err).To(HaveOccurred())
-
 		})
 
 		It("should return an error - cloud profile has no matching (machineImage.type) machine type defined", func() {
@@ -1656,6 +1657,17 @@ var _ = Describe("Shoot Maintenance", func() {
 			}))
 		})
 
+		It("should not attempt etcd encryption key rotation when shoot is hibernated", func() {
+			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
+			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0
+			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: new(true),
+			}
+			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
+
+			Expect(results).To(BeEmpty())
+		})
+
 		It("should not return results when the rotation period has not passed", func() {
 			shoot.CreationTimestamp = metav1.Time{Time: now.Add(-48 * time.Hour)}
 			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
@@ -1676,7 +1688,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(results).To(BeEmpty())
 		})
 
-		It("should not return results when Shoow is newly created", func() {
+		It("should not return results when Shoot is newly created", func() {
 			shoot.CreationTimestamp = metav1.Time{Time: now}
 			shoot.Status.Credentials = nil
 			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
@@ -2004,9 +2016,7 @@ var _ = Describe("Shoot Maintenance", func() {
 	})
 
 	Describe("#maintainAddons", func() {
-		var (
-			shoot *gardencorev1beta1.Shoot
-		)
+		var shoot *gardencorev1beta1.Shoot
 
 		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{

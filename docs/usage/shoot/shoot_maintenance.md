@@ -107,6 +107,7 @@ spec:
 > See [ETCD Encryption Config](../security/etcd_encryption_config.md) for more details.
 
 During the daily maintenance, the `gardener-controller-manager` starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.
+If the cluster is hibernated, the ETCD encryption key rotation is skipped, because it can only be completed with a running etcd and kube-apiserver.
 Automatic rotation can be disabled for specific credential by setting the `rotationPeriod` field to `0`.
 
 ## Cluster Reconciliation
