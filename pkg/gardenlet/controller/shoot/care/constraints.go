@@ -159,14 +159,14 @@ func (c *Constraint) constraintsChecks(
 		constraints.hibernationPossible = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(c.clock, constraints.hibernationPossible, message)
 		constraints.maintenancePreconditionsSatisfied = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(c.clock, constraints.maintenancePreconditionsSatisfied, message)
 
-		return filterOptionalConditions(
+		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
 			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
-		return filterOptionalConditions(
+		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
 			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
 		)
@@ -189,7 +189,7 @@ func (c *Constraint) constraintsChecks(
 		constraints.crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.crdsWithProblematicConversionWebhooks, status, reason, message)
 	}
 
-	return filterOptionalConditions(
+	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
 		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
 	)
@@ -507,6 +507,19 @@ func IsProblematicWebhook(
 
 func wasRemediatedByGardener(annotations map[string]string) bool {
 	return annotations[v1beta1constants.GardenerWarning] != ""
+}
+
+func filterOptionalConstraints(required, optional []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	var out []gardencorev1beta1.Condition
+	out = append(out, required...)
+
+	for _, constraint := range optional {
+		if constraint.Status != gardencorev1beta1.ConditionTrue {
+			out = append(out, constraint)
+		}
+	}
+
+	return out
 }
 
 // ShootConstraints contains all constraints of the shoot status subresource.

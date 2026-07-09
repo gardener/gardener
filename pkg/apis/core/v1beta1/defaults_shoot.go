@@ -343,7 +343,7 @@ func SetDefaults_Worker(obj *Worker) {
 			}
 		}
 		if obj.MachineControllerManagerSettings == nil {
-			obj.MachineControllerManagerSettings = new(MachineControllerManagerSettings)
+			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}
 		}
 		if obj.MachineControllerManagerSettings.DisableHealthTimeout == nil {
 			obj.MachineControllerManagerSettings.DisableHealthTimeout = new(true)

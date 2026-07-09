@@ -218,6 +218,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			})
 		}
 	}
+
 	w.machineClassSecrets = machineClassSecrets
 	w.machineClasses = machineClasses
 	w.machineImages = machineImages

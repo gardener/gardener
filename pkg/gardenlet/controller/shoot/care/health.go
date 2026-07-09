@@ -797,9 +797,10 @@ func (h *Health) CheckClusterNodes(
 	// checkNodesScalingDown can correctly account for cordoned-preserved nodes.
 	// nonPreservedNodesManagedByMCM: MCM-managed, non-preserved — used for lease and systemd-unit checks.
 	// allNonPreservedNodes: all non-preserved nodes — used for expired-lease check.
-	allNodesManagedByMCM := []*corev1.Node{}
-	nonPreservedNodesManagedByMCM := []*corev1.Node{}
-	allNonPreservedNodes := corev1.NodeList{}
+	var (
+		allNodesManagedByMCM, nonPreservedNodesManagedByMCM []*corev1.Node
+		allNonPreservedNodes                                corev1.NodeList
+	)
 	for _, node := range nodeList.Items {
 		if !preservedNodeNames.Has(node.Name) {
 			allNonPreservedNodes.Items = append(allNonPreservedNodes.Items, node)
@@ -1092,11 +1093,11 @@ func (h *Health) hasPreservedFailedMachines(ctx context.Context) bool {
 	if h.shoot.IsWorkerless || (h.shoot.IsSelfHosted() && !h.shoot.HasManagedInfrastructure()) {
 		return false
 	}
-	list := &machinev1alpha1.MachineDeploymentList{}
-	if err := h.seedClient.Client().List(ctx, list, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+	if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 		return false
 	}
-	for _, mcd := range list.Items {
+	for _, mcd := range machineDeploymentList.Items {
 		if mcd.Status.PreservedFailedReplicas > 0 {
 			return true
 		}
@@ -1230,16 +1231,6 @@ func (s ShootConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 		conditions = append(conditions, *s.backupBucketsReady)
 	}
 	return conditions
-}
-
-func filterOptionalConditions(required, optional []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-	out := append([]gardencorev1beta1.Condition{}, required...)
-	for _, c := range optional {
-		if c.Status != gardencorev1beta1.ConditionTrue {
-			out = append(out, c)
-		}
-	}
-	return out
 }
 
 // ConditionTypes returns all shoot condition types.
