@@ -132,7 +132,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 	}
 
 	r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "%s Shoot cluster", utils.IifString(isRestoring, "Restored", "Reconciled"))
-	if err := r.patchShootStatusOperationSuccess(ctx, shoot, &o.Seed.GetInfo().Name, operationType); err != nil {
+	if err := r.patchShootStatusOperationSuccess(ctx, shoot, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -534,7 +534,7 @@ func (r *Reconciler) finalizeShootMigration(ctx context.Context, shoot *gardenco
 	}
 
 	r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventMigrationPrepared, gardencorev1beta1.EventActionMigrate, "Prepared Shoot cluster for migration")
-	return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeMigrate)
+	return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeMigrate)
 }
 
 func (r *Reconciler) finalizeShootDeletion(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (reconcile.Result, error) {
@@ -560,7 +560,7 @@ func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	operationType := gardencorev1beta1.LastOperationTypeDelete
 
-	if err := r.patchShootStatusOperationSuccess(ctx, shoot, nil, operationType); err != nil {
+	if err := r.patchShootStatusOperationSuccess(ctx, shoot, operationType); err != nil {
 		return err
 	}
 
@@ -843,7 +843,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 func (r *Reconciler) patchShootStatusOperationSuccess(
 	ctx context.Context,
 	shoot *gardencorev1beta1.Shoot,
-	seedName *string,
 	operationType gardencorev1beta1.LastOperationType,
 ) error {
 	var (
@@ -872,13 +871,11 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
-	if seedName != nil {
-		isHibernated, err := r.isHibernationActive(ctx, shoot.Status.TechnicalID, seedName)
-		if err != nil {
-			return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %w", shoot.Namespace, shoot.Name, err)
-		}
-		shoot.Status.IsHibernated = isHibernated
+	isHibernated, err := r.isHibernationActive(ctx, v1beta1helper.ControlPlaneNamespaceForShoot(shoot))
+	if err != nil {
+		return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %w", shoot.Namespace, shoot.Name, err)
 	}
+	shoot.Status.IsHibernated = isHibernated
 
 	if setConditionsToProgressing {
 		for i, cond := range shoot.Status.Conditions {
@@ -1121,14 +1118,13 @@ func (r *Reconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1be
 
 // isHibernationActive uses the Cluster resource in the Seed to determine whether the Shoot is hibernated
 // The Cluster contains the actual or "active" spec of the Shoot resource for this reconciliation
-// as the Shoot resources field `spec.hibernation.enabled` might have changed during the reconciliation
-func (r *Reconciler) isHibernationActive(ctx context.Context, clusterName string, seedName *string) (bool, error) {
-	if seedName == nil {
-		return false, nil
-	}
-
+// as the Shoot resources field `spec.hibernation.enabled` might have changed during the reconciliation.
+func (r *Reconciler) isHibernationActive(ctx context.Context, clusterName string) (bool, error) {
 	cluster, err := gardenerextensions.GetCluster(ctx, r.SeedClientSet.Client(), clusterName)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, err
 	}
 

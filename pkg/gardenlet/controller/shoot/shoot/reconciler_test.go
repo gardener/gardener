@@ -12,11 +12,13 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 )
@@ -60,6 +62,7 @@ var _ = Describe("Reconciler", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
+				TechnicalID: "shoot--namespace--shoot",
 				Credentials: &gardencorev1beta1.ShootCredentials{
 					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
 						CertificateAuthorities: &gardencorev1beta1.CARotation{
@@ -149,6 +152,15 @@ var _ = Describe("Reconciler", func() {
 			Expect(gardenClient.Create(ctx, namespace)).To(Succeed())
 			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
 
+			shootForCluster := shoot.DeepCopy()
+			shootForCluster.TypeMeta = metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"}
+			Expect(seedClient.Create(ctx, &extensionsv1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: shoot.Status.TechnicalID},
+				Spec: extensionsv1alpha1.ClusterSpec{
+					Shoot: runtime.RawExtension{Object: shootForCluster},
+				},
+			})).To(Succeed())
+
 			DeferCleanup(func() {
 				Expect(gardenClient.Delete(ctx, shoot)).To(Succeed())
 				Expect(gardenClient.Delete(ctx, namespace)).To(Succeed())
@@ -159,7 +171,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{Name: "worker-1"}}
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			Expect(shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts).To(BeNil())
@@ -170,7 +182,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase = gardencorev1beta1.RotationPreparing
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPreparing))
@@ -185,7 +197,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
@@ -201,7 +213,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationWaitingForWorkersRollout))
@@ -216,7 +228,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationWaitingForWorkersRollout))
@@ -233,7 +245,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
