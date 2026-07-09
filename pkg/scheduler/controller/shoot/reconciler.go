@@ -140,12 +140,19 @@ func (r *Reconciler) DetermineSeed(
 	if err != nil {
 		return nil, err
 	}
-	regionConfig, err := gardenerutils.GetRegionConfigMap(ctx, r.Client, r.GardenNamespace, cloudProfile.Name)
+	regionConfigMaps, err := gardenerutils.GetRegionConfigMaps(ctx, r.Client, r.GardenNamespace, cloudProfile.Name)
 	if err != nil {
 		return nil, err
 	}
-	if regionConfig == nil {
+	var regionConfig *corev1.ConfigMap
+	switch len(regionConfigMaps) {
+	case 0:
 		log.Info("No region config found", "cloudProfileName", cloudProfile.Name)
+	case 1:
+		regionConfig = regionConfigMaps[0]
+	default:
+		regionConfig = regionConfigMaps[0]
+		log.Info("Multiple region configs found, using the first one", "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(regionConfig))
 	}
 	project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, shoot.Namespace)
 	if err != nil {

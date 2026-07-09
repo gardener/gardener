@@ -27,9 +27,9 @@ To allow migration between distant regions for a specific `Shoot`, set `migratio
 
 ## Triggering the Migration
 
-Live migration is triggered by two independent changes on the `Shoot`:
+Both of the following are required on the `Shoot` to trigger a live control plane migration:
 
-1. Set the intent annotation:
+1. The intent annotation:
 
     ```yaml
     metadata:
@@ -37,7 +37,7 @@ Live migration is triggered by two independent changes on the `Shoot`:
         migration.gardener.cloud/live-migrate: "true"
     ```
 
-2. Change `.spec.seedName` to the `Destination Seed` via the [`shoots/binding`](../concepts/scheduler.md#shootsbinding-subresource) subresource:
+2. A change of `.spec.seedName` to the `Destination Seed` via the [`shoots/binding`](../concepts/scheduler.md#shootsbinding-subresource) subresource:
 
     ```bash
     NAMESPACE=my-namespace
@@ -47,4 +47,4 @@ Live migration is triggered by two independent changes on the `Shoot`:
     kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME} | jq -c '.spec.seedName = "'${DEST_SEED_NAME}'"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
     ```
 
-Without either signal, the seed rebinding proceeds through the snapshot-based [control plane migration](./control_plane_migration.md#triggering-the-migration) path.
+The annotation and the `.spec.seedName` change may be applied in the same request or in separate ones, as long as both are in effect when the binding subresource is called.

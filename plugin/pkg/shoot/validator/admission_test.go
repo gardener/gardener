@@ -6508,7 +6508,17 @@ var _ = Describe("validator", func() {
 				}
 			})
 
-			It("should reject when the feature gate is disabled", func() {
+			It("should reject the live-migration annotation on the main resource while the feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.LiveControlPlaneMigration, false))
+				delete(oldShoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+				shoot.Spec.SeedName = oldShoot.Spec.SeedName
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("feature gate is disabled in gardener-apiserver")))
+			})
+
+			It("should reject the live-migration annotation on the binding subresource while the feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.LiveControlPlaneMigration, false))
 				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 				Expect(err).To(BeForbiddenError())
@@ -6520,7 +6530,7 @@ var _ = Describe("validator", func() {
 				oldShoot.Spec.ControlPlane = nil
 				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("non-HA shoot")))
+				Expect(err).To(MatchError(ContainSubstring("shoot control plane must be configured for high availability")))
 			})
 
 			It("should reject a hibernated shoot (spec)", func() {
@@ -6528,7 +6538,7 @@ var _ = Describe("validator", func() {
 				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
 				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("hibernated or waking-up")))
+				Expect(err).To(MatchError(ContainSubstring("live control plane migration is not supported for hibernated or waking-up shoots")))
 			})
 
 			It("should reject a waking-up shoot (status hibernated but spec not)", func() {
@@ -6536,7 +6546,23 @@ var _ = Describe("validator", func() {
 				oldShoot.Status.IsHibernated = true
 				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("hibernated or waking-up")))
+				Expect(err).To(MatchError(ContainSubstring("live control plane migration is not supported for hibernated or waking-up shoots")))
+			})
+
+			It("should aggregate multiple prerequisite errors in a single response", func() {
+				// Trigger three independent failures at once: non-HA, hibernated, and mismatched provider type.
+				shoot.Spec.ControlPlane = nil
+				oldShoot.Spec.ControlPlane = nil
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: new(true)}
+				destSeed.Spec.Provider.Type = "different"
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
+
+				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("shoot control plane must be configured for high availability")))
+				Expect(err).To(MatchError(ContainSubstring("live control plane migration is not supported for hibernated or waking-up shoots")))
+				Expect(err).To(MatchError(ContainSubstring("source and destination seeds must use the same provider type")))
 			})
 
 			It("should reject mismatched provider types", func() {
@@ -6544,7 +6570,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
 				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("different provider types")))
+				Expect(err).To(MatchError(ContainSubstring("source and destination seeds must use the same provider type")))
 			})
 
 			It("should reject when the destination seed has no reported gardenlet version", func() {
@@ -6560,7 +6586,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
 				err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("different gardenlet versions")))
+				Expect(err).To(MatchError(ContainSubstring("source and destination seeds must run the same gardenlet version")))
 			})
 
 			Context("inter-region distance", func() {
@@ -6579,7 +6605,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
 					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("distance 999 exceeds threshold 180")))
+					Expect(err).To(MatchError(ContainSubstring("distance 999 from source region eu-west-1 to destination region us-east-1 exceeds threshold 180")))
 				})
 
 				It("should honour the per-ConfigMap threshold override annotation", func() {
@@ -6587,7 +6613,7 @@ var _ = Describe("validator", func() {
 					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Update(regionConfigMap)).To(Succeed())
 					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("distance 50 exceeds threshold 40")))
+					Expect(err).To(MatchError(ContainSubstring("distance 50 from source region eu-west-1 to destination region eu-central-1 exceeds threshold 40")))
 				})
 
 				It("should reject when no region ConfigMap references the cloud profile", func() {
@@ -6602,7 +6628,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&sourceSeed)).To(Succeed())
 					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("source region not configured")))
+					Expect(err).To(MatchError(ContainSubstring("source region unknown-region not configured in region ConfigMap")))
 				})
 
 				It("should reject when the destination region is not configured", func() {
@@ -6610,7 +6636,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&destSeed)).To(Succeed())
 					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("distance to destination region not configured")))
+					Expect(err).To(MatchError(ContainSubstring("distance from source region eu-west-1 to destination region no-such-region not configured in region ConfigMap")))
 				})
 
 				It("should bypass the distance check when allow-distant-regions=true", func() {

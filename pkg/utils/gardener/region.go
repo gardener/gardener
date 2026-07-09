@@ -6,7 +6,6 @@ package gardener
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -15,10 +14,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// GetRegionConfigMap lists the region ConfigMaps in the given namespace and returns the one whose
-// scheduling.gardener.cloud/cloudprofiles annotation references cloudProfileName. It returns nil if no matching
-// ConfigMap is found, and an error if more than one ConfigMap matches.
-func GetRegionConfigMap(ctx context.Context, reader client.Reader, namespace, cloudProfileName string) (*corev1.ConfigMap, error) {
+// GetRegionConfigMaps lists the region ConfigMaps in the given namespace and returns those whose
+// scheduling.gardener.cloud/cloudprofiles annotation references cloudProfileName. Callers decide how to handle the case
+// of multiple matching ConfigMaps.
+func GetRegionConfigMaps(ctx context.Context, reader client.Reader, namespace, cloudProfileName string) ([]*corev1.ConfigMap, error) {
 	regionConfigList := &corev1.ConfigMapList{}
 	if err := reader.List(ctx, regionConfigList, client.InNamespace(namespace), client.MatchingLabels{v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig}); err != nil {
 		return nil, err
@@ -29,25 +28,20 @@ func GetRegionConfigMap(ctx context.Context, reader client.Reader, namespace, cl
 		regionConfigMaps = append(regionConfigMaps, &regionConfigList.Items[i])
 	}
 
-	return FindRegionConfigMap(regionConfigMaps, cloudProfileName)
+	return FindRegionConfigMaps(regionConfigMaps, cloudProfileName), nil
 }
 
-// FindRegionConfigMap returns the ConfigMap from the given list whose scheduling.gardener.cloud/cloudprofiles
-// annotation references cloudProfileName. It returns an error if more than one ConfigMap matches.
-func FindRegionConfigMap(regionConfigMaps []*corev1.ConfigMap, cloudProfileName string) (*corev1.ConfigMap, error) {
-	var match *corev1.ConfigMap
+// FindRegionConfigMaps returns the ConfigMaps from the given list whose scheduling.gardener.cloud/cloudprofiles
+// annotation references cloudProfileName.
+func FindRegionConfigMaps(regionConfigMaps []*corev1.ConfigMap, cloudProfileName string) []*corev1.ConfigMap {
+	var matches []*corev1.ConfigMap
 	for _, cm := range regionConfigMaps {
 		for name := range strings.SplitSeq(cm.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",") {
-			if strings.TrimSpace(name) != cloudProfileName {
-				continue
+			if strings.TrimSpace(name) == cloudProfileName {
+				matches = append(matches, cm)
+				break
 			}
-			if match != nil {
-				return nil, fmt.Errorf("multiple scheduler region ConfigMaps reference cloud profile %q: %s/%s and %s/%s",
-					cloudProfileName, match.Namespace, match.Name, cm.Namespace, cm.Name)
-			}
-			match = cm
-			break
 		}
 	}
-	return match, nil
+	return matches
 }

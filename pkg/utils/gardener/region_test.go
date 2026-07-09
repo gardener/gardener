@@ -40,64 +40,55 @@ var _ = Describe("Region", func() {
 		}
 	}
 
-	Describe("#FindRegionConfigMap", func() {
-		It("returns nil when no ConfigMap references the profile", func() {
-			got, err := FindRegionConfigMap([]*corev1.ConfigMap{makeCM("cm-b", otherProfile)}, profileName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(BeNil())
+	Describe("#FindRegionConfigMaps", func() {
+		It("returns no matches when no ConfigMap references the profile", func() {
+			Expect(FindRegionConfigMaps([]*corev1.ConfigMap{makeCM("cm-b", otherProfile)}, profileName)).To(BeEmpty())
 		})
 
 		It("returns the matching ConfigMap", func() {
 			match := makeCM("cm-a", profileName)
-			got, err := FindRegionConfigMap([]*corev1.ConfigMap{match, makeCM("cm-b", otherProfile)}, profileName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(Equal(match))
+			Expect(FindRegionConfigMaps([]*corev1.ConfigMap{match, makeCM("cm-b", otherProfile)}, profileName)).To(ConsistOf(match))
 		})
 
 		It("matches on comma-separated annotation values with surrounding whitespace", func() {
 			match := makeCM("cm-multi", " gcp-profile , aws-profile ,azure-profile")
-			got, err := FindRegionConfigMap([]*corev1.ConfigMap{match}, profileName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(Equal(match))
+			Expect(FindRegionConfigMaps([]*corev1.ConfigMap{match}, profileName)).To(ConsistOf(match))
 		})
 
-		It("returns an error when multiple ConfigMaps reference the same profile", func() {
+		It("returns all matches when multiple ConfigMaps reference the same profile", func() {
 			first := makeCM("cm-a", profileName)
 			second := makeCM("cm-b", profileName)
-			got, err := FindRegionConfigMap([]*corev1.ConfigMap{first, second}, profileName)
-			Expect(err).To(MatchError(ContainSubstring("multiple scheduler region ConfigMaps reference cloud profile")))
-			Expect(err).To(MatchError(ContainSubstring("cm-a")))
-			Expect(err).To(MatchError(ContainSubstring("cm-b")))
-			Expect(got).To(BeNil())
+			Expect(FindRegionConfigMaps([]*corev1.ConfigMap{first, second}, profileName)).To(ConsistOf(first, second))
 		})
 	})
 
-	Describe("#GetRegionConfigMap", func() {
+	Describe("#GetRegionConfigMaps", func() {
 		var ctx = context.Background()
 
 		It("finds a ConfigMap via the reader", func() {
 			match := makeCM("cm-a", profileName)
 			reader := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).WithObjects(match).Build()
-			got, err := GetRegionConfigMap(ctx, reader, namespace, profileName)
+			matches, err := GetRegionConfigMaps(ctx, reader, namespace, profileName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got).NotTo(BeNil())
-			Expect(got.Name).To(Equal("cm-a"))
+			Expect(matches).To(HaveLen(1))
+			Expect(matches[0].Name).To(Equal("cm-a"))
 		})
 
-		It("returns nil when the reader finds no matching ConfigMap", func() {
+		It("returns no matches when the reader finds no matching ConfigMap", func() {
 			reader := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).WithObjects(makeCM("cm-b", otherProfile)).Build()
-			got, err := GetRegionConfigMap(ctx, reader, namespace, profileName)
+			matches, err := GetRegionConfigMaps(ctx, reader, namespace, profileName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(BeNil())
+			Expect(matches).To(BeEmpty())
 		})
 
-		It("propagates the duplicate-detection error from FindRegionConfigMap", func() {
+		It("returns all matches when multiple ConfigMaps reference the same profile", func() {
 			reader := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).WithObjects(
 				makeCM("cm-a", profileName),
 				makeCM("cm-b", profileName),
 			).Build()
-			_, err := GetRegionConfigMap(ctx, reader, namespace, profileName)
-			Expect(err).To(MatchError(ContainSubstring("multiple scheduler region ConfigMaps")))
+			matches, err := GetRegionConfigMaps(ctx, reader, namespace, profileName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(matches).To(HaveLen(2))
 		})
 	})
 })
