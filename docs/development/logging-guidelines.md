@@ -19,7 +19,7 @@ Instead, it needs to be backed by a logging implementation like [zapr](https://g
 controller-runtime already provides a [set of helpers](https://github.com/kubernetes-sigs/controller-runtime/tree/v0.11.0/pkg/log/zap) for constructing zapr loggers, i.e., logr loggers backed by [zap](https://github.com/uber-go/zap), which is a popular logging library in the go community.
 Hence, we are migrating our component logging from logrus to logr (backed by zap) as part of [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251).
 
-> ⚠️ `logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code! (also see [Migration from logrus to logr](#migration-from-logrus-to-logr))
+> ⚠️ `logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code!
 >
 > ℹ️ Don't use zap loggers directly, always use the logr interface in order to avoid tight coupling to a specific logging implementation.
 

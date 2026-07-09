@@ -53,7 +53,7 @@ If you need to deploy a non-DaemonSet resource, Gardener automatically ensures t
 
 Historically, Gardener extensions used to generate kubeconfigs with client certificates for components they deploy into the shoot control plane.
 For this, they reused the shoot cluster CA secret (`ca`) to issue new client certificates.
-With [gardener/gardener#4661](https://github.com/gardener/gardener/issues/4661) we moved away from using client certificates in favor of short-lived, auto-rotated `ServiceAccount` tokens. These tokens are managed by gardener-resource-manager's [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor).
+With [gardener/gardener#4661](https://github.com/gardener/gardener/issues/4661) we moved away from using client certificates in favor of short-lived, auto-rotated `ServiceAccount` tokens. These tokens are managed by gardener-resource-manager's [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor-controller).
 Extensions are supposed to reuse this mechanism for requesting tokens and a `generic-token-kubeconfig` for authenticating against shoot clusters.
 
 With [GEP-0018](https://github.com/gardener/enhancements/tree/main/geps/0018-shoot-ca-rotation) (Shoot cluster CA rotation), a dedicated CA will be used for signing client certificates ([gardener/gardener#5779](https://github.com/gardener/gardener/pull/5779)) which will be rotated when triggered by the shoot owner.

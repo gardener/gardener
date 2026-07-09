@@ -11,7 +11,7 @@ Gardener offers a clever way to automatically scale-down all resources to zero: 
 
 > To save costs, it's recommended to define a hibernation schedule before the creation of a cluster. You can hibernate your cluster or wake up your cluster manually even if there's a schedule for its hibernation.
 
-- [Hibernate a Cluster](#hibernate-a-cluster)
+- [Shoot Hibernation](#shoot-hibernation)
   - [What Is Hibernation?](#what-is-hibernation)
   - [What Isn’t Affected by the Hibernation?](#what-isnt-affected-by-the-hibernation)
   - [Hibernate Your Cluster Manually](#hibernate-your-cluster-manually)

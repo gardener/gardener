@@ -120,7 +120,7 @@ When serial reconciliation is enabled:
 - The controller uses a dedicated cache for the leader election `Lease` object to minimize unnecessary network I/O.
 
 > [!NOTE]
-> Nodes with serial reconciliation enabled are excluded from the [Agent Reconciliation Delay Controller](resource-manager.md#agent-reconciliation-delay-controller) in the `gardener-resource-manager`, as the serialization mechanism provides its own coordination.
+> Nodes with serial reconciliation enabled are excluded from the [Node Agent Reconciliation Delay Controller](resource-manager.md#node-agent-reconciliation-delay-controller) in the `gardener-resource-manager`, as the serialization mechanism provides its own coordination.
 
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 

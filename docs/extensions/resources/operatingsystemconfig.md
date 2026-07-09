@@ -16,7 +16,7 @@ This means that basically every operating system is possible to be used, as long
    1. [ctr (client CLI)](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/)
    1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
    1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (eventually created by Gardener).
-1. [systemd](https://www.freedesktop.org/wiki/Software/systemd/)
+1. [systemd](https://systemd.io/)
 
 The reasons for that will become evident later.
 

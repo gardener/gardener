@@ -365,7 +365,7 @@ This reconciler is responsible for managing the seed's system components.
 Those comprise CA certificates, the various `CustomResourceDefinition`s, the logging and monitoring stacks, and few central components like `gardener-resource-manager`, `etcd-druid`, `istio`, etc.
 
 The reconciler also deploys a `BackupBucket` resource in the garden cluster in case the `Seed'`s `.spec.backup` is set.
-It also checks whether the seed cluster's Kubernetes version is at least the [minimum supported version](../usage/shoot-operations/supported_k8s_versions.md#seed-cluster-versions) and errors in case this constraint is not met.
+It also checks whether the seed cluster's Kubernetes version is at least the [minimum supported version](../usage/shoot-operations/supported_k8s_versions.md#seed-clusters) and errors in case this constraint is not met.
 
 This reconciler maintains the `.status.lastOperation` field, i.e. it sets it:
 

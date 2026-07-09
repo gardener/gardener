@@ -22,7 +22,7 @@ This guide is about the roles and extensibility options of the logging and monit
 The central Prometheus instance in the `garden` namespace (called "cache Prometheus") fetches metrics and data from all seed cluster nodes and all seed cluster pods.
 It uses the [federation](https://prometheus.io/docs/prometheus/latest/federation/) concept to allow the shoot-specific instances to scrape only the metrics for the pods of the control plane they are responsible for.
 This mechanism allows to scrape the metrics for the nodes/pods once for the whole cluster, and to have them distributed afterwards.
-For more details, continue reading [here](../monitoring/README.md#prometheus).
+For more details, continue reading [here](../monitoring/README.md#cache-prometheus).
 
 Typically, this is not necessary, but in case an extension wants to extend the configuration for this cache Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=cache`, for example:
 
@@ -324,7 +324,7 @@ data:
 
 In Kubernetes clusters, container logs are non-persistent and do not survive stopped and destroyed containers. Gardener addresses this problem for the components hosted in a seed cluster by introducing its own managed logging solution. It is integrated with the Gardener monitoring stack to have all troubleshooting context in one place.
 
-!["Cluster Logging Topology"](../usage/images/logging-architecture.png "Cluster Logging Topology")
+!["Cluster Logging Topology"](../usage/images/logging-architecture.png)
 
 Gardener logging consists of components in three roles - log collectors and forwarders, log persistency and exploration/consumption interfaces. All of them live in the seed clusters in multiple instances:
 

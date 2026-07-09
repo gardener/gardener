@@ -250,6 +250,6 @@ With this, local `Nodes` and `Bastions` can connect to other `Nodes` via their h
 
 ## Future Work
 
-Future work could mostly focus on resolving the above listed [limitations](#limitations), i.e.:
+Future work could mostly focus on resolving the above listed [limitations](#current-limitations), i.e.:
 
 - Properly implement `.spec.machineTypes` in the `CloudProfile`s (i.e., configure `.spec.resources` properly for the created shoot worker machine pods).

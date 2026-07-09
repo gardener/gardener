@@ -29,7 +29,7 @@ Historically, `gardenlet` has been the only component running in the seed cluste
 Accordingly, extensions running on the seed cluster didn't have access to the garden cluster.
 
 Starting from Gardener [`v1.74.0`](https://github.com/gardener/gardener/releases/v1.74.0), there is a new mechanism for components running on seed clusters to get access to the garden cluster.
-For this, `gardenlet` runs an instance of the [`TokenRequestor`](../concepts/gardenlet.md#tokenrequestor-controller) for requesting tokens that can be used to communicate with the garden cluster.
+For this, `gardenlet` runs an instance of the `TokenRequestor` for [`ServiceAccount`s](../concepts/gardenlet.md#tokenrequestor-controller-for-serviceaccounts) or [`WorkloadIdentity`s](../concepts/gardenlet.md#tokenrequestor-controller-for-workloadidentitys) for requesting tokens that can be used to communicate with the garden cluster.
 
 ### Using Gardenlet-Managed Garden Access
 
@@ -176,7 +176,7 @@ Note the label `authorization.gardener.cloud/extensions-serviceaccount-selector`
 
 There is a controller part of `gardener-controller-manager` which takes care of maintaining the respective `ClusterRoleBinding` resources.
 It binds all extension `ServiceAccount`s in the garden cluster whose labels match: those in seed namespaces (all names), the `garden` namespace, and project namespaces (`garden-*`) — where the latter two are restricted to `ServiceAccount`s whose name is prefixed with `extension-shoot--` (i.e., extension clients of self-hosted shoot clusters).
-You can read more about this controller [here](../concepts/controller-manager.md#-extension-clusterrole--reconciler).
+You can read more about this controller [here](../concepts/controller-manager.md#extension-clusterrole-reconciler).
 
 #### Custom Permissions
 
