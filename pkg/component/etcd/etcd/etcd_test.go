@@ -967,6 +967,109 @@ var _ = Describe("Etcd", func() {
 			Entry("should update every-Three-days defrag schedule to daily", "24 3 */3 * *", defragmentationSchedule),
 		)
 
+		It("should set spec.memberNamePrefix when the Etcd resource does not yet exist", func() {
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: highAvailabilityEnabled,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				MemberNamePrefix:        "my-seed",
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.MemberNamePrefix).NotTo(BeNil())
+			Expect(*actual.Spec.MemberNamePrefix).To(Equal("my-seed"))
+		})
+
+		It("should not set spec.memberNamePrefix when the values are empty and the Etcd resource does not yet exist", func() {
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.MemberNamePrefix).To(BeNil())
+		})
+
+		It("should not overwrite spec.memberNamePrefix when the Etcd resource already exists (immutable field)", func() {
+			existingPrefix := "existing-prefix"
+			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace},
+				Spec: druidcorev1alpha1.EtcdSpec{
+					MemberNamePrefix: &existingPrefix,
+				},
+				Status: druidcorev1alpha1.EtcdStatus{
+					Etcd: &druidcorev1alpha1.CrossVersionObjectReference{Name: etcdName},
+				},
+			})).To(Succeed())
+
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: highAvailabilityEnabled,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				MemberNamePrefix:        "different-prefix",
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.MemberNamePrefix).NotTo(BeNil())
+			Expect(*actual.Spec.MemberNamePrefix).To(Equal(existingPrefix))
+		})
+
+		It("should not add spec.memberNamePrefix to an existing Etcd resource that was created without one", func() {
+			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace},
+				Status: druidcorev1alpha1.EtcdStatus{
+					Etcd: &druidcorev1alpha1.CrossVersionObjectReference{Name: etcdName},
+				},
+			})).To(Succeed())
+
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: highAvailabilityEnabled,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				MemberNamePrefix:        "my-seed",
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.MemberNamePrefix).To(BeNil())
+		})
+
 		It("should successfully deploy (normal etcd) and not keep the existing resource request settings", func() {
 			existingResourceRequests := &corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{

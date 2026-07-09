@@ -164,6 +164,7 @@ type Values struct {
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
 	StaticPodConfig             *StaticPodConfig
+	MemberNamePrefix            string
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
@@ -441,6 +442,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
+
+		if existingEtcd == nil && e.values.MemberNamePrefix != "" {
+			e.etcd.Spec.MemberNamePrefix = new(e.values.MemberNamePrefix)
+		}
 		return nil
 	}); err != nil {
 		return err
