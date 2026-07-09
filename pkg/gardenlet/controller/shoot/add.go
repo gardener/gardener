@@ -57,18 +57,15 @@ func AddToManager(
 		shootStateControllerEnabled = !responsibleForManagedSeed && ptr.Deref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
 	}
 
-	// TODO(rfranzke): Enable this reconciler when the work on GEP-0028 progresses.
-	if !gardenletutils.IsResponsibleForSelfHostedShoot() {
-		if err := (&shoot.Reconciler{
-			SeedClientSet:               seedClientSet,
-			ShootClientMap:              shootClientMap,
-			Config:                      cfg,
-			Identity:                    identity,
-			GardenClusterIdentity:       gardenClusterIdentity,
-			ShootStateControllerEnabled: shootStateControllerEnabled,
-		}).AddToManager(mgr, gardenCluster); err != nil {
-			return fmt.Errorf("failed adding main reconciler: %w", err)
-		}
+	if err := (&shoot.Reconciler{
+		SeedClientSet:               seedClientSet,
+		ShootClientMap:              shootClientMap,
+		Config:                      cfg,
+		Identity:                    identity,
+		GardenClusterIdentity:       gardenClusterIdentity,
+		ShootStateControllerEnabled: shootStateControllerEnabled,
+	}).AddToManager(mgr, gardenCluster); err != nil {
+		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
 	if err := (&care.Reconciler{

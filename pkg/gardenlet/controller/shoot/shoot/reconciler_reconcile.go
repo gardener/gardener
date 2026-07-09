@@ -41,6 +41,10 @@ import (
 // runReconcileShootFlow reconciles the Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object.
 func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *v1beta1helper.WrappedLastErrors {
+	if v1beta1helper.IsShootSelfHosted(o.Shoot.GetInfo().Spec.Provider.Workers) {
+		return nil
+	}
+
 	// We create the botanists (which will do the actual work).
 	var (
 		botanist                *botanistpkg.Botanist

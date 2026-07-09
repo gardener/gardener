@@ -25,6 +25,10 @@ import (
 // runForceDeleteShootFlow force deletes a Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
 func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logger, o *operation.Operation) *v1beta1helper.WrappedLastErrors {
+	if v1beta1helper.IsShootSelfHosted(o.Shoot.GetInfo().Spec.Provider.Workers) {
+		return nil
+	}
+
 	var (
 		botanist        *botanistpkg.Botanist
 		tasksWithErrors []string
