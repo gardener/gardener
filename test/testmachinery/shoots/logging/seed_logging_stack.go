@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
-	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -80,7 +79,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		shootValiPriorityClass = &schedulingv1.PriorityClass{}
 		shootValiConfMap       = &corev1.ConfigMap{}
 
-		plutonoVirtualService client.Object = &istionetworkingv1beta1.VirtualService{}
 		// This shoot is used as seed for this test only
 		shootClient     kubernetes.Interface
 		shootValiLabels = map[string]string{
@@ -257,16 +255,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					Namespace: shootFramework.ShootSeedNamespace(),
 					Name:      shootValiPriorityClassName},
 				shootValiPriorityClass),
-		)
-
-		// Get the plutono VirtualService
-		framework.ExpectNoError(
-			seedClient.Get(ctx,
-				types.NamespacedName{
-					Namespace: shootFramework.ShootSeedNamespace(),
-					Name:      fmt.Sprintf("%s-%s", v1beta1constants.DeploymentNamePlutono, shootFramework.ShootSeedNamespace()),
-				},
-				plutonoVirtualService),
 		)
 	}, initializationTimeout)
 
