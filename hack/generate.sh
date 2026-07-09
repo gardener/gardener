@@ -124,7 +124,7 @@ run_target() {
       fi
       ;;
     logcheck)
-      cd "$REPO_ROOT/$LOGCHECK_DIR" && go generate ./...
+      cd "$LOGCHECK_DIR" && go generate ./...
       ;;
     *)
       printf "ERROR: Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck'.\n\n"

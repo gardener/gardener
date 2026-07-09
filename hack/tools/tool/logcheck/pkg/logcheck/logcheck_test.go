@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/tools/go/analysis/analysistest"
 
-	. "github.com/gardener/gardener/hack/tools/logcheck/pkg/logcheck"
+	. "github.com/gardener/gardener/hack/tools/tool/logcheck/pkg/logcheck"
 )
 
 func TestLogcheck(t *testing.T) {

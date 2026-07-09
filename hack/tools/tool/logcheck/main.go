@@ -7,7 +7,7 @@ package main
 import (
 	"golang.org/x/tools/go/analysis/singlechecker"
 
-	"github.com/gardener/gardener/hack/tools/logcheck/pkg/logcheck"
+	"github.com/gardener/gardener/hack/tools/tool/logcheck/pkg/logcheck"
 )
 
 func main() {

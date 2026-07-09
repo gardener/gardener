@@ -33,7 +33,7 @@ There are two options for installing and using the `logcheck` tool:
 Install the tool with:
 
 ```bash
-go install github.com/gardener/gardener/hack/tools/logcheck
+go install github.com/gardener/gardener/hack/tools/tool/logcheck
 ```
 
 Use it with:
@@ -48,7 +48,7 @@ logcheck package [package...]
 Build the plugin with:
 
 ```bash
-CGO_ENABLED=1 go build -o logcheck.so -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
+CGO_ENABLED=1 go build -o logcheck.so -buildmode=plugin github.com/gardener/gardener/hack/tools/tool/logcheck/plugin
 ```
 
 > ⚠️ Both the `golangci-lint` binary and the `logcheck` plugin have to be built with `CGO_ENABLED=1` for the plugin mechanism to work. See [golangci/golangci-lint#1276](https://github.com/golangci/golangci-lint/issues/1276#issuecomment-665903858) for more details.
@@ -62,7 +62,7 @@ linters-settings:
     logcheck:
       path: hack/tools/bin/logcheck.so
       description: Check structured logging calls to logr.Logger instances
-      original-url: github.com/gardener/gardener/hack/tools/logcheck
+      original-url: github.com/gardener/gardener/hack/tools/tool/logcheck
 ```
 
 > ℹ️ In order for the plugin mechanism to work, all versions of plugin dependencies that overlap with `golangci-lint` must be set to the same version. You can see the versions by running `go version -m golangci-lint`.
