@@ -87,7 +87,7 @@ var _ = Describe("Etcd", func() {
 			botanist.Shoot = &shootpkg.Shoot{
 				ControlPlaneNamespace: namespace,
 			}
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "test-seed"}})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
@@ -112,6 +112,7 @@ var _ = Describe("Etcd", func() {
 				expectedDefragmentationSchedule:   Equal(new("34 12 * * *")),
 				expectedMaintenanceTimeWindow:     Equal(maintenanceTimeWindow),
 				expectedHighAvailabilityEnabled:   Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+				expectedMemberNamePrefix:          Equal("test-seed"),
 			}
 		})
 
@@ -501,6 +502,7 @@ type newEtcdValidator struct {
 	expectedHighAvailabilityEnabled   gomegatypes.GomegaMatcher
 	expectedMaintenanceTimeWindow     gomegatypes.GomegaMatcher
 	expectedAutoscalingConfiguration  gomegatypes.GomegaMatcher
+	expectedMemberNamePrefix          gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -529,6 +531,9 @@ func (v *newEtcdValidator) NewEtcd(
 		Expect(values.Autoscaling).To(v.expectedAutoscalingConfiguration)
 	} else {
 		Expect(values.Autoscaling).To(Equal(etcd.AutoscalingConfig{}))
+	}
+	if v.expectedMemberNamePrefix != nil {
+		Expect(values.MemberNamePrefix).To(v.expectedMemberNamePrefix)
 	}
 
 	return v

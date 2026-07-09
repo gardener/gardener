@@ -39,6 +39,9 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
 		HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
 		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
+		// Prefix etcd member names with the seed name so that members can be distinguished across
+		// control plane migrations between seeds.
+		MemberNamePrefix: b.Seed.GetInfo().Name,
 	}
 
 	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.GetInfo())
