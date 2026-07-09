@@ -1041,7 +1041,8 @@ func (e *etcd) computeReplicas(existingEtcd *druidcorev1alpha1.Etcd) int32 {
 
 func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidcorev1alpha1.Etcd) *string {
 	defragmentationSchedule := e.values.DefragmentationSchedule
-	if existingEtcd != nil && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil {
+	if existingEtcd != nil && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil &&
+		!isEveryNDaysSchedule(*existingEtcd.Spec.Etcd.DefragmentationSchedule) {
 		defragmentationSchedule = existingEtcd.Spec.Etcd.DefragmentationSchedule
 	}
 	return defragmentationSchedule
@@ -1065,4 +1066,16 @@ func (e *etcd) defaultPortOrEtcdEventsStaticPodPort(defaultPort, etcdEventsPortW
 // Name returns the name of the etcd based on its role.
 func Name(role string) string {
 	return "etcd-" + role
+}
+
+// isEveryNDaysSchedule reports whether the cron expression schedules on every Nth day-of-month
+// where N > 1 (i.e. the day-of-month field matches "*/N" with N > 1). Such schedules were used
+// as the old defragmentation schedule and should be updated to the new daily schedule on existing Etcd resources.
+func isEveryNDaysSchedule(schedule string) bool {
+	fields := strings.Fields(schedule)
+	if len(fields) != 5 || !strings.HasPrefix(fields[2], "*/") {
+		return false
+	}
+	n, err := strconv.Atoi(strings.TrimPrefix(fields[2], "*/"))
+	return err == nil && n > 1
 }
