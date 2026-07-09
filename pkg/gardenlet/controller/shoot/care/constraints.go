@@ -63,6 +63,15 @@ func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1bet
 			}
 			continue
 		}
+		// Optional constraint computed before the hibernation guard.
+		// Only preserve it if it's non-True (i.e. the configuration is problematic).
+		// When True, drop it — consistent with filterOptionalConstraints behaviour.
+		if cond.Type == gardencorev1beta1.ShootHibernationScheduleProblematic {
+			if cond.Status != gardencorev1beta1.ConditionTrue {
+				hibernationConditions = append(hibernationConditions, cond)
+			}
+			continue
+		}
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
@@ -135,6 +144,9 @@ func (c *Constraint) constraintsChecks(
 		constraints.preservedFailedMachinesAbsent = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.preservedFailedMachinesAbsent, status, reason, message)
 	}
 
+	status, reason, message = c.checkIfHibernationScheduleProblematic()
+	constraints.hibernationScheduleProblematic = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hibernationScheduleProblematic, status, reason, message)
+
 	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
 		return shootHibernatedConstraints(c.clock, constraints.ConvertToSlice()...)
 	}
@@ -161,14 +173,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent, constraints.hibernationScheduleProblematic},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent, constraints.hibernationScheduleProblematic},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -191,7 +203,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent, constraints.hibernationScheduleProblematic},
 	)
 }
 
@@ -509,6 +521,35 @@ func wasRemediatedByGardener(annotations map[string]string) bool {
 	return annotations[v1beta1constants.GardenerWarning] != ""
 }
 
+func (c *Constraint) checkIfHibernationScheduleProblematic() (gardencorev1beta1.ConditionStatus, string, string) {
+	shoot := c.shoot.GetInfo()
+
+	if shoot.Spec.Hibernation == nil || len(shoot.Spec.Hibernation.Schedules) == 0 {
+		return gardencorev1beta1.ConditionTrue,
+			"NoProblematicHibernationSchedule",
+			"Shoot does not have a hibernation schedule."
+	}
+
+	if v1beta1helper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer) != gardencorev1beta1.EncryptionProviderTypeAESGCM {
+		return gardencorev1beta1.ConditionTrue,
+			"NoProblematicHibernationSchedule",
+			"Shoot does not use AESGCM encryption for etcd."
+	}
+
+	if IsShootAlwaysHibernatedDuringMaintenance(shoot) {
+		return gardencorev1beta1.ConditionFalse,
+			"MaintenanceWindowInHibernationWindow",
+			"The shoot uses AESGCM encryption for etcd and its maintenance window is entirely within the " +
+				"hibernation window. The ETCD encryption key auto-rotation will never be triggered automatically. " +
+				"Please adjust the maintenance window or the hibernation schedule so that maintenance can run " +
+				"while the cluster is awake."
+	}
+
+	return gardencorev1beta1.ConditionTrue,
+		"NoProblematicHibernationSchedule",
+		"The maintenance window is not entirely within the hibernation window."
+}
+
 func filterOptionalConstraints(required, optional []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	var out []gardencorev1beta1.Condition
 	out = append(out, required...)
@@ -529,6 +570,7 @@ type ShootConstraints struct {
 	caCertificateValiditiesAcceptable     gardencorev1beta1.Condition
 	crdsWithProblematicConversionWebhooks gardencorev1beta1.Condition
 	manualInPlaceWorkersUpdated           gardencorev1beta1.Condition
+	hibernationScheduleProblematic        gardencorev1beta1.Condition
 	hasIgnoredManagedResources            gardencorev1beta1.Condition
 	preservedFailedMachinesAbsent         gardencorev1beta1.Condition
 }
@@ -541,6 +583,7 @@ func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.caCertificateValiditiesAcceptable,
 		g.crdsWithProblematicConversionWebhooks,
 		g.manualInPlaceWorkersUpdated,
+		g.hibernationScheduleProblematic,
 		g.hasIgnoredManagedResources,
 		g.preservedFailedMachinesAbsent,
 	}
@@ -554,6 +597,7 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 		g.caCertificateValiditiesAcceptable.Type,
 		g.crdsWithProblematicConversionWebhooks.Type,
 		g.manualInPlaceWorkersUpdated.Type,
+		g.hibernationScheduleProblematic.Type,
 		g.hasIgnoredManagedResources.Type,
 		g.preservedFailedMachinesAbsent.Type,
 	}
@@ -568,6 +612,7 @@ func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoo
 		caCertificateValiditiesAcceptable:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
 		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
 		manualInPlaceWorkersUpdated:           v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+		hibernationScheduleProblematic:        v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHibernationScheduleProblematic),
 		hasIgnoredManagedResources:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHasIgnoredManagedResources),
 		preservedFailedMachinesAbsent:         v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
 	}

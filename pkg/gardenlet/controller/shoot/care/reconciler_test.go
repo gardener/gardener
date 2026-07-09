@@ -678,6 +678,10 @@ func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
 		), ContainCondition(
+			OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		), ContainCondition(
 			OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
