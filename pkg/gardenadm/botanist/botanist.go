@@ -311,19 +311,13 @@ func newShootObject(
 	*shootpkg.Shoot,
 	error,
 ) {
-	b := shootpkg.
+	obj, err := shootpkg.
 		NewBuilder().
 		WithProjectName(resources.Project.Name).
 		WithCloudProfileObject(resources.CloudProfile).
-		WithShootObject(resources.Shoot)
-
-	if resources.Shoot.Spec.SecretBindingName != nil || resources.Shoot.Spec.CredentialsBindingName != nil {
-		b = b.WithShootCredentialsFrom(gardenClient)
-	} else {
-		b = b.WithoutShootCredentials()
-	}
-
-	obj, err := b.Build(ctx, gardenClient)
+		WithShootObject(resources.Shoot).
+		WithShootCredentialsFrom(gardenClient).
+		Build(ctx, gardenClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}

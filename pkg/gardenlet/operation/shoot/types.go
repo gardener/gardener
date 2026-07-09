@@ -57,7 +57,7 @@ import (
 type Builder struct {
 	shootObjectFunc              func(context.Context) (*gardencorev1beta1.Shoot, error)
 	cloudProfileFunc             func(context.Context, *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error)
-	shootCredentialsFunc         func(context.Context, string, string, bool) (client.Object, error)
+	shootCredentialsFunc         func(context.Context, *gardencorev1beta1.Shoot) (client.Object, error)
 	serviceAccountIssuerHostname func() (*string, error)
 	shootDNSFunc                 func() *gardencorev1beta1.DNS
 	seed                         *gardencorev1beta1.Seed
