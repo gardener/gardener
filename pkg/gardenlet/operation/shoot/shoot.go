@@ -288,7 +288,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shoot.WantsClusterAutoscaler = v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 
-	if shoot.IsWorkerless && shootObject.Spec.Networking != nil {
+	if (shoot.IsSelfHosted() || shoot.IsWorkerless) && shootObject.Spec.Networking != nil {
 		networks, err := ToNetworks(shootObject, shoot.IsWorkerless)
 		if err != nil {
 			return nil, err

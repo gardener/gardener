@@ -328,11 +328,6 @@ func newShootObject(
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}
 
-	obj.Networks, err = shootpkg.ToNetworks(resources.Shoot, obj.IsWorkerless)
-	if err != nil {
-		return nil, fmt.Errorf("failed computing shoot networks: %w", err)
-	}
-
 	// In self-hosted shoot clusters, kube-system is used as the control plane namespace.
 	// However, when bootstrapping a self-hosted shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
 	// we want to avoid conflicts with kube-system components of the bootstrap cluster by placing all shoot-related
