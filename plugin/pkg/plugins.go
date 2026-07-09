@@ -142,10 +142,13 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameManagedSeedShoot,                // ManagedSeedShoot
 		PluginNameBastion,                         // Bastion
 		PluginNameBackupBucketValidator,           // BackupBucketValidator
-		mutating.PluginName,                       // MutatingAdmissionPolicy
-		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
-		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
-		validating.PluginName,                     // ValidatingAdmissionPolicy
-		resourcequota.PluginName,                  // ResourceQuota
+		// TODO(vpnachev): Enable the MutatingAdmissionPolicy admission plugin by default
+		// once the minimum supported virtual-garden-kube-apiserver version is 1.36,
+		// where the admissionregistration.k8s.io/v1 MutatingAdmissionPolicy(Binding) APIs are GA.
+		// mutating.PluginName,          // MutatingAdmissionPolicy
+		mutatingwebhook.PluginName,   // MutatingAdmissionWebhook
+		validatingwebhook.PluginName, // ValidatingAdmissionWebhook
+		validating.PluginName,        // ValidatingAdmissionPolicy
+		resourcequota.PluginName,     // ResourceQuota
 	)
 }

@@ -54,6 +54,8 @@ spec:
     gardener:
       clusterIdentity: gardener-local
       gardenerAPIServer:
+        admissionPlugins:
+        - name: MutatingAdmissionPolicy
         featureGates:
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true

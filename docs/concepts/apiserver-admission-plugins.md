@@ -113,7 +113,7 @@ It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed`
 
 ## `MutatingAdmissionPolicy`
 
-**Type**: Mutating. **Enabled by default**: Yes.
+**Type**: Mutating. **Enabled by default**: No.
 
 This admission controller is defined in the generic API server library (`k8s.io/apiserver`). See the [Mutating Admission Policy page](https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy).
 
