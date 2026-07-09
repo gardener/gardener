@@ -84,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if responsibleSeedName := gardenerutils.GetResponsibleSeedName(shoot.Spec.SeedName, shoot.Status.SeedName); responsibleSeedName != r.Config.SeedConfig.Name {
+	if responsibleSeedName := gardenerutils.GetResponsibleSeedName(shoot.Spec.SeedName, shoot.Status.SeedName); !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) && responsibleSeedName != r.Config.SeedConfig.Name {
 		log.Info("Skipping because Shoot is not managed by this gardenlet", "seedName", responsibleSeedName)
 		return reconcile.Result{}, nil
 	}
@@ -136,7 +136,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 		return reconcile.Result{}, err
 	}
 
-	if syncErr := r.syncClusterResourceToSeed(ctx, shoot, o.Garden.Project, o.Shoot.CloudProfile, o.Seed.GetInfo()); syncErr != nil {
+	if syncErr := r.syncClusterResourceToSeed(ctx, shoot, o.Garden.Project, o.Shoot.CloudProfile, o.GetSeed()); syncErr != nil {
 		log.Error(syncErr, "Cluster resource sync to seed failed")
 
 		// As the reconciliation flow has generally succeeded, the RetryCycleStartTime is already set to nil.
@@ -154,7 +154,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.UTC()))
 
 	// determine when the next shoot reconciliation is supposed to happen
-	result = helper.CalculateControllerInfos(o.Seed.GetInfo(), shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
+	result = helper.CalculateControllerInfos(o.GetSeed(), shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
 	nextReconciliation := r.Clock.Now().UTC().Add(result.RequeueAfter)
 
 	log.Info("Shoot operation finished successfully, scheduling next reconciliation for Shoot", "requeueAfter", result.RequeueAfter, "nextReconciliation", nextReconciliation)
@@ -279,17 +279,20 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 		return nil, reconcile.Result{}, err
 	}
 
-	seed := &gardencorev1beta1.Seed{}
-	// always fetch the seed that this gardenlet is responsible for (instead of using spec.seedName),
-	// it is never acting on a foreign seed (e.g., during control plane migration)
-	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: r.Config.SeedConfig.Name}, seed); err != nil {
-		return nil, reconcile.Result{}, err
+	var seed *gardencorev1beta1.Seed
+	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		seed = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: r.Config.SeedConfig.Name}}
+		// always fetch the seed that this gardenlet is responsible for (instead of using spec.seedName),
+		// it is never acting on a foreign seed (e.g., during control plane migration)
+		if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 	}
 
 	var exposureClass *gardencorev1beta1.ExposureClass
 	if shoot.Spec.ExposureClassName != nil {
-		exposureClass = &gardencorev1beta1.ExposureClass{}
-		if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: *shoot.Spec.ExposureClassName}, exposureClass); err != nil {
+		exposureClass = &gardencorev1beta1.ExposureClass{ObjectMeta: metav1.ObjectMeta{Name: *shoot.Spec.ExposureClassName}}
+		if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(exposureClass), exposureClass); err != nil {
 			return nil, reconcile.Result{}, err
 		}
 	}
@@ -411,31 +414,18 @@ func (r *Reconciler) initializeOperation(
 		return nil, err
 	}
 
-	seedObj, err := seedpkg.
+	shootBuilder := shootpkg.
 		NewBuilder().
-		WithSeedObject(seed).
-		Build(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	shootObj, err := shootpkg.
-		NewBuilder().
-		WithShootObject(shoot).
-		WithCloudProfileObject(cloudProfile).
-		WithShootCredentialsFrom(r.GardenClient).
-		WithSeedObject(seed).
-		WithExposureClassObject(exposureClass).
 		WithProjectName(project.Name).
+		WithCloudProfileObject(cloudProfile).
+		WithShootObject(shoot).
+		WithShootCredentialsFrom(r.GardenClient).
+		WithExposureClassObject(exposureClass).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
-		WithServiceAccountIssuerHostname(gardenSecrets[v1beta1constants.GardenRoleShootServiceAccountIssuer]).
-		Build(ctx, r.GardenClient)
-	if err != nil {
-		return nil, err
-	}
+		WithServiceAccountIssuerHostname(gardenSecrets[v1beta1constants.GardenRoleShootServiceAccountIssuer])
 
-	op, err := operation.
+	opBuilder := operation.
 		NewBuilder().
 		WithLogger(log).
 		WithConfig(&r.Config).
@@ -444,10 +434,24 @@ func (r *Reconciler) initializeOperation(
 		WithSecrets(gardenSecrets).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
-		WithGarden(gardenObj).
-		WithSeed(seedObj).
-		WithShoot(shootObj).
-		Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap, shoot)
+		WithGarden(gardenObj)
+
+	if seed != nil {
+		seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		shootBuilder = shootBuilder.WithSeedObject(seed)
+		opBuilder = opBuilder.WithSeed(seedObj)
+	}
+
+	shootObj, err := shootBuilder.Build(ctx, r.GardenClient)
+	if err != nil {
+		return nil, err
+	}
+
+	op, err := opBuilder.WithShoot(shootObj).Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap, shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -475,6 +479,10 @@ func (r *Reconciler) syncClusterResourceToSeed(ctx context.Context, shoot *garde
 }
 
 func (r *Reconciler) checkSeed(ctx context.Context, seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType) error {
+	if seed == nil {
+		return nil
+	}
+
 	// Don't wait for the Seed to be ready if it is already marked for deletion. In this case
 	// it will never get ready because the bootstrap loop is never executed again.
 	// Don't block the Shoot deletion flow in this case to allow proper cleanup.

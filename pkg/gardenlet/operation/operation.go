@@ -68,9 +68,6 @@ func NewBuilder() *Builder {
 		defaultDomainsFunc: func() ([]*gardenerutils.Domain, error) {
 			return nil, errors.New("default domains are required but not set")
 		},
-		seedFunc: func(context.Context) (*seed.Seed, error) {
-			return nil, errors.New("seed object is required but not set")
-		},
 		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed, *corev1.Secret) (*shootpkg.Shoot, error) {
 			return nil, errors.New("shoot object is required but not set")
 		},
@@ -260,11 +257,13 @@ func (b *Builder) Build(
 			return nil, err
 		}
 
-		seed, err = b.seedFunc(ctx)
-		if err != nil {
-			return nil, err
+		if b.seedFunc != nil {
+			seed, err = b.seedFunc(ctx)
+			if err != nil {
+				return nil, err
+			}
+			operation.Seed = seed
 		}
-		operation.Seed = seed
 
 		seedVersion, err := semver.NewVersion(seedClientSet.Version())
 		if err != nil {
@@ -535,4 +534,12 @@ func (o *Operation) DeleteSecret(key string) {
 	defer o.secretsMutex.Unlock()
 
 	delete(o.secrets, key)
+}
+
+// GetSeed returns the seed object if it is set.
+func (o *Operation) GetSeed() *gardencorev1beta1.Seed {
+	if o.Seed == nil {
+		return nil
+	}
+	return o.Seed.GetInfo()
 }

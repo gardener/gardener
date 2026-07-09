@@ -123,7 +123,7 @@ func run(ctx context.Context, opts *Options) error {
 		reconcileClusterResource = g.Add(flow.Task{
 			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
 			Fn: func(ctx context.Context) error {
-				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, b.Seed.GetInfo())
+				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, nil)
 			},
 			Dependencies: flow.NewTaskIDs(ensureCustomResourceDefinitionsReady),
 		})
