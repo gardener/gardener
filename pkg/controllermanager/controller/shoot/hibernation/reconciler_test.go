@@ -46,7 +46,6 @@ var _ = Describe("Shoot Hibernation", func() {
 		locationEUSofia  = "Europe/Sofia"
 
 		weekDayAt2  = "2022-04-12T02:00:00Z"
-		weekDayAt0  = "2022-04-12T00:00:00Z"
 		weekDayAt7  = "2022-04-12T07:00:00Z"
 		weekDayAt19 = "2022-04-12T19:00:00Z"
 
@@ -87,49 +86,6 @@ var _ = Describe("Shoot Hibernation", func() {
 			}
 		}
 	)
-
-	Context("parsedHibernationSchedule", func() {
-		Describe("#next", func() {
-			It("should correctly return the next scheduling time from the parsed schedule", func() {
-				now := mustParseRFC3339Time(weekDayAt2)
-				expected := mustParseRFC3339Time(weekDayAt0).Add(24 * time.Hour)
-
-				parsedSchedule := parsedHibernationSchedule{
-					location: mustLoadLocation(locationEUBerlin),
-					schedule: mustParseStandard(everyDayAt2),
-				}
-				Expect(parsedSchedule.next(now)).To(Equal(expected))
-			})
-		})
-
-		Describe("#previous", func() {
-			It("should correctly return the previous scheduling time from the parsed schedule if it is within the specified range", func() {
-				now := mustParseRFC3339Time(weekDayAt2)
-				from := now.Add(-2 * 24 * time.Hour)
-
-				expected := mustParseRFC3339Time(weekDayAt0)
-				parsedSchedule := parsedHibernationSchedule{
-					location: mustLoadLocation(locationEUBerlin),
-					schedule: mustParseStandard(everyDayAt2),
-				}
-				prev := parsedSchedule.previous(from, now)
-				Expect(prev).NotTo(BeNil())
-				Expect(*prev).To(Equal(expected))
-			})
-
-			It("should return nil if previous scheduling time was not in specified range", func() {
-				now := mustParseRFC3339Time(weekDayAt2)
-				from := now.Add(-1 * time.Hour)
-
-				parsedSchedule := parsedHibernationSchedule{
-					location: mustLoadLocation(locationEUBerlin),
-					schedule: mustParseStandard(everyDayAt2),
-				}
-				prev := parsedSchedule.previous(from, now)
-				Expect(prev).To(BeNil())
-			})
-		})
-	})
 
 	Context("Shoot hibernation reconciliation", func() {
 		Describe("#Reconcile", func() {
