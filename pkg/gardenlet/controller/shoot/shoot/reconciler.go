@@ -373,35 +373,47 @@ func (r *Reconciler) initializeOperation(
 	*operation.Operation,
 	error,
 ) {
-	gardenSecrets, err := gardenerutils.ReadGardenSecrets(
-		ctx,
-		log,
-		r.GardenClient,
-		gardenerutils.ComputeGardenNamespace(seed.Name),
+	var (
+		gardenSecrets  map[string]*corev1.Secret
+		internalDomain *gardenerutils.Domain
+		defaultDomains []*gardenerutils.Domain
+		err            error
 	)
-	if err != nil {
-		return nil, err
-	}
 
-	internalDomain, err := gardenerutils.ReadGardenInternalDomain(
-		ctx,
-		r.GardenClient,
-		gardenerutils.ComputeGardenNamespace(seed.Name),
-		true,
-		seed.Spec.DNS.Internal,
-	)
-	if err != nil {
-		return nil, err
-	}
+	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		// TODO(rfranzke): Enable shoot gardenlet to read the gardener.cloud/role=shoot-service-account-issuer secret from
+		//  garden namespace (adapt authorizer) --> requires virtual garden to be at least 1.34 (this promotes the selector
+		//  feature gate to GA, hence, we can enforce the needed label selectors)
+		gardenSecrets, err = gardenerutils.ReadGardenSecrets(
+			ctx,
+			log,
+			r.GardenClient,
+			gardenerutils.ComputeGardenNamespace(seed.Name),
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
-		ctx,
-		r.GardenClient,
-		gardenerutils.ComputeGardenNamespace(seed.Name),
-		seed.Spec.DNS.Defaults,
-	)
-	if err != nil {
-		return nil, err
+		internalDomain, err = gardenerutils.ReadGardenInternalDomain(
+			ctx,
+			r.GardenClient,
+			gardenerutils.ComputeGardenNamespace(seed.Name),
+			true,
+			seed.Spec.DNS.Internal,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		defaultDomains, err = gardenerutils.ReadGardenDefaultDomains(
+			ctx,
+			r.GardenClient,
+			gardenerutils.ComputeGardenNamespace(seed.Name),
+			seed.Spec.DNS.Defaults,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	gardenObj, err := garden.
