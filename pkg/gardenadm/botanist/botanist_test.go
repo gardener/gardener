@@ -66,7 +66,7 @@ var _ = Describe("GardenadmBotanist", func() {
 						HaveField("ControllerRegistration.Name", "provider-stackit"),
 						HaveField("ControllerRegistration.Name", "networking-cilium"),
 					))
-					Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", HaveKeyWithValue("seed.gardener.cloud/self-hosted-shoot-cluster", "true")))
+					Expect(b.Seed).To(BeNil())
 				})
 
 				It("should set the LastOperation to Restore when a bootstrap ShootState exists", func() {

@@ -205,33 +205,35 @@ func newBotanist(
 	*botanistpkg.Botanist,
 	error,
 ) {
-	gardenObj, err := newGardenObject(ctx, resources.Project)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating garden object: %w", err)
-	}
-
-	shootObj, err := newShootObject(ctx, gardenClient, resources, runsControlPlane)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating shoot object: %w", err)
-	}
-
-	seedObj, err := newSeedObject(ctx, resources.Seed, shootObj)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating seed object: %w", err)
-	}
-
 	keysAndValues := []any{"cloudProfile", resources.CloudProfile, "project", resources.Project, "shoot", resources.Shoot}
 	if clientSet == nil {
-		clientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
+		clientSet = newFakeSeedClientSet(resources.Shoot.Spec.Kubernetes.Version)
 		log.Info("Initializing gardenadm botanist with fake client set", keysAndValues...) //nolint:logcheck
 	} else {
 		log.Info("Initializing gardenadm botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
-	o := newOperation(log, gardenClient, clientSet)
-	o.Garden = gardenObj
-	o.Seed = seedObj
-	o.Shoot = shootObj
+	var (
+		o   = newOperation(log, gardenClient, clientSet)
+		err error
+	)
+
+	o.Garden, err = newGardenObject(ctx, resources.Project)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating garden object: %w", err)
+	}
+
+	o.Shoot, err = newShootObject(ctx, clientSet, gardenClient, resources, runsControlPlane)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating shoot object: %w", err)
+	}
+
+	if !runsControlPlane {
+		o.Seed, err = seedpkg.NewBuilder().WithSeedObject(resources.Seed).Build(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating seed object: %w", err)
+		}
+	}
 
 	return botanistpkg.New(ctx, o)
 }
@@ -289,21 +291,9 @@ func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*
 		Build(ctx)
 }
 
-func newSeedObject(ctx context.Context, seed *gardencorev1beta1.Seed, shootObj *shootpkg.Shoot) (*seedpkg.Seed, error) {
-	obj, err := seedpkg.
-		NewBuilder().
-		WithSeedObject(seed).
-		Build(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed building seed object: %w", err)
-	}
-
-	obj.KubernetesVersion = shootObj.KubernetesVersion
-	return obj, nil
-}
-
 func newShootObject(
 	ctx context.Context,
+	clientSet kubernetes.Interface,
 	gardenClient client.Client,
 	resources gardenadm.Resources,
 	runsControlPlane bool,
@@ -317,7 +307,7 @@ func newShootObject(
 		WithCloudProfileObject(resources.CloudProfile).
 		WithShootObject(resources.Shoot).
 		WithShootCredentialsFrom(gardenClient).
-		Build(ctx, gardenClient)
+		Build(ctx, clientSet, gardenClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}
