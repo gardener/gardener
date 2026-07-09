@@ -397,7 +397,7 @@ func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool Worker
 	)
 
 	if k.values.VPAEnabled {
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{

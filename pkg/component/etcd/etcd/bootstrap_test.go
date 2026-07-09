@@ -323,7 +323,7 @@ webhooks:
 						Name:       "etcd-druid",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
+						UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
 					},
 				},
 			}

@@ -389,7 +389,7 @@ spec:
     kind: Deployment
     name: nginx-ingress-controller
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 				deploymentBackendYAML = `apiVersion: apps/v1
@@ -1220,7 +1220,7 @@ spec:
     kind: Deployment
     name: addons-nginx-ingress-controller
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 

@@ -785,7 +785,7 @@ func serviceMonitor(namespace string) *monitoringv1.ServiceMonitor {
 }
 
 func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
-	updateMode := vpaautoscalingv1.UpdateModeRecreate
+	updateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{

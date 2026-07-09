@@ -389,7 +389,7 @@ spec:
     kind: Deployment
     name: ` + dwdName + `
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 

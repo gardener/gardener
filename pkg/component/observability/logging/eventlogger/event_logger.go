@@ -281,7 +281,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 func (l *eventLogger) reconcileVPA(ctx context.Context) error {
 	var (
 		vpa              = l.emptyVPA()
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeRecreate
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
 

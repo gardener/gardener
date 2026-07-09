@@ -90,7 +90,7 @@ spec:
     kind: Deployment
     name: metrics-server
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1

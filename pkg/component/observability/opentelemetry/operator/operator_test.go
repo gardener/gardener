@@ -302,7 +302,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 				},
 			},
 		}
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,

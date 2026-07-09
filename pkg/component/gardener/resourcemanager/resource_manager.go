@@ -272,7 +272,7 @@ type Values struct {
 	MaxConcurrentTokenRequestorWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations.
 	MaxConcurrentCSRApproverWorkers *int
-	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for the network policy controller.
+	// MaxConcurrentNetworkPolicyWorkers configures the number of worker threads for the network policy controller.
 	MaxConcurrentNetworkPolicyWorkers *int
 	// NamePrefix is the prefix for the resource names.
 	NamePrefix string
@@ -1126,7 +1126,7 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 			Name:       r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
+			UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{

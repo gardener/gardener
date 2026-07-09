@@ -292,7 +292,7 @@ spec:
     kind: Deployment
     name: ` + prefix + `istio-basic-auth-server
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 		}

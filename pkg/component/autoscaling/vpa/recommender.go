@@ -313,7 +313,7 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{

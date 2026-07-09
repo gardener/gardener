@@ -14,7 +14,7 @@ import (
 )
 
 func (g *gardenerControllerManager) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName + "-vpa",

@@ -107,7 +107,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 
 		maxSurge         = intstr.FromInt32(0)
 		maxUnavailable   = intstr.FromInt32(1)
-		updateMode       = vpaautoscalingv1.UpdateModeRecreate
+		updateMode       = vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		namespace = &corev1.Namespace{

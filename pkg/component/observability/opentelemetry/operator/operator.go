@@ -377,7 +377,7 @@ func (o *openTelemetryOperator) deployment() *appsv1.Deployment {
 }
 
 func (o *openTelemetryOperator) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

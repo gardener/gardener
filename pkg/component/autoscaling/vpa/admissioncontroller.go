@@ -308,7 +308,7 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate)},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{

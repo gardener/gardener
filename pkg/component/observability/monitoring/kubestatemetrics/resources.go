@@ -305,7 +305,7 @@ func (k *kubeStateMetrics) deployment(
 func (k *kubeStateMetrics) verticalPodAutoscaler(deployment *appsv1.Deployment) *vpaautoscalingv1.VerticalPodAutoscaler {
 	var (
 		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-vpa" + k.values.NameSuffix, Namespace: k.namespace}}
-		updateMode       = vpaautoscalingv1.UpdateModeRecreate
+		updateMode       = vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
 

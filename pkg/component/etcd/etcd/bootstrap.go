@@ -467,7 +467,7 @@ func (b *bootstrapper) getImageVectorOverwriteConfigMap() *corev1.ConfigMap {
 }
 
 func (b *bootstrapper) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
-	updateMode := vpaautoscalingv1.UpdateModeRecreate
+	updateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      druidVPAName,

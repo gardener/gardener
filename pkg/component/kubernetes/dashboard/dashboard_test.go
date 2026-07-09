@@ -506,7 +506,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 					Name:       "kubernetes-dashboard",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
+					UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
 				},
 			},
 		}

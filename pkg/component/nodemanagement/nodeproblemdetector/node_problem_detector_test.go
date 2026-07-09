@@ -272,7 +272,7 @@ spec:
     kind: DaemonSet
     name: node-problem-detector
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 		)

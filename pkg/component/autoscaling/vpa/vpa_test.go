@@ -103,7 +103,7 @@ var _ = Describe("VPA", func() {
 		valuesRecommender         ValuesRecommender
 		valuesUpdater             ValuesUpdater
 
-		vpaUpdateMode       = vpaautoscalingv1.UpdateModeRecreate
+		vpaUpdateMode       = vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		maxUnavailable      = intstr.FromInt32(1)
 

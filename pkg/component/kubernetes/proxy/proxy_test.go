@@ -868,7 +868,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 							Name:       daemonSetNameFor(pool),
 						},
 						UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-							UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
+							UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
 						},
 					},
 				}

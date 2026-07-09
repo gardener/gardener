@@ -341,7 +341,7 @@ spec:
     kind: Deployment
     name: blackbox-exporter
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 	})

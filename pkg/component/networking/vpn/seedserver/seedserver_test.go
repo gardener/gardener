@@ -59,7 +59,7 @@ var _ = Describe("VpnSeedServer", func() {
 		istioNamespace     = "istio-foo"
 		istioNamespaceFunc = func() string { return istioNamespace }
 
-		vpaUpdateMode = vpaautoscalingv1.UpdateModeRecreate
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 
 		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00"
 

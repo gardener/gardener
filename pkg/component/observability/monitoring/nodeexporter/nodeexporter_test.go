@@ -424,7 +424,7 @@ spec:
     kind: DaemonSet
     name: node-exporter
   updatePolicy:
-    updateMode: Recreate
+    updateMode: InPlaceOrRecreate
 status: {}
 `
 		)

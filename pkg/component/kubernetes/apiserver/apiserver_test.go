@@ -367,7 +367,7 @@ var _ = Describe("KubeAPIServer", func() {
 								Name:       "kube-apiserver",
 							},
 							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
+								UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
 							},
 							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 								ContainerPolicies: containerPolicies,

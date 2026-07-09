@@ -157,7 +157,7 @@ spec:
     kind:       Deployment
     name:       foo-deployment
   updatePolicy:
-    updateMode: "Recreate"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: foo-container

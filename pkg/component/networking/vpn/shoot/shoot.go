@@ -493,7 +493,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	utilruntime.Must(references.InjectAnnotations(deploymentOrStatefulSet))
 
 	if v.values.VPAEnabled {
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeRecreate
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeInPlaceOrRecreate
 		if v.values.VPAUpdateDisabled {
 			vpaUpdateMode = vpaautoscalingv1.UpdateModeOff
 		}

@@ -854,7 +854,7 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 	var (
 		vpa           = v.emptyVPA()
-		vpaUpdateMode = new(vpaautoscalingv1.UpdateModeRecreate)
+		vpaUpdateMode = new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate)
 	)
 
 	targetRefKind := "Deployment"
