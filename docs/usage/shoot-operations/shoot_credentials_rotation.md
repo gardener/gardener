@@ -1,5 +1,26 @@
 # Credentials Rotation for Shoot Clusters
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Infrastructure Credentials (Project-Scoped)](#infrastructure-credentials-project-scoped)
+  - [Cloud Provider Credentials](#cloud-provider-credentials)
+- [Shoot Credentials (Gardener-Managed)](#shoot-credentials-gardener-managed)
+  - [Prepare Rotation of All Credentials](#prepare-rotation-of-all-credentials)
+  - [Complete Rotation of All Credentials](#complete-rotation-of-all-credentials)
+  - [Certificate Authorities](#certificate-authorities)
+    - [Triggering Worker Node Rollout Individually](#triggering-worker-node-rollout-individually)
+    - [Worker Node with ManualInPlaceUpdate Update Strategy](#worker-node-with-manualinplaceupdate-update-strategy)
+  - [Observability Password(s) For Plutono and Prometheus](#observability-passwords-for-plutono-and-prometheus)
+  - [SSH Key Pair for Worker Nodes](#ssh-key-pair-for-worker-nodes)
+  - [ETCD Encryption Key](#etcd-encryption-key)
+  - [`ServiceAccount` Token Signing Key](#serviceaccount-token-signing-key)
+    - [Triggering Worker Node Rollout Individually](#triggering-worker-node-rollout-individually-1)
+    - [Worker Node with ManualInPlaceUpdate Update Strategy](#worker-node-with-manualinplaceupdate-update-strategy-1)
+  - [OpenVPN TLS Auth Keys](#openvpn-tls-auth-keys)
+
+## Overview
+
 This page covers two distinct classes of credentials relevant to `Shoot` clusters. They differ in scope, ownership, and rotation workflow:
 
 | Class | Scope | Ownership | Rotation |
@@ -21,7 +42,9 @@ End-users must provide credentials such that Gardener and Kubernetes controllers
 For example, Gardener uses them to set up and maintain the networks, security groups, subnets, etc., while the [cloud-controller-manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) uses them to reconcile load balancers and routes, and the [CSI controller](https://kubernetes-csi.github.io/docs/) uses them to reconcile volumes and disks.
 
 These credentials are stored in a Kubernetes `Secret` in your project namespace in the garden cluster and referenced by the Shoot via a `CredentialsBinding` (`spec.credentialsBindingName`).
-The legacy `SecretBinding` (`spec.secretBindingName`) is deprecated and cannot be used for Shoots running Kubernetes v1.34 or later — migrate to `CredentialsBinding` if you haven't already (see [SecretBinding to CredentialsBinding Migration](secretbinding-to-credentialsbinding-migration.md)).
+
+> [!WARNING]
+> The legacy `SecretBinding` (`spec.secretBindingName`) is deprecated and cannot be used for Shoots running Kubernetes v1.34 or later — migrate to `CredentialsBinding` if you haven't already (see [SecretBinding to CredentialsBinding Migration](secretbinding-to-credentialsbinding-migration.md)).
 
 Depending on the cloud provider, the required data keys of the `Secret` differ.
 Please consult the documentation of the respective provider extension to get the concrete data keys:
@@ -36,7 +59,7 @@ Please consult the documentation of the respective provider extension to get the
 The following steps are required to perform the rotation:
 
 1. Update the data in the `Secret` with new credentials.
-2. ⚠️ Wait until all `Shoot`s using the `Secret` are reconciled before you disable the old credentials in your cloud provider account! Otherwise, the `Shoot`s will no longer work as expected.
+1. ⚠️ Wait until all `Shoot`s using the `Secret` are reconciled before you disable the old credentials in your cloud provider account! Otherwise, the `Shoot`s will no longer work as expected.
    Each `Shoot` reconciles automatically at least once every 24 hours during its maintenance window. To trigger [an immediate reconciliation](shoot_operations.md#immediate-reconciliation):
    ```bash
    kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=reconcile
@@ -45,7 +68,7 @@ The following steps are required to perform the rotation:
    ```bash
    kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=maintain
    ```
-3. After all `Shoot`s using the `Secret` were reconciled successfully, you can go ahead and deactivate the old credentials in your provider account.
+1. After all `Shoot`s using the `Secret` were reconciled successfully, you can go ahead and deactivate the old credentials in your provider account.
 
 ## Shoot Credentials (Gardener-Managed)
 
@@ -75,7 +98,8 @@ The following table summarizes the credential types and their automatic rotation
 
 See [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for configuration details.
 
-**🚨 For credential types without auto-rotation, there is no automatic rotation, and it is the responsibility of the end-user to regularly rotate them.**
+> [!CAUTION]
+> For credential types without auto-rotation, there is no automatic rotation, and it is the responsibility of the end-user to regularly rotate them.
 
 While it is possible to rotate them one by one, there is also a convenient method to combine the rotation of all of those credentials.
 The rotation happens in two phases since it might be required to update some API clients (e.g., when CAs are rotated).
@@ -96,7 +120,7 @@ Please note that all respective individual actions apply for this combined rotat
 
 > [!TIP]
 > If you don't want the worker nodes to roll out immediately in this phase (and rather trigger it individually at a later time of your convenience), you can use the `rotate-credentials-start-without-workers-rollout` and `rotate-rollout-workers` operations instead.
-> Read up all about it [here](#triggering-worker-node-rollout-individually).
+> Read up all about it in the [Triggering Worker Node Rollout Individually](#triggering-worker-node-rollout-individually) section.
 
 ### Complete Rotation of All Credentials
 
@@ -323,13 +347,13 @@ After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase
 #### Triggering Worker Node Rollout Individually
 
 Similar to the rotation of the certificate authorities, you can control the worker node rollout individually.
-Please read [this section](#triggering-worker-node-rollout-individually) to get more information.
+Please read the [Triggering Worker Node Rollout Individually](#triggering-worker-node-rollout-individually) section to get more information.
 It works the same way for the `ServiceAccount` token signing key (using `rotate-serviceaccount-key-start-without-workers-rollout`).
 
 #### Worker Node with ManualInPlaceUpdate Update Strategy
 
 Similar to the rotation of the certificate authorities, in case of manual in-place update, `ServiceAccount` token signing key rotation phase will be at `Preparing` until all the worker pools are successfully in-place updated and there are no pending worker pools with strategy ManualInPlaceUpdate.
-Please read [this section](#worker-node-with-manualinplaceupdate-update-strategy) for more information.
+Please read the [Worker Node with ManualInPlaceUpdate Update Strategy](#worker-node-with-manualinplaceupdate-update-strategy) section for more information.
 
 ### OpenVPN TLS Auth Keys
 
