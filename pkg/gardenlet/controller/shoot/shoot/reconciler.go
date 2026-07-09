@@ -468,6 +468,9 @@ func (r *Reconciler) initializeOperation(
 
 func (r *Reconciler) syncClusterResourceToSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
 	clusterName := gardenerutils.ComputeTechnicalID(project.Name, shoot)
+	if v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		clusterName = metav1.NamespaceSystem
+	}
 	return gardenerextensions.SyncClusterResourceToSeed(ctx, r.SeedClientSet.Client(), clusterName, shoot, cloudProfile, seed)
 }
 
