@@ -1,4 +1,4 @@
-module github.com/gardener/gardener/hack/tools/tool
+module github.com/gardener/gardener/hack/tools
 
 // Version must be kept in sync with Go version of https://github.com/golangci/golangci-lint.
 go 1.26.0
@@ -37,7 +37,11 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 )
 
-require sigs.k8s.io/controller-runtime v0.24.1
+require (
+	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/spf13/cobra v1.10.2
+	sigs.k8s.io/controller-runtime v0.24.1
+)
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.3.0 // indirect
@@ -288,7 +292,6 @@ require (
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.23.0 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
-	github.com/onsi/ginkgo/v2 v2.32.0 // indirect
 	github.com/onsi/gomega v1.42.0 // indirect
 	github.com/openai/openai-go/v3 v3.32.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
@@ -328,7 +331,6 @@ require (
 	github.com/sourcegraph/go-diff v0.8.0 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect

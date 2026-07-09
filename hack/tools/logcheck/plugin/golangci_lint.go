@@ -7,7 +7,7 @@ package main
 import (
 	"golang.org/x/tools/go/analysis"
 
-	"github.com/gardener/gardener/hack/tools/tool/logcheck/pkg/logcheck"
+	"github.com/gardener/gardener/hack/tools/logcheck/pkg/logcheck"
 )
 
 // New returns the logcheck analyzer.

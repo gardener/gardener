@@ -408,7 +408,7 @@
         'go',
       ],
       matchFileNames: [
-        'hack/tools/tool/go\\.mod',
+        'hack/tools/go\\.mod',
       ],
       enabled: false,
     },

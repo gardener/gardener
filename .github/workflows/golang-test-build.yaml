@@ -9,7 +9,7 @@ on:
       - .github/workflows/golang-test-images.yaml
       - hack/tools/image/**
       - hack/tools.mk
-      - hack/tools/tool/logcheck/**
+      - hack/tools/logcheck/**
       - go.mod
 
 jobs:

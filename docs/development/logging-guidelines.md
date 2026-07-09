@@ -29,9 +29,9 @@ Hence, the following sections focus on logging in the controller and admission c
 
 ## `logcheck` Tool
 
-To ensure a smooth migration to logr and make logging in Gardener components more consistent, the [`logcheck` tool](../../hack/tools/tool/logcheck) was added.
+To ensure a smooth migration to logr and make logging in Gardener components more consistent, the [`logcheck` tool](../../hack/tools/logcheck) was added.
 It enforces (parts of) this guideline and detects programmer-level errors early on in order to prevent bugs.
-Please check out the [tool's documentation](../../hack/tools/tool/logcheck) for a detailed description. 
+Please check out the [tool's documentation](../../hack/tools/logcheck) for a detailed description. 
 
 ## Structured Logging
 
