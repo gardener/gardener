@@ -33,6 +33,11 @@ The values of the `containerLogMaxSize` and `containerLogMaxFiles` fields need t
 
 In the majority of the cases, the defaults should do just fine. Custom configuration might be of use under rare conditions.
 
+### Container Logs Rotation and Retention by logrotate
+
+A security requirement mandates that no log entry older than 14 days is present on the host.
+kubelet only supports size-based log rotation, not time-based retention, so `logrotate` is used to enforce daily rotation and a 14-day retention window on top of the kubelet's own size-based rotation.
+
 ## Logs Retention in Vali
 
 Logs in Vali are preserved for a maximum of 14 days. Note that the retention period is also restricted to the Vali's persistent volume size and in some cases, it can be less than 14 days. The oldest logs are deleted when a configured threshold of free disk space is crossed.
