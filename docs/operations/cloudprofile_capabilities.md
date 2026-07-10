@@ -64,6 +64,7 @@ spec:
 Rules enforced by `CloudProfile` admission:
 
 - Names must be unique within `spec.machineCapabilities`.
+- Capability names starting with `gardener-` are reserved for Gardener only and must not be used.
 - Each capability must declare at least one value, and values must be unique within that capability.
 - Only capability names registered in `spec.machineCapabilities` may be used on `machineTypes[*].capabilities` or `machineImages[*].versions[*].capabilityFlavors[*]`. 
 - Using an unregistered name/value is rejected with `Unsupported value`.
