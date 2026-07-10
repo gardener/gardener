@@ -301,6 +301,18 @@
       ],
     },
     {
+      // Group Helm updates in one PR.
+      groupName: 'helm',
+      matchDatasources: [
+        'go',
+        'github-releases',
+      ],
+      matchPackageNames: [
+        'helm/helm',
+        'helm.sh/helm/v4',
+      ],
+    },
+    {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
       matchDatasources: [
