@@ -2,7 +2,6 @@ go 1.26.0
 
 use (
 	./
-	./hack/tools/logcheck
+	./hack/tools
 	./pkg/apis
-	./pkg/internal/tools
 )

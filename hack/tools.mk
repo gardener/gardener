@@ -13,11 +13,15 @@ IS_GARDENER := $(shell go list -f '{{.Main}}' -m github.com/gardener/gardener)
 
 ifeq ($(IS_GARDENER),true)
 GARDENER_HACK_DIR          := ./hack
+GARDENER_LOGCHECK_DIR      := ./hack/tools/logcheck
 else
 # dependency on github.com/gardener/gardener is optional.
 # If other repos don't use it and the project doesn't depend on the package, silence the error to minimize confusion.
 GARDENER_HACK_DIR          := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener 2>/dev/null)/hack
-MODFILE_TOOL_MOD           := -modfile $(GARDENER_HACK_DIR)/../pkg/internal/tools/go.mod
+GARDENER_TOOL_DIR          := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener/hack/tools 2>/dev/null)
+GARDENER_LOGCHECK_DIR      := $(GARDENER_TOOL_DIR)/logcheck
+MODFILE_TOOL_MOD           := -modfile $(GARDENER_TOOL_DIR)/go.mod
+SET_GOWORK                 := GOWORK=off
 endif
 
 SYSTEM_NAME                := $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -90,7 +94,7 @@ CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtim
 K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
 # Hash of analyzer sources + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
-LOGCHECK_VERSION           ?= $(shell { find $(GARDENER_HACK_DIR)/tools/logcheck -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -113,11 +117,11 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)
 
 # Use this function to get the version of a go module from go.mod
-version_gomod = $(shell go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))
+version_gomod = $(shell $(SET_GOWORK) go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))
 
 # Use this function to copy the tool binary built by Go to the location passed as arg.
 #   E.g., `$(call go_tool_copy,./path/to/tool)` will copy the tool binary built by Go to ./path/to/tool.
-go_tool_copy = $(shell cp $$(go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
+go_tool_copy = $(shell cp $$( $(SET_GOWORK) go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
 
 # This target cleans up any previous version files for the given tool and creates the given version file.
 # This way, we can generically determine, which version was installed without calling each and every binary explicitly.
@@ -214,10 +218,11 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 # marker on $(GOLANGCI_LINT), which guarantees both invalidate together.
 ifeq ($(IS_GARDENER),true)
 $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
-	cd $(GARDENER_HACK_DIR)/tools/logcheck; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
+	cd $(GARDENER_LOGCHECK_DIR); GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
 $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
-	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin github.com/gardener/gardener/hack/tools/logcheck/plugin
+	@[ -n "$(GARDENER_LOGCHECK_DIR)" ] || { echo "GARDENER_LOGCHECK_DIR is not set, cannot build logcheck plugin. Consider adding github.com/gardener/gardener/hack/tools/logcheck as dependency if errors occur." >&2; exit 1; }
+	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin $(GARDENER_LOGCHECK_DIR)/plugin
 endif
 
 $(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
@@ -238,19 +243,19 @@ $(REPORT_COLLECTOR): go.mod
 endif
 
 ifeq ($(IS_GARDENER),true)
-$(OIDC_METADATA): $(GARDENER_HACK_DIR)/tools/oidcmeta/*.go
-	go build -o $(OIDC_METADATA) $(GARDENER_HACK_DIR)/tools/oidcmeta
+$(OIDC_METADATA): $(GARDENER_HACK_DIR)/generators/oidcmeta/*.go
+	go build -o $(OIDC_METADATA) $(GARDENER_HACK_DIR)/generators/oidcmeta
 else
 $(OIDC_METADATA): go.mod
-	go build -o $(OIDC_METADATA) github.com/gardener/gardener/hack/tools/oidcmeta
+	go build -o $(OIDC_METADATA) github.com/gardener/gardener/hack/generators/oidcmeta
 endif
 
 ifeq ($(IS_GARDENER),true)
-$(EXTENSION_GEN): $(GARDENER_HACK_DIR)/tools/extension-generator/*.go
-	go build -o $(EXTENSION_GEN) $(GARDENER_HACK_DIR)/tools/extension-generator
+$(EXTENSION_GEN): $(GARDENER_HACK_DIR)/generators/extension-generator/*.go
+	go build -o $(EXTENSION_GEN) $(GARDENER_HACK_DIR)/generators/extension-generator
 else
 $(EXTENSION_GEN): go.mod
-	go build -o $(EXTENSION_GEN) github.com/gardener/gardener/hack/tools/extension-generator
+	go build -o $(EXTENSION_GEN) github.com/gardener/gardener/hack/generators/extension-generator
 endif
 
 $(SETUP_ENVTEST): $(call tool_version_file,$(SETUP_ENVTEST),$(CONTROLLER_RUNTIME_VERSION))
