@@ -27,9 +27,12 @@ type federationConfig struct {
 //go:embed assets/scrapeconfigs/cadvisor.yaml
 var cAdvisor string
 
+//go:embed assets/scrapeconfigs/kubelet.yaml
+var kubelet string
+
 // AdditionalScrapeConfigs returns the additional scrape configs for the garden prometheus.
 func AdditionalScrapeConfigs() []string {
-	return []string{cAdvisor}
+	return []string{cAdvisor, kubelet}
 }
 
 // CentralScrapeConfigs returns the central ScrapeConfig resources for the garden prometheus.

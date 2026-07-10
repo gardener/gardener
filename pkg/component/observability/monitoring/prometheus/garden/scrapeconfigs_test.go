@@ -50,6 +50,34 @@ metric_relabel_configs:
   regex: ^(container_cpu_usage_seconds_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total)$
   action: keep
 `,
+				`job_name: kubelet
+honor_labels: false
+scheme: https
+
+tls_config:
+  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+kubernetes_sd_configs:
+- role: node
+
+relabel_configs:
+- source_labels: [__meta_kubernetes_node_address_InternalIP]
+  target_label: instance
+- action: labelmap
+  regex: __meta_kubernetes_node_label_(.+)
+- target_label: __address__
+  replacement: kubernetes.default.svc
+- source_labels: [__meta_kubernetes_node_name]
+  regex: (.+)
+  target_label: __metrics_path__
+  replacement: /api/v1/nodes/${1}/proxy/metrics
+
+metric_relabel_configs:
+- source_labels: [__name__]
+  action: keep
+  regex: ^(kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_volume_stats_inodes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used)$
+`,
 			))
 		})
 	})
