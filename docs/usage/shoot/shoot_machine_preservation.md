@@ -108,7 +108,13 @@ If `autoPreserveFailedMachineMax` is decreased after some machines are already a
 
 Operators and end-users can preserve individual machines by annotating the machine or its backing node object. Annotating the node is preferred when the node exists and is accessible, to avoid ambiguity.
 
+### Annotations
+
 **Annotation key:** `node.machine.sapcloud.io/preserve`
+
+> [!CAUTION]
+> The following annotation values are subject to rework to improve the machine preservation experience, and may likely change in future releases.
+> We will try to ensure backward compatibility, but please be aware that the values may change in future releases.
 
 | Annotation value | Effect                                                                                   |
 |------------------|------------------------------------------------------------------------------------------|
