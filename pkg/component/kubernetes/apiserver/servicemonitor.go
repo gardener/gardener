@@ -79,6 +79,7 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					"apiserver_flowcontrol_request_execution_seconds_.+",
 					"apiserver_flowcontrol_nominal_limit_seats",
 					"apiserver_flowcontrol_request_concurrency_in_use",
+					"apiserver_flowcontrol_priority_level_request_utilization_.+",
 					"apiserver_flowcontrol_priority_level_seat_utilization_.+",
 					"apiserver_init_events_total",
 					"apiserver_latency",
