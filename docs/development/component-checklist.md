@@ -90,7 +90,7 @@ This document provides a checklist for them that you can walk through.
 
 2. **Use shoot access tokens instead of a client certificates** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L234-L236))
 
-   For components that need to talk to a target cluster different from their runtime cluster (e.g., running in seed cluster but talking to shoot) the `gardener-resource-manager`'s [TokenRequestor](../concepts/resource-manager.md#tokenrequestor-controller-controller) should be used to manage a so-called "shoot access token".
+   For components that need to talk to a target cluster different from their runtime cluster (e.g., running in seed cluster but talking to shoot) the `gardener-resource-manager`'s [TokenRequestor](../concepts/resource-manager.md#tokenrequestor-controller) should be used to manage a so-called "shoot access token".
 
 3. **Define RBAC roles with minimal privileges** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L153-L223))
 
