@@ -28,7 +28,7 @@ func NewVali(
 	isGardenCluster bool,
 	istioIngressGatewayLabels map[string]string,
 	istioIngressGatewayNamespace string,
-	pvcAutoscalerValues vali.PVCAutoscalingConfig,
+	pvcAutoscaling vali.PVCAutoscalingConfig,
 ) (
 	vali.Interface,
 	error,
@@ -73,7 +73,7 @@ func NewVali(
 		IsGardenCluster:              isGardenCluster,
 		IstioIngressGatewayLabels:    istioIngressGatewayLabels,
 		IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
-		PVCAutoscaler:                pvcAutoscalerValues,
+		PVCAutoscaling:               pvcAutoscaling,
 	})
 
 	return deployer, nil

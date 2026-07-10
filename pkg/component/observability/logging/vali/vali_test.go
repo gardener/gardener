@@ -397,7 +397,7 @@ var _ = Describe("Vali", func() {
 						IngressHost:                  valiHost,
 						IstioIngressGatewayNamespace: "istio-ingress",
 						IsGardenCluster:              false,
-						PVCAutoscaler: PVCAutoscalingConfig{
+						PVCAutoscaling: PVCAutoscalingConfig{
 							Enabled:     true,
 							MaxCapacity: maxCapacity,
 						},
@@ -504,7 +504,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("shouldn't do anything when PVCAutoscaler is enabled", func() {
-			valiDeployer := New(fakeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity, PVCAutoscaler: PVCAutoscalingConfig{Enabled: true}})
+			valiDeployer := New(fakeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity, PVCAutoscaling: PVCAutoscalingConfig{Enabled: true}})
 
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
 

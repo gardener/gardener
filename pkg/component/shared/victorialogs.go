@@ -22,7 +22,7 @@ func NewVictoriaLogs(
 	priorityClassName string,
 	storage *resource.Quantity,
 	isGardenCluster bool,
-	pvcAutoscalerValues victorialogs.PVCAutoscalingConfig,
+	pvcAutoscaling victorialogs.PVCAutoscalingConfig,
 ) (
 	component.DeployWaiter,
 	error,
@@ -39,7 +39,7 @@ func NewVictoriaLogs(
 		ClusterType:       clusterType,
 		Replicas:          replicas,
 		PriorityClassName: priorityClassName,
-		PVCAutoscaler:     pvcAutoscalerValues,
+		PVCAutoscaling:    pvcAutoscaling,
 	})
 
 	return deployer, nil

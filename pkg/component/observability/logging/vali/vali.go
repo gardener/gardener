@@ -129,7 +129,7 @@ type Values struct {
 	IstioIngressGatewayNamespace string
 	ShootNodeLoggingEnabled      bool
 	Storage                      *resource.Quantity
-	PVCAutoscaler                PVCAutoscalingConfig
+	PVCAutoscaling               PVCAutoscalingConfig
 }
 
 // PVCAutoscalingConfig configures whether and up to what capacity the Vali PVC is autoscaled.
@@ -178,7 +178,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		resources []client.Object
 	)
 
-	if v.values.Storage != nil && !v.values.PVCAutoscaler.Enabled {
+	if v.values.Storage != nil && !v.values.PVCAutoscaling.Enabled {
 		if err := v.resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx); err != nil {
 			return err
 		}
@@ -273,8 +273,8 @@ func (v *vali) Deploy(ctx context.Context) error {
 		v.getPrometheusRule(),
 	)
 
-	if v.values.PVCAutoscaler.Enabled {
-		resources = append(resources, v.getPVCA(v.values.PVCAutoscaler))
+	if v.values.PVCAutoscaling.Enabled {
+		resources = append(resources, v.getPVCA(v.values.PVCAutoscaling))
 	}
 
 	if err := registry.Add(resources...); err != nil {
@@ -351,7 +351,7 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return vpa
 }
 
-func (v *vali) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (v *vali) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	pvca := &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiconstants.ManagedResourceNameRuntime,
@@ -366,7 +366,7 @@ func (v *vali) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alpha1.Persi
 			},
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
-					MaxCapacity: values.MaxCapacity,
+					MaxCapacity: pvcAutoscaling.MaxCapacity,
 					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
 						UtilizationThresholdPercent: new(70),
 						StepPercent:                 new(10),

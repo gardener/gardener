@@ -262,7 +262,7 @@ var _ = Describe("VictoriaLogs", func() {
 			func(maxCapacity resource.Quantity) {
 				values = Values{
 					Image: image,
-					PVCAutoscaler: PVCAutoscalingConfig{
+					PVCAutoscaling: PVCAutoscalingConfig{
 						Enabled:     true,
 						MaxCapacity: maxCapacity,
 					},

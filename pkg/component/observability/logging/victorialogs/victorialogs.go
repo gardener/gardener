@@ -56,7 +56,7 @@ type Values struct {
 	// PriorityClassName is the name of the priority class for the VictoriaLogs pods.
 	PriorityClassName string
 	// PVCAutoscaler configures whether and how the VictoriaLogs PVC is autoscaled.
-	PVCAutoscaler PVCAutoscalingConfig
+	PVCAutoscaling PVCAutoscalingConfig
 }
 
 // PVCAutoscalingConfig configures whether and up to what capacity the VictoriaLogs PVC is autoscaled.
@@ -100,8 +100,8 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 		v.getPrometheusRule(),
 	}
 
-	if v.values.PVCAutoscaler.Enabled {
-		resources = append(resources, v.getPVCA(v.values.PVCAutoscaler))
+	if v.values.PVCAutoscaling.Enabled {
+		resources = append(resources, v.getPVCA(v.values.PVCAutoscaling))
 	}
 
 	serializedResources, err := registry.AddAllAndSerialize(resources...)
@@ -243,7 +243,7 @@ func (v *victoriaLogs) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	}
 }
 
-func (v *victoriaLogs) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func (v *victoriaLogs) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VLSingleResourceName,
@@ -258,7 +258,7 @@ func (v *victoriaLogs) getPVCA(values PVCAutoscalingConfig) *pvcautoscalerv1alph
 			},
 			VolumePolicies: []pvcautoscalerv1alpha1.VolumePolicy{
 				{
-					MaxCapacity: values.MaxCapacity,
+					MaxCapacity: pvcAutoscaling.MaxCapacity,
 					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
 						UtilizationThresholdPercent: new(70),
 						StepPercent:                 new(10),
