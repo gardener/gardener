@@ -83,7 +83,7 @@ func (s shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	gardenerutils.SyncCloudProfileFields(nil, newShoot)
 
 	SyncDNSProviderCredentials(newShoot)
-	s.storeIgnoredDNSWarnings(newShoot, nil, ignoredDNSWarningIndexes)
+	s.storeIgnoredDNSWarnings(newShoot, ignoredDNSWarningIndexes)
 }
 
 func (s shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -108,7 +108,7 @@ func (s shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obje
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
-	s.storeIgnoredDNSWarnings(newShoot, oldShoot, ignoredDNSWarningIndexes)
+	s.storeIgnoredDNSWarnings(newShoot, ignoredDNSWarningIndexes)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -242,7 +242,7 @@ func (s shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
 	allErrs = append(allErrs, validation.ValidateInPlaceUpdateStrategyOnCreation(shoot)...)
 	if len(allErrs) > 0 {
-		s.deleteIgnoredDNSWarningIndexes(shoot, nil)
+		s.deleteIgnoredDNSWarningIndexes(shoot)
 	}
 
 	return allErrs
@@ -291,7 +291,7 @@ func (s shootStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.
 	oldShoot := oldObj.(*core.Shoot)
 	allErrs := validation.ValidateShootUpdate(newShoot, oldShoot)
 	if len(allErrs) > 0 {
-		s.deleteIgnoredDNSWarningIndexes(newShoot, oldShoot)
+		s.deleteIgnoredDNSWarningIndexes(newShoot)
 	}
 
 	return allErrs
@@ -304,17 +304,17 @@ func (shootStrategy) AllowUnconditionalUpdate() bool {
 // WarningsOnCreate returns warnings to the client performing a create.
 func (s shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
 	newShoot := obj.(*core.Shoot)
-	return shoot.GetWarnings(ctx, newShoot, nil, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot, nil))
+	return shoot.GetWarnings(ctx, newShoot, nil, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot))
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
-	return shoot.GetWarnings(ctx, newShoot, oldShoot, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot, oldShoot))
+	return shoot.GetWarnings(ctx, newShoot, oldShoot, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot))
 }
 
-func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, _ *core.Shoot, ignoredIndexes []int) {
+func (s shootStrategy) storeIgnoredDNSWarnings(shootObj *core.Shoot, ignoredIndexes []int) {
 	if len(ignoredIndexes) == 0 {
 		return
 	}
@@ -327,11 +327,11 @@ func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, _ *core.Shoot, ignoredI
 	})
 }
 
-func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj, _ *core.Shoot) {
+func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj *core.Shoot) {
 	s.dnsProviderSecretNameWarningSuppressions.Delete(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
 }
 
-func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj, _ *core.Shoot) []int {
+func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj *core.Shoot) []int {
 	value, ok := s.dnsProviderSecretNameWarningSuppressions.LoadAndDelete(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
 	if !ok {
 		return nil
