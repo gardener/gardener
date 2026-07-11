@@ -513,7 +513,7 @@ images:
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector
-    tag: "v1.35.3"
+    tag: "v1.36.0"
     targetVersion: ">= 1.35"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
@@ -531,7 +531,7 @@ images:
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector
-    tag: "v1.34.4"
+    tag: "v1.36.0"
     targetVersion: ">= 1.34"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
@@ -549,7 +549,7 @@ images:
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector
-    tag: "v0.8.25"
+    tag: "v1.36.0"
     targetVersion: "< 1.34"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
