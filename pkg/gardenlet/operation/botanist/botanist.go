@@ -128,13 +128,16 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
-		o.Shoot.Components.ControlPlane.VPNSeedServer, err = b.DefaultVPNSeedServer()
-		if err != nil {
-			return nil, err
-		}
 		o.Shoot.Components.ControlPlane.MachineControllerManager, err = b.DefaultMachineControllerManager()
 		if err != nil {
 			return nil, err
+		}
+
+		if !o.Shoot.IsSelfHosted() {
+			o.Shoot.Components.ControlPlane.VPNSeedServer, err = b.DefaultVPNSeedServer()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -215,10 +218,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
-		o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
-		if err != nil {
-			return nil, err
-		}
 		o.Shoot.Components.SystemComponents.NodeProblemDetector, err = b.DefaultNodeProblemDetector()
 		if err != nil {
 			return nil, err
@@ -230,6 +229,13 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		o.Shoot.Components.SystemComponents.KubeProxy, err = b.DefaultKubeProxy()
 		if err != nil {
 			return nil, err
+		}
+
+		if !o.Shoot.IsSelfHosted() {
+			o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
