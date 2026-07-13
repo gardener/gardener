@@ -127,7 +127,13 @@ func run(ctx context.Context, opts *Options) error {
 						b.Shoot.GetInfo(),
 						nil,
 						&seedmanagementv1alpha1.GardenletDeployment{},
-						&runtime.RawExtension{Object: &gardenletconfigv1alpha1.GardenletConfiguration{}},
+						&runtime.RawExtension{Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+							Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+								Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
+									ReconcileInMaintenanceOnly: new(true),
+								},
+							},
+						}},
 						seedmanagementv1alpha1.BootstrapToken,
 						false,
 					)
