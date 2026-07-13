@@ -67,7 +67,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	// informer caches syncs is slow operation, the reconciler's deferred watches can exceed the default 5s Eventually timeout.
+	// informer cache syncs are slow operations, the reconciler's deferred watches can exceed the default 5s Eventually timeout.
 	SetDefaultEventuallyTimeout(30 * time.Second)
 
 	By("Start test environment")
