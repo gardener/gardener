@@ -47,6 +47,21 @@
       datasourceTemplate: 'github-releases',
     },
     {
+      // Detection for Gardener extension Helm chart references in dev-setup `extension.yaml` files.
+      // The OCI chart version matches the extension's GitHub release tag, so we track it via
+      // github-releases. The docker datasource for these files is disabled below to avoid duplicate updates.
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^dev-setup/extensions/.+/extension\\.yaml$/',
+      ],
+      matchStrings: [
+        'charts/gardener/extensions/networking-(?<provider>[^:@\\s]+):(?<currentValue>[^@\\s]+)',
+        'charts/gardener/extensions/admission-(?<provider>[^-]+)-(?:runtime|application):(?<currentValue>[^@\\s]+)',
+      ],
+      depNameTemplate: 'gardener/gardener-extension-networking-{{{provider}}}',
+      datasourceTemplate: 'github-releases',
+    },
+    {
       // Generic detection for cli argument image specifications.
       customType: 'regex',
       managerFilePatterns: [
