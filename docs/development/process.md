@@ -10,6 +10,7 @@ This document describes how to contribute features or hotfixes, and how new Gard
     - [TODO Statements](#todo-statements)
     - [Deprecations and Backwards-Compatibility](#deprecations-and-backwards-compatibility)
   - [Cherry Picks](#cherry-picks)
+    - [What Kind of PRs are Good for Cherry Picks](#what-kind-of-prs-are-good-for-cherry-picks)
     - [Prerequisites](#prerequisites)
     - [Initiate a Cherry Pick](#initiate-a-cherry-pick)
 
@@ -256,8 +257,30 @@ For example, the migration code for moving the Prometheus instances under manage
 
 This section explains how to initiate cherry picks on release branches within the `gardener/gardener` repository.
 
-- [Prerequisites](#prerequisites)
-- [Initiate a Cherry Pick](#initiate-a-cherry-pick)
+### What Kind of PRs are Good for Cherry Picks
+
+Patch releases must be easy and safe to consume, so security fixes and critical bug fixes can be delivered with minimal risk of regression.
+
+Good candidates for cherry picks are:
+- Security fixes
+  - Fixes that preserve the confidentiality, integrity, or availability of the system.
+- Regression fixes
+  - Fixes for functionality that used to work in an earlier release but broke.
+- Critical bug fixes
+  - Examples: failing reconciliation, failing lifecycle operation, resource leakage, outages, loss of data, memory corruption, panic, crash, hang and others.
+- Critical dependency updates
+  - Dependency updates that fix a security vulnerability or a critical bug in a dependency.
+  - Examples: Go patch version update, Go module dependency updates, container image version updates
+  - Routine dependency updates do **not** qualify.
+- Test-only changes to stabilize failing / flaky tests on release branches
+
+Changes that generally should **not** be cherry-picked:
+- New features or enhancements.
+- Refactorings, cleanups, or cosmetic changes.
+- Breaking changes.
+- Pull requests which don't have one of the `/kind bug` or `/kind regression` labels.
+
+The release responsible usually cuts new patch releases for critical fixes in a timely manner. Non-critical fixes (e.g., fixes for off-by-default alpha features, deflaking tests) may still be cherry-picked, but the release responsible is not obliged to cut a patch release for them promptly.
 
 ### Prerequisites
 
