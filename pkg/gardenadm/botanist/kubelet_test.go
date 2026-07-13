@@ -102,7 +102,7 @@ var _ = Describe("Kubelet", func() {
 
 				info, err := b.FS.Stat("/var/lib/gardener-node-agent/cluster-ca.crt")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(info.Mode().Perm()).To(Equal(fs.FileMode(0o644)))
+				Expect(info.Mode().Perm()).To(Equal(fs.FileMode(0o640)))
 			},
 
 			Entry("with creation of token file", true),

@@ -97,8 +97,7 @@ type APIServer struct {
 	// Server is the address of the API server.
 	Server string `json:"server"`
 	// CAFile is the path on the node to the certificate authority file for the API server.
-	// +optional
-	CAFile string `json:"caFile,omitempty"`
+	CAFile string `json:"caFile"`
 }
 
 // BootstrapConfiguration contains configuration for the bootstrap command.

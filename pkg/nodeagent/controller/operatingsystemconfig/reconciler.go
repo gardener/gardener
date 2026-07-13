@@ -933,11 +933,6 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 	}
 
 	if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet || oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
-		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS, r.ConfigDir)
-		if err != nil {
-			return fmt.Errorf("failed reading the API server config: %w", err)
-		}
-
 		if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
 			if err := r.requestNewKubeConfigForNodeAgent(ctx, log); err != nil {
 				return fmt.Errorf("failed requesting new certificate for node agent: %w", err)
@@ -951,6 +946,11 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 		}
 
 		if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet {
+			apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS, r.ConfigDir)
+			if err != nil {
+				return fmt.Errorf("failed reading the API server config: %w", err)
+			}
+
 			if err := r.rebootstrapKubelet(ctx, log, apiServerConfig, node); err != nil {
 				return fmt.Errorf("failed to rebootstrap kubelet: %w", err)
 			}
