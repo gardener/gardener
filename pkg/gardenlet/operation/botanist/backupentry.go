@@ -27,11 +27,11 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 		ShootPurpose:   b.Shoot.GetInfo().Spec.Purpose,
 		OwnerReference: ownerRef,
 		SeedName:       b.Shoot.GetInfo().Spec.SeedName,
-		BucketName:     string(b.Seed.GetInfo().UID),
+		BucketName:     string(b.Shoot.GetInfo().Status.UID),
 	}
 
-	if b.Shoot.RunsControlPlane() {
-		values.BucketName = string(b.Shoot.GetInfo().Status.UID)
+	if !b.Shoot.RunsControlPlane() {
+		values.BucketName = string(b.Seed.GetInfo().UID)
 	}
 
 	if b.Shoot.IsSelfHosted() {

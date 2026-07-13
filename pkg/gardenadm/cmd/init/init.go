@@ -102,7 +102,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployGardenNamespace = g.Add(flow.Task{
 			Name: "Deploying garden namespace",
 			Fn: func(ctx context.Context) error {
-				return gardenerutils.ReconcileGardenNamespace(ctx, b.SeedClientSet.Client(), v1beta1constants.GardenNamespace, b.Seed.GetInfo().Spec.Provider.Zones, true, nil)
+				return gardenerutils.ReconcileGardenNamespace(ctx, b.SeedClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers).Zones, true, nil)
 			},
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{

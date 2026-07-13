@@ -83,7 +83,7 @@ func getEvictionRequirement(c etcd.Class, s *shoot.Shoot) *string {
 
 // DeployEtcd deploys the etcd main and events.
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
-	if backupConfig := v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), b.Seed.GetInfo()); backupConfig != nil {
+	if backupConfig := v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), b.GetSeed()); backupConfig != nil {
 		secret := &corev1.Secret{}
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.BackupSecretName}, secret); err != nil {
 			return err

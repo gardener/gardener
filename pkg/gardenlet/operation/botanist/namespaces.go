@@ -49,9 +49,14 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 			return err
 		}
 
+		seedProviderType := b.Shoot.GetInfo().Spec.Provider.Type
+		if !b.Shoot.IsSelfHosted() {
+			seedProviderType = b.Seed.GetInfo().Spec.Provider.Type
+		}
+
 		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, v1beta1constants.ShootUID, string(b.Shoot.GetInfo().Status.UID))
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleShoot)
-		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelSeedProvider, b.Seed.GetInfo().Spec.Provider.Type)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelSeedProvider, seedProviderType)
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelShootProvider, b.Shoot.GetInfo().Spec.Provider.Type)
 		if b.Shoot.GetInfo().Spec.Networking != nil && b.Shoot.GetInfo().Spec.Networking.Type != nil {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkingProvider, *b.Shoot.GetInfo().Spec.Networking.Type)
@@ -67,9 +72,9 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelExtensionPrefix+extensionType, "true")
 		}
 
-		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Provider.Type)
-		if b.Seed.GetInfo().Spec.Backup != nil {
-			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Backup.Provider)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, seedProviderType)
+		if backup := v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), b.GetSeed()); backup != nil {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, backup.Provider)
 		}
 
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelPrivileged))
@@ -84,15 +89,22 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, string(*shootFailureToleranceType))
 		}
 
-		newFailureToleranceType := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]
+		var (
+			newFailureToleranceType = namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]
+			zones                   []string
+		)
 
-		if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
+		if b.Shoot.IsSelfHosted() {
+			zones = v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers).Zones
+		} else if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
 			(!failureToleranceTypeExisting || existingFailureToleranceType != newFailureToleranceType) {
-			zones, err := calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones, allShootZones(b.Shoot.GetInfo().Spec.Provider.Workers), v1beta1helper.SeedSettingZoneSelectionMode(b.Seed.GetInfo().Spec.Settings))
+			zones, err = calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones, allShootZones(b.Shoot.GetInfo().Spec.Provider.Workers), v1beta1helper.SeedSettingZoneSelectionMode(b.Seed.GetInfo().Spec.Settings))
 			if err != nil {
 				return err
 			}
+		}
 
+		if len(zones) > 0 {
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 		}
 
