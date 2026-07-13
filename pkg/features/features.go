@@ -131,7 +131,7 @@ const (
 	// RemoveHTTPProxyLegacyPort removes the old HTTP proxy network infrastructure on the seed side (ingress
 	// gateway port tls-tunnel, Gateway, EnvoyFilter, etc.) through the gardenlet, as described in GEP-0030.
 	// owner: @jamand @timebertt
-	// alpha: v1.146.0
+	// alpha: v1.147.0
 	RemoveHTTPProxyLegacyPort featuregate.Feature = "RemoveHTTPProxyLegacyPort"
 )
 

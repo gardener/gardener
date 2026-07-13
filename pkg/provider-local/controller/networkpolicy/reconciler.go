@@ -56,6 +56,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
+				// TODO(jamand): Drop 8132 once the RemoveHTTPProxyLegacyPort feature gate is removed.
+				// The local Extension does not register feature gates, so checking it would panic,
+				// adding the NetPol unconditionally does not break anything.
+				{Port: new(intstr.FromInt32(8132)), Protocol: new(corev1.ProtocolTCP)},
 				{Port: new(intstr.FromInt32(8443)), Protocol: new(corev1.ProtocolTCP)},
 				{Port: new(intstr.FromInt32(9443)), Protocol: new(corev1.ProtocolTCP)},
 			},

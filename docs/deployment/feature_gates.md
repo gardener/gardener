@@ -40,7 +40,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | LiveControlPlaneMigration      | `false` | `Alpha` | `1.142` |         |
 | BackupEntryForGarden           | `false` | `Alpha` | `1.142` | `1.146` |
 | BackupEntryForGarden           | `true`  | `Beta`  | `1.147` |         |
-| RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.146` |         |
+| RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.147` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
