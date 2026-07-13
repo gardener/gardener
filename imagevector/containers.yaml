@@ -389,6 +389,25 @@ images:
     sourceRepository: github.com/kubernetes-sigs/metrics-server
     repository: registry.k8s.io/metrics-server/metrics-server
     tag: v0.9.0
+    targetVersion: ">= 1.34"
+    labels:
+      - name: gardener.cloud/cve-categorisation
+        value:
+          network_exposure: private
+          authentication_enforced: false
+          user_interaction: gardener-operator
+          confidentiality_requirement: high
+          integrity_requirement: high
+          availability_requirement: low
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/monitoring-maintainers'
+  - name: metrics-server
+    sourceRepository: github.com/kubernetes-sigs/metrics-server
+    repository: registry.k8s.io/metrics-server/metrics-server
+    tag: v0.8.1
+    targetVersion: ">= 1.31 < 1.34"
     labels:
       - name: gardener.cloud/cve-categorisation
         value:
