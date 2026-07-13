@@ -7,10 +7,12 @@ package registry
 import (
 	"context"
 	"os"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Extractor is an interface for extracting files from a container image.
 type Extractor interface {
 	// CopyFromImage copies a file from a given image reference to the destination file.
-	CopyFromImage(ctx context.Context, imageRef string, filePathInImage string, destination string, permissions os.FileMode) error
+	CopyFromImage(ctx context.Context, imageRef string, pullSecret *corev1.Secret, filePathInImage string, destination string, permissions os.FileMode) error
 }

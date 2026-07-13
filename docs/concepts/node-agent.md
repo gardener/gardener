@@ -66,6 +66,8 @@ File content can be provided inline, via an image reference, or via a `secretRef
 For `secretRef` files, the controller reads the referenced `Secret` and extracts the data from the specified key.
 It writes or updates the files and units to the file system, removes no longer needed files and units, reloads the systemd daemon, and starts or stops the units accordingly.
 
+If the `controllers.operatingSystemConfig.imagePullSecretName` field in the `gardener-node-agent`'s configuration is set, the controller uses the specified secret to authenticate against container registries when pulling images. This secret must be located in the `kube-system` namespace and be of type `kubernetes.io/dockerconfigjson`.
+
 After successful reconciliation, it persists the just applied `OperatingSystemConfig` into a file on the host.
 This file will be used for future reconciliations to compute file/unit changes.
 

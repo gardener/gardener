@@ -192,6 +192,10 @@ type FileContentImageRef struct {
 	Image string `json:"image"`
 	// FilePathInImage contains the path in the image to the file that should be extracted.
 	FilePathInImage string `json:"filePathInImage"`
+	// PullSecretRef is the name of the pull secret.
+	// The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `kube-system` namespace.
+	// +optional
+	PullSecretRef *string `json:"pullSecretRef,omitempty"`
 }
 
 // OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.

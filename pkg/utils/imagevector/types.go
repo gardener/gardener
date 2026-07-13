@@ -30,11 +30,12 @@ type ImageSource struct {
 
 // Image is a concrete, pullable image with a nonempty tag.
 type Image struct {
-	Name       string
-	Ref        *string
-	Repository *string
-	Tag        *string
-	Version    *string
+	Name          string
+	Ref           *string
+	Repository    *string
+	Tag           *string
+	Version       *string
+	PullSecretRef *string
 }
 
 // ImageVector is a list of image sources.
