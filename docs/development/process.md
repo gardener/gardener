@@ -11,8 +11,10 @@ This document describes how to contribute features or hotfixes, and how new Gard
     - [Deprecations and Backwards-Compatibility](#deprecations-and-backwards-compatibility)
   - [Cherry Picks](#cherry-picks)
     - [What Kind of PRs are Good for Cherry Picks](#what-kind-of-prs-are-good-for-cherry-picks)
-    - [Prerequisites](#prerequisites)
-    - [Initiate a Cherry Pick](#initiate-a-cherry-pick)
+    - [Initiate a Cherry Pick via the `cherrypicker` Plugin](#initiate-a-cherry-pick-via-the-cherrypicker-plugin)
+    - [Initiate a Cherry Pick via the Cherry Pick Script](#initiate-a-cherry-pick-via-the-cherry-pick-script)
+      - [Prerequisites](#prerequisites)
+      - [Run the Cherry Pick Script](#run-the-cherry-pick-script)
 
 ## Releases
 
@@ -282,7 +284,25 @@ Changes that generally should **not** be cherry-picked:
 
 The release responsible usually cuts new patch releases for critical fixes in a timely manner. Non-critical fixes (e.g., fixes for off-by-default alpha features, deflaking tests) may still be cherry-picked, but the release responsible is not obliged to cut a patch release for them promptly.
 
-### Prerequisites
+### Initiate a Cherry Pick via the `cherrypicker` Plugin
+
+As a first option, initiate a cherry-pick by using Prow's `cherrypicker` plugin.
+To initiate a cherry pick, comment in the pull request as follows:
+```
+/cherry-pick release-v3.14
+```
+
+The above comment will result in opening a new PR against the `release-v3.14` branch.
+
+For more details, see the [`cherrypicker` plugin documentation](https://docs.prow.k8s.io/docs/components/external-plugins/cherrypicker/).
+
+If the plugin fails to open a cherry pick PR due to merge conflicts, use the [Initiate a Cherry Pick via the Cherry Pick Script](#initiate-a-cherry-pick-via-the-cherry-pick-script) approach.
+
+### Initiate a Cherry Pick via the Cherry Pick Script
+
+Use this approach only if opening a cherry pick PR with the `cherrypicker` plugin fails (e.g., due to merge conflicts).
+
+#### Prerequisites
 
 Before you initiate a cherry pick, make sure that the following prerequisites are accomplished.
 
@@ -294,7 +314,7 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
 - Have `hub` installed. On macOS, `hub` can be installed via homebrew using the [hub formula](https://formulae.brew.sh/formula/hub). For other OS, follow the [`hub` installation instructions](https://github.com/mislav/hub?tab=readme-ov-file#installation).
 - A GitHub token which has permissions to create a PR in an upstream branch.
 
-### Initiate a Cherry Pick
+#### Run the Cherry Pick Script
 
 - Run the [cherry pick script][cherry-pick-script].
 
