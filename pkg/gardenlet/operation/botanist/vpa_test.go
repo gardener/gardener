@@ -47,8 +47,7 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 			fakeClient := fakeclient.NewClientBuilder().Build()
 			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithVersion("1.31.1").Build()
 			botanist.Seed = &seedpkg.Seed{}
-			botanist.Seed.KubernetesVersion = semver.MustParse("v1.31.1")
-			botanist.Shoot = &shootpkg.Shoot{}
+			botanist.Shoot = &shootpkg.Shoot{RuntimeKubernetesVersion: semver.MustParse("v1.31.1")}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 

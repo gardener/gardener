@@ -52,12 +52,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 		kubernetesClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithVersion("1.35.0").Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.Seed = &seedpkg.Seed{
-			KubernetesVersion: semver.MustParse("1.35.0"),
-		}
+		botanist.Seed = &seedpkg.Seed{}
 		botanist.Shoot = &shootpkg.Shoot{
-			Networks:     &shootpkg.Networks{},
-			CloudProfile: &gardencorev1beta1.CloudProfile{},
+			Networks:                 &shootpkg.Networks{},
+			CloudProfile:             &gardencorev1beta1.CloudProfile{},
+			RuntimeKubernetesVersion: semver.MustParse("1.35.0"),
 		}
 		botanist.SeedClientSet = kubernetesClientSet
 	})

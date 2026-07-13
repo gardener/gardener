@@ -22,7 +22,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.Logger,
 		b.SeedClientSet,
 		b.Shoot.ControlPlaneNamespace,
-		b.Seed.KubernetesVersion,
+		b.Shoot.RuntimeKubernetesVersion,
 		b.Shoot.KubernetesVersion,
 		b.SecretsManager,
 		"",

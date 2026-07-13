@@ -81,7 +81,10 @@ type Shoot struct {
 
 	// ControlPlaneNamespace is the namespace in which the control plane components run.
 	ControlPlaneNamespace string
-	KubernetesVersion     *semver.Version
+	// RuntimeKubernetesVersion is the Kubernetes version of the cluster that runs the shoot control plane.
+	RuntimeKubernetesVersion *semver.Version
+	// KubernetesVersion is the Kubernetes version of the cluster that runs the shoot system components.
+	KubernetesVersion *semver.Version
 
 	// InternalClusterDomain is empty for self-hosted shoots, which only have an external domain (Shoot.spec.dns.domain).
 	InternalClusterDomain *string

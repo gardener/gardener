@@ -56,7 +56,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.GardenClient,
 		b.Shoot.ControlPlaneNamespace,
 		b.Shoot.GetInfo().ObjectMeta,
-		b.Seed.KubernetesVersion,
+		b.Shoot.RuntimeKubernetesVersion,
 		b.Shoot.KubernetesVersion,
 		b.SecretsManager,
 		"",

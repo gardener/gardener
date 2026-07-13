@@ -50,7 +50,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 			// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
 			PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
 			PriorityClassName:                   v1beta1constants.PriorityClassNameShootControlPlane400,
-			RuntimeKubernetesVersion:            b.Seed.KubernetesVersion,
+			RuntimeKubernetesVersion:            b.Shoot.RuntimeKubernetesVersion,
 			SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 			SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
 			SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),

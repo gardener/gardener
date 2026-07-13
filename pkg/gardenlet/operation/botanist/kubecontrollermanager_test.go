@@ -60,12 +60,11 @@ var _ = Describe("KubeControllerManager", func() {
 		BeforeEach(func() {
 			botanist.Logger = logr.Discard()
 			botanist.SeedClientSet = kubernetesClientSet
-			botanist.Seed = &seedpkg.Seed{
-				KubernetesVersion: semver.MustParse("1.31.0"),
-			}
+			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
-				KubernetesVersion: semver.MustParse("1.31.0"),
-				Networks:          &shootpkg.Networks{},
+				KubernetesVersion:        semver.MustParse("1.31.0"),
+				RuntimeKubernetesVersion: semver.MustParse("1.31.0"),
+				Networks:                 &shootpkg.Networks{},
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})

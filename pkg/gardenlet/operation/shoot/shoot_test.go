@@ -18,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -413,17 +414,19 @@ var _ = Describe("shoot", func() {
 			})
 
 			It("should unset the shoot DNS domain in the builder", func() {
+				seedClientSet := fakekubernetes.NewClientSetBuilder().WithVersion("1.35.0").Build()
 				shoot, err := shootBuilder.
 					WithoutShootDNS().
-					Build(ctx, c)
+					Build(ctx, seedClientSet, c)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(shoot.GetInfo().Spec.DNS).To(BeNil())
 			})
 
 			It("should not overwrite the shoot DNS domain in the builder", func() {
+				seedClientSet := fakekubernetes.NewClientSetBuilder().WithVersion("1.35.0").Build()
 				shoot, err := shootBuilder.
-					Build(ctx, c)
+					Build(ctx, seedClientSet, c)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(shoot.GetInfo().Spec.DNS).To(Equal(&gardencorev1beta1.DNS{

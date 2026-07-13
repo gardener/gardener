@@ -88,24 +88,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// control plane components
-	o.Shoot.Components.ControlPlane.Alertmanager, err = b.DefaultAlertmanager()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.BlackboxExporter, err = b.DefaultBlackboxExporterControlPlane()
-	if err != nil {
-		return nil, err
-	}
 	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
 		return nil, err
 	}
 	o.Shoot.Components.ControlPlane.EtcdEvents, err = b.DefaultEtcd(v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.EventLogger, err = b.DefaultEventLogger()
 	if err != nil {
 		return nil, err
 	}
@@ -120,18 +108,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 	o.Shoot.Components.ControlPlane.KubeControllerManager, err = b.DefaultKubeControllerManager()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.KubeStateMetrics, err = b.DefaultKubeStateMetrics()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.Plutono, err = b.DefaultPlutono()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.Prometheus, err = b.DefaultPrometheus()
 	if err != nil {
 		return nil, err
 	}
@@ -161,24 +137,51 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 			return nil, err
 		}
 	}
-	o.Shoot.Components.ControlPlane.Vali, err = b.DefaultVali()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.OtelCollector, err = b.DefaultOtelCollector()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.VictoriaLogs, err = b.DefaultVictoriaLogs()
-	if err != nil {
-		return nil, err
-	}
+
 	if o.Shoot.IsSelfHosted() {
 		o.Shoot.Components.ControlPlane.EtcdDruid, err = b.DefaultEtcdDruid()
 		if err != nil {
 			return nil, err
 		}
 		o.Shoot.Components.ControlPlane.RuntimeResourceManager, err = b.DefaultRuntimeGardenerResourceManager()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// TODO(rfranzke): Enable these components once the observability components are ready for self-hosted shoots.
+		o.Shoot.Components.ControlPlane.Alertmanager, err = b.DefaultAlertmanager()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.BlackboxExporter, err = b.DefaultBlackboxExporterControlPlane()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.EventLogger, err = b.DefaultEventLogger()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.KubeStateMetrics, err = b.DefaultKubeStateMetrics()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.Plutono, err = b.DefaultPlutono()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.Prometheus, err = b.DefaultPrometheus()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.Vali, err = b.DefaultVali()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.OtelCollector, err = b.DefaultOtelCollector()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.VictoriaLogs, err = b.DefaultVictoriaLogs()
 		if err != nil {
 			return nil, err
 		}

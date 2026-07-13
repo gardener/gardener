@@ -33,7 +33,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		Role:                        role,
 		Class:                       class,
 		CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
-		RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
+		RuntimeKubernetesVersion:    b.Shoot.RuntimeKubernetesVersion,
 		MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
 		EvictionRequirement:         getEvictionRequirement(class, b.Shoot),
 		PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,

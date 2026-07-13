@@ -113,9 +113,7 @@ var _ = Describe("KubeAPIServer", func() {
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
 				Garden:         &garden.Garden{},
-				Seed: &seedpkg.Seed{
-					KubernetesVersion: semver.MustParse(seedVersion),
-				},
+				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					ControlPlaneNamespace: controlPlaneNamespace,
 					Components: &shootpkg.Components{
@@ -130,7 +128,8 @@ var _ = Describe("KubeAPIServer", func() {
 						Pods:      podNetworks,
 						Services:  serviceNetworks,
 					},
-					KubernetesVersion: semver.MustParse("1.31.1"),
+					KubernetesVersion:        semver.MustParse("1.31.1"),
+					RuntimeKubernetesVersion: semver.MustParse(seedVersion),
 				},
 				APIServerAddress:   apiServerAddress,
 				APIServerClusterIP: apiServerClusterIP,

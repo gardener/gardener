@@ -211,7 +211,7 @@ func (b *Builder) WithServiceAccountIssuerHostname(secret *corev1.Secret) *Build
 }
 
 // Build initializes a new Shoot object.
-func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
+func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface, gardenReader client.Reader) (*Shoot, error) {
 	shoot := &Shoot{}
 
 	shootObject, err := b.shootObjectFunc(ctx)
@@ -259,7 +259,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.ServiceAccountIssuerHostname = serviceAccountIssuerHostname
 
 	// Determine information about external domain for shoot cluster.
-	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, shoot.Credentials, b.defaultDomains)
+	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, gardenReader, shootObject, shoot.Credentials, b.defaultDomains)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +271,12 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		return nil, err
 	}
 	shoot.KubernetesVersion = kubernetesVersion
+
+	runtimeKubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
+	if err != nil {
+		return nil, err
+	}
+	shoot.RuntimeKubernetesVersion = runtimeKubernetesVersion
 
 	shoot.IsWorkerless = v1beta1helper.IsWorkerless(shoot.GetInfo())
 
@@ -336,7 +342,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore &&
 		lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 		shootState := &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shootObject.Name, Namespace: shootObject.Namespace}}
-		if err := c.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
+		if err := gardenReader.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
 			return nil, err
 		}
 		shoot.SetShootState(shootState)

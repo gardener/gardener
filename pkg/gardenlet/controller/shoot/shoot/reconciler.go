@@ -458,7 +458,7 @@ func (r *Reconciler) initializeOperation(
 		opBuilder = opBuilder.WithSeed(seedObj)
 	}
 
-	shootObj, err := shootBuilder.Build(ctx, r.GardenClient)
+	shootObj, err := shootBuilder.Build(ctx, r.SeedClientSet, r.GardenClient)
 	if err != nil {
 		return nil, err
 	}
