@@ -35,6 +35,7 @@ func NewVictoriaLogs(
 		return nil, err
 	}
 
+	// TODO(rrhubenov): Use the Image struct directly when issue #15259 is fixed.
 	repository, tag, err := splitImageRef(victoriaLogsImage.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed parsing image %q from imagevector: %w", imagevector.ContainerImageNameVictoriaLogs, err)
