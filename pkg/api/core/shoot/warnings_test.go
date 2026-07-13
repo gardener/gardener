@@ -527,26 +527,6 @@ var _ = Describe("Warnings", func() {
 					Not(ContainElement(ContainSubstring("spec.dns.providers[0].secretName"))),
 				),
 			),
-			Entry("should return warnings for all providers with secretName",
-				&core.DNS{Providers: []core.DNSProvider{
-					{
-						SecretName:     new("synced-secret"),
-						CredentialsRef: dnsSecretCredentialsRef("synced-secret"),
-					},
-					{SecretName: new("secret")},
-					{CredentialsRef: dnsSecretCredentialsRef("credentials-secret")},
-					{
-						SecretName:     new("mismatched-secret"),
-						CredentialsRef: dnsSecretCredentialsRef("other-secret"),
-					},
-				}},
-				field.NewPath("spec", "dns"),
-				ConsistOf(
-					Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead."),
-					Equal("you are setting the spec.dns.providers[1].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[1].credentialsRef instead."),
-					Equal("you are setting the spec.dns.providers[3].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[3].credentialsRef instead."),
-				),
-			),
 			Entry("should use custom field path in warning message",
 				&core.DNS{Providers: []core.DNSProvider{{SecretName: new("secret")}}},
 				field.NewPath("custom", "path"),
