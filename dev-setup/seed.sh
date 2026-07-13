@@ -48,12 +48,6 @@ case "$COMMAND" in
 
     if [[ "$SCENARIO" == "multi-node-gardenadm" ]]; then
       cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenlet/components/kubeconfigs/seed-root/kubeconfig"
-      # TODO(rfranzke): In the gardenadm (self-hosted shoot) scenario, the seed gardenlet is deployed via a
-      #  ManagedSeed (that gets reconciled by the already running shoot gardenlet). The ManagedSeed controller requires
-      #  the Shoot status to indicate successful reconciliation before it attempts to deploy something. As the
-      #  shoot/shoot controller is not yet activated in the shoot gardenlet, we have to manually manipulate the status
-      #  here. This can be removed once the shoot/shoot controller in the shoot gardenlet has been enabled.
-      kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden patch shoot root --subresource=status --type=merge --patch='{"status":{"lastOperation":{"state":"Succeeded"},"observedGeneration":1}}'
     fi
 
     skaffold $skaffold_command \
