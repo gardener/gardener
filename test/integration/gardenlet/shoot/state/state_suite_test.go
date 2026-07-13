@@ -65,9 +65,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	// envtest 1.36 exhibits slower informer cache syncs and lazy ResourceQuota admission
-	// evaluator registration compared to older versions, occasionally exceeding the default 5s
-	// Eventually timeout during the first reconcile of the suite.
+	// informer caches syncs is slow operation, the reconciler's deferred watches can exceed the default 5s Eventually timeout.
 	SetDefaultEventuallyTimeout(30 * time.Second)
 
 	By("Start test environment")

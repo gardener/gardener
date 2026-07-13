@@ -67,9 +67,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	// envtest 1.36 exhibits slower informer cache syncs than older versions. The reconciler
-	// registers watches for 12 extension kinds deferred to the first Reconcile, each blocking
-	// on a fresh cache sync, occasionally exceeding the default 5s Eventually timeout.
+	// informer caches syncs is slow operation, the reconciler's deferred watches can exceed the default 5s Eventually timeout.
 	SetDefaultEventuallyTimeout(30 * time.Second)
 
 	By("Start test environment")
