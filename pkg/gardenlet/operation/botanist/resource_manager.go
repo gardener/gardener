@@ -31,11 +31,16 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		defaultUnreachableTolerationSeconds = b.Config.NodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
+	clusterIdentity := b.Shoot.GetInfo().Status.ClusterIdentity
+	if !b.Shoot.IsSelfHosted() {
+		clusterIdentity = b.Seed.GetInfo().Status.ClusterIdentity
+	}
+
 	var (
 		newFunc = shared.NewTargetGardenerResourceManager
 
 		values = resourcemanager.Values{
-			ClusterIdentity:                           b.Seed.GetInfo().Status.ClusterIdentity,
+			ClusterIdentity:                           clusterIdentity,
 			HighAvailabilityConfigWebhookEnabled:      true,
 			DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 			DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
