@@ -16,7 +16,7 @@ clamp_mss_to_pmtu
 trap "
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
   ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden )
-  ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots )
+  ( [[ -s $KUBECONFIG_VIRTUAL_GARDEN_CLUSTER ]] && { export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots; } || true )
   ( make gardenadm-down SCENARIO=managed-infra )
   ( make kind-down )
 " EXIT
