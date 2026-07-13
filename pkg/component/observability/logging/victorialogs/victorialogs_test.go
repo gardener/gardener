@@ -263,7 +263,8 @@ var _ = Describe("VictoriaLogs", func() {
 		DescribeTable("should successfully deploy all resources including the PersistentVolumeClaimAutoscaler when PVC autoscaler is enabled",
 			func(maxCapacity resource.Quantity) {
 				values = Values{
-					Image: image,
+					ImageRepository: imageRepository,
+					ImageTag:        imageTag,
 					PVCAutoscaling: PVCAutoscalingConfig{
 						Enabled:     true,
 						MaxCapacity: maxCapacity,
