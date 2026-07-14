@@ -5,6 +5,9 @@
 package shared
 
 import (
+	// crypto/sha256 is imported for its side effect of registering the sha256 digest algorithm, which
+	// distribution/reference requires to parse image references containing a sha256 digest.
+	_ "crypto/sha256"
 	"fmt"
 
 	"github.com/distribution/reference"
@@ -36,7 +39,7 @@ func NewVictoriaLogs(
 	}
 
 	// TODO(rrhubenov): Use the Image struct directly when issue #15259 is fixed.
-	repository, tag, err := splitImageRef(victoriaLogsImage.String())
+	repository, tag, err := SplitImageRef(victoriaLogsImage.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed parsing image %q from imagevector: %w", imagevector.ContainerImageNameVictoriaLogs, err)
 	}
@@ -55,10 +58,10 @@ func NewVictoriaLogs(
 	return deployer, nil
 }
 
-// splitImageRef parses a fully-qualified image reference into its repository and tag components. When the reference
+// SplitImageRef parses a fully-qualified image reference into its repository and tag components. When the reference
 // contains both a tag and a digest, they are recombined into the '<tag>@sha256:...' form; a digest-only reference is
 // returned as 'sha256:...'.
-func splitImageRef(image string) (repository string, tag string, err error) {
+func SplitImageRef(image string) (repository string, tag string, err error) {
 	ref, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
 		return "", "", err
