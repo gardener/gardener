@@ -456,6 +456,12 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
+		if err := indexer.AddPodNodeName(ctx, g.mgr.GetFieldIndexer()); err != nil {
+			return fmt.Errorf("failed adding pod node name index: %w", err)
+		}
+	}
+
 	log.Info("Adding garden cluster to manager")
 	if err := g.mgr.Add(gardenCluster); err != nil {
 		return fmt.Errorf("failed adding garden cluster to manager: %w", err)

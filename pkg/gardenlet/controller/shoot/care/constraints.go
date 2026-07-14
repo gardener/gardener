@@ -51,7 +51,7 @@ func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1bet
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
 		// Not applicable during hibernation — skip entirely.
-		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated || cond.Type == gardencorev1beta1.ShootHasPreservedFailedMachines {
+		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated || cond.Type == gardencorev1beta1.ShootPreservedFailedMachinesAbsent {
 			continue
 		}
 		// Optional constraint computed before the hibernation guard.
@@ -130,9 +130,9 @@ func (c *Constraint) constraintsChecks(
 	}
 	status, reason, message, err = c.checkPreservation(ctx)
 	if err != nil {
-		constraints.hasPreservedFailedMachines = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.hasPreservedFailedMachines, err)
+		constraints.preservedFailedMachinesAbsent = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.preservedFailedMachinesAbsent, err)
 	} else {
-		constraints.hasPreservedFailedMachines = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.hasPreservedFailedMachines, status, reason, message)
+		constraints.preservedFailedMachinesAbsent = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.preservedFailedMachinesAbsent, status, reason, message)
 	}
 
 	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
@@ -161,14 +161,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -191,7 +191,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.hasPreservedFailedMachines},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.hasIgnoredManagedResources, constraints.preservedFailedMachinesAbsent},
 	)
 }
 
@@ -530,7 +530,7 @@ type ShootConstraints struct {
 	crdsWithProblematicConversionWebhooks gardencorev1beta1.Condition
 	manualInPlaceWorkersUpdated           gardencorev1beta1.Condition
 	hasIgnoredManagedResources            gardencorev1beta1.Condition
-	hasPreservedFailedMachines            gardencorev1beta1.Condition
+	preservedFailedMachinesAbsent         gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot constraints as a slice.
@@ -542,7 +542,7 @@ func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.crdsWithProblematicConversionWebhooks,
 		g.manualInPlaceWorkersUpdated,
 		g.hasIgnoredManagedResources,
-		g.hasPreservedFailedMachines,
+		g.preservedFailedMachinesAbsent,
 	}
 }
 
@@ -555,7 +555,7 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 		g.crdsWithProblematicConversionWebhooks.Type,
 		g.manualInPlaceWorkersUpdated.Type,
 		g.hasIgnoredManagedResources.Type,
-		g.hasPreservedFailedMachines.Type,
+		g.preservedFailedMachinesAbsent.Type,
 	}
 }
 
@@ -569,6 +569,6 @@ func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoo
 		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
 		manualInPlaceWorkersUpdated:           v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
 		hasIgnoredManagedResources:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHasIgnoredManagedResources),
-		hasPreservedFailedMachines:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootHasPreservedFailedMachines),
+		preservedFailedMachinesAbsent:         v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
 	}
 }

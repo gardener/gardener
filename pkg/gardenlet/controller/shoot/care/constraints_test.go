@@ -496,7 +496,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
 							{Type: gardencorev1beta1.ShootHasIgnoredManagedResources},
-							{Type: gardencorev1beta1.ShootHasPreservedFailedMachines},
+							{Type: gardencorev1beta1.ShootPreservedFailedMachinesAbsent},
 						},
 					},
 				}
@@ -780,7 +780,7 @@ var _ = Describe("Constraints", func() {
 					})
 				})
 
-				Context("#HasPreservedFailedMachines", func() {
+				Context("#PreservedFailedMachinesAbsent", func() {
 					BeforeEach(func() {
 						shootPkg := &shootpkg.Shoot{
 							ControlPlaneNamespace: controlPlaneNamespace,
@@ -805,7 +805,7 @@ var _ = Describe("Constraints", func() {
 
 					It("should remove the constraint when no MachineDeployments exist", func() {
 						Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-							OfType(gardencorev1beta1.ShootHasPreservedFailedMachines),
+							OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
 						))
 					})
 
@@ -816,7 +816,7 @@ var _ = Describe("Constraints", func() {
 						})).To(Succeed())
 
 						Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-							OfType(gardencorev1beta1.ShootHasPreservedFailedMachines),
+							OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
 						))
 					})
 
@@ -831,7 +831,7 @@ var _ = Describe("Constraints", func() {
 						})).To(Succeed())
 
 						Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
-							OfType(gardencorev1beta1.ShootHasPreservedFailedMachines),
+							OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
 							WithStatus(gardencorev1beta1.ConditionProgressing),
 							WithReason("FailedMachinesPreserved"),
 							WithMessageSubstrings("3 preserved failed machine(s)"),
@@ -960,7 +960,7 @@ var _ = Describe("Constraints", func() {
 					OfType("CRDsWithProblematicConversionWebhooks"),
 					OfType("ManualInPlaceWorkersUpdated"),
 					OfType("HasIgnoredManagedResources"),
-					OfType("HasPreservedFailedMachines"),
+					OfType("PreservedFailedMachinesAbsent"),
 				))
 			})
 		})
@@ -976,7 +976,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
 					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
 					gardencorev1beta1.ConditionType("HasIgnoredManagedResources"),
-					gardencorev1beta1.ConditionType("HasPreservedFailedMachines"),
+					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
 				))
 			})
 		})

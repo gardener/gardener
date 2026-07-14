@@ -2159,8 +2159,8 @@ const (
 	ShootDNSServiceMigrationReady ConditionType = "DNSServiceMigrationReady"
 	// ShootUsesUnifiedHTTPProxyPort is a constant for a condition type indicating whether the new http-proxy port is consumed from istio.
 	ShootUsesUnifiedHTTPProxyPort ConditionType = "UsesUnifiedHTTPProxyPort"
-	// ShootHasPreservedFailedMachines is a constant for a condition type indicating that the Shoot cluster has preserved failed machines.
-	ShootHasPreservedFailedMachines ConditionType = "HasPreservedFailedMachines"
+	// ShootPreservedFailedMachinesAbsent is a constant for a condition type indicating that the Shoot cluster no preserved failed machines.
+	ShootPreservedFailedMachinesAbsent ConditionType = "PreservedFailedMachinesAbsent"
 	// ShootLiveMigrationSourceEtcdPreparedForPeerJoin indicates that the source etcd cluster
 	// is prepared for destination peers to join.
 	ShootLiveMigrationSourceEtcdPreparedForPeerJoin ConditionType = "SourceEtcdPreparedForPeerJoin"

@@ -29,9 +29,9 @@ A preserved machine/node has the following properties:
 
 Preservation affects the following Shoot conditions and constraints:
 
-### `HasPreservedFailedMachines`
+### `PreservedFailedMachinesAbsent`
 
-When the shoot has preserved failed machines, Gardener tracks preserved failed machines and exposes a `HasPreservedFailedMachines` constraint in the Shoot status.
+When the shoot has preserved failed machines, Gardener tracks preserved failed machines and exposes a `PreservedFailedMachinesAbsent` constraint in the Shoot status.
 
 | Constraint status | Meaning |
 |---|---|
@@ -49,7 +49,7 @@ The `EveryNodeReady` condition reflects whether all registered nodes are ready a
 
 ### `SystemComponentsHealthy`
 
-When the `HasPreservedFailedMachines` constraint is `False`, Gardener suppresses `SystemComponentsHealthy` failures that are attributable solely to DaemonSet pods running on the preserved (unhealthy) nodes. This prevents a single preserved failed node from blocking the overall health of the cluster. Specifically:
+When the `PreservedFailedMachinesAbsent` constraint is `False`, Gardener suppresses `SystemComponentsHealthy` failures that are attributable solely to DaemonSet pods running on the preserved (unhealthy) nodes. This prevents a single preserved failed node from blocking the overall health of the cluster. Specifically:
 
 - For each unhealthy ManagedResource, suppression is evaluated per resource type:
   - **DaemonSet:** failures caused entirely by pods on preserved nodes are suppressed.

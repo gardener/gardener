@@ -126,9 +126,9 @@ This constraint indicates that at least one `ManagedResource` in the Shoot's con
 It will not be added to `.status.constraints` if no such `ManagedResource` exists.
 If it's visible, operators should be aware that the annotated resources may diverge from the desired state and should remove the annotation once the manual intervention is complete.
 
-**`HasPreservedFailedMachines`**:
+**`PreservedFailedMachinesAbsent`**:
 
-This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis. It will not be added to `.status.constraints` when no failed machines are currently preserved.
+This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis. The constraint is not added to `.status.constraints` when no failed machines are currently preserved.
 See [Machine Preservation](shoot_machine_preservation.md) for more details.
 
 
