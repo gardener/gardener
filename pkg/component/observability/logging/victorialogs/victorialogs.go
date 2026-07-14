@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
@@ -89,6 +90,18 @@ func New(
 }
 
 func (v *victoriaLogs) Deploy(ctx context.Context) error {
+	// TODO(rrhubenov): Remove this check once https://github.com/VictoriaMetrics/operator/pull/2401 is merged
+	// and we update to the release that includes it. Until then, the VictoriaMetrics operator cannot handle a
+	// digest-only image reference, so we reject it here. A digest-only tag has the form "<algorithm>:<hex>"
+	// (e.g. "sha256:...", "sha512:...") whereas a tag+digest combined form contains a "@" separator.
+	if !strings.Contains(v.values.ImageTag, "@") {
+		for _, algorithmPrefix := range []string{"sha256:", "sha512:"} {
+			if strings.HasPrefix(v.values.ImageTag, algorithmPrefix) {
+				return fmt.Errorf("digest-only image reference %q is not supported yet", v.values.ImageRepository+"@"+v.values.ImageTag)
+			}
+		}
+	}
+
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	resources := []client.Object{

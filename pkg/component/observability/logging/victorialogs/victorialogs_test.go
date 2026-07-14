@@ -218,6 +218,18 @@ var _ = Describe("VictoriaLogs", func() {
 	})
 
 	Describe("#Deploy", func() {
+		// TODO(rrhubenov): Remove this test once https://github.com/VictoriaMetrics/operator/pull/2401 is merged
+		// and we update to the release that includes it, together with the digest-only check in Deploy.
+		It("should return an error when the image reference is digest-only", func() {
+			for _, digestTag := range []string{
+				"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+				"sha512:ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff",
+			} {
+				component = New(c, namespace, Values{ImageRepository: imageRepository, ImageTag: digestTag})
+				Expect(component.Deploy(ctx)).To(MatchError(ContainSubstring("digest-only image reference")))
+			}
+		})
+
 		It("should successfully deploy all resources for shoot cluster", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
