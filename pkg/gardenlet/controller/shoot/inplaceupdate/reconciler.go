@@ -7,6 +7,7 @@ package inplaceupdate
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -60,22 +62,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	poolName := nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool]
-	maxUnavailable := r.MaxUnavailableForPool(poolName, len(nodeList.Items))
+	var (
+		poolName       = nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool]
+		maxUnavailable = r.MaxUnavailableForPool(poolName, len(nodeList.Items))
+	)
 
-	for i := range nodeList.Items {
-		node := &nodeList.Items[i]
+	for _, node := range nodeList.Items {
 		switch {
 		case node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateSuccessful:
-			if err := r.cleanupAfterSuccessfulUpdate(ctx, log, node); err != nil {
+			if err := r.cleanupAfterSuccessfulUpdate(ctx, log, &node); err != nil {
 				return reconcile.Result{}, err
 			}
 		case node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed:
-			if err := r.handleUpdateFailed(ctx, log, node); err != nil {
+			if err := r.handleUpdateFailed(ctx, log, &node); err != nil {
 				return reconcile.Result{}, err
 			}
-		case r.isUpdateTimedOut(node):
-			if err := r.markUpdateTimedOut(ctx, log, node); err != nil {
+		case r.isUpdateTimedOut(&node):
+			if err := r.markUpdateTimedOut(ctx, log, &node); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -200,10 +203,8 @@ func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.
 		); err != nil {
 			return fmt.Errorf("failed listing gardener-resource-manager pods in namespace %s: %w", r.ControlPlaneNamespace, err)
 		}
-		for i := range podList.Items {
-			if err := r.SeedClient.Delete(ctx, &podList.Items[i]); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("failed deleting gardener-resource-manager pod %s: %w", podList.Items[i].Name, err)
-			}
+		if err := kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.SeedClient, podList, nil); err != nil {
+			return fmt.Errorf("failed deleting gardener-resource-manager pods in namespace %s: %w", r.ControlPlaneNamespace, err)
 		}
 		if len(podList.Items) > 0 {
 			log.Info("Deleted gardener-resource-manager pods to pick up updated configuration")
@@ -228,7 +229,6 @@ func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.
 // handleUpdateFailed handles the case where GNA has set the update-result=failed label.
 func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node) error {
 	log = log.WithValues("node", node.Name)
-	log.Info("GNA reported update failed, recording condition")
 
 	reason := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
 	if reason == "" {
@@ -241,7 +241,7 @@ func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, no
 		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
 	}
 
-	log.Info("Recorded GNA-reported update failure in condition")
+	log.Info("Recorded GNA-reported update failure in condition", "reason", reason)
 	return nil
 }
 
@@ -256,7 +256,6 @@ func (r *Reconciler) isUpdateTimedOut(node *corev1.Node) bool {
 
 func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, node *corev1.Node) error {
 	log = log.WithValues("node", node.Name)
-	log.Info("In-place update timed out, marking update as failed")
 
 	labelPatch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
@@ -276,6 +275,8 @@ func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, no
 
 // evictPods attempts to evict all evictable pods from the node. If drainTimedOut is true,
 // pods that are PDB-protected are force-deleted instead of retried.
+// The drain approach (evict, honor PDBs, retry, force-delete after a timeout) mirrors the
+// node drain logic the machine-controller-manager performs for managed shoots.
 func (r *Reconciler) evictPods(ctx context.Context, log logr.Logger, node *corev1.Node, drainTimedOut bool) error {
 	log = log.WithValues("node", node.Name)
 
@@ -366,21 +367,15 @@ func ShouldSkipPod(pod *corev1.Pod) bool {
 	}
 	// Skip pods that tolerate the unschedulable taint — they reschedule back onto the cordoned
 	// node immediately after eviction, causing an infinite drain loop.
-	if podToleratesUnschedulable(pod) {
-		return true
-	}
-	return false
+	return podToleratesUnschedulable(pod)
 }
 
 func podToleratesUnschedulable(pod *corev1.Pod) bool {
-	for _, t := range pod.Spec.Tolerations {
-		if t.Effect == corev1.TaintEffectNoSchedule &&
+	return slices.ContainsFunc(pod.Spec.Tolerations, func(t corev1.Toleration) bool {
+		return t.Effect == corev1.TaintEffectNoSchedule &&
 			(t.Key == corev1.TaintNodeUnschedulable || t.Key == "") &&
-			(t.Operator == corev1.TolerationOpExists) {
-			return true
-		}
-	}
-	return false
+			t.Operator == corev1.TolerationOpExists
+	})
 }
 
 // NodeIsUnavailableForInPlaceUpdate returns true if the node is currently unavailable for
@@ -389,19 +384,13 @@ func NodeIsUnavailableForInPlaceUpdate(node *corev1.Node) bool {
 	if node.Spec.Unschedulable && (node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || nodeHasInPlaceUpdateCondition(node)) {
 		return true
 	}
-	if node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed {
-		return true
-	}
-	return false
+	return node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed
 }
 
 func nodeHasInPlaceUpdateCondition(node *corev1.Node) bool {
-	for _, cond := range node.Status.Conditions {
-		if cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Reason != machinev1alpha1.UpdateSuccessful {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
+		return cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Reason != machinev1alpha1.UpdateSuccessful
+	})
 }
 
 // MaxUnavailableForPool returns the maximum number of nodes that can undergo in-place

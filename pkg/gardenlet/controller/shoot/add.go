@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -112,10 +111,6 @@ func AddToManager(
 		}
 
 		if selfHostedShoot != nil && !v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
-			if err := indexer.AddPodNodeName(ctx, seedCluster.GetFieldIndexer()); err != nil {
-				return fmt.Errorf("failed adding pod node name indexer for in-place update controller: %w", err)
-			}
-
 			if err := (&inplaceupdate.Reconciler{
 				SeedClient:            seedClientSet.Client(),
 				Workers:               selfHostedShoot.Spec.Provider.Workers,

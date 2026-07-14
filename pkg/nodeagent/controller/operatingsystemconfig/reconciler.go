@@ -293,7 +293,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				// If reconciliation fails and GNA restarts, it re-detects the mismatch and re-signals —
 				// making the flow self-healing. The gardenlet cannot autonomously determine this because
 				// once it deploys the OSC secret, subsequent reconciliations see no diff from its perspective.
-				if secret.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated] == "true" {
+				if gardenletOrchestratedInPlaceUpdate {
 					if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" {
 						log.Info("Requesting drain from gardenlet", "node", node.Name)
 						patch := client.MergeFrom(node.DeepCopy())
@@ -389,7 +389,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed removing deleted files: %w", err)
 	}
 
-	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion, secret.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated] == "true"); err != nil {
+	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion, gardenletOrchestratedInPlaceUpdate); err != nil {
 		// If the error is retriable, we requeue with a delay.
 		if retriableErrorPatternRegex.MatchString(err.Error()) {
 			log.Error(err, "Update failed with retriable error, Requeuing with a delay")
@@ -1131,19 +1131,15 @@ func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, n
 		return fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
 	}
 
-	if !skipGRM {
-		return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, nil)
-	}
-
 	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtime.Object) bool {
+		if !skipGRM {
+			return true
+		}
 		pod, ok := obj.(*corev1.Pod)
 		if !ok {
 			return true
 		}
-		if pod.Labels[v1beta1constants.LabelApp] == v1beta1constants.DeploymentNameGardenerResourceManager {
-			return false
-		}
-		return true
+		return pod.Labels[v1beta1constants.LabelApp] != v1beta1constants.DeploymentNameGardenerResourceManager
 	})
 }
 

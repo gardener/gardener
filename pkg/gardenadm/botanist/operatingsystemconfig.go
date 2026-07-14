@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -60,8 +61,12 @@ func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx co
 
 	if poolName != "" {
 		if shoot := b.Shoot.GetInfo(); shoot != nil && !v1beta1helper.HasManagedInfrastructure(shoot) {
-			metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
-				v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
+			if i := slices.IndexFunc(shoot.Spec.Provider.Workers, func(w gardencorev1beta1.Worker) bool {
+				return w.Name == poolName
+			}); i >= 0 && v1beta1helper.IsUpdateStrategyInPlace(shoot.Spec.Provider.Workers[i].UpdateStrategy) {
+				metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
+					v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
+			}
 		}
 	}
 

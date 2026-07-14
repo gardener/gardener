@@ -440,17 +440,21 @@ var _ = Describe("operatingsystemconfig", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(oldSecret2), oldSecret2)).To(BeNotFoundError())
 				})
 
-				It("should set the gardenlet-orchestrated annotation on OSC secrets for unmanaged-infrastructure shoots", func() {
+				It("should set the gardenlet-orchestrated annotation on OSC secrets of in-place worker pools for unmanaged-infrastructure shoots", func() {
 					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
 							Provider: gardencorev1beta1.Provider{
 								Workers: []gardencorev1beta1.Worker{
-									{Name: worker1Name},
+									{
+										Name:           worker1Name,
+										UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+									},
 									{
 										Name:                  worker2Name,
 										KubeletDataVolumeName: &worker2KubeletDataVolumeName,
 										DataVolumes:           []gardencorev1beta1.DataVolume{{Name: worker2KubeletDataVolumeName}},
 										Kubernetes:            &gardencorev1beta1.WorkerKubernetes{Version: &worker2KubernetesVersion},
+										UpdateStrategy:        new(gardencorev1beta1.ManualInPlaceUpdate),
 									},
 								},
 							},
@@ -485,6 +489,55 @@ var _ = Describe("operatingsystemconfig", func() {
 						Expect(oscSecret.Annotations).To(HaveKeyWithValue(
 							v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true"),
 							"pool %s: gardenlet-orchestrated annotation missing or wrong", workerName)
+					}
+				})
+
+				It("should not set the gardenlet-orchestrated annotation on OSC secrets of non-in-place worker pools", func() {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Provider: gardencorev1beta1.Provider{
+								Workers: []gardencorev1beta1.Worker{
+									{Name: worker1Name},
+									{
+										Name:                  worker2Name,
+										KubeletDataVolumeName: &worker2KubeletDataVolumeName,
+										DataVolumes:           []gardencorev1beta1.DataVolume{{Name: worker2KubeletDataVolumeName}},
+										Kubernetes:            &gardencorev1beta1.WorkerKubernetes{Version: &worker2KubernetesVersion},
+										UpdateStrategy:        new(gardencorev1beta1.AutoRollingUpdate),
+									},
+								},
+							},
+						},
+					})
+
+					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(Succeed())
+
+					versions := schema.GroupVersions([]schema.GroupVersion{corev1.SchemeGroupVersion})
+					codec := kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+
+					for _, workerName := range []string{worker1Name, worker2Name} {
+						secretList := &corev1.SecretList{}
+						Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"managed-resource": "shoot-gardener-node-agent"})).To(Succeed())
+
+						var mrSecret *corev1.Secret
+						for i := range secretList.Items {
+							if strings.Contains(secretList.Items[i].Name, workerName) {
+								mrSecret = &secretList.Items[i]
+								break
+							}
+						}
+						Expect(mrSecret).NotTo(BeNil(), "MR secret for pool %s not found", workerName)
+
+						compressed := mrSecret.Data["data.yaml.br"]
+						Expect(compressed).NotTo(BeEmpty())
+						decompressed, err := test.BrotliDecompression(compressed)
+						Expect(err).NotTo(HaveOccurred())
+
+						oscSecret := &corev1.Secret{}
+						Expect(runtime.DecodeInto(codec, decompressed, oscSecret)).To(Succeed())
+						Expect(oscSecret.Annotations).NotTo(HaveKey(
+							v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated),
+							"pool %s: gardenlet-orchestrated annotation should not be set", workerName)
 					}
 				})
 			})
