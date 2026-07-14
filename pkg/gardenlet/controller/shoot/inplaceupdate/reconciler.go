@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/extensions"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -43,7 +44,6 @@ const (
 type Reconciler struct {
 	SeedClient            client.Client
 	Clock                 clock.Clock
-	Workers               []gardencorev1beta1.Worker
 	ControlPlaneNamespace string
 }
 
@@ -62,9 +62,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
+	workers, err := r.workersFromCluster(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	var (
 		poolName       = nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool]
-		maxUnavailable = r.MaxUnavailableForPool(poolName, len(nodeList.Items))
+		maxUnavailable = MaxUnavailableForPool(workers, poolName, len(nodeList.Items))
 	)
 
 	for _, node := range nodeList.Items {
@@ -393,10 +398,21 @@ func nodeHasInPlaceUpdateCondition(node *corev1.Node) bool {
 	})
 }
 
+func (r *Reconciler) workersFromCluster(ctx context.Context) ([]gardencorev1beta1.Worker, error) {
+	cluster, err := extensions.GetCluster(ctx, r.SeedClient, r.ControlPlaneNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting Cluster resource for namespace %s: %w", r.ControlPlaneNamespace, err)
+	}
+	if cluster.Shoot == nil {
+		return nil, nil
+	}
+	return cluster.Shoot.Spec.Provider.Workers, nil
+}
+
 // MaxUnavailableForPool returns the maximum number of nodes that can undergo in-place
 // updates simultaneously for the given pool. Control plane pools are always limited to 1.
-func (r *Reconciler) MaxUnavailableForPool(poolName string, currentNodeCount int) int {
-	for _, w := range r.Workers {
+func MaxUnavailableForPool(workers []gardencorev1beta1.Worker, poolName string, currentNodeCount int) int {
+	for _, w := range workers {
 		if w.Name != poolName {
 			continue
 		}

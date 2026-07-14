@@ -6,6 +6,7 @@ package inplaceupdate_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -30,6 +32,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/inplaceupdate"
 	"github.com/gardener/gardener/pkg/logger"
@@ -75,7 +78,14 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{}
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
+			},
+		},
+		ErrorIfCRDPathMissing: true,
+	}
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -134,7 +144,7 @@ var _ = BeforeSuite(func() {
 
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
-	By("Register controller")
+	By("Create Cluster resource with worker pool configuration")
 	workers := []gardencorev1beta1.Worker{
 		{
 			Name:           poolDefault,
@@ -154,10 +164,42 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
+	codec := kubernetes.GardenCodec.LegacyCodec(gardencorev1beta1.SchemeGroupVersion)
+	shootRaw, err := runtime.Encode(codec, &gardencorev1beta1.Shoot{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
+		Spec: gardencorev1beta1.ShootSpec{
+			Provider: gardencorev1beta1.Provider{Workers: workers},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	cloudProfileRaw, err := runtime.Encode(codec, &gardencorev1beta1.CloudProfile{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "CloudProfile"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	seedRaw, err := runtime.Encode(codec, &gardencorev1beta1.Seed{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Seed"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	cluster := &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: testNamespace.Name},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			CloudProfile: runtime.RawExtension{Raw: cloudProfileRaw},
+			Seed:         &runtime.RawExtension{Raw: seedRaw},
+			Shoot:        runtime.RawExtension{Raw: shootRaw},
+		},
+	}
+	Expect(testClient.Create(ctx, cluster)).To(Succeed())
+	DeferCleanup(func() {
+		By("Delete Cluster resource")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
+	})
+
 	Expect((&inplaceupdate.Reconciler{
 		SeedClient:            mgr.GetClient(),
 		Clock:                 fakeClock,
-		Workers:               workers,
 		ControlPlaneNamespace: testNamespace.Name,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 

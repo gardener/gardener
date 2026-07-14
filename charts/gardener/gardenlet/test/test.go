@@ -140,6 +140,11 @@ func getGardenletClusterRole(labels map[string]string, selfHostedShoot bool) *rb
 				Resources: []string{"pods/eviction"},
 				Verbs:     []string{"create"},
 			},
+			{
+				APIGroups: []string{"extensions.gardener.cloud"},
+				Resources: []string{"clusters"},
+				Verbs:     []string{"get"},
+			},
 		}...)
 	}
 

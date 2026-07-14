@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/inplaceupdate"
 )
@@ -59,14 +61,11 @@ var _ = Describe("Reconciler", func() {
 			WithStatusSubresource(&corev1.Node{}).
 			Build()
 
+		createClusterWithWorkerPool(ctx, c)
+
 		reconciler = &Reconciler{
-			SeedClient: c,
-			Clock:      fakeClock,
-			Workers: []gardencorev1beta1.Worker{{
-				Name:           poolName,
-				Maximum:        5,
-				MaxUnavailable: new(intstr.FromInt(1)),
-			}},
+			SeedClient:            c,
+			Clock:                 fakeClock,
 			ControlPlaneNamespace: cpNamespace,
 		}
 
@@ -192,41 +191,41 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("#MaxUnavailableForPool", func() {
 		It("should return 1 when the pool is not found", func() {
-			Expect(reconciler.MaxUnavailableForPool("unknown", 5)).To(Equal(1))
+			Expect(MaxUnavailableForPool(nil, "unknown", 5)).To(Equal(1))
 		})
 
 		It("should return 1 when MaxUnavailable is nil", func() {
-			reconciler.Workers = []gardencorev1beta1.Worker{{Name: poolName, Maximum: 5}}
-			Expect(reconciler.MaxUnavailableForPool(poolName, 5)).To(Equal(1))
+			workers := []gardencorev1beta1.Worker{{Name: poolName, Maximum: 5}}
+			Expect(MaxUnavailableForPool(workers, poolName, 5)).To(Equal(1))
 		})
 
 		It("should return the absolute MaxUnavailable", func() {
-			reconciler.Workers = []gardencorev1beta1.Worker{{
+			workers := []gardencorev1beta1.Worker{{
 				Name:           poolName,
 				Maximum:        5,
 				MaxUnavailable: new(intstr.FromInt(2)),
 			}}
-			Expect(reconciler.MaxUnavailableForPool(poolName, 5)).To(Equal(2))
+			Expect(MaxUnavailableForPool(workers, poolName, 5)).To(Equal(2))
 		})
 
 		It("should always return 1 for control-plane pools", func() {
-			reconciler.Workers = []gardencorev1beta1.Worker{{
+			workers := []gardencorev1beta1.Worker{{
 				Name:           poolName,
 				Maximum:        5,
 				MaxUnavailable: new(intstr.FromInt(3)),
 				ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
 			}}
-			Expect(reconciler.MaxUnavailableForPool(poolName, 5)).To(Equal(1))
+			Expect(MaxUnavailableForPool(workers, poolName, 5)).To(Equal(1))
 		})
 
 		It("should scale percentage against current node count", func() {
-			reconciler.Workers = []gardencorev1beta1.Worker{{
+			workers := []gardencorev1beta1.Worker{{
 				Name:           poolName,
 				Maximum:        10,
 				MaxUnavailable: new(intstr.FromString("50%")),
 			}}
-			Expect(reconciler.MaxUnavailableForPool(poolName, 2)).To(Equal(1))
-			Expect(reconciler.MaxUnavailableForPool(poolName, 4)).To(Equal(2))
+			Expect(MaxUnavailableForPool(workers, poolName, 2)).To(Equal(1))
+			Expect(MaxUnavailableForPool(workers, poolName, 4)).To(Equal(2))
 		})
 	})
 
@@ -441,6 +440,7 @@ var _ = Describe("Reconciler", func() {
 				Build()
 
 			reconciler.SeedClient = interceptingClient
+			createClusterWithWorkerPool(ctx, interceptingClient)
 
 			node := makeNode("node-1", withNeedsDrain())
 			Expect(interceptingClient.Create(ctx, node)).To(Succeed())
@@ -457,6 +457,29 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 })
+
+func createClusterWithWorkerPool(ctx context.Context, cl client.Client) {
+	GinkgoHelper()
+	shootRaw, err := runtime.Encode(kubernetes.GardenCodec.LegacyCodec(gardencorev1beta1.SchemeGroupVersion), &gardencorev1beta1.Shoot{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
+		Spec: gardencorev1beta1.ShootSpec{
+			Provider: gardencorev1beta1.Provider{
+				Workers: []gardencorev1beta1.Worker{{
+					Name:           poolName,
+					Maximum:        5,
+					MaxUnavailable: new(intstr.FromInt(1)),
+				}},
+			},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(cl.Create(ctx, &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: cpNamespace},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			Shoot: runtime.RawExtension{Raw: shootRaw},
+		},
+	})).To(Succeed())
+}
 
 func makeNode(name string, opts ...func(*corev1.Node)) *corev1.Node {
 	node := &corev1.Node{

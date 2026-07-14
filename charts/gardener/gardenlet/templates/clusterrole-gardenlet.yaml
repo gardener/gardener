@@ -34,6 +34,12 @@ rules:
   - pods/eviction
   verbs:
   - create
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - clusters
+  verbs:
+  - get
 {{- end }}
 - apiGroups:
   - operator.gardener.cloud
