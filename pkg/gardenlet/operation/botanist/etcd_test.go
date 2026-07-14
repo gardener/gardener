@@ -195,6 +195,37 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
+		Context("self-hosted shoot", func() {
+			BeforeEach(func() {
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							Version: "1.27.2",
+						},
+						Maintenance: &gardencorev1beta1.Maintenance{
+							TimeWindow: &maintenanceTimeWindow,
+						},
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{
+								{Name: "cp-pool", ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
+							},
+						},
+					},
+				})
+				validator.expectedMemberNamePrefix = Equal("")
+			})
+
+			It("should not set MemberNamePrefix for self-hosted shoots", func() {
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		It("should return an error because the maintenance time window cannot be parsed", func() {
 			botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "foobar",
