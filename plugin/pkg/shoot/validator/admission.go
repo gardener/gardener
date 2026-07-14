@@ -363,7 +363,7 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 	allErrs = append(allErrs, validationContext.validateAdmissionPlugins(a, v.secretLister)...)
 	allErrs = append(allErrs, validationContext.validateLimits(a)...)
-	allErrs = append(allErrs, validationContext.validateLiveMigrationPrerequisites(v.seedLister, v.configMapLister)...)
+	allErrs = append(allErrs, validationContext.validateLiveMigrationPrerequisites(a.GetOperation(), v.seedLister, v.configMapLister)...)
 
 	// Skip the validation if the operation is admission.Delete or the spec hasn't changed.
 	if a.GetOperation() != admission.Delete && !reflect.DeepEqual(validationContext.shoot.Spec, validationContext.oldShoot.Spec) {
@@ -1888,6 +1888,7 @@ const defaultInterRegionDistanceThreshold = 180
 //   - the source and destination seeds report the same gardenlet version
 //   - the inter-region distance between the source and destination seeds does not exceed the configured threshold
 func (c *validationContext) validateLiveMigrationPrerequisites(
+	operation admission.Operation,
 	seedLister gardencorev1beta1listers.SeedLister,
 	configMapLister kubecorev1listers.ConfigMapLister,
 ) field.ErrorList {
@@ -1905,6 +1906,12 @@ func (c *validationContext) validateLiveMigrationPrerequisites(
 		return field.ErrorList{field.Forbidden(
 			annotationPath,
 			fmt.Sprintf("the %q feature gate is disabled in gardener-apiserver", features.LiveControlPlaneMigration))}
+	}
+
+	// A live control plane migration can only be triggered on an existing shoot by changing spec.seedName, never on
+	// creation.
+	if operation == admission.Create {
+		return field.ErrorList{field.Forbidden(annotationPath, "annotation must not be set on shoot creation")}
 	}
 
 	// Without a spec.seedName change the annotation expresses intent only; there is nothing more to validate.

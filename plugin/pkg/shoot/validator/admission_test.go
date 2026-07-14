@@ -6467,12 +6467,11 @@ var _ = Describe("validator", func() {
 				Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
 			})
 
-			It("should be a no-op on Create", func() {
+			It("should reject the live-migration annotation on shoot creation", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				// The Create path fails for other reasons (unresolved cloud profile), but MUST NOT reference live migration.
-				if err := admissionHandler.Validate(ctx, attrs, nil); err != nil {
-					Expect(err.Error()).NotTo(ContainSubstring("live control plane migration"))
-				}
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("annotation must not be set on shoot creation")))
 			})
 
 			It("should be a no-op on Update without the binding subresource (validateScheduling rejects the seedName change first)", func() {

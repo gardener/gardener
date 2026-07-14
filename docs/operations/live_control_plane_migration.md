@@ -46,5 +46,3 @@ Both of the following are required on the `Shoot` to trigger a live control plan
 
     kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME} | jq -c '.spec.seedName = "'${DEST_SEED_NAME}'"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
     ```
-
-The annotation and the `.spec.seedName` change may be applied in the same request or in separate ones, as long as both are in effect when the binding subresource is called.
