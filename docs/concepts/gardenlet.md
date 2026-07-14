@@ -398,6 +398,12 @@ The following table explains which `ManagedResource`s are considered for which c
 |-------------------------------|----------------------------------------|
 | `SeedSystemComponentsHealthy` | `.spec.class` is set                   |
 
+`ManagedResource`s and `Prometheus`es can be temporarily excluded from condition aggregation by annotating them with `care.gardener.cloud/skip-health-checks-until=<RFC3339 timestamp>`.
+While the timestamp lies in the future, the care reconciler skips health checks for that resource and reports no failure for the respective condition, regardless of its actual status.
+An absent, malformed, or already-elapsed value is treated as if the annotation were not set.
+
+The reconciler automatically removes this annotation from any resource whose timestamp has expired.
+
 #### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 
 This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
@@ -486,6 +492,14 @@ The following table explains which `ManagedResource`s are considered for which c
 | `ControlPlaneHealthy`            | `.spec.class=seed` and `care.gardener.cloud/condition-type` label either unset, or set to `ControlPlaneHealthy` |
 | `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                              |
 | `SystemComponentsHealthy`        | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `SystemComponentsHealthy`              |
+
+##### Skipping Individual Resources
+
+`Deployment`s, `Etcd`s, `ManagedResource`s, and `Prometheus`es can be temporarily excluded from condition aggregation by annotating them with `care.gardener.cloud/skip-health-checks-until=<RFC3339 timestamp>`.
+While the timestamp lies in the future, the care reconciler skips health checks for that resource and reports no failure for the respective condition, regardless of its actual status.
+An absent, malformed, or already-elapsed value is treated as if the annotation were not set.
+
+The reconciler automatically removes this annotation from any resource whose timestamp has expired.
 
 ##### Constraints And Automatic Webhook Remediation
 

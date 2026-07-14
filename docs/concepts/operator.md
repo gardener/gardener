@@ -550,6 +550,12 @@ The following table explains which `ManagedResource`s are considered for which c
 | `VirtualComponentsHealthy`       | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `VirtualComponentsHealthy`                  |
 | `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                                   |
 
+`Deployment`s, `Etcd`s, `ManagedResource`s, and `Prometheus`es can be temporarily excluded from condition aggregation by annotating them with `care.gardener.cloud/skip-health-checks-until=<RFC3339 timestamp>`.
+While the timestamp lies in the future, the care reconciler skips health checks for that resource and reports no failure for the respective condition, regardless of its actual status.
+An absent, malformed, or already-elapsed value is treated as if the annotation were not set.
+
+The reconciler automatically removes this annotation from any resource whose timestamp has expired.
+
 #### [`Reference` Reconciler](../../pkg/operator/controller/garden/reference)
 
 `Garden` objects may specify references to other objects in the Garden cluster which are required for certain features.
