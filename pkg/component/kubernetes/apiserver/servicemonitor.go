@@ -86,6 +86,8 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					"apiserver_latency",
 					"apiserver_latency_seconds",
 					"apiserver_longrunning_requests",
+					"apiserver_mutating_admission_policy_check_total",
+					"apiserver_mutating_admission_policy_check_duration_seconds_.+",
 					"apiserver_request_duration_seconds_.+",
 					"apiserver_request_duration_seconds_bucket",
 					"apiserver_request_duration_seconds_count",
