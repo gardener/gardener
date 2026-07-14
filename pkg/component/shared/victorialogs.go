@@ -5,8 +5,6 @@
 package shared
 
 import (
-	// crypto/sha256 is imported for its side effect of registering the sha256 digest algorithm, which
-	// distribution/reference requires to parse image references containing a sha256 digest.
 	_ "crypto/sha256"
 	"fmt"
 
