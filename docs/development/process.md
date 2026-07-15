@@ -277,10 +277,10 @@ Good candidates for cherry picks are:
 - Test-only changes to stabilize failing / flaky tests on release branches
 
 Changes that generally should **not** be cherry-picked:
-- New features or enhancements.
-- Refactorings, cleanups, or cosmetic changes.
-- Breaking changes.
-- Pull requests which don't have one of the `/kind bug` or `/kind regression` labels.
+- New features or enhancements
+- Refactorings, cleanups, or cosmetic changes
+- Breaking changes
+- Pull requests which don't have one of the `/kind bug` or `/kind regression` labels
 
 The release responsible usually cuts new patch releases for critical fixes in a timely manner. Non-critical fixes (e.g., fixes for off-by-default alpha features, deflaking tests) may still be cherry-picked, but the release responsible is not obliged to cut a patch release for them promptly.
 
