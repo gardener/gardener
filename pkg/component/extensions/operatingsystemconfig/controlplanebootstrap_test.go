@@ -110,6 +110,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 			Expect(actual.Spec.Units).To(ConsistOf(
 				HaveField("Name", "gardener-user.service"),
 				HaveField("Name", "gardener-user.path"),
+				HaveField("Name", "sshd-ensurer.service"),
 			))
 			Expect(actual.Spec.Files).To(ConsistOf(
 				HaveField("Path", "/var/lib/gardener-user/run.sh"),
@@ -117,6 +118,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 					HaveField("Path", "/var/lib/gardener-user-authorized-keys"),
 					HaveField("Content.Inline.Data", utils.EncodeBase64([]byte(sshPublicKey))),
 				),
+				HaveField("Path", "/var/lib/sshd-ensurer/run.sh"),
 				And(
 					HaveField("Path", nodeinit.GardenadmPathDownloadScript),
 					HaveField("Permissions", new(uint32(0755))),

@@ -15,6 +15,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -42,9 +43,22 @@ var (
 // We must not exceed the 16 KB, so be careful when extending/changing anything in here.
 // ### !CAUTION! ###
 func GardenadmConfig(sshPublicKey string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	units, files, err := gardeneruser.New().Config(components.Context{SSHPublicKeys: []string{sshPublicKey}})
-	if err != nil {
-		return nil, nil, fmt.Errorf("error generating gardener user component contents: %w", err)
+	var (
+		units []extensionsv1alpha1.Unit
+		files []extensionsv1alpha1.File
+	)
+
+	for _, component := range []components.Component{
+		gardeneruser.New(),
+		sshdensurer.New(),
+	} {
+		u, f, err := component.Config(components.Context{SSHPublicKeys: []string{sshPublicKey}, SSHAccessEnabled: true})
+		if err != nil {
+			return nil, nil, fmt.Errorf("error generating gardener user component contents: %w", err)
+		}
+
+		units = append(units, u...)
+		files = append(files, f...)
 	}
 
 	downloadScript, err := generateGardenadmDownloadScript()
