@@ -26,7 +26,7 @@ import (
 
 const (
 	managedResourceNameReferencedResources = "referenced-resources"
-	managedResourceNameImagePullSecret     = "image-pull-secret"
+	managedResourceNameImagePullSecret     = "image-pull-secret" // #nosec G101 -- No credential.
 )
 
 // DestroyImagePullSecret deletes the ManagedResource that propagates image pull secrets to the shoot cluster.

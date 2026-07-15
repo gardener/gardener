@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const managedResourceNameImagePullSecret = "image-pull-secret"
+const managedResourceNameImagePullSecret = "image-pull-secret" // #nosec G101 -- No credential.
 
 // Reconciler watches image pull secrets in the seed's scoped namespace (seed-<name>) on the
 // garden cluster and propagates them to all extension and shoot control plane namespaces in the
