@@ -262,6 +262,7 @@ build:
             - cmd/gardener-resource-manager/app
             - cmd/utils
             - cmd/utils/initrun
+            - imagevector
             - pkg/api
             - pkg/api/config/resourcemanager/v1alpha1/validation
             - pkg/api/core/helper
@@ -352,6 +353,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
@@ -389,6 +391,7 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
+            - imagevector
             - pkg/api
             - pkg/api/authentication/validation
             - pkg/api/config/gardenlet/v1alpha1/validation
@@ -528,6 +531,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/unstructured
@@ -595,6 +599,7 @@ build:
             - cmd/gardener-controller-manager/app
             - cmd/utils
             - cmd/utils/initrun
+            - imagevector
             - pkg/api
             - pkg/api/config/controllermanager/v1alpha1/validation
             - pkg/api/core/helper
@@ -671,6 +676,7 @@ build:
             - pkg/controllermanager/controller/seed
             - pkg/controllermanager/controller/seed/backupbucketscheck
             - pkg/controllermanager/controller/seed/extensionscheck
+            - pkg/controllermanager/controller/seed/imagepullsecret
             - pkg/controllermanager/controller/seed/reference
             - pkg/controllermanager/controller/seed/secrets
             - pkg/controllermanager/controller/seed/utils
@@ -733,6 +739,7 @@ build:
             - cmd/gardener-scheduler/app
             - cmd/utils
             - cmd/utils/initrun
+            - imagevector
             - pkg/api
             - pkg/api/config/scheduler/v1alpha1/validation
             - pkg/api/core/helper
@@ -789,6 +796,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/unstructured
@@ -813,6 +821,7 @@ build:
             - cmd/gardener-admission-controller/app
             - cmd/utils
             - cmd/utils/initrun
+            - imagevector
             - pkg/admissioncontroller/gardenletidentity
             - pkg/admissioncontroller/gardenletidentity/seed
             - pkg/admissioncontroller/gardenletidentity/shoot
@@ -889,6 +898,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/gardener/gardenlet
             - pkg/utils/graph
+            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/health
@@ -1176,6 +1186,7 @@ build:
             - extensions/pkg/webhook/certificates
             - extensions/pkg/webhook/cmd
             - extensions/pkg/webhook/shoot
+            - imagevector
             - pkg/api
             - pkg/api/core/helper
             - pkg/api/core/v1beta1/helper
@@ -1308,6 +1319,7 @@ build:
         dependencies:
           paths:
             - cmd/machine-controller-manager-provider-local
+            - imagevector
             - pkg/api
             - pkg/api/core/v1beta1/helper
             - pkg/api/indexer
@@ -1352,6 +1364,7 @@ build:
             - pkg/utils/context
             - pkg/utils/errors
             - pkg/utils/flow
+            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
             - pkg/utils/retry
