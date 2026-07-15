@@ -309,6 +309,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		}
 
+		kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 		return nil
 	}); err != nil {
 		return err

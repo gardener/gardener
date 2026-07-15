@@ -440,6 +440,8 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 			clientObjects = append(clientObjects, vpa)
 		}
 	}
+
+	kubernetesutils.InjectImagePullSecret(&daemonSet.Spec.Template.Spec)
 	return clientObjects
 }
 

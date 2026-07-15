@@ -200,6 +200,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		b.injectImageVectorOverwrite(deployment, imageVectorOverwriteConfigMap.Name)
 	}
 
+	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 	utilruntime.Must(references.InjectAnnotations(deployment))
 	resourcesToAdd = append(resourcesToAdd, deployment)
 
