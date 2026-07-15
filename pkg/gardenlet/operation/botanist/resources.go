@@ -24,7 +24,16 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const managedResourceNameReferencedResources = "referenced-resources"
+const (
+	managedResourceNameReferencedResources = "referenced-resources"
+	managedResourceNameImagePullSecret     = "image-pull-secret"
+)
+
+// DestroyImagePullSecret deletes the ManagedResource that propagates image pull secrets to the shoot cluster.
+// Secrets in the shoot control plane namespace are managed by the seed-image-pull-secret controller.
+func (b *Botanist) DestroyImagePullSecret(ctx context.Context) error {
+	return client.IgnoreNotFound(managedresources.DeleteForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, managedResourceNameImagePullSecret))
+}
 
 // DeployReferencedResources reads all referenced resources from the Garden cluster and writes a managed resource to the Seed cluster.
 func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
