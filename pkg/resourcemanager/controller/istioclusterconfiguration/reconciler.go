@@ -271,13 +271,19 @@ func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPP
 		},
 	}
 
+	commonHTTPProtocolOptions := &structpb.Struct{
+		Fields: map[string]*structpb.Value{
+			"max_connection_duration": structpb.NewStringValue(fmt.Sprintf("%ds", istioutils.MaxConnectionDuration)),
+		},
+	}
+
 	var protocolOptions *structpb.Struct
 	switch httpProtocolPolicy {
 	case istioutils.HTTPProtocolPolicyExplicitHTTP2:
 		protocolOptions = &structpb.Struct{
 			Fields: map[string]*structpb.Value{
 				"@type":                        structpb.NewStringValue(httpProtocolOptionsType),
-				"common_http_protocol_options": structpb.NewStructValue(&structpb.Struct{}),
+				"common_http_protocol_options": structpb.NewStructValue(commonHTTPProtocolOptions),
 				"explicit_http_config": structpb.NewStructValue(&structpb.Struct{
 					Fields: map[string]*structpb.Value{
 						"http2_protocol_options": structpb.NewStructValue(http2Options),
@@ -289,7 +295,7 @@ func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPP
 		protocolOptions = &structpb.Struct{
 			Fields: map[string]*structpb.Value{
 				"@type":                        structpb.NewStringValue(httpProtocolOptionsType),
-				"common_http_protocol_options": structpb.NewStructValue(&structpb.Struct{}),
+				"common_http_protocol_options": structpb.NewStructValue(commonHTTPProtocolOptions),
 				"use_downstream_protocol_config": structpb.NewStructValue(&structpb.Struct{
 					Fields: map[string]*structpb.Value{
 						"http2_protocol_options": structpb.NewStructValue(http2Options),

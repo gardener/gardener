@@ -153,6 +153,10 @@ var _ = Describe("Reconciler", func() {
 			h2opts := explicitConfig.Fields["http2_protocol_options"].GetStructValue()
 			Expect(h2opts.Fields["initial_stream_window_size"].GetNumberValue()).To(Equal(float64(65536)))
 			Expect(h2opts.Fields["initial_connection_window_size"].GetNumberValue()).To(Equal(float64(1048576)))
+
+			commonOpts := httpOpts.Fields["common_http_protocol_options"].GetStructValue()
+			Expect(commonOpts).NotTo(BeNil())
+			Expect(commonOpts.Fields["max_connection_duration"].GetStringValue()).To(Equal("86400s"))
 		})
 
 		It("should create an EnvoyFilter with explicit HTTP/2 when port name is http2", func() {
@@ -233,6 +237,10 @@ var _ = Describe("Reconciler", func() {
 			h2opts := downstreamConfig.Fields["http2_protocol_options"].GetStructValue()
 			Expect(h2opts.Fields["initial_stream_window_size"].GetNumberValue()).To(Equal(float64(65536)))
 			Expect(h2opts.Fields["initial_connection_window_size"].GetNumberValue()).To(Equal(float64(1048576)))
+
+			commonOpts := httpOpts.Fields["common_http_protocol_options"].GetStructValue()
+			Expect(commonOpts).NotTo(BeNil())
+			Expect(commonOpts.Fields["max_connection_duration"].GetStringValue()).To(Equal("86400s"))
 		})
 
 		It("should prefer useClientProtocol over h2UpgradePolicy", func() {
