@@ -5,12 +5,21 @@
 package health
 
 import (
+	"context"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
 )
 
+// daemonSetMaxUnavailable returns the maximum number of unavailable pods allowed for a DaemonSet.
 func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int {
 	if daemonSet.Status.DesiredNumberScheduled == 0 || daemonSet.Spec.UpdateStrategy.Type != appsv1.RollingUpdateDaemonSetStrategyType {
 		return 0
@@ -73,4 +82,56 @@ func IsDaemonSetProgressing(daemonSet *appsv1.DaemonSet) (bool, string) {
 	}
 
 	return false, "DaemonSet is fully rolled out"
+}
+
+// CheckDaemonSetWithPreservedNodes re-evaluates a failing DaemonSet health check by subtracting
+// unavailable pods on preserved unhealthy nodes.
+// Returns true if the failure is suppressed (attributable entirely to preserved nodes), false otherwise.
+func CheckDaemonSetWithPreservedNodes(ctx context.Context, c client.Client, ds *appsv1.DaemonSet, preservedNodeNames sets.Set[string]) (isHealthy bool, suppress bool, err error) {
+	// Fast path: already healthy.
+	if err = CheckDaemonSet(ds); err == nil {
+		isHealthy = true
+		// explicit return to suppress linter error
+		return isHealthy, false, nil
+	}
+	if preservedNodeNames.Len() == 0 {
+		return
+	}
+	// Count not-ready pods on preserved unhealthy nodes using the PodNodeName field index.
+	selector, err := metav1.LabelSelectorAsSelector(ds.Spec.Selector)
+	if err != nil {
+		return
+	}
+	var preservedUnavailable int
+	for nodeName := range preservedNodeNames {
+		podList := &corev1.PodList{}
+		if err = c.List(ctx, podList,
+			client.InNamespace(ds.Namespace),
+			client.MatchingFields{indexer.PodNodeName: nodeName},
+			client.MatchingLabelsSelector{Selector: selector},
+		); err != nil {
+			return
+		}
+		for _, pod := range podList.Items {
+			if !slices.ContainsFunc(pod.Status.Conditions, func(c corev1.PodCondition) bool {
+				return c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue
+			}) {
+				preservedUnavailable++
+			}
+		}
+	}
+	nonPreservedUnavailable := int(ds.Status.NumberUnavailable) - preservedUnavailable
+	maxUnavailable := daemonSetMaxUnavailable(ds)
+	if ds.Status.UpdatedNumberScheduled < ds.Status.DesiredNumberScheduled {
+		// During rollout: tolerance is maxUnavailable.
+		if nonPreservedUnavailable > maxUnavailable {
+			return
+		}
+	} else {
+		// Fully rolled out: tolerance is 0.
+		if nonPreservedUnavailable > 0 {
+			return
+		}
+	}
+	return false, true, nil
 }

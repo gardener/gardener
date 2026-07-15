@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -964,6 +965,93 @@ var _ = Describe("HealthChecker", func() {
 					Expect(result2).To(Equal(result))
 				})
 			})
+		})
+	})
+
+	Describe("#CheckNodes with preservation", func() {
+		var (
+			checker           *HealthChecker
+			nodeCondition     gardencorev1beta1.Condition
+			fakeClock         *testclock.FakeClock
+			kubernetesVersion = semver.MustParse("1.33.0")
+		)
+
+		BeforeEach(func() {
+			fakeClock = testclock.NewFakeClock(time.Now())
+			checker = NewHealthChecker(logr.Discard(), nil, fakeClock)
+			nodeCondition = gardencorev1beta1.Condition{
+				Type:               "EveryNodeReady",
+				LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+			}
+		})
+
+		unhealthyNode := func(name string) corev1.Node {
+			return corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Status: corev1.NodeStatus{
+					NodeInfo: corev1.NodeSystemInfo{KubeletVersion: "v1.33.0"},
+					Conditions: []corev1.NodeCondition{
+						{Type: corev1.NodeReady, Status: corev1.ConditionFalse, Reason: "KubeletNotReady", Message: "container runtime not ready"},
+					},
+				},
+			}
+		}
+
+		healthyNode := func(name string) corev1.Node {
+			return corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Status: corev1.NodeStatus{
+					NodeInfo: corev1.NodeSystemInfo{KubeletVersion: "v1.33.0"},
+					Conditions: []corev1.NodeCondition{
+						{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+					},
+				},
+			}
+		}
+
+		It("returns nil when all nodes are healthy", func() {
+			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{healthyNode("node-1")}, "worker", kubernetesVersion, nil)
+			Expect(result).To(BeNil())
+			Expect(isPreserved).To(BeFalse())
+		})
+
+		It("returns false with original message when node is unhealthy and preservedNodeNames is nil", func() {
+			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-unpreserved")}, "worker", kubernetesVersion, nil)
+			Expect(result).NotTo(BeNil())
+			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(result.Message).To(ContainSubstring(`Node "node-unpreserved" in worker group "worker" is unhealthy`))
+			Expect(result.Message).NotTo(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(isPreserved).To(BeFalse())
+		})
+
+		It("returns false with preservation suffix when the unhealthy node is preserved", func() {
+			preserved := sets.New("node-preserved")
+			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-preserved")}, "worker", kubernetesVersion, preserved)
+			Expect(result).NotTo(BeNil())
+			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(result.Message).To(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(isPreserved).To(BeTrue())
+		})
+
+		It("returns false with original message when the unhealthy node is not preserved", func() {
+			preserved := sets.New("other-node")
+			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-unpreserved")}, "worker", kubernetesVersion, preserved)
+			Expect(result).NotTo(BeNil())
+			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(result.Message).To(ContainSubstring(`Node "node-unpreserved" in worker group "worker" is unhealthy`))
+			Expect(result.Message).NotTo(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(isPreserved).To(BeFalse())
+		})
+
+		It("reports only the non-preserved unhealthy node in a mix", func() {
+			preserved := sets.New("node-preserved")
+			nodes := []corev1.Node{unhealthyNode("node-preserved"), unhealthyNode("node-unpreserved")}
+			result, isPreserved := checker.CheckNodes(nodeCondition, nodes, "worker", kubernetesVersion, preserved)
+			Expect(result).NotTo(BeNil())
+			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(result.Message).To(ContainSubstring(`Node "node-unpreserved"`))
+			Expect(result.Message).NotTo(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(isPreserved).To(BeFalse())
 		})
 	})
 })

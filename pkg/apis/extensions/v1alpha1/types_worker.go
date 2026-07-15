@@ -279,4 +279,7 @@ type MachineDeployment struct {
 	// Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.
 	// +optional
 	Priority *int32 `json:"priority,omitempty"`
+	// AutoPreserveFailedMachineMax is the maximum number of machines in the machine deployment that can be auto-preserved by MCM.
+	// +optional
+	AutoPreserveFailedMachineMax *int32 `json:"autoPreserveFailedMachineMax,omitempty"`
 }

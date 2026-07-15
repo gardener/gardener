@@ -6930,6 +6930,23 @@ func (m *MachineControllerManagerSettings) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
+	if m.AutoPreserveFailedMachineMax != nil {
+		i = encodeVarintGenerated(dAtA, i, uint64(*m.AutoPreserveFailedMachineMax))
+		i--
+		dAtA[i] = 0x48
+	}
+	if m.MachinePreserveTimeout != nil {
+		{
+			size, err := m.MachinePreserveTimeout.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x42
+	}
 	if m.DisableHealthTimeout != nil {
 		i--
 		if *m.DisableHealthTimeout {
@@ -15988,6 +16005,13 @@ func (m *MachineControllerManagerSettings) Size() (n int) {
 	if m.DisableHealthTimeout != nil {
 		n += 2
 	}
+	if m.MachinePreserveTimeout != nil {
+		l = m.MachinePreserveTimeout.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.AutoPreserveFailedMachineMax != nil {
+		n += 1 + sovGenerated(uint64(*m.AutoPreserveFailedMachineMax))
+	}
 	return n
 }
 
@@ -20048,6 +20072,8 @@ func (this *MachineControllerManagerSettings) String() string {
 		`NodeConditions:` + fmt.Sprintf("%v", this.NodeConditions) + `,`,
 		`MachineInPlaceUpdateTimeout:` + strings.Replace(fmt.Sprintf("%v", this.MachineInPlaceUpdateTimeout), "Duration", "v11.Duration", 1) + `,`,
 		`DisableHealthTimeout:` + valueToStringGenerated(this.DisableHealthTimeout) + `,`,
+		`MachinePreserveTimeout:` + strings.Replace(fmt.Sprintf("%v", this.MachinePreserveTimeout), "Duration", "v11.Duration", 1) + `,`,
+		`AutoPreserveFailedMachineMax:` + valueToStringGenerated(this.AutoPreserveFailedMachineMax) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -40649,6 +40675,62 @@ func (m *MachineControllerManagerSettings) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.DisableHealthTimeout = &b
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MachinePreserveTimeout", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.MachinePreserveTimeout == nil {
+				m.MachinePreserveTimeout = &v11.Duration{}
+			}
+			if err := m.MachinePreserveTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AutoPreserveFailedMachineMax", wireType)
+			}
+			var v int32
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.AutoPreserveFailedMachineMax = &v
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

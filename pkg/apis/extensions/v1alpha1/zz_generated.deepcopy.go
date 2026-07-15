@@ -1489,6 +1489,11 @@ func (in *MachineDeployment) DeepCopyInto(out *MachineDeployment) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.AutoPreserveFailedMachineMax != nil {
+		in, out := &in.AutoPreserveFailedMachineMax, &out.AutoPreserveFailedMachineMax
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

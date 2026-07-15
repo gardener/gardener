@@ -452,8 +452,12 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Adding field indexes to informers")
-	if err := addAllFieldIndexes(ctx, gardenCluster.GetFieldIndexer()); err != nil {
-		return fmt.Errorf("failed adding indexes: %w", err)
+	if err := addAllFieldIndexesToGardenClient(ctx, gardenCluster.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes to garden client: %w", err)
+	}
+
+	if err := addAllFieldIndexesToSeedClient(ctx, g.mgr.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes to seed client: %w", err)
 	}
 
 	log.Info("Adding garden cluster to manager")
@@ -859,7 +863,7 @@ func (g *garden) overwriteGardenHostWhenDeployedInRuntimeCluster(ctx context.Con
 	return nil
 }
 
-func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+func addAllFieldIndexesToGardenClient(ctx context.Context, i client.FieldIndexer) error {
 	fns := []func(context.Context, client.FieldIndexer) error{
 		// core API group
 		indexer.AddBackupEntryBucketName,
@@ -885,6 +889,21 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 			indexer.AddBackupEntrySeedName,
 			indexer.AddControllerInstallationSeedRefName,
 		)
+	}
+
+	for _, fn := range fns {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func addAllFieldIndexesToSeedClient(ctx context.Context, i client.FieldIndexer) error {
+	var fns []func(context.Context, client.FieldIndexer) error
+	if gardenlet.IsResponsibleForSelfHostedShoot() {
+		fns = append(fns, indexer.AddPodNodeName)
 	}
 
 	for _, fn := range fns {
