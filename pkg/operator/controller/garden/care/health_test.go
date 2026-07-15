@@ -711,6 +711,7 @@ var _ = Describe("Garden health", func() {
 					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualGardenAPIServerAvailable, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.ObservabilityComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.GardenHasIgnoredManagedResources, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -727,6 +728,7 @@ var _ = Describe("Garden health", func() {
 					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.RuntimeComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.VirtualComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.ObservabilityComponentsHealthy, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.GardenHasIgnoredManagedResources, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -740,6 +742,7 @@ var _ = Describe("Garden health", func() {
 					OfType("RuntimeComponentsHealthy"),
 					OfType("VirtualComponentsHealthy"),
 					OfType("ObservabilityComponentsHealthy"),
+					OfType("GardenHasIgnoredManagedResources"),
 				))
 			})
 		})
@@ -753,6 +756,88 @@ var _ = Describe("Garden health", func() {
 					gardencorev1beta1.ConditionType("RuntimeComponentsHealthy"),
 					gardencorev1beta1.ConditionType("VirtualComponentsHealthy"),
 					gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
+					gardencorev1beta1.ConditionType("GardenHasIgnoredManagedResources"),
+				))
+			})
+		})
+
+		Describe("#checkIfManagedResourcesAreIgnored", func() {
+			var (
+				healthCheck HealthCheck
+				conditions  GardenConditions
+			)
+
+			JustBeforeEach(func() {
+				healthCheck = NewHealth(garden, runtimeClient, nil, fakeClock, nil, gardenNamespace, healthchecker.NewHealthChecker(log, runtimeClient, fakeClock))
+				conditions = NewGardenConditions(fakeClock, operatorv1alpha1.GardenStatus{})
+			})
+
+			It("should set condition to True when no ManagedResources exist", func() {
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(operatorv1alpha1.GardenHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason("NoManagedResourcesIgnored"),
+				))
+			})
+
+			It("should set condition to True when a ManagedResource has ignore=false", func() {
+				mr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: gardenNamespace,
+						Annotations: map[string]string{
+							resourcesv1alpha1.Ignore: "false",
+						},
+					},
+				}
+				Expect(runtimeClient.Create(ctx, mr)).To(Succeed())
+
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(operatorv1alpha1.GardenHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason("NoManagedResourcesIgnored"),
+				))
+			})
+
+			It("should set condition to False when a ManagedResource has ignore=true", func() {
+				mr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: gardenNamespace,
+						Annotations: map[string]string{
+							resourcesv1alpha1.Ignore: "true",
+						},
+					},
+				}
+				Expect(runtimeClient.Create(ctx, mr)).To(Succeed())
+
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(operatorv1alpha1.GardenHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("ManagedResourcesIgnored"),
+					WithMessageSubstrings("foo"),
+				))
+			})
+
+			It("should list multiple ignored ManagedResources sorted alphabetically", func() {
+				for _, name := range []string{"foo", "bar", "baz"} {
+					mr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      name,
+							Namespace: gardenNamespace,
+							Annotations: map[string]string{
+								resourcesv1alpha1.Ignore: "true",
+							},
+						},
+					}
+					Expect(runtimeClient.Create(ctx, mr)).To(Succeed())
+				}
+
+				Expect(healthCheck.Check(ctx, conditions)).To(ContainCondition(
+					OfType(operatorv1alpha1.GardenHasIgnoredManagedResources),
+					WithStatus(gardencorev1beta1.ConditionFalse),
+					WithReason("ManagedResourcesIgnored"),
+					WithMessageSubstrings("bar, baz, foo"),
 				))
 			})
 		})

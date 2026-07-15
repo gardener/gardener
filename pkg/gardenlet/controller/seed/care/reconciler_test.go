@@ -224,6 +224,8 @@ var _ = Describe("Seed Care Control", func() {
 						"Status":  BeEquivalentTo("True"),
 						"Reason":  Equal("EmergencyStopShootReconciliations"),
 						"Message": Equal("Reconciliations of Shoots managed by this Seed cluster are currently disabled by annotation."),
+					}), MatchFields(IgnoreExtras, Fields{
+						"Type": BeEquivalentTo("SeedHasIgnoredManagedResources"),
 					}),
 				))
 			})
@@ -243,9 +245,13 @@ var _ = Describe("Seed Care Control", func() {
 
 				updatedSeed := &gardencorev1beta1.Seed{}
 				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
-				Expect(updatedSeed.Status.Conditions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type": BeEquivalentTo("SeedSystemComponentsHealthy"),
-				})))
+				Expect(updatedSeed.Status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type": BeEquivalentTo("SeedSystemComponentsHealthy"),
+					}), MatchFields(IgnoreExtras, Fields{
+						"Type": BeEquivalentTo("SeedHasIgnoredManagedResources"),
+					}),
+				))
 			})
 		})
 	})
