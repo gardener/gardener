@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -99,33 +100,41 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log.Info("Propagating image pull secret", "secret", seedSecret.Name, "targetNamespaces", len(targetNamespaces))
 
+	var propagateFns []flow.TaskFn
 	for _, namespace := range targetNamespaces {
-		targetSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      seedSecret.Name,
-				Namespace: namespace,
-			},
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, targetSecret, func() error {
-			targetSecret.Type = seedSecret.Type
-			targetSecret.Data = seedSecret.Data
-			targetSecret.Labels = utils.MergeStringMaps(map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleImagePullSecret,
-			}, seedSecret.Labels)
+		ns := namespace
+		propagateFns = append(propagateFns, func(ctx context.Context) error {
+			targetSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      seedSecret.Name,
+					Namespace: ns,
+				},
+			}
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, targetSecret, func() error {
+				targetSecret.Type = seedSecret.Type
+				targetSecret.Data = seedSecret.Data
+				targetSecret.Labels = utils.MergeStringMaps(map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleImagePullSecret,
+				}, seedSecret.Labels)
+				return nil
+			}); err != nil {
+				return fmt.Errorf("failed to propagate image pull secret %q to namespace %q: %w", seedSecret.Name, ns, err)
+			}
 			return nil
-		}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to propagate image pull secret %q to namespace %q: %w", seedSecret.Name, namespace, err)
-		}
+		})
+	}
+	if err := flow.Parallel(propagateFns...)(ctx); err != nil {
+		return reconcile.Result{}, err
 	}
 
+	var managedResourceFns []flow.TaskFn
 	for _, namespace := range shootNamespaceNames {
-		if err := r.updateShootManagedResource(ctx, namespace); err != nil {
-			return reconcile.Result{}, err
-		}
+		ns := namespace
+		managedResourceFns = append(managedResourceFns, func(ctx context.Context) error {
+			return r.updateShootManagedResource(ctx, ns)
+		})
 	}
-
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, flow.Parallel(managedResourceFns...)(ctx)
 }
 
 // deleteFromSeedCluster removes the named secret from the seed cluster's garden namespace, all
@@ -152,28 +161,38 @@ func (r *Reconciler) deleteFromSeedCluster(ctx context.Context, secretName strin
 		return fmt.Errorf("failed to list shoot namespaces: %w", err)
 	}
 
+	var fns []flow.TaskFn
+
 	for _, ns := range extensionNamespaces.Items {
-		if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: ns.Name},
-		})); err != nil {
-			return fmt.Errorf("failed to delete image pull secret %q from namespace %q: %w", secretName, ns.Name, err)
-		}
+		ns := ns
+		fns = append(fns, func(ctx context.Context) error {
+			if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: ns.Name},
+			})); err != nil {
+				return fmt.Errorf("failed to delete image pull secret %q from namespace %q: %w", secretName, ns.Name, err)
+			}
+			return nil
+		})
 	}
 
 	for _, ns := range shootNamespaces.Items {
-		if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: ns.Name},
-		})); err != nil {
-			return fmt.Errorf("failed to delete image pull secret %q from namespace %q: %w", secretName, ns.Name, err)
-		}
-		// Rebuild the ManagedResource from the remaining secrets rather than deleting it
-		// entirely, to avoid removing other image pull secrets from the shoot cluster.
-		if err := r.updateShootManagedResource(ctx, ns.Name); err != nil {
-			return fmt.Errorf("failed to update ManagedResource in namespace %q: %w", ns.Name, err)
-		}
+		ns := ns
+		fns = append(fns, func(ctx context.Context) error {
+			if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: ns.Name},
+			})); err != nil {
+				return fmt.Errorf("failed to delete image pull secret %q from namespace %q: %w", secretName, ns.Name, err)
+			}
+			// Rebuild the ManagedResource from the remaining secrets rather than deleting it
+			// entirely, to avoid removing other image pull secrets from the shoot cluster.
+			if err := r.updateShootManagedResource(ctx, ns.Name); err != nil {
+				return fmt.Errorf("failed to update ManagedResource in namespace %q: %w", ns.Name, err)
+			}
+			return nil
+		})
 	}
 
-	return nil
+	return flow.Parallel(fns...)(ctx)
 }
 
 // updateShootManagedResource creates or updates the image-pull-secret ManagedResource in the
@@ -181,8 +200,8 @@ func (r *Reconciler) deleteFromSeedCluster(ctx context.Context, secretName strin
 func (r *Reconciler) updateShootManagedResource(ctx context.Context, namespace string) error {
 	var secretNames []string
 	for _, cred := range imagevector.AllContainerImagePullCredentials() {
-		if cred.Type == "StaticSecret" && cred.SecretName != nil {
-			secretNames = append(secretNames, *cred.SecretName)
+		if cred.Type == "StaticSecret" && cred.SecretName != "" {
+			secretNames = append(secretNames, cred.SecretName)
 		}
 	}
 	if len(secretNames) == 0 {

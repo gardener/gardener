@@ -12,6 +12,7 @@ import (
 	_ "embed"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -76,7 +77,7 @@ func ChartImagePullCredential() *imagevector.ImagePullCredential {
 
 // AllContainerImagePullCredentials returns all unique image pull credentials (global + per-image) for containers.
 func AllContainerImagePullCredentials() []*imagevector.ImagePullCredential {
-	seen := make(map[string]struct{})
+	seen := sets.New[string]()
 	var result []*imagevector.ImagePullCredential
 
 	addCred := func(cred *imagevector.ImagePullCredential) {
@@ -84,8 +85,8 @@ func AllContainerImagePullCredentials() []*imagevector.ImagePullCredential {
 			return
 		}
 		key := imagevector.CredentialKey(cred)
-		if _, exists := seen[key]; !exists {
-			seen[key] = struct{}{}
+		if !seen.Has(key) {
+			seen.Insert(key)
 			result = append(result, cred)
 		}
 	}
