@@ -12,6 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// MaxConnectionDuration is the maximum duration of a connection in seconds. It is set to 24 hours (86400 seconds) to prevent issues with expiring client certificates.
+const MaxConnectionDuration = 86400
+
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {
 	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, exportTo, destinationHost, &istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE})
@@ -82,7 +85,7 @@ func destinationRuleWithTrafficPolicy(
 			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
 					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
-						MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+						MaxConnectionDuration: &durationpb.Duration{Seconds: MaxConnectionDuration},
 						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 							Time:     &durationpb.Duration{Seconds: 7200},
 							Interval: &durationpb.Duration{Seconds: 75},
