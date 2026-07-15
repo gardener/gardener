@@ -18,27 +18,29 @@ import (
 
 var (
 	//go:embed containers.yaml
-	containersYAML        string
-	containersImageVector imagevector.ImageVector
-	containersCABundle    *imagevector.CABundle
+	containersYAML                string
+	containersImageVector         imagevector.ImageVector
+	containersCABundle            *imagevector.CABundle
+	containersImagePullCredential *imagevector.ImagePullCredential
 
 	//go:embed charts.yaml
-	chartsYAML        string
-	chartsImageVector imagevector.ImageVector
-	chartsCABundle    *imagevector.CABundle
+	chartsYAML                string
+	chartsImageVector         imagevector.ImageVector
+	chartsCABundle            *imagevector.CABundle
+	chartsImagePullCredential *imagevector.ImagePullCredential
 )
 
 func init() {
 	var err error
 
-	containersImageVector, containersCABundle, err = imagevector.Read([]byte(containersYAML))
+	containersImageVector, containersCABundle, containersImagePullCredential, err = imagevector.Read([]byte(containersYAML))
 	runtime.Must(err)
-	containersImageVector, containersCABundle, err = imagevector.WithEnvOverride(containersImageVector, containersCABundle, imagevector.OverrideEnv)
+	containersImageVector, containersCABundle, containersImagePullCredential, err = imagevector.WithEnvOverride(containersImageVector, containersCABundle, imagevector.OverrideEnv)
 	runtime.Must(err)
 
-	chartsImageVector, chartsCABundle, err = imagevector.Read([]byte(chartsYAML))
+	chartsImageVector, chartsCABundle, chartsImagePullCredential, err = imagevector.Read([]byte(chartsYAML))
 	runtime.Must(err)
-	chartsImageVector, chartsCABundle, err = imagevector.WithEnvOverride(chartsImageVector, chartsCABundle, imagevector.OverrideChartsEnv)
+	chartsImageVector, chartsCABundle, chartsImagePullCredential, err = imagevector.WithEnvOverride(chartsImageVector, chartsCABundle, imagevector.OverrideChartsEnv)
 	runtime.Must(err)
 }
 
@@ -60,4 +62,47 @@ func ContainersCABundle() *imagevector.CABundle {
 // ChartsCABundle returns the CA bundle defined in the chart image vector.
 func ChartsCABundle() *imagevector.CABundle {
 	return chartsCABundle
+}
+
+// ContainerImagePullCredential returns the global image pull credential for container images, if specified.
+func ContainerImagePullCredential() *imagevector.ImagePullCredential {
+	return containersImagePullCredential
+}
+
+// ChartImagePullCredential returns the global image pull credential for Helm chart images, if specified.
+func ChartImagePullCredential() *imagevector.ImagePullCredential {
+	return chartsImagePullCredential
+}
+
+// AllContainerImagePullCredentials returns all unique image pull credentials (global + per-image) for containers.
+func AllContainerImagePullCredentials() []*imagevector.ImagePullCredential {
+	seen := make(map[string]struct{})
+	var result []*imagevector.ImagePullCredential
+
+	addCred := func(cred *imagevector.ImagePullCredential) {
+		if cred == nil {
+			return
+		}
+		key := imagevector.CredentialKey(cred)
+		if _, exists := seen[key]; !exists {
+			seen[key] = struct{}{}
+			result = append(result, cred)
+		}
+	}
+
+	addCred(containersImagePullCredential)
+	for _, cred := range containersImageVector.AllImagePullCredentials() {
+		addCred(cred)
+	}
+	return result
+}
+
+// ContainerImagePullCredentialForImage returns the pull credential for a given container image reference.
+// It first checks for a per-image credential, then falls back to the global credential.
+// Returns nil if no credential is configured for the image.
+func ContainerImagePullCredentialForImage(containerImage string) *imagevector.ImagePullCredential {
+	if perImage := containersImageVector.ImagePullCredentialForContainerImage(containerImage); perImage != nil {
+		return perImage
+	}
+	return containersImagePullCredential
 }

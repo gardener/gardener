@@ -22,10 +22,10 @@ var (
 func init() {
 	var err error
 
-	imageVector, _, err = imagevector.Read([]byte(imagesYAML))
+	imageVector, _, _, err = imagevector.Read([]byte(imagesYAML))
 	runtime.Must(err)
 
-	imageVector, _, err = imagevector.WithEnvOverride(imageVector, nil, imagevector.OverrideEnv)
+	imageVector, _, _, err = imagevector.WithEnvOverride(imageVector, nil, imagevector.OverrideEnv)
 	runtime.Must(err)
 }
 

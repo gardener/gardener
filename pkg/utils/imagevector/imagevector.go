@@ -29,31 +29,32 @@ const (
 )
 
 // Read reads an ImageVector from the given bytes. It also returns the optional global CABundle.
-func Read(buf []byte) (ImageVector, *CABundle, error) {
+func Read(buf []byte) (ImageVector, *CABundle, *ImagePullCredential, error) {
 	vector := struct {
-		Images   ImageVector `json:"images" yaml:"images"`
-		CABundle *CABundle   `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
+		Images              ImageVector          `json:"images" yaml:"images"`
+		CABundle            *CABundle            `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
+		ImagePullCredential *ImagePullCredential `json:"imagePullCredential,omitempty" yaml:"imagePullCredential,omitempty"`
 	}{}
 
 	if err := yaml.Unmarshal(buf, &vector); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if errs := ValidateImageVector(vector.Images, field.NewPath("images")); len(errs) > 0 {
-		return nil, nil, errs.ToAggregate()
+		return nil, nil, nil, errs.ToAggregate()
 	}
 	if errs := ValidateCABundle(vector.CABundle, field.NewPath("caBundle")); len(errs) > 0 {
-		return nil, nil, errs.ToAggregate()
+		return nil, nil, nil, errs.ToAggregate()
 	}
 
-	return vector.Images, vector.CABundle, nil
+	return vector.Images, vector.CABundle, vector.ImagePullCredential, nil
 }
 
 // ReadFile reads an ImageVector from the file with the given name.
-func ReadFile(name string) (ImageVector, *CABundle, error) {
+func ReadFile(name string) (ImageVector, *CABundle, *ImagePullCredential, error) {
 	buf, err := os.ReadFile(name) // #nosec: G304,G703 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	return Read(buf)
@@ -105,15 +106,21 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 		architectures = old.Architectures
 	}
 
+	imagePullCredential := override.ImagePullCredential
+	if imagePullCredential == nil {
+		imagePullCredential = old.ImagePullCredential
+	}
+
 	return &ImageSource{
-		Name:           override.Name,
-		RuntimeVersion: runtimeVersion,
-		TargetVersion:  targetVersion,
-		Architectures:  architectures,
-		Ref:            ref,
-		Repository:     repository,
-		Tag:            tag,
-		Version:        version,
+		Name:                override.Name,
+		RuntimeVersion:      runtimeVersion,
+		TargetVersion:       targetVersion,
+		Architectures:       architectures,
+		Ref:                 ref,
+		Repository:          repository,
+		Tag:                 tag,
+		Version:             version,
+		ImagePullCredential: imagePullCredential,
 	}
 }
 
@@ -187,18 +194,18 @@ func MergeCABundle(caBundle, overrideCABundle *CABundle) *CABundle {
 // WithEnvOverride checks if an environment variable with the provided key is set.
 // If yes, it reads the ImageVector at the value of the variable and merges it with the given one.
 // Otherwise, it returns the unmodified ImageVector and caBundle.
-func WithEnvOverride(vector ImageVector, caBundle *CABundle, env string) (ImageVector, *CABundle, error) {
+func WithEnvOverride(vector ImageVector, caBundle *CABundle, env string) (ImageVector, *CABundle, *ImagePullCredential, error) {
 	overwritePath := os.Getenv(env)
 	if len(overwritePath) == 0 {
-		return vector, caBundle, nil
+		return vector, caBundle, nil, nil
 	}
 
-	overrideImageVector, overrideCABundle, err := ReadFile(overwritePath)
+	overrideImageVector, overrideCABundle, imagePullCredential, err := ReadFile(overwritePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return MergeImageVectors(vector, overrideImageVector), MergeCABundle(caBundle, overrideCABundle), nil
+	return MergeImageVectors(vector, overrideImageVector), MergeCABundle(caBundle, overrideCABundle), imagePullCredential, nil
 }
 
 // String implements Stringer.
@@ -383,9 +390,10 @@ func FindImages(v ImageVector, names []string, opts ...FindOptionFunc) (map[stri
 func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	if i.Ref != nil {
 		return &Image{
-			Name:    i.Name,
-			Ref:     i.Ref,
-			Version: i.Version,
+			Name:                i.Name,
+			Ref:                 i.Ref,
+			Version:             i.Version,
+			ImagePullCredential: i.ImagePullCredential,
 		}
 	}
 
@@ -401,10 +409,11 @@ func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	}
 
 	return &Image{
-		Name:       i.Name,
-		Repository: i.Repository,
-		Tag:        tag,
-		Version:    version,
+		Name:                i.Name,
+		Repository:          i.Repository,
+		Tag:                 tag,
+		Version:             version,
+		ImagePullCredential: i.ImagePullCredential,
 	}
 }
 
@@ -445,4 +454,50 @@ func ImageMapToValues(m map[string]*Image) map[string]any {
 		out[k] = v.String()
 	}
 	return out
+}
+
+// ImagePullCredentialForContainerImage returns the per-image pull credential for a given container image string.
+// It matches the container image against the ImageVector entries by repository or ref.
+// Returns nil if no per-image credential is configured for the image.
+func (v ImageVector) ImagePullCredentialForContainerImage(containerImage string) *ImagePullCredential {
+	for _, source := range v {
+		if source.ImagePullCredential == nil {
+			continue
+		}
+		if source.Repository != nil && strings.HasPrefix(containerImage, *source.Repository) {
+			rest := containerImage[len(*source.Repository):]
+			if rest == "" || rest[0] == ':' || rest[0] == '@' {
+				return source.ImagePullCredential
+			}
+		}
+		if source.Ref != nil && containerImage == *source.Ref {
+			return source.ImagePullCredential
+		}
+	}
+	return nil
+}
+
+// AllImagePullCredentials returns all unique per-image pull credentials from the ImageVector.
+func (v ImageVector) AllImagePullCredentials() []*ImagePullCredential {
+	seen := make(map[string]struct{})
+	var result []*ImagePullCredential
+	for _, source := range v {
+		if source.ImagePullCredential == nil {
+			continue
+		}
+		key := CredentialKey(source.ImagePullCredential)
+		if _, exists := seen[key]; !exists {
+			seen[key] = struct{}{}
+			result = append(result, source.ImagePullCredential)
+		}
+	}
+	return result
+}
+
+// CredentialKey returns a deduplication key for an ImagePullCredential.
+func CredentialKey(c *ImagePullCredential) string {
+	if c.SecretName != nil {
+		return string(c.Type) + ":" + *c.SecretName
+	}
+	return string(c.Type)
 }
