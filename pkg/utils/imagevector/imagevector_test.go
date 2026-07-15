@@ -360,7 +360,7 @@ images:
 {
 	"imagePullCredential": {
 		"type": "StaticSecret",
-		"secretName": "my-image-pull-secret"
+		"secretNames": ["my-image-pull-secret"]
 	},
 	"images": [
 		{
@@ -383,8 +383,8 @@ images:
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
 				Expect(imagePullCredential).To(PointTo(Equal(ImagePullCredential{
-					Type:       ImagePullCredentialTypeStaticSecret,
-					SecretName: "my-image-pull-secret",
+					Type:        ImagePullCredentialTypeStaticSecret,
+					SecretNames: []string{"my-image-pull-secret"},
 				})))
 			})
 

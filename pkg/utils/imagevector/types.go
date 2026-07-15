@@ -24,10 +24,10 @@ const (
 type ImagePullCredential struct {
 	// Type is the credential delivery mechanism.
 	Type ImagePullCredentialType `json:"type" yaml:"type"`
-	// SecretName is the name of the dockerconfigjson Secret.
+	// SecretNames is the list of dockerconfigjson Secret names.
 	// Required when Type is StaticSecret.
 	// +optional
-	SecretName string `json:"secretName,omitempty" yaml:"secretName,omitempty"`
+	SecretNames []string `json:"secretNames,omitempty" yaml:"secretNames,omitempty"`
 }
 
 // ImageSource contains the repository and the tag of a Docker container image. If the respective

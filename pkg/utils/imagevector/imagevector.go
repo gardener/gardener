@@ -497,5 +497,5 @@ func (v ImageVector) AllImagePullCredentials() []*ImagePullCredential {
 
 // CredentialKey returns a deduplication key for an ImagePullCredential.
 func CredentialKey(c *ImagePullCredential) string {
-	return string(c.Type) + c.SecretName
+	return string(c.Type) + strings.Join(c.SecretNames, ",")
 }
