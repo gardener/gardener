@@ -15,6 +15,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/imagepullsecret"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -61,6 +62,12 @@ func AddToManager(
 		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)
+	}
+
+	if err := (&imagepullsecret.Reconciler{
+		SeedName: cfg.SeedConfig.Name,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding image pull secret reconciler: %w", err)
 	}
 
 	return nil
