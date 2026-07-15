@@ -178,7 +178,7 @@ func userDataSecretForBastion(bastion *extensionsv1alpha1.Bastion, technicalID s
 
 func podForBastion(bastion *extensionsv1alpha1.Bastion, technicalID, image, userDataSecretName string) *corev1.Pod {
 	objectMeta := objectMetaForBastion(bastion, technicalID)
-
+	metav1.SetMetaDataLabel(&objectMeta, v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed)
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
