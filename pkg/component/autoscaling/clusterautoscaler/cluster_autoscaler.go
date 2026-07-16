@@ -274,12 +274,18 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: new(vpaautoscalingv1.UpdateModeRecreate),
 		}
+
+		containerPolicy := vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName:    containerName,
+			ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+		}
+		if c.config != nil && c.config.Autoscaling != nil {
+			containerPolicy.MinAllowed = c.config.Autoscaling.MinAllowed
+		}
+
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName:    containerName,
-					ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-				},
+				containerPolicy,
 				{
 					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 					Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),

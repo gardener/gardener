@@ -3073,6 +3073,7 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.NodeGroupBackoffResetTimeout = (*metav1.Duration)(unsafe.Pointer(in.NodeGroupBackoffResetTimeout))
 	out.EmitPerNodeGroupMetrics = (*bool)(unsafe.Pointer(in.EmitPerNodeGroupMetrics))
 	out.MaxBinpackingTime = (*metav1.Duration)(unsafe.Pointer(in.MaxBinpackingTime))
+	out.Autoscaling = (*core.ControlPlaneAutoscaling)(unsafe.Pointer(in.Autoscaling))
 	return nil
 }
 
@@ -3105,6 +3106,7 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.EmitPerNodeGroupMetrics = (*bool)(unsafe.Pointer(in.EmitPerNodeGroupMetrics))
 	out.MaxBinpackingTime = (*metav1.Duration)(unsafe.Pointer(in.MaxBinpackingTime))
 	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
+	out.Autoscaling = (*ControlPlaneAutoscaling)(unsafe.Pointer(in.Autoscaling))
 	return nil
 }
 

@@ -623,6 +623,8 @@ type ClusterAutoscaler struct {
 	MaxBinpackingTime *metav1.Duration
 	// Verbosity allows CA to modify its log level.
 	Verbosity *int32
+	// Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.
+	Autoscaling *ControlPlaneAutoscaling
 }
 
 // ExpanderMode is type used for Expander values
