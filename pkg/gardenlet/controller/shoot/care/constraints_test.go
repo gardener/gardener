@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -495,6 +496,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
 							{Type: gardencorev1beta1.ShootHasIgnoredManagedResources},
+							{Type: gardencorev1beta1.ShootPreservedFailedMachinesAbsent},
 						},
 					},
 				}
@@ -777,6 +779,65 @@ var _ = Describe("Constraints", func() {
 						))
 					})
 				})
+
+				Context("#PreservedFailedMachinesAbsent", func() {
+					BeforeEach(func() {
+						shootPkg := &shootpkg.Shoot{
+							ControlPlaneNamespace: controlPlaneNamespace,
+						}
+						shootPkg.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Provider: gardencorev1beta1.Provider{
+									Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+								},
+							},
+						})
+						constraint = NewConstraint(
+							logr.Discard(),
+							shootPkg,
+							seedClient,
+							func() (kubernetes.Interface, bool, error) {
+								return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+							},
+							clock,
+						)
+					})
+
+					It("should remove the constraint when no MachineDeployments exist", func() {
+						Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+							OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
+						))
+					})
+
+					It("should remove the constraint when no MachineDeployments have preserved failed replicas", func() {
+						Expect(seedClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+							Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 0},
+						})).To(Succeed())
+
+						Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+							OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
+						))
+					})
+
+					It("should keep the constraint when MachineDeployments have preserved failed replicas", func() {
+						Expect(seedClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{Name: "deploy-1", Namespace: controlPlaneNamespace},
+							Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 2},
+						})).To(Succeed())
+						Expect(seedClient.Create(ctx, &machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{Name: "deploy-2", Namespace: controlPlaneNamespace},
+							Status:     machinev1alpha1.MachineDeploymentStatus{PreservedFailedReplicas: 1},
+						})).To(Succeed())
+
+						Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+							OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
+							WithStatus(gardencorev1beta1.ConditionProgressing),
+							WithReason("FailedMachinesPreserved"),
+							WithMessageSubstrings("3 preserved failed machine(s)"),
+						))
+					})
+				})
 			})
 		})
 
@@ -861,6 +922,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -882,6 +944,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -897,6 +960,7 @@ var _ = Describe("Constraints", func() {
 					OfType("CRDsWithProblematicConversionWebhooks"),
 					OfType("ManualInPlaceWorkersUpdated"),
 					OfType("HasIgnoredManagedResources"),
+					OfType("PreservedFailedMachinesAbsent"),
 				))
 			})
 		})
@@ -912,6 +976,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
 					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
 					gardencorev1beta1.ConditionType("HasIgnoredManagedResources"),
+					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
 				))
 			})
 		})

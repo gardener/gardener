@@ -6137,6 +6137,19 @@ func schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref common.Re
 							Format:      "",
 						},
 					},
+					"machinePreserveTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachinePreserveTimeout defines the duration after which machine preservation is disabled. If preservation is disabled while the machine is in the Failed phase, the machine transitions to the Terminating phase. For machines in any other phase, disabling preservation does not alter the current phase, and normal behavior and phase transitions continue as usual. However, the Cluster Autoscaler (CA) may scale down the machine if required.",
+							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
+						},
+					},
+					"autoPreserveFailedMachineMax": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool. This value is distributed across zones like Minimum and Maximum.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},

@@ -2362,7 +2362,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 	}
 
 	if worker.MachineControllerManagerSettings != nil {
-		allErrs = append(allErrs, ValidateMachineControllerManagerSettingsOptions(worker.MachineControllerManagerSettings, worker.UpdateStrategy, fldPath.Child("machineControllerManagerSettings"))...)
+		allErrs = append(allErrs, ValidateMachineControllerManagerSettingsOptions(worker.MachineControllerManagerSettings, worker.UpdateStrategy, worker.Maximum, helper.SystemComponentsAllowed(&worker), fldPath.Child("machineControllerManagerSettings"))...)
 	}
 
 	if worker.UpdateStrategy != nil {
@@ -2403,7 +2403,7 @@ func validateVolumeName(name string, fldPath *field.Path) field.ErrorList {
 }
 
 // ValidateMachineControllerManagerSettingsOptions validates the machine controller manager setting options of worker pools
-func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineControllerManagerSettings, machineUpdateStrategy *core.MachineUpdateStrategy, fldPath *field.Path) field.ErrorList {
+func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineControllerManagerSettings, machineUpdateStrategy *core.MachineUpdateStrategy, maximum int32, systemComponentsAllowed bool, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachineDrainTimeout, fldPath.Child("machineDrainTimeout"))...)
@@ -2422,6 +2422,19 @@ func ValidateMachineControllerManagerSettingsOptions(mcmOptions *core.MachineCon
 		}
 		if ptr.Deref(mcmOptions.DisableHealthTimeout, false) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
+		}
+	}
+
+	allErrs = append(allErrs, ValidatePositiveDuration(mcmOptions.MachinePreserveTimeout, fldPath.Child("machinePreserveTimeout"))...)
+
+	if mcmOptions.AutoPreserveFailedMachineMax != nil {
+		autoPreserveFailedMachineMax := *mcmOptions.AutoPreserveFailedMachineMax
+		if autoPreserveFailedMachineMax < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be negative"))
+		} else if systemComponentsAllowed && maximum > 0 && (autoPreserveFailedMachineMax > (maximum - 1)) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"))
+		} else if autoPreserveFailedMachineMax > (maximum) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoPreserveFailedMachineMax"), autoPreserveFailedMachineMax, "must not be greater than maximum value"))
 		}
 	}
 

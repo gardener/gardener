@@ -1900,6 +1900,17 @@ type MachineControllerManagerSettings struct {
 	// This is intended to be used only for in-place updates.
 	// +optional
 	DisableHealthTimeout *bool `json:"disableHealthTimeout,omitempty" protobuf:"varint,7,opt,name=disableHealthTimeout"`
+	// MachinePreserveTimeout defines the duration after which machine preservation is disabled.
+	// If preservation is disabled while the machine is in the Failed phase, the machine transitions
+	// to the Terminating phase. For machines in any other phase, disabling preservation does not
+	// alter the current phase, and normal behavior and phase transitions continue as usual.
+	// However, the Cluster Autoscaler (CA) may scale down the machine if required.
+	// +optional
+	MachinePreserveTimeout *metav1.Duration `json:"machinePreserveTimeout,omitempty" protobuf:"bytes,8,opt,name=machinePreserveTimeout"`
+	// AutoPreserveFailedMachineMax is the maximum number of machines that can be auto-preserved by MCM for the worker pool.
+	// This value is distributed across zones like Minimum and Maximum.
+	// +optional
+	AutoPreserveFailedMachineMax *int32 `json:"autoPreserveFailedMachineMax,omitempty" protobuf:"varint,9,opt,name=autoPreserveFailedMachineMax"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool
@@ -2148,6 +2159,8 @@ const (
 	ShootDNSServiceMigrationReady ConditionType = "DNSServiceMigrationReady"
 	// ShootUsesUnifiedHTTPProxyPort is a constant for a condition type indicating whether the new http-proxy port is consumed from istio.
 	ShootUsesUnifiedHTTPProxyPort ConditionType = "UsesUnifiedHTTPProxyPort"
+	// ShootPreservedFailedMachinesAbsent is a constant for a condition type indicating that the Shoot cluster no preserved failed machines.
+	ShootPreservedFailedMachinesAbsent ConditionType = "PreservedFailedMachinesAbsent"
 	// ShootLiveMigrationSourceEtcdPreparedForPeerJoin indicates that the source etcd cluster
 	// is prepared for destination peers to join.
 	ShootLiveMigrationSourceEtcdPreparedForPeerJoin ConditionType = "SourceEtcdPreparedForPeerJoin"

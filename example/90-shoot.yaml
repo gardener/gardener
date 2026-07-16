@@ -143,6 +143,8 @@ spec:
     #   maxEvictRetries: 10
     #   inPlaceUpdateTimeout: 20m (only relevant for in-place update strategy)
     #   disableHealthTimeout: true (only relevant for in-place update strategy)
+    #   machinePreserveTimeout: 96h (only relevant for preservation of machines)
+    #   autoPreserveFailedMachineMax: 0 (i.e., no failed machine will be auto-preserved)
     #   nodeConditions:
     #   - ReadonlyFilesystem
     #   - KernelDeadlock
