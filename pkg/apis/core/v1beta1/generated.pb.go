@@ -10931,6 +10931,20 @@ func (m *SeedStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Constraints) > 0 {
+		for iNdEx := len(m.Constraints) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Constraints[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x52
+		}
+	}
 	if m.LastOperation != nil {
 		{
 			size, err := m.LastOperation.MarshalToSizedBuffer(dAtA[:i])
@@ -17547,6 +17561,12 @@ func (m *SeedStatus) Size() (n int) {
 		l = m.LastOperation.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if len(m.Constraints) > 0 {
+		for _, e := range m.Constraints {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -21218,6 +21238,11 @@ func (this *SeedStatus) String() string {
 		repeatedStringForConditions += strings.Replace(strings.Replace(f.String(), "Condition", "Condition", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForConditions += "}"
+	repeatedStringForConstraints := "[]Condition{"
+	for _, f := range this.Constraints {
+		repeatedStringForConstraints += strings.Replace(strings.Replace(f.String(), "Condition", "Condition", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForConstraints += "}"
 	keysForCapacity := make([]string, 0, len(this.Capacity))
 	for k := range this.Capacity {
 		keysForCapacity = append(keysForCapacity, string(k))
@@ -21248,6 +21273,7 @@ func (this *SeedStatus) String() string {
 		`Allocatable:` + mapStringForAllocatable + `,`,
 		`ClientCertificateExpirationTimestamp:` + strings.Replace(fmt.Sprintf("%v", this.ClientCertificateExpirationTimestamp), "Time", "v11.Time", 1) + `,`,
 		`LastOperation:` + strings.Replace(this.LastOperation.String(), "LastOperation", "LastOperation", 1) + `,`,
+		`Constraints:` + repeatedStringForConstraints + `,`,
 		`}`,
 	}, "")
 	return s
@@ -52745,6 +52771,40 @@ func (m *SeedStatus) Unmarshal(dAtA []byte) error {
 				m.LastOperation = &LastOperation{}
 			}
 			if err := m.LastOperation.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Constraints", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Constraints = append(m.Constraints, Condition{})
+			if err := m.Constraints[len(m.Constraints)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
