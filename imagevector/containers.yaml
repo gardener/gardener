@@ -480,7 +480,7 @@ images:
   - name: coredns
     sourceRepository: github.com/coredns/coredns
     repository: registry.k8s.io/coredns/coredns
-    tag: "v1.14.4"
+    tag: "v1.14.6"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
