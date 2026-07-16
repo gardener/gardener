@@ -5,6 +5,10 @@
 package shared
 
 import (
+	_ "crypto/sha256"
+	"fmt"
+
+	"github.com/distribution/reference"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,8 +36,15 @@ func NewVictoriaLogs(
 		return nil, err
 	}
 
+	// TODO(rrhubenov): Use the Image struct directly when issue #15259 is fixed.
+	repository, tag, err := SplitImageRef(victoriaLogsImage.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing image %q from imagevector: %w", imagevector.ContainerImageNameVictoriaLogs, err)
+	}
+
 	deployer := victorialogs.New(c, namespace, victorialogs.Values{
-		Image:             victoriaLogsImage.String(),
+		ImageRepository:   repository,
+		ImageTag:          tag,
 		Storage:           storage,
 		IsGardenCluster:   isGardenCluster,
 		ClusterType:       clusterType,
@@ -43,4 +54,30 @@ func NewVictoriaLogs(
 	})
 
 	return deployer, nil
+}
+
+// SplitImageRef parses a fully-qualified image reference into its repository and tag components. When the reference
+// contains both a tag and a digest, they are recombined into the '<tag>@sha256:...' form; a digest-only reference is
+// returned as 'sha256:...'.
+func SplitImageRef(image string) (repository string, tag string, err error) {
+	ref, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return "", "", err
+	}
+
+	repository = ref.Name()
+
+	if tagged, ok := ref.(reference.Tagged); ok {
+		tag = tagged.Tag()
+	}
+	if digested, ok := ref.(reference.Digested); ok {
+		digest := digested.Digest().String()
+		if tag != "" {
+			tag += "@" + digest
+		} else {
+			tag = digest
+		}
+	}
+
+	return repository, tag, nil
 }
