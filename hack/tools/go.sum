@@ -671,8 +671,8 @@ github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10/go.mod h1
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/prometheus/client_golang v1.23.3-0.20260710134234-de192175ccd6 h1:9nZu+DHAEK5WX812CmkMQ5SfF2qLicIR+ZjLidV20T8=
-github.com/prometheus/client_golang v1.23.3-0.20260710134234-de192175ccd6/go.mod h1:etwalK4uJm/LysqzK2V9sMeqJL2/rGEjXKesbmG518Q=
+github.com/prometheus/client_golang v1.23.3-0.20260716094704-78262a77b899 h1:yroMlWyJwms1GIpVQUqe4VLWyi3XJVomGJbpVFFUBGc=
+github.com/prometheus/client_golang v1.23.3-0.20260716094704-78262a77b899/go.mod h1:etwalK4uJm/LysqzK2V9sMeqJL2/rGEjXKesbmG518Q=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/prometheus/client_model v0.6.2 h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
 github.com/prometheus/client_model v0.6.2/go.mod h1:y3m2F6Gdpfy6Ut/GBsUqTWZqCUvMVzSfMLjcu6wAwpE=
