@@ -29,21 +29,17 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const (
-	// podEvictionRetryInterval is the time to wait before retrying eviction of PDB-protected pods.
-	// Matches MCM's PodEvictionRetryInterval.
-	podEvictionRetryInterval = 20 * time.Second
-	// drainTimeout is the overall maximum duration for a drain operation before force-deleting pods.
-	drainTimeout = 20 * time.Minute
-	// updateTimeout is the maximum duration to wait for GNA to complete the in-place update after
-	// the node has been drained. If exceeded, the update is marked as failed.
-	updateTimeout = 30 * time.Minute
-)
-
 // Reconciler orchestrates in-place updates for all nodes in a worker pool.
 type Reconciler struct {
 	ShootClient client.Client
 	Clock       clock.Clock
+	// DrainTimeout is the overall maximum duration for a drain operation before force-deleting pods.
+	DrainTimeout time.Duration
+	// UpdateTimeout is the maximum duration to wait for GNA to complete the in-place update after
+	// the node has been drained. If exceeded, the update is marked as failed.
+	UpdateTimeout time.Duration
+	// PodEvictionRetryInterval is the time to wait before retrying eviction of PDB-protected pods.
+	PodEvictionRetryInterval time.Duration
 }
 
 // Reconcile processes all in-place-update state for a single worker pool.
@@ -167,7 +163,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if needsRequeue {
-		return reconcile.Result{RequeueAfter: podEvictionRetryInterval}, nil
+		return reconcile.Result{RequeueAfter: r.PodEvictionRetryInterval}, nil
 	}
 
 	// If any node is waiting for GNA to finish the update (ReadyForUpdate condition set),
@@ -180,7 +176,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 				cond.Reason != machinev1alpha1.ReadyForUpdate {
 				continue
 			}
-			remaining := updateTimeout - r.Clock.Since(cond.LastTransitionTime.Time)
+			remaining := r.UpdateTimeout - r.Clock.Since(cond.LastTransitionTime.Time)
 			if remaining > 0 && (requeueAfter == 0 || remaining < requeueAfter) {
 				requeueAfter = remaining
 			}
@@ -251,7 +247,7 @@ func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, no
 func (r *Reconciler) isUpdateTimedOut(node *corev1.Node) bool {
 	for _, cond := range node.Status.Conditions {
 		if cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Status == corev1.ConditionTrue && cond.Reason == machinev1alpha1.ReadyForUpdate {
-			return r.Clock.Since(cond.LastTransitionTime.Time) > updateTimeout
+			return r.Clock.Since(cond.LastTransitionTime.Time) > r.UpdateTimeout
 		}
 	}
 	return false
@@ -329,7 +325,7 @@ func (r *Reconciler) isDrainTimedOut(log logr.Logger, node *corev1.Node) bool {
 		log.Error(err, "Failed to parse drain-start-time annotation, treating drain as timed out", "node", node.Name, "value", startTimeStr)
 		return true
 	}
-	return r.Clock.Since(startTime) > drainTimeout
+	return r.Clock.Since(startTime) > r.DrainTimeout
 }
 
 func (r *Reconciler) listEvictablePods(ctx context.Context, nodeName string) ([]corev1.Pod, error) {

@@ -164,6 +164,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ShootState == nil {
 		obj.ShootState = &ShootStateControllerConfiguration{}
 	}
+	if obj.InPlaceUpdate == nil {
+		obj.InPlaceUpdate = &InPlaceUpdateControllerConfiguration{}
+	}
 	if obj.NetworkPolicy == nil {
 		obj.NetworkPolicy = &NetworkPolicyControllerConfiguration{}
 	}
@@ -383,6 +386,20 @@ func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConf
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 6 * time.Hour}
+	}
+}
+
+// SetDefaults_InPlaceUpdateControllerConfiguration sets defaults for the in-place update controller.
+func SetDefaults_InPlaceUpdateControllerConfiguration(obj *InPlaceUpdateControllerConfiguration) {
+	if obj.DrainTimeout == nil {
+		obj.DrainTimeout = &metav1.Duration{Duration: 20 * time.Minute}
+	}
+	if obj.UpdateTimeout == nil {
+		obj.UpdateTimeout = &metav1.Duration{Duration: 30 * time.Minute}
+	}
+	if obj.PodEvictionRetryInterval == nil {
+		// Matches MCM's PodEvictionRetryInterval.
+		obj.PodEvictionRetryInterval = &metav1.Duration{Duration: 20 * time.Second}
 	}
 }
 

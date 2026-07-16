@@ -1137,7 +1137,7 @@ const (
 	// AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated is an annotation key on the gardener-node-agent Secret
 	// containing the OperatingSystemConfig. When set to "true", gardener-node-agent skips acquiring the serial
 	// reconciliation lease and instead signals the gardenlet to cordon and drain the node before applying the update.
-	AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated = "in-place-update.node-agent.gardener.cloud/gardenlet-orchestrated"
+	AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated = "reconciliation.osc.node-agent.gardener.cloud/gardenlet-orchestrated"
 	// AnnotationNodeAgentInPlaceUpdateNeedsDrain is an annotation key set by gardener-node-agent on a Node object to
 	// signal the gardenlet that the node must be drained before the in-place update can proceed.
 	AnnotationNodeAgentInPlaceUpdateNeedsDrain = "in-place-update.node-agent.gardener.cloud/needs-drain"

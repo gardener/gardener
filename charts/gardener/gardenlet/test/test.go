@@ -806,6 +806,11 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs: &five,
 				SyncPeriod:      &metav1.Duration{Duration: 6 * time.Hour},
 			},
+			InPlaceUpdate: &gardenletconfigv1alpha1.InPlaceUpdateControllerConfiguration{
+				DrainTimeout:             &metav1.Duration{Duration: 20 * time.Minute},
+				UpdateTimeout:            &metav1.Duration{Duration: 30 * time.Minute},
+				PodEvictionRetryInterval: &metav1.Duration{Duration: 20 * time.Second},
+			},
 			ShootStatus: &gardenletconfigv1alpha1.ShootStatusControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},

@@ -6,6 +6,7 @@ package inplaceupdate
 
 import (
 	"context"
+	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +36,16 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, shootCluster cluster.Clus
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
+	}
+	if r.DrainTimeout == 0 {
+		r.DrainTimeout = 20 * time.Minute
+	}
+	if r.UpdateTimeout == 0 {
+		r.UpdateTimeout = 30 * time.Minute
+	}
+	if r.PodEvictionRetryInterval == 0 {
+		// Matches MCM's PodEvictionRetryInterval.
+		r.PodEvictionRetryInterval = 20 * time.Second
 	}
 
 	return builder.

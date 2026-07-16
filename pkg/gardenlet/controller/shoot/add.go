@@ -112,7 +112,10 @@ func AddToManager(
 
 		if selfHostedShoot != nil && !v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
 			if err := (&inplaceupdate.Reconciler{
-				ShootClient: seedClientSet.Client(),
+				ShootClient:              seedClientSet.Client(),
+				DrainTimeout:             cfg.Controllers.InPlaceUpdate.DrainTimeout.Duration,
+				UpdateTimeout:            cfg.Controllers.InPlaceUpdate.UpdateTimeout.Duration,
+				PodEvictionRetryInterval: cfg.Controllers.InPlaceUpdate.PodEvictionRetryInterval.Duration,
 			}).AddToManager(mgr, seedCluster); err != nil {
 				return fmt.Errorf("failed adding in-place update reconciler: %w", err)
 			}
