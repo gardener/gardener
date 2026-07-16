@@ -73,6 +73,7 @@ spec:
                   totalWeight:
                     description: Sum of samples to be used as denominator for weights
                       from BucketWeights.
+                    type: number
                 type: object
               firstSampleStart:
                 description: Timestamp of the first sample from the histograms.
@@ -105,6 +106,7 @@ spec:
                   totalWeight:
                     description: Sum of samples to be used as denominator for weights
                       from BucketWeights.
+                    type: number
                 type: object
               totalSamplesCount:
                 description: Total number of samples in the histograms.
@@ -172,6 +174,7 @@ spec:
                   totalWeight:
                     description: Sum of samples to be used as denominator for weights
                       from BucketWeights.
+                    type: number
                 type: object
               firstSampleStart:
                 description: Timestamp of the first sample from the histograms.
@@ -204,6 +207,7 @@ spec:
                   totalWeight:
                     description: Sum of samples to be used as denominator for weights
                       from BucketWeights.
+                    type: number
                 type: object
               totalSamplesCount:
                 description: Total number of samples in the histograms.
