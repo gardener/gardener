@@ -42,7 +42,7 @@ type Values struct {
 type SelfHostedShootExposure struct {
 	log    logr.Logger
 	client client.Client
-	clock  clock.PassiveClock
+	clock  clock.Clock
 	Values *Values
 
 	// exposed for testing
@@ -60,7 +60,7 @@ type SelfHostedShootExposure struct {
 func New(
 	log logr.Logger,
 	c client.Client,
-	clock clock.PassiveClock,
+	clock clock.Clock,
 	values *Values,
 ) *SelfHostedShootExposure {
 	return &SelfHostedShootExposure{
