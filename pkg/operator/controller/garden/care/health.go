@@ -61,14 +61,14 @@ func NewHealth(
 }
 
 // Check conducts the health checks on all the given conditions.
-func (h *health) Check(ctx context.Context, conditions GardenConditions) []gardencorev1beta1.Condition {
+func (h *health) Check(ctx context.Context, conditions GardenConditions, constraints GardenConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
 	managedResources, err := h.listManagedResources(ctx)
 	if err != nil {
 		conditions.virtualGardenAPIServerAvailable = v1beta1helper.NewConditionOrError(h.clock, conditions.virtualGardenAPIServerAvailable, nil, err)
 		conditions.runtimeComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.runtimeComponentsHealthy, nil, err)
 		conditions.virtualComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.virtualComponentsHealthy, nil, err)
 		conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, nil, err)
-		return conditions.ConvertToSlice()
+		return conditions.ConvertToSlice(), constraints.ConvertToSlice()
 	}
 
 	taskFns := []flow.TaskFn{
@@ -101,7 +101,10 @@ func (h *health) Check(ctx context.Context, conditions GardenConditions) []garde
 
 	_ = flow.Parallel(taskFns...)(ctx)
 
-	return conditions.ConvertToSlice()
+	status, reason, message := kuberneteshealth.CheckManagedResourcesHonored(managedResources)
+	constraints.managedResourcesHonored = v1beta1helper.UpdatedConditionWithClock(h.clock, constraints.managedResourcesHonored, status, reason, message)
+
+	return conditions.ConvertToSlice(), constraints.ConvertToSlice()
 }
 
 func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.ManagedResource, error) {
@@ -227,5 +230,32 @@ func NewGardenConditions(clock clock.Clock, status operatorv1alpha1.GardenStatus
 		runtimeComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.RuntimeComponentsHealthy),
 		virtualComponentsHealthy:        v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualComponentsHealthy),
 		observabilityComponentsHealthy:  v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.ObservabilityComponentsHealthy),
+	}
+}
+
+// GardenConstraints contains all constraints of the garden status subresource.
+type GardenConstraints struct {
+	managedResourcesHonored gardencorev1beta1.Condition
+}
+
+// ConvertToSlice returns the garden constraints as a slice.
+func (g GardenConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
+	return []gardencorev1beta1.Condition{
+		g.managedResourcesHonored,
+	}
+}
+
+// ConstraintTypes returns all garden constraint types.
+func (g GardenConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
+	return []gardencorev1beta1.ConditionType{
+		g.managedResourcesHonored.Type,
+	}
+}
+
+// NewGardenConstraints returns a new instance of GardenConstraints.
+// All constraints are retrieved from the given 'status' or newly initialized.
+func NewGardenConstraints(clock clock.Clock, status operatorv1alpha1.GardenStatus) GardenConstraints {
+	return GardenConstraints{
+		managedResourcesHonored: v1beta1helper.GetOrInitConditionWithClock(clock, status.Constraints, operatorv1alpha1.GardenManagedResourcesHonored),
 	}
 }

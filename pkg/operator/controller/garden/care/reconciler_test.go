@@ -99,7 +99,9 @@ var _ = Describe("Garden Care Control", func() {
 			Context("when no conditions are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(&NewHealthCheck,
-						healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition { return nil })))
+						healthCheckFunc(func(_ GardenConditions, _ GardenConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
+							return nil, nil
+						})))
 				})
 
 				It("should not set conditions", func() {
@@ -132,10 +134,10 @@ var _ = Describe("Garden Care Control", func() {
 			Context("when conditions are returned unchanged", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond GardenConditions) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(cond GardenConditions, _ GardenConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
 							conditions := cond.ConvertToSlice()
 							conditionsCopy := append(conditions[:0:0], conditions...)
-							return conditionsCopy
+							return conditionsCopy, nil
 						}),
 					))
 				})
@@ -179,8 +181,8 @@ var _ = Describe("Garden Care Control", func() {
 						},
 					}
 					DeferCleanup(test.WithVars(&NewHealthCheck,
-						healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition {
-							return conditions
+						healthCheckFunc(func(_ GardenConditions, _ GardenConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
+							return conditions, nil
 						})))
 				})
 
@@ -196,10 +198,10 @@ var _ = Describe("Garden Care Control", func() {
 	})
 })
 
-type resultingConditionFunc func(cond GardenConditions) []gardencorev1beta1.Condition
+type resultingConditionFunc func(cond GardenConditions, constr GardenConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition)
 
-func (c resultingConditionFunc) Check(_ context.Context, conditions GardenConditions) []gardencorev1beta1.Condition {
-	return c(conditions)
+func (c resultingConditionFunc) Check(_ context.Context, conditions GardenConditions, constraints GardenConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
+	return c(conditions, constraints)
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {

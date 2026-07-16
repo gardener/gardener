@@ -71,6 +71,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Initialize conditions based on the current status.
 	gardenConditions := NewGardenConditions(r.Clock, garden.Status)
+	gardenConstraints := NewGardenConstraints(r.Clock, garden.Status)
 
 	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
 	if err != nil {
@@ -78,7 +79,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	}
 
 	conditionThresholds := r.conditionThresholdsToProgressingMapping()
-	updatedConditions := NewHealthCheck(
+	updatedConditions, updatedConstraints := NewHealthCheck(
 		garden,
 		r.RuntimeClient,
 		gardenClientSet,
@@ -94,16 +95,24 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	).Check(
 		ctx,
 		gardenConditions,
+		gardenConstraints,
 	)
 
-	// Update Garden status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions) {
-		log.Info("Updating garden status conditions")
-		patch := client.MergeFrom(garden.DeepCopy())
-		// Rebuild garden conditions to ensure that only the conditions with the
-		// correct types will be updated, and any other conditions will remain intact
-		garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
+	conditionsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions)
+	constraintsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(gardenConstraints.ConvertToSlice(), updatedConstraints)
 
+	if conditionsNeedUpdate || constraintsNeedUpdate {
+		// Rebuild garden conditions/constraints to ensure that only the entries with the
+		// correct types will be updated, and any other entries will remain intact
+		patch := client.MergeFrom(garden.DeepCopy())
+		if conditionsNeedUpdate {
+			garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
+		}
+		if constraintsNeedUpdate {
+			garden.Status.Constraints = v1beta1helper.BuildConditions(garden.Status.Constraints, updatedConstraints, gardenConstraints.ConstraintTypes())
+		}
+
+		log.Info("Updating garden status conditions and constraints")
 		if err := r.RuntimeClient.Status().Patch(reconcileCtx, garden, patch); err != nil {
 			log.Error(err, "Could not update garden status")
 			return reconcile.Result{}, err
