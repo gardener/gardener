@@ -58,9 +58,9 @@ var _ = Describe("Garden health", func() {
 		gardenClientSet kubernetes.Interface
 		fakeClock       *testclock.FakeClock
 
-		garden           *operatorv1alpha1.Garden
-		gardenNamespace  string
-		gardenConditions GardenConditions
+		garden            *operatorv1alpha1.Garden
+		gardenNamespace   string
+		gardenConditions  GardenConditions
 		gardenConstraints GardenConstraints
 
 		apiserverAvailabilityCondition          gardencorev1beta1.Condition

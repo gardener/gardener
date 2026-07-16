@@ -31,9 +31,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 const (

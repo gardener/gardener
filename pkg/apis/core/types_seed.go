@@ -99,6 +99,8 @@ type SeedStatus struct {
 	ClientCertificateExpirationTimestamp *metav1.Time
 	// LastOperation holds information about the last operation on the Seed.
 	LastOperation *LastOperation
+	// Constraints represents conditions of a Seed's current state that constraint some operations on it.
+	Constraints []Condition
 }
 
 // Backup contains the object store configuration for backups for shoot (currently only etcd).

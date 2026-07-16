@@ -11652,6 +11652,18 @@ string
 </tr>
 <tr>
 <td>
+<code>constraints</code></br>
+<em>
+<a href="#condition">Condition</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Constraints represents conditions of a Seed's current state that constraint some operations on it.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastOperation</code></br>
 <em>
 <a href="#lastoperation">LastOperation</a>

@@ -42,7 +42,7 @@ var _ = Describe("Seed health", func() {
 		seed *gardencorev1beta1.Seed
 
 		seedSystemComponentsHealthyCondition gardencorev1beta1.Condition
-	seedConstraints                       SeedConstraints
+		seedConstraints                      SeedConstraints
 	)
 
 	BeforeEach(func() {
@@ -222,7 +222,7 @@ var _ = Describe("Seed health", func() {
 					prometheus.Labels = map[string]string{"health-check-by": "foo"}
 					Expect(c.Update(ctx, prometheus)).To(Succeed())
 					updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
-				expectHealthySystemComponents(updatedConditions)
+					expectHealthySystemComponents(updatedConditions)
 				})
 			})
 		})
