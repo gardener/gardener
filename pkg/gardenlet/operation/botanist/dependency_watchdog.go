@@ -15,6 +15,10 @@ import (
 // DefaultDependencyWatchdogAccess returns an instance of the Deployer which reconciles the resources so that DependencyWatchdogAccess can access a
 // shoot cluster.
 func (b *Botanist) DefaultDependencyWatchdogAccess() component.Deployer {
+	if b.Shoot.IsWorkerless {
+		return nil
+	}
+
 	return dependencywatchdog.NewAccess(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,

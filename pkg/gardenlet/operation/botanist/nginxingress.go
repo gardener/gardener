@@ -25,6 +25,10 @@ import (
 
 // DefaultNginxIngress returns a deployer for the nginxingress.
 func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
+	if b.Shoot.IsWorkerless {
+		return nil, nil
+	}
+
 	var (
 		configData               map[string]string
 		loadBalancerSourceRanges []string

@@ -13,6 +13,10 @@ import (
 
 // DefaultNodeProblemDetector returns a deployer for the NodeProblemDetector.
 func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) {
+	if b.Shoot.IsWorkerless {
+		return nil, nil
+	}
+
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameNodeProblemDetector, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

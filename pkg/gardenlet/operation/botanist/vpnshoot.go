@@ -18,33 +18,34 @@ import (
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
-	imageNameVPNShootClient := imagevector.ContainerImageNameVpnClient
-	image, err := imagevector.Containers().FindImage(imageNameVPNShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
+	if b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted() {
+		return nil, nil
 	}
 
-	values := vpnshoot.Values{
-		Image:             image.String(),
-		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
-		VPAUpdateDisabled: b.Shoot.VPNVPAUpdateDisabled,
-		ReversedVPN: vpnshoot.ReversedVPNValues{
-			Header:     "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.ControlPlaneNamespace + ".svc.cluster.local",
-			Endpoint:   b.outOfClusterAPIServerFQDN(),
-			IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
-		},
-		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
-		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
-		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
-		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
-		AutoMTU:                              b.Shoot.VPNAutoMTU,
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpnClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
 	}
 
 	return vpnshoot.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
-		values,
+		vpnshoot.Values{
+			Image:             image.String(),
+			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
+			VPAUpdateDisabled: b.Shoot.VPNVPAUpdateDisabled,
+			ReversedVPN: vpnshoot.ReversedVPNValues{
+				Header:     "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.ControlPlaneNamespace + ".svc.cluster.local",
+				Endpoint:   b.outOfClusterAPIServerFQDN(),
+				IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
+			},
+			HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
+			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
+			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+			SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
+			AutoMTU:                              b.Shoot.VPNAutoMTU,
+		},
 	), nil
 }
 

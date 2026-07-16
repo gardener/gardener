@@ -57,6 +57,10 @@ func (b *Botanist) ReconcileBlackboxExporterControlPlane(ctx context.Context) er
 
 // DefaultBlackboxExporterCluster returns a deployer for the blackbox-exporter.
 func (b *Botanist) DefaultBlackboxExporterCluster() (component.DeployWaiter, error) {
+	if b.Shoot.IsWorkerless {
+		return nil, nil
+	}
+
 	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
 		b.SecretsManager,

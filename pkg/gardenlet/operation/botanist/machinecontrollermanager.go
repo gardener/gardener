@@ -20,6 +20,10 @@ import (
 
 // DefaultMachineControllerManager returns a deployer for the machine-controller-manager.
 func (b *Botanist) DefaultMachineControllerManager() (machinecontrollermanager.Interface, error) {
+	if b.Shoot.IsWorkerless {
+		return nil, nil
+	}
+
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameMachineControllerManager, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

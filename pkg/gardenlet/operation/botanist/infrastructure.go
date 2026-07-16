@@ -20,6 +20,10 @@ import (
 
 // DefaultInfrastructure creates the default deployer for the Infrastructure custom resource.
 func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
+	if b.Shoot.IsWorkerless {
+		return nil
+	}
+
 	return infrastructure.New(
 		b.Logger,
 		b.SeedClientSet.Client(),

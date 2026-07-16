@@ -16,6 +16,10 @@ import (
 
 // DefaultEtcdDruid creates a new deployer for etcd-druid.
 func (b *Botanist) DefaultEtcdDruid() (component.DeployWaiter, error) {
+	if !b.Shoot.IsSelfHosted() {
+		return nil, nil
+	}
+
 	var componentImageVectors imagevectorutils.ComponentImageVectors
 	if path := os.Getenv(imagevectorutils.ComponentOverrideEnv); path != "" {
 		var err error

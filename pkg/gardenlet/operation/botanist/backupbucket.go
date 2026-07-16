@@ -11,6 +11,10 @@ import (
 
 // DefaultCoreBackupBucket creates the default deployer for the core.gardener.cloud/v1beta1.BackupBucket resource.
 func (b *Botanist) DefaultCoreBackupBucket() corebackupbucket.Interface {
+	if !b.Shoot.IsSelfHosted() {
+		return nil
+	}
+
 	return corebackupbucket.New(b.Logger, b.GardenClient, &corebackupbucket.Values{
 		Name:          string(b.Shoot.GetInfo().Status.UID),
 		Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),

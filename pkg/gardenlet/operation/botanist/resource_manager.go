@@ -96,6 +96,10 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 // DefaultRuntimeGardenerResourceManager returns the gardener-resource-manager component for deploying it to the garden
 // namespace (self-hosted shoot scenario).
 func (b *Botanist) DefaultRuntimeGardenerResourceManager() (resourcemanager.Interface, error) {
+	if !b.Shoot.IsSelfHosted() {
+		return nil, nil
+	}
+
 	return shared.NewRuntimeGardenerResourceManager(b.SeedClientSet.Client(), v1beta1constants.GardenNamespace, b.SecretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:         features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		SystemComponentsConfigWebhookEnabled: true,

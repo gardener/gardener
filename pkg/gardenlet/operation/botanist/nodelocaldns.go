@@ -28,6 +28,10 @@ import (
 
 // DefaultNodeLocalDNS returns a deployer for the node-local-dns.
 func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
+	if b.Shoot.IsWorkerless {
+		return nil, nil
+	}
+
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameNodeLocalDns, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

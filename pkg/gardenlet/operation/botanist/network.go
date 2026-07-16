@@ -13,6 +13,10 @@ import (
 
 // DefaultNetwork creates the default deployer for the Network custom resource.
 func (b *Botanist) DefaultNetwork() network.Interface {
+	if b.Shoot.IsWorkerless {
+		return nil
+	}
+
 	var ipFamilies []extensionsv1alpha1.IPFamily
 	for _, ipFamily := range b.Shoot.GetInfo().Spec.Networking.IPFamilies {
 		ipFamilies = append(ipFamilies, extensionsv1alpha1.IPFamily(ipFamily))

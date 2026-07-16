@@ -14,6 +14,10 @@ import (
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
 func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
+	if b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted() {
+		return nil, nil
+	}
+
 	imageAPIServerProxy, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameEnvoyProxy, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

@@ -36,6 +36,10 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
+	if b.Shoot.IsWorkerless {
+		return nil, nil
+	}
+
 	values, err := b.OperatingSystemConfigValues()
 	if err != nil {
 		return nil, fmt.Errorf("failed creating operating system config values: %w", err)

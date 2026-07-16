@@ -20,6 +20,10 @@ import (
 // DefaultSelfHostedShootExposure creates the default deployer for the SelfHostedShootExposure resource.
 // The actual endpoints are populated at deploy time by the caller via Values.Endpoints.
 func (b *Botanist) DefaultSelfHostedShootExposure() *extensionsselfhostedshootexposure.SelfHostedShootExposure {
+	if !b.Shoot.HasExtensionExposure() {
+		return nil
+	}
+
 	var (
 		shoot  = b.Shoot.GetInfo()
 		pool   = v1beta1helper.ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)

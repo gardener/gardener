@@ -29,6 +29,10 @@ import (
 
 // DefaultWorker creates the default deployer for the Worker custom resource.
 func (b *Botanist) DefaultWorker() worker.Interface {
+	if b.Shoot.IsWorkerless {
+		return nil
+	}
+
 	workers := b.Shoot.GetInfo().Spec.Provider.Workers
 	// In `gardenadm bootstrap` we only deploy the control plane worker pool. When running `gardenadm init` on the
 	// created control plane nodes, the full `Worker` with all pools will be deployed.

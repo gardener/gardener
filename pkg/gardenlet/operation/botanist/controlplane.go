@@ -160,6 +160,10 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
 func (b *Botanist) DefaultControlPlane() extensionscontrolplane.Interface {
+	if b.Shoot.IsWorkerless {
+		return nil
+	}
+
 	return extensionscontrolplane.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
