@@ -398,6 +398,14 @@ The following table explains which `ManagedResource`s are considered for which c
 |-------------------------------|----------------------------------------|
 | `SeedSystemComponentsHealthy` | `.spec.class` is set                   |
 
+##### Constraints
+
+The reconciler also computes the following constraint in `.status.constraints` of the `Seed`:
+
+| Constraint Type          | Meaning when `status=True`                                        | Meaning when `status=False`                                                         |
+|--------------------------|-------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| `ManagedResourcesHonored` | No `ManagedResource` in the seed's namespaces carries the `resources.gardener.cloud/ignore=true` annotation. | At least one `ManagedResource` is annotated with `resources.gardener.cloud/ignore=true`, disabling its reconciliation. |
+
 #### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 
 This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
