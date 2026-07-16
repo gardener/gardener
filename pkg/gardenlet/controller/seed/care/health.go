@@ -19,6 +19,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	commonprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/features"
+	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
@@ -52,17 +53,18 @@ func NewHealth(
 func (h *health) Check(
 	ctx context.Context,
 	conditions SeedConditions,
-) []gardencorev1beta1.Condition {
+	constraints SeedConstraints,
+) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
 	managedResources, err := h.listManagedResources(ctx)
 	if err != nil {
 		conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, nil, err)
-		return conditions.ConvertToSlice()
+		return conditions.ConvertToSlice(), constraints.ConvertToSlice()
 	}
 
 	prometheuses, err := h.listPrometheuses(ctx)
 	if err != nil {
 		conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, nil, err)
-		return conditions.ConvertToSlice()
+		return conditions.ConvertToSlice(), constraints.ConvertToSlice()
 	}
 
 	var checkedConditions []gardencorev1beta1.Condition
@@ -70,7 +72,11 @@ func (h *health) Check(
 	if newEmergencyStopShootReconciliations := h.checkEmergencyStopShootReconciliations(conditions.emergencyStopShootReconciliations); newEmergencyStopShootReconciliations != nil {
 		checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.emergencyStopShootReconciliations, newEmergencyStopShootReconciliations, nil))
 	}
-	return checkedConditions
+
+	status, reason, message := kuberneteshealth.CheckManagedResourcesHonored(managedResources)
+	constraints.managedResourcesHonored = v1beta1helper.UpdatedConditionWithClock(h.clock, constraints.managedResourcesHonored, status, reason, message)
+
+	return checkedConditions, constraints.ConvertToSlice()
 }
 
 func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.ManagedResource, error) {
@@ -157,5 +163,32 @@ func NewSeedConditions(clock clock.Clock, status gardencorev1beta1.SeedStatus) S
 	return SeedConditions{
 		systemComponentsHealthy:           v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy),
 		emergencyStopShootReconciliations: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, gardencorev1beta1.SeedEmergencyStopShootReconciliations),
+	}
+}
+
+// SeedConstraints contains all constraints of the seed status subresource.
+type SeedConstraints struct {
+	managedResourcesHonored gardencorev1beta1.Condition
+}
+
+// ConvertToSlice returns the seed constraints as a slice.
+func (s SeedConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
+	return []gardencorev1beta1.Condition{
+		s.managedResourcesHonored,
+	}
+}
+
+// ConstraintTypes returns all seed constraint types.
+func (s SeedConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
+	return []gardencorev1beta1.ConditionType{
+		s.managedResourcesHonored.Type,
+	}
+}
+
+// NewSeedConstraints returns a new instance of SeedConstraints.
+// All constraints are retrieved from the given 'status' or newly initialized.
+func NewSeedConstraints(clock clock.Clock, status gardencorev1beta1.SeedStatus) SeedConstraints {
+	return SeedConstraints{
+		managedResourcesHonored: v1beta1helper.GetOrInitConditionWithClock(clock, status.Constraints, gardencorev1beta1.SeedManagedResourcesHonored),
 	}
 }
