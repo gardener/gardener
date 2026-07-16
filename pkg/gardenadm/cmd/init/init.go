@@ -152,7 +152,9 @@ func run(ctx context.Context, opts *Options) error {
 					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 				}
 
-				return flow.Parallel(
+				// Deploy sequentially: only `RuntimeResourceManager` installs the `ManagedResource` CRD, and
+				// `ResourceManager.Deploy` creates a `ManagedResource` object on the same client.
+				return flow.Sequential(
 					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
