@@ -519,7 +519,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
 							{Type: gardencorev1beta1.ShootAutomaticCredentialsRotationPossible},
-							{Type: gardencorev1beta1.ShootHasIgnoredManagedResources},
+							{Type: gardencorev1beta1.ShootManagedResourcesHonored},
 							{Type: gardencorev1beta1.ShootPreservedFailedMachinesAbsent},
 						},
 					},
@@ -820,7 +820,7 @@ var _ = Describe("Constraints", func() {
 			Context("#HasIgnoredManagedResources", func() {
 				It("should remove the constraint when no ManagedResources exist", func() {
 					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-						OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+						OfType(gardencorev1beta1.ShootManagedResourcesHonored),
 					))
 				})
 
@@ -837,7 +837,7 @@ var _ = Describe("Constraints", func() {
 					Expect(seedClient.Create(ctx, mr)).To(Succeed())
 
 					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-						OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+						OfType(gardencorev1beta1.ShootManagedResourcesHonored),
 					))
 				})
 
@@ -856,7 +856,7 @@ var _ = Describe("Constraints", func() {
 					}
 
 					Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
-						OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+						OfType(gardencorev1beta1.ShootManagedResourcesHonored),
 						WithStatus(gardencorev1beta1.ConditionProgressing),
 						WithReason("ManagedResourcesIgnored"),
 						WithMessageSubstrings("bar, baz, foo"),
@@ -888,14 +888,14 @@ var _ = Describe("Constraints", func() {
 						hibernatedShoot := &gardencorev1beta1.Shoot{
 							Status: gardencorev1beta1.ShootStatus{
 								Constraints: []gardencorev1beta1.Condition{
-									{Type: gardencorev1beta1.ShootHasIgnoredManagedResources, Status: gardencorev1beta1.ConditionTrue},
+									{Type: gardencorev1beta1.ShootManagedResourcesHonored, Status: gardencorev1beta1.ConditionTrue},
 								},
 							},
 						}
 						hibernatedConstraints := NewShootConstraints(testclock.NewFakeClock(time.Time{}), hibernatedShoot)
 
 						Expect(hibernatedConstraint.Check(ctx, hibernatedConstraints)).NotTo(ContainCondition(
-							OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+							OfType(gardencorev1beta1.ShootManagedResourcesHonored),
 						))
 					})
 
@@ -912,7 +912,7 @@ var _ = Describe("Constraints", func() {
 						Expect(seedClient.Create(ctx, mr)).To(Succeed())
 
 						Expect(hibernatedConstraint.Check(ctx, constraints)).To(ContainCondition(
-							OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+							OfType(gardencorev1beta1.ShootManagedResourcesHonored),
 							WithReason("ManagedResourcesIgnored"),
 							WithMessageSubstrings("foo"),
 						))
@@ -1101,7 +1101,7 @@ var _ = Describe("Constraints", func() {
 					OfType("CRDsWithProblematicConversionWebhooks"),
 					OfType("ManualInPlaceWorkersUpdated"),
 					OfType("AutomaticCredentialsRotationPossible"),
-					OfType("HasIgnoredManagedResources"),
+					OfType("ManagedResourcesHonored"),
 					OfType("PreservedFailedMachinesAbsent"),
 				))
 			})
@@ -1118,7 +1118,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
 					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
 					gardencorev1beta1.ConditionType("AutomaticCredentialsRotationPossible"),
-					gardencorev1beta1.ConditionType("HasIgnoredManagedResources"),
+					gardencorev1beta1.ConditionType("ManagedResourcesHonored"),
 					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
 				))
 			})
