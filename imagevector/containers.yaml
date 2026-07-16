@@ -895,7 +895,7 @@ images:
   - name: pvc-autoscaler
     sourceRepository: github.com/gardener/pvc-autoscaler
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/pvc-autoscaler
-    tag: "v0.2.0"
+    tag: "v0.3.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
