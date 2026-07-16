@@ -68,7 +68,8 @@ In these cases, you might want to overwrite certain images, e.g., point the `pau
 
 :warning: If you specify an image that does not fit to the resource manifest, then the reconciliations might fail.
 
-In order to overwrite the images, you must provide a similar file to the Gardener component:
+In order to overwrite the images, you must provide a similar file to the Gardener component.
+If your registry requires a custom CA, you can also supply a `caBundle` in the same file (see [CA Bundle for Private Registries](#ca-bundle-for-private-registries)):
 
 ```yaml
 images:
@@ -123,6 +124,28 @@ spec:
         configMap:
           name: gardenlet-images-overwrite
 ```
+
+## CA Bundle for Private Registries
+
+If the registry used in the image vector overwrite is backed by a custom PKI (i.e., it presents a TLS certificate that is not trusted by the default system roots), you can supply the CA bundle alongside the image overrides in the same file:
+
+```yaml
+images:
+- name: pause-container
+  repository: my-private-registry.example.com/pause
+  tag: "3.5"
+caBundle:
+  inline: |
+    -----BEGIN CERTIFICATE-----
+    <base64-encoded DER certificate>
+    -----END CERTIFICATE-----
+```
+
+The `caBundle.inline` field accepts a PEM-encoded CA certificate bundle.
+If set for `gardenlet`, it will distribute the CA certificate bundle to the worker nodes of every shoot managed by this seed, so that containerd on those nodes trusts the registry when pulling images.
+
+> [!NOTE]
+> The certificate must be a CA certificate and must not be expired. Gardener validates both conditions when loading the image vector overwrite file.
 
 ## Image Vectors for Dependent Components
 
