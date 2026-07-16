@@ -2179,10 +2179,10 @@ const (
 	// ShootManualInPlaceWorkersUpdated is a constant for a condition type indicating that the Shoot cluster does not have
 	// any worker pools with update strategy "ManualInPlaceUpdate" and pending update.
 	ShootManualInPlaceWorkersUpdated ConditionType = "ManualInPlaceWorkersUpdated"
-	// ShootHasIgnoredManagedResources is a constant for a condition type indicating that one or more ManagedResources
-	// in the Shoot's control plane namespace in the seed have been annotated with resources.gardener.cloud/ignore=true,
-	// meaning their reconciliation has been disabled. Operators should be aware of such resources as they may diverge from the desired state.
-	ShootHasIgnoredManagedResources ConditionType = "HasIgnoredManagedResources"
+	// ShootManagedResourcesHonored is a constant for a constraint type indicating that no ManagedResources
+	// in the Shoot's control plane namespace in the seed have been annotated with resources.gardener.cloud/ignore=true.
+	// When False, at least one ManagedResource has its reconciliation disabled by the ignore annotation.
+	ShootManagedResourcesHonored ConditionType = "ManagedResourcesHonored"
 	// ShootAutomaticCredentialsRotationPossible is a constant for a condition type indicating whether an automatic
 	// ETCD encryption key rotation can run during the next maintenance window.
 	ShootAutomaticCredentialsRotationPossible ConditionType = "AutomaticCredentialsRotationPossible"

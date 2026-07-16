@@ -122,6 +122,11 @@ type SeedStatus struct {
 	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
 	// +optional
 	ClientCertificateExpirationTimestamp *metav1.Time `json:"clientCertificateExpirationTimestamp,omitempty" protobuf:"bytes,8,opt,name=clientCertificateExpirationTimestamp"`
+	// Constraints represents conditions of a Seed's current state that constraint some operations on it.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +optional
+	Constraints []Condition `json:"constraints,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,10,rep,name=constraints"`
 	// LastOperation holds information about the last operation on the Seed.
 	// +optional
 	LastOperation *LastOperation `json:"lastOperation,omitempty" protobuf:"bytes,9,opt,name=lastOperation"`
@@ -540,6 +545,9 @@ const (
 	SeedSystemComponentsHealthy ConditionType = "SeedSystemComponentsHealthy"
 	// SeedEmergencyStopShootReconciliations is a constant for a condition type indicating disabled shoot reconciliations.
 	SeedEmergencyStopShootReconciliations ConditionType = "EmergencyStopShootReconciliations"
+	// SeedManagedResourcesHonored is a constant for a constraint type indicating that no ManagedResources
+	// in the seed's namespaces have been annotated with resources.gardener.cloud/ignore=true.
+	SeedManagedResourcesHonored ConditionType = "ManagedResourcesHonored"
 )
 
 // Resource constants for Gardener object types
