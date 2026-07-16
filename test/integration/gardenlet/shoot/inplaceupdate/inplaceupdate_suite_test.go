@@ -106,17 +106,15 @@ var _ = BeforeSuite(func() {
 	By("Create control plane Namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "cp-" + testRunID,
+			// The in-place update reconciler operates on self-hosted shoots, whose control plane always
+			// runs in-cluster in the kube-system namespace.
+			Name:   metav1.NamespaceSystem,
 			Labels: map[string]string{testID: testRunID},
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	// kube-system is created by the kube-apiserver on start-up, so it may already exist.
+	Expect(client.IgnoreAlreadyExists(testClient.Create(ctx, testNamespace))).To(Succeed())
 	log.Info("Created control plane Namespace for test", "namespace", testNamespace.Name, "testRunID", testRunID)
-
-	DeferCleanup(func() {
-		By("Delete control plane Namespace")
-		Expect(client.IgnoreNotFound(testClient.Delete(ctx, testNamespace))).To(Succeed())
-	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -198,9 +196,8 @@ var _ = BeforeSuite(func() {
 	})
 
 	Expect((&inplaceupdate.Reconciler{
-		SeedClient:            mgr.GetClient(),
-		Clock:                 fakeClock,
-		ControlPlaneNamespace: testNamespace.Name,
+		ShootClient: mgr.GetClient(),
+		Clock:       fakeClock,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")

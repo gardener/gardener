@@ -29,9 +29,9 @@ import (
 const ControllerName = "shoot-inplace-update"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Cluster) error {
-	if r.SeedClient == nil {
-		r.SeedClient = seedCluster.GetClient()
+func (r *Reconciler) AddToManager(mgr manager.Manager, shootCluster cluster.Cluster) error {
+	if r.ShootClient == nil {
+		r.ShootClient = shootCluster.GetClient()
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
@@ -45,7 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		WatchesRawSource(source.Kind[client.Object](
-			seedCluster.GetCache(),
+			shootCluster.GetCache(),
 			&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(MapNodeToPool),
 			NodeInPlaceUpdateStatePredicate(),

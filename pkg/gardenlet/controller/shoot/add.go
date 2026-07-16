@@ -112,8 +112,7 @@ func AddToManager(
 
 		if selfHostedShoot != nil && !v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
 			if err := (&inplaceupdate.Reconciler{
-				SeedClient:            seedClientSet.Client(),
-				ControlPlaneNamespace: selfHostedShoot.Status.TechnicalID,
+				ShootClient: seedClientSet.Client(),
 			}).AddToManager(mgr, seedCluster); err != nil {
 				return fmt.Errorf("failed adding in-place update reconciler: %w", err)
 			}

@@ -121,6 +121,56 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			}).Should(Succeed())
 		})
 
+		It("should force-delete remaining pods and complete the drain once the drain timeout is exceeded", func() {
+			node := newNode(uniqueName("timeout"), poolDefault, poolDefaultSecretName)
+			Expect(testClient.Create(ctx, node)).To(Succeed())
+
+			// The finalizer keeps the pod around after eviction so the drain cannot complete on its own,
+			// forcing the reconciler down the drain-timeout force-delete path.
+			pod := newPod(uniqueName("pod"), testNamespace.Name, node.Name, func(p *corev1.Pod) {
+				p.Finalizers = []string{finalizerKeepAlive}
+			})
+			Expect(testClient.Create(ctx, pod)).To(Succeed())
+
+			addNeedsDrain(node)
+
+			By("Wait for cordon and drain-start annotation")
+			Eventually(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				g.Expect(node.Spec.Unschedulable).To(BeTrue())
+				g.Expect(node.Annotations).To(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
+			}).Should(Succeed())
+
+			By("Confirm the drain does not complete while the pod is stuck")
+			Consistently(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				g.Expect(findCondition(node)).To(BeNil())
+			}, 2*time.Second, 200*time.Millisecond).Should(Succeed())
+
+			By("Step past the drain timeout")
+			fakeClock.Step(21 * time.Minute)
+
+			// Re-trigger reconcile by toggling needs-drain, rather than waiting for the requeue interval.
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				patch := client.MergeFrom(node.DeepCopy())
+				delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain)
+				g.Expect(testClient.Patch(ctx, node, patch)).To(Succeed())
+			}).Should(Succeed())
+			addNeedsDrain(node)
+
+			By("The remaining pod is force-deleted and the drain completes")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+				g.Expect(pod.DeletionTimestamp).NotTo(BeNil())
+			}).Should(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
+				g.Expect(findCondition(node)).To(matchCondition(machinev1alpha1.ReadyForUpdate))
+			}).Should(Succeed())
+		})
+
 		It("should respect the pool's MaxUnavailable when multiple nodes need drain", func() {
 			By("Create three nodes in the multi-pool, all needing drain, each holding a finalizer pod to keep drain in-progress")
 			nodes := make([]*corev1.Node, 3)
@@ -368,6 +418,34 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(cond).NotTo(BeNil())
 				g.Expect(cond.Reason).To(Equal(machinev1alpha1.UpdateFailed))
 				g.Expect(cond.Message).To(Equal("GNA reported in-place update failure"))
+			}).Should(Succeed())
+		})
+
+		It("should bump the condition's LastTransitionTime when the reason changes across update cycles", func() {
+			node := newNode(uniqueName("bump"), poolDefault, poolDefaultSecretName)
+			Expect(testClient.Create(ctx, node)).To(Succeed())
+
+			// Seed a stale condition from a previous cycle and mark the node for a fresh drain.
+			staleTime := fakeClock.Now().Add(-time.Hour)
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				patch := client.MergeFrom(node.DeepCopy())
+				node.Status.Conditions = []corev1.NodeCondition{{
+					Type:               machinev1alpha1.NodeInPlaceUpdate,
+					Status:             corev1.ConditionTrue,
+					Reason:             machinev1alpha1.UpdateSuccessful,
+					LastTransitionTime: metav1.NewTime(staleTime),
+				}}
+				g.Expect(testClient.Status().Patch(ctx, node, patch)).To(Succeed())
+			}).Should(Succeed())
+			addNeedsDrain(node)
+
+			By("The reason flips to ReadyForUpdate with a bumped LastTransitionTime")
+			Eventually(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				cond := findCondition(node)
+				g.Expect(cond).To(matchCondition(machinev1alpha1.ReadyForUpdate))
+				g.Expect(cond.LastTransitionTime.Time).To(BeTemporally(">", staleTime))
 			}).Should(Succeed())
 		})
 	})

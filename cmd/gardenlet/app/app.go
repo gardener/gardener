@@ -44,7 +44,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -591,12 +590,6 @@ func (g *garden) Start(ctx context.Context) error {
 			return fmt.Errorf("failed waiting for Shoot %s: %w", g.selfHostedShootInfo, err)
 		}
 		log.Info("Successfully fetched Shoot resource for self-hosted shoot", "shoot", g.selfHostedShootInfo)
-
-		if !v1beta1helper.HasManagedInfrastructure(shoot) {
-			if err := indexer.AddPodNodeName(ctx, g.mgr.GetFieldIndexer()); err != nil {
-				return fmt.Errorf("failed adding pod node name field index for in-place update controller: %w", err)
-			}
-		}
 	}
 
 	log.Info("Adding controllers to manager")

@@ -42,9 +42,8 @@ const (
 
 // Reconciler orchestrates in-place updates for all nodes in a worker pool.
 type Reconciler struct {
-	SeedClient            client.Client
-	Clock                 clock.Clock
-	ControlPlaneNamespace string
+	ShootClient client.Client
+	Clock       clock.Clock
 }
 
 // Reconcile processes all in-place-update state for a single worker pool.
@@ -53,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	poolSecretName := req.Name
 
 	nodeList := &corev1.NodeList{}
-	if err := r.SeedClient.List(ctx, nodeList, client.MatchingLabels{
+	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{
 		v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName,
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list nodes for pool %s: %w", poolSecretName, err)
@@ -89,15 +88,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
-	if err := r.SeedClient.List(ctx, nodeList, client.MatchingLabels{
+	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{
 		v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName,
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to re-list nodes for pool %s: %w", poolSecretName, err)
 	}
 
 	inProgress := 0
-	for i := range nodeList.Items {
-		if NodeIsUnavailableForInPlaceUpdate(&nodeList.Items[i]) {
+	for _, node := range nodeList.Items {
+		if NodeIsUnavailableForInPlaceUpdate(&node) {
 			inProgress++
 		}
 	}
@@ -113,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		patch := client.MergeFrom(node.DeepCopy())
 		node.Spec.Unschedulable = true
 		metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime, r.Clock.Now().UTC().Format(time.RFC3339))
-		if err := r.SeedClient.Patch(ctx, node, patch); err != nil {
+		if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to cordon node %s: %w", node.Name, err)
 		}
 		log.Info("Cordoned node, starting drain", "node", node.Name)
@@ -146,7 +145,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			}
 			log.Info("Drain timed out, force-deleting remaining pods", "node", node.Name, "count", len(remaining))
 			for _, pod := range remaining {
-				if err := r.SeedClient.Delete(ctx, &pod, client.GracePeriodSeconds(0)); client.IgnoreNotFound(err) != nil {
+				if err := r.ShootClient.Delete(ctx, &pod, client.GracePeriodSeconds(0)); client.IgnoreNotFound(err) != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to force-delete pod %s/%s: %w", pod.Namespace, pod.Name, err)
 				}
 			}
@@ -154,14 +153,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		condPatch := client.MergeFrom(node.DeepCopy())
 		r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.ReadyForUpdate, "Node drained and ready for in-place update")
-		if err := r.SeedClient.Status().Patch(ctx, node, condPatch); err != nil {
+		if err := r.ShootClient.Status().Patch(ctx, node, condPatch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to set NodeInPlaceUpdate condition on node %s: %w", node.Name, err)
 		}
 
 		annotPatch := client.MergeFrom(node.DeepCopy())
 		delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain)
 		delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime)
-		if err := r.SeedClient.Patch(ctx, node, annotPatch); err != nil {
+		if err := r.ShootClient.Patch(ctx, node, annotPatch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove drain annotations from node %s: %w", node.Name, err)
 		}
 		log.Info("Drain complete, node ready for in-place update", "node", node.Name)
@@ -174,8 +173,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// If any node is waiting for GNA to finish the update (ReadyForUpdate condition set),
 	// requeue just before the earliest timeout so we can detect a stuck GNA.
 	var requeueAfter time.Duration
-	for i := range nodeList.Items {
-		for _, cond := range nodeList.Items[i].Status.Conditions {
+	for _, node := range nodeList.Items {
+		for _, cond := range node.Status.Conditions {
 			if cond.Type != machinev1alpha1.NodeInPlaceUpdate ||
 				cond.Status != corev1.ConditionTrue ||
 				cond.Reason != machinev1alpha1.ReadyForUpdate {
@@ -200,31 +199,30 @@ func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.
 	// Delete gardener-resource-manager pods so they restart and pick up updated configuration
 	// (new CA bundles, SA keys, etc.) from the in-place update. GNA skips GRM during pod
 	// deletion to avoid a webhook deadlock, so the gardenlet restarts it here instead.
-	if r.ControlPlaneNamespace != "" {
-		podList := &corev1.PodList{}
-		if err := r.SeedClient.List(ctx, podList,
-			client.InNamespace(r.ControlPlaneNamespace),
-			client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager},
-		); err != nil {
-			return fmt.Errorf("failed listing gardener-resource-manager pods in namespace %s: %w", r.ControlPlaneNamespace, err)
-		}
-		if err := kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.SeedClient, podList, nil); err != nil {
-			return fmt.Errorf("failed deleting gardener-resource-manager pods in namespace %s: %w", r.ControlPlaneNamespace, err)
-		}
-		if len(podList.Items) > 0 {
-			log.Info("Deleted gardener-resource-manager pods to pick up updated configuration")
-		}
+	// For self-hosted shoots the control plane runs in-cluster, so GRM lives in kube-system.
+	podList := &corev1.PodList{}
+	if err := r.ShootClient.List(ctx, podList,
+		client.InNamespace(metav1.NamespaceSystem),
+		client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager},
+	); err != nil {
+		return fmt.Errorf("failed listing gardener-resource-manager pods in namespace %s: %w", metav1.NamespaceSystem, err)
+	}
+	if err := kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.ShootClient, podList, nil); err != nil {
+		return fmt.Errorf("failed deleting gardener-resource-manager pods in namespace %s: %w", metav1.NamespaceSystem, err)
+	}
+	if len(podList.Items) > 0 {
+		log.Info("Deleted gardener-resource-manager pods to pick up updated configuration")
 	}
 
 	condPatch := client.MergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateSuccessful, "In-place update completed successfully")
-	if err := r.SeedClient.Status().Patch(ctx, node, condPatch); err != nil {
+	if err := r.ShootClient.Status().Patch(ctx, node, condPatch); err != nil {
 		return fmt.Errorf("failed to set NodeInPlaceUpdate condition to successful on node %s: %w", node.Name, err)
 	}
 
 	labelPatch := client.MergeFrom(node.DeepCopy())
 	delete(node.Labels, machinev1alpha1.LabelKeyNodeUpdateResult)
-	if err := r.SeedClient.Patch(ctx, node, labelPatch); err != nil {
+	if err := r.ShootClient.Patch(ctx, node, labelPatch); err != nil {
 		return fmt.Errorf("failed to remove update-result label from node %s: %w", node.Name, err)
 	}
 	log.Info("Cleaned up node after successful in-place update")
@@ -242,7 +240,7 @@ func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, no
 
 	patch := client.MergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, reason)
-	if err := r.SeedClient.Status().Patch(ctx, node, patch); err != nil {
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
 	}
 
@@ -264,13 +262,13 @@ func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, no
 
 	labelPatch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
-	if err := r.SeedClient.Patch(ctx, node, labelPatch); err != nil {
+	if err := r.ShootClient.Patch(ctx, node, labelPatch); err != nil {
 		return fmt.Errorf("failed to label node with update failed label %s: %w", node.Name, err)
 	}
 
 	patch := client.MergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, "GNA failed to complete the in-place update within the expected time")
-	if err := r.SeedClient.Status().Patch(ctx, node, patch); err != nil {
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
 	}
 
@@ -297,14 +295,14 @@ func (r *Reconciler) evictPods(ctx context.Context, log logr.Logger, node *corev
 				Namespace: pod.Namespace,
 			},
 		}
-		if err := r.SeedClient.SubResource("eviction").Create(ctx, &pod, eviction); err != nil {
+		if err := r.ShootClient.SubResource("eviction").Create(ctx, &pod, eviction); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
 			if apierrors.IsTooManyRequests(err) {
 				if drainTimedOut {
 					log.Info("Drain timed out, force-deleting PDB-protected pod", "pod", client.ObjectKeyFromObject(&pod))
-					if err := r.SeedClient.Delete(ctx, &pod, client.GracePeriodSeconds(0)); client.IgnoreNotFound(err) != nil {
+					if err := r.ShootClient.Delete(ctx, &pod, client.GracePeriodSeconds(0)); client.IgnoreNotFound(err) != nil {
 						return fmt.Errorf("failed to force-delete pod %s/%s: %w", pod.Namespace, pod.Name, err)
 					}
 				} else {
@@ -336,7 +334,7 @@ func (r *Reconciler) isDrainTimedOut(log logr.Logger, node *corev1.Node) bool {
 
 func (r *Reconciler) listEvictablePods(ctx context.Context, nodeName string) ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	if err := r.SeedClient.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
+	if err := r.ShootClient.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
 		return nil, fmt.Errorf("failed to list pods on node %s: %w", nodeName, err)
 	}
 
@@ -399,9 +397,9 @@ func nodeHasInPlaceUpdateCondition(node *corev1.Node) bool {
 }
 
 func (r *Reconciler) workersFromCluster(ctx context.Context) ([]gardencorev1beta1.Worker, error) {
-	cluster, err := extensions.GetCluster(ctx, r.SeedClient, r.ControlPlaneNamespace)
+	cluster, err := extensions.GetCluster(ctx, r.ShootClient, metav1.NamespaceSystem)
 	if err != nil {
-		return nil, fmt.Errorf("failed getting Cluster resource for namespace %s: %w", r.ControlPlaneNamespace, err)
+		return nil, fmt.Errorf("failed getting Cluster resource for namespace %s: %w", metav1.NamespaceSystem, err)
 	}
 	if cluster.Shoot == nil {
 		return nil, nil
