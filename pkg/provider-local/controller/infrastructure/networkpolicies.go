@@ -6,6 +6,7 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -15,11 +16,16 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-const sshPort = 22
+var (
+	machineSelector = map[string]string{"app": "machine"}
+	bastionSelector = map[string]string{"app": "bastion"}
+)
 
 func reconcileNetworkPolicies(ctx context.Context, cl client.Client, namespace string, cluster *extensionscontroller.Cluster) error {
 	for _, obj := range networkPolicies(namespace, cluster) {
@@ -31,37 +37,108 @@ func reconcileNetworkPolicies(ctx context.Context, cl client.Client, namespace s
 }
 
 func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []client.Object {
-	// allow-to-istio-ingress-gateway allows egress from machine pods to the Istio ingress gateway,
-	// enabling them to reach their shoot control plane (kube-apiserver).
-	allowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", namespace)
-	allowToIstioIngressGateway.Spec = networkingv1.NetworkPolicySpec{
+	denyAll := emptyNetworkPolicy("provider-local-deny-all", namespace)
+	denyAll.Spec = networkingv1.NetworkPolicySpec{
+		PodSelector: metav1.LabelSelector{},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+	}
+
+	allowMachinePods := emptyNetworkPolicy("provider-local-allow-machine-pods", namespace)
+	allowMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{local.LabelNetworkPolicyToIstioIngressGateway: v1beta1constants.LabelNetworkPolicyAllowed},
+			MatchLabels: machineSelector,
 		},
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress"}},
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
-				}},
+		Ingress: []networkingv1.NetworkPolicyIngressRule{
+			{From: loadBalancerPeers()},
+			{From: machinePodPeers()}, // allow intra-machine communication
+			{From: bastionPodPeers(), Ports: sshPort()},
+		},
+		Egress: []networkingv1.NetworkPolicyEgressRule{
+			allowToIstioGateways(cluster), // kube-proxy might short-circuit traffic to the istio-ingressgateway pods
+			allowToKindNetwork(),          // required to reach registry
+			allowToNodeLocalDNS(),         // machine pods explicitly use node-local DNS.
+			{To: loadBalancerPeers()},
+			{To: machinePodPeers()},
+		},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+	}
+
+	allowBastionPods := emptyNetworkPolicy("provider-local-allow-bastion-pods", namespace)
+	allowBastionPods.Spec = networkingv1.NetworkPolicySpec{
+		PodSelector: metav1.LabelSelector{
+			MatchLabels: bastionSelector,
+		},
+		Ingress: []networkingv1.NetworkPolicyIngressRule{
+			{From: loadBalancerPeers()},
+		},
+		Egress: []networkingv1.NetworkPolicyEgressRule{
+			allowToDNS(),         // bastion pods use the in-cluster CoreDNS to resolve hostnames of machine pods.
+			allowToKindNetwork(), // required to reach registry
+			{To: machinePodPeers(), Ports: sshPort()},
+		},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+	}
+
+	return []client.Object{allowMachinePods, allowBastionPods, denyAll}
+}
+
+func machinePodPeers() []networkingv1.NetworkPolicyPeer {
+	return []networkingv1.NetworkPolicyPeer{{
+		PodSelector: &metav1.LabelSelector{MatchLabels: machineSelector},
+	}}
+}
+
+func bastionPodPeers() []networkingv1.NetworkPolicyPeer {
+	return []networkingv1.NetworkPolicyPeer{{
+		PodSelector: &metav1.LabelSelector{MatchLabels: bastionSelector},
+	}}
+}
+
+func loadBalancerPeers() []networkingv1.NetworkPolicyPeer {
+	return []networkingv1.NetworkPolicyPeer{
+		{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
+		{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
+	}
+}
+
+func sshPort() []networkingv1.NetworkPolicyPort {
+	return []networkingv1.NetworkPolicyPort{
+		{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
+	}
+}
+
+func allowToKindNetwork() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/16"}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:ff::/64"}},
+		},
+	}
+}
+
+func allowToIstioGateways(cluster *extensionscontroller.Cluster) networkingv1.NetworkPolicyEgressRule {
+	istioGatewaysRule := networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+			PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				"app":   "istio-ingressgateway",
+				"istio": "ingressgateway",
 			}},
-			Ports: []networkingv1.NetworkPolicyPort{
-				// TODO(jamand): Drop 8132 once the RemoveHTTPProxyLegacyPort feature gate is removed.
-				// The local Extension does not register feature gates, so checking it would panic,
-				// adding the NetPol unconditionally does not break anything.
-				{Port: new(intstr.FromInt32(8132)), Protocol: new(corev1.ProtocolTCP)},
-				{Port: new(intstr.FromInt32(8443)), Protocol: new(corev1.ProtocolTCP)},
-				{Port: new(intstr.FromInt32(9443)), Protocol: new(corev1.ProtocolTCP)},
-			},
 		}},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		Ports: []networkingv1.NetworkPolicyPort{
+			// TODO(jamand): Drop 8132 once the RemoveHTTPProxyLegacyPort feature gate is removed.
+			// The local Extension does not register feature gates, so checking it would panic,
+			// adding the NetPol unconditionally does not break anything.
+			{Port: new(intstr.FromInt32(8132)), Protocol: new(corev1.ProtocolTCP)},
+			{Port: new(intstr.FromInt32(8443)), Protocol: new(corev1.ProtocolTCP)},
+			{Port: new(intstr.FromInt32(9443)), Protocol: new(corev1.ProtocolTCP)},
+		},
 	}
 	// For multi-zone seeds, also allow egress to the per-zone istio-ingress namespaces.
 	if len(cluster.Seed.Spec.Provider.Zones) > 1 {
 		for _, zone := range cluster.Seed.Spec.Provider.Zones {
-			allowToIstioIngressGateway.Spec.Egress[0].To = append(allowToIstioIngressGateway.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress--" + zone}},
+			istioGatewaysRule.To = append(istioGatewaysRule.To, networkingv1.NetworkPolicyPeer{
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":   "istio-ingressgateway",
 					"istio": "ingressgateway--zone--" + zone,
@@ -69,72 +146,74 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 			})
 		}
 	}
+	return istioGatewaysRule
+}
 
-	// allow-machine-pods allows:
-	// - ingress from load balancer containers (envoy, in the internal LB IP range) so they can forward
-	//   traffic to machine pods (e.g., VPN on port 30123).
-	// - ingress from bastion pods for SSH access (port 22).
-	// - ingress and egress between machine pods for inter-node communication.
-	allowMachinePods := emptyNetworkPolicy("allow-machine-pods", namespace)
-	allowMachinePods.Spec = networkingv1.NetworkPolicySpec{
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{"app": "machine"},
+func allowToNodeLocalDNS() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.255.53/32"}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:ff::53/128"}},
 		},
-		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{
-				From: []networkingv1.NetworkPolicyPeer{
-					// Load balancer containers (envoy) run in the kind network with IPs from InternalRangeV4/V6.
-					{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
-					{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
-					// Other machine pods in this namespace.
-					{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}}},
-				},
-			},
-			{
-				// Bastion pods need SSH access to machine pods.
-				From: []networkingv1.NetworkPolicyPeer{
-					{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "bastion"}}},
-				},
-				Ports: []networkingv1.NetworkPolicyPort{
-					{Port: new(intstr.FromInt32(sshPort)), Protocol: new(corev1.ProtocolTCP)},
-				},
-			},
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(53))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(53))},
 		},
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{
-				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}}},
-			},
-		}},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 	}
+}
 
-	// allow-bastion-pods allows:
-	// - ingress from load balancer containers (envoy) so the bastion's LoadBalancer service works.
-	// - egress to machine pods on port 22 (SSH).
-	allowBastionPods := emptyNetworkPolicy("allow-bastion-pods", namespace)
-	allowBastionPods.Spec = networkingv1.NetworkPolicySpec{
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{"app": "bastion"},
+func allowToDNS() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						corev1.LabelMetadataName: metav1.NamespaceSystem,
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      corednsconstants.LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{corednsconstants.LabelValue},
+					}},
+				},
+			},
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						corev1.LabelMetadataName: metav1.NamespaceSystem,
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      corednsconstants.LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{nodelocaldnsconstants.LabelValue},
+					}},
+				},
+			},
+			// required for node local dns feature, allows egress traffic to node local dns cache
+			{
+				IPBlock: &networkingv1.IPBlock{
+					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+					CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
+				},
+			},
+			{
+				IPBlock: &networkingv1.IPBlock{
+					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+					CIDR: fmt.Sprintf("%s/128", nodelocaldnsconstants.IPVSIPv6Address),
+				},
+			},
 		},
-		Ingress: []networkingv1.NetworkPolicyIngressRule{{
-			From: []networkingv1.NetworkPolicyPeer{
-				// Load balancer containers (envoy) run in the kind network with IPs from InternalRangeV4/V6.
-				{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
-				{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
-			},
-		}},
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{
-				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}}},
-			},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: new(intstr.FromInt32(sshPort)), Protocol: new(corev1.ProtocolTCP)},
-			},
-		}},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
+		},
 	}
-
-	return []client.Object{allowToIstioIngressGateway, allowMachinePods, allowBastionPods}
 }
 
 func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
@@ -146,6 +225,9 @@ func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "provider-local",
+			},
 		},
 	}
 }

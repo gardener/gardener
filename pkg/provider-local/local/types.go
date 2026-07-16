@@ -23,11 +23,6 @@ const (
 
 	// CloudControllerManagerName is a constant for the name of the cloud-controller-manager deployed by the controlplane controller.
 	CloudControllerManagerName = "cloud-controller-manager"
-
-	// LabelNetworkPolicyToIstioIngressGateway allows Egress from pods labeled with
-	// 'networking.gardener.cloud/to-istio-ingressgateway=allowed' to istio-ingressgateway pods running in
-	// 'istio-ingress' namespace.
-	LabelNetworkPolicyToIstioIngressGateway = "networking.gardener.cloud/to-istio-ingressgateway"
 )
 
 var (
