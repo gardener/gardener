@@ -965,6 +965,9 @@ build:
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/utils
+            - pkg/controller/networkpolicy
+            - pkg/controller/networkpolicy/helper
+            - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate

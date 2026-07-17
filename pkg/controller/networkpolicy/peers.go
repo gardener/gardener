@@ -10,8 +10,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
-// allPrivateNetworkBlocksV4 returns a list of all Private network (RFC1918) and Carrier-grade NAT (RFC6598) IPv4 blocks.
-func allPrivateNetworkBlocksV4() []net.IPNet {
+// AllPrivateNetworkBlocksV4 returns a list of all Private network (RFC1918) and Carrier-grade NAT (RFC6598) IPv4 blocks.
+func AllPrivateNetworkBlocksV4() []net.IPNet {
 	return []net.IPNet{
 		// 10.0.0.0/8 (private network (RFC1918))
 		{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)},
@@ -24,24 +24,15 @@ func allPrivateNetworkBlocksV4() []net.IPNet {
 	}
 }
 
-// allPrivateNetworkBlocksV6 returns a list of all private reserved IPv6 network blocks.
+// AllPrivateNetworkBlocksV6 returns a list of all private reserved IPv6 network blocks.
 // See https://en.wikipedia.org/wiki/Reserved_IP_addresses#IPv6.
-func allPrivateNetworkBlocksV6() []net.IPNet {
+func AllPrivateNetworkBlocksV6() []net.IPNet {
 	return []net.IPNet{
 		// fe80::/10 (Link Local)
 		{IP: net.IP{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Mask: net.CIDRMask(10, 128)},
 		// fc00::/7 (Unique Local (ULA))
 		{IP: net.IP{0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Mask: net.CIDRMask(7, 128)},
 	}
-}
-
-// toCIDRStrings takes a list of net.IPNet and returns their CIDR representations in a string slice.
-func toCIDRStrings(networks ...net.IPNet) []string {
-	var out []string
-	for _, network := range networks {
-		out = append(out, network.String())
-	}
-	return out
 }
 
 // toNetworkPolicyPeersWithExceptions returns a list of networkingv1.NetworkPolicyPeers whose ipBlock.cidr points to

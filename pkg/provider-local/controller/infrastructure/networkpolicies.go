@@ -18,8 +18,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 var (
@@ -49,15 +51,16 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 			MatchLabels: machineSelector,
 		},
 		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{From: loadBalancerPeers()},
+			allowFromLoadBalancers(),
 			{From: machinePodPeers()}, // allow intra-machine communication
 			{From: bastionPodPeers(), Ports: sshPort()},
 		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{
 			allowToIstioGateways(cluster), // kube-proxy might short-circuit traffic to the istio-ingressgateway pods
-			allowToKindNetwork(),          // required to reach registry
+			allowToKindNetwork(),          // required to reach registry, bind9 and LBs
 			allowToNodeLocalDNS(),         // machine pods explicitly use node-local DNS.
-			{To: loadBalancerPeers()},
+			allowToPublicNetworks(),       // In case we need to pull manifests from public registries, or a workload wants to reach the public internet
+			allowToLoadBalancers(),
 			{To: machinePodPeers()},
 		},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
@@ -69,7 +72,7 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 			MatchLabels: bastionSelector,
 		},
 		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{From: loadBalancerPeers()},
+			allowFromLoadBalancers(),
 		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{
 			allowToDNS(),         // bastion pods use the in-cluster CoreDNS to resolve hostnames of machine pods.
@@ -94,24 +97,37 @@ func bastionPodPeers() []networkingv1.NetworkPolicyPeer {
 	}}
 }
 
-func loadBalancerPeers() []networkingv1.NetworkPolicyPeer {
-	return []networkingv1.NetworkPolicyPeer{
-		{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
-		{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
-	}
-}
-
 func sshPort() []networkingv1.NetworkPolicyPort {
 	return []networkingv1.NetworkPolicyPort{
 		{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
 	}
 }
 
+func allowToPublicNetworks() networkingv1.NetworkPolicyEgressRule {
+	exceptV4 := netutils.ToCIDRStrings(networkpolicy.AllPrivateNetworkBlocksV4()...)
+	exceptV6 := netutils.ToCIDRStrings(networkpolicy.AllPrivateNetworkBlocksV6()...)
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0", Except: exceptV4}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "::/0", Except: exceptV6}},
+		},
+	}
+}
+
 func allowToKindNetwork() networkingv1.NetworkPolicyEgressRule {
 	return networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{
-			{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/16"}},
-			{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:ff::/64"}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/24"}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::/64"}},
+		},
+	}
+}
+
+func allowToLoadBalancers() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.ExternalRangeV4}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.ExternalRangeV6}},
 		},
 	}
 }
@@ -212,6 +228,15 @@ func allowToDNS() networkingv1.NetworkPolicyEgressRule {
 			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
 			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
 			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
+		},
+	}
+}
+
+func allowFromLoadBalancers() networkingv1.NetworkPolicyIngressRule {
+	return networkingv1.NetworkPolicyIngressRule{
+		From: []networkingv1.NetworkPolicyPeer{
+			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
 		},
 	}
 }

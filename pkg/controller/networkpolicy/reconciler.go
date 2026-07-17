@@ -287,7 +287,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
 	peersV4, err := networkPolicyPeersWithExceptions([]string{"0.0.0.0/0"}, append(
-		toCIDRStrings(allPrivateNetworkBlocksV4()...),
+		netutils.ToCIDRStrings(AllPrivateNetworkBlocksV4()...),
 		r.RuntimeNetworks.BlockCIDRs...,
 	)...)
 	if err != nil {
@@ -295,7 +295,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 	}
 
 	peersV6, err := networkPolicyPeersWithExceptions([]string{"::/0"}, append(
-		toCIDRStrings(allPrivateNetworkBlocksV6()...),
+		netutils.ToCIDRStrings(AllPrivateNetworkBlocksV6()...),
 		// In IPv4, all cluster networks are contained in the private IPv4 blocks.
 		// In IPv6 however, cluster networks might be "public" (e.g., if using prefix delegation from provider).
 		// As this NetworkPolicy should only allow communication with public networks *outside* the cluster,
@@ -392,12 +392,12 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 		}
 	}
 
-	privateNetworkPeersV4, err := toNetworkPolicyPeersWithExceptions(allPrivateNetworkBlocksV4(), blockedNetworkPeersV4...)
+	privateNetworkPeersV4, err := toNetworkPolicyPeersWithExceptions(AllPrivateNetworkBlocksV4(), blockedNetworkPeersV4...)
 	if err != nil {
 		return err
 	}
 
-	privateNetworkPeersV6, err := toNetworkPolicyPeersWithExceptions(allPrivateNetworkBlocksV6(), blockedNetworkPeersV6...)
+	privateNetworkPeersV6, err := toNetworkPolicyPeersWithExceptions(AllPrivateNetworkBlocksV6(), blockedNetworkPeersV6...)
 	if err != nil {
 		return err
 	}

@@ -96,3 +96,12 @@ func OverLapAny(nw net.IPNet, otherNws ...net.IPNet) bool {
 	}
 	return false
 }
+
+// ToCIDRStrings takes a list of net.IPNet and returns their CIDR representations in a string slice.
+func ToCIDRStrings(networks ...net.IPNet) []string {
+	out := make([]string, 0, len(networks))
+	for _, network := range networks {
+		out = append(out, network.String())
+	}
+	return out
+}
