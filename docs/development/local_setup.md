@@ -188,16 +188,18 @@ While WSL1, plain docker for Windows and various Linux distributions and local K
 
 The Gardener repository and all the above-mentioned tools (git, golang, kubectl, ...) should be installed in your WSL2 distro, according to the distribution-specific Linux installation instructions.
 
-### Troubleshooting
-E0716 16:56:04.437868  179692 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://127.0.0.1:<some port>/api?timeout=32s\": dial tcp 127.0.0.1:<some port>: i/o timeout"
+### WSL local garden troubleshooting
+From time to time, you might be confronted with the following error:
+> E0716 16:56:04.437868  179692 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://127.0.0.1:<some port>/api?timeout=32s\": dial tcp 127.0.0.1:<some port>: i/o timeout"
+This is because the WSL forwarding tables periodically break.
 
-WSL periodically breaks port forwarding tables. Fix:
-In windows powershell:
-```
+
+To fix, refresh the portproxy in windows powershell:
+```ps
 netsh interface portproxy reset
 ```
-And in WSL:
-```
+And restart the docker daemon in WSL:
+```bash
 sudo systemctl restart docker
 ```
 
