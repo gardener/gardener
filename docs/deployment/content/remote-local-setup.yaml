@@ -26,7 +26,7 @@ spec:
                   diffutils dnsmasq docker-bash-completion findutils fzf g++ gawk gcompat git      \
                   git-prompt grep helm inotify-tools jq k9s less lsof make mandoc mc moreutils     \
                   mount ncurses neovim parallel procps sed strace tar tcpdump tmux tmux-doc tzdata \
-                  util-linux vim wget yq
+                  util-linux vim wget yq perl-utils
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
           echo golang
