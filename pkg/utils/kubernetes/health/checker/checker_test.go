@@ -282,6 +282,7 @@ var _ = Describe("HealthChecker", func() {
 					[]resourcesv1alpha1.ManagedResource{skipped},
 					func(resourcesv1alpha1.ManagedResource) bool { return true },
 					nil,
+					nil,
 				)
 				Expect(exitCondition).To(BeNil())
 			})
