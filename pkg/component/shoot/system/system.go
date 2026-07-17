@@ -32,6 +32,7 @@ import (
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -340,7 +341,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		const name = "registry-ca-bundle"
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceSystem},
-			Data:       map[string]string{"ca.b64": base64.StdEncoding.EncodeToString([]byte(*s.values.RegistryCABundle))},
+			Data:       map[string]string{secretsutils.DataKeyCertificateBundle: base64.StdEncoding.EncodeToString([]byte(*s.values.RegistryCABundle))},
 		}
 		role := &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceSystem},

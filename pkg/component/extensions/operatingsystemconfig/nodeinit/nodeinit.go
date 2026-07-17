@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // PathInitScript is the path to the init script.
@@ -151,6 +152,7 @@ func generateInitScript(nodeAgentImage string, registryCAEnabled bool, apiServer
 		data["clusterCAFilePath"] = nodeagentconfigv1alpha1.ClusterCAFilePath
 		data["apiServerURL"] = apiServerURL
 		data["updateCACertificatesScript"] = rootcertificates.PathUpdateLocalCACertificates
+		data["registryCABundleKey"] = secretsutils.DataKeyCertificateBundle
 	}
 
 	if err := initScriptTpl.Execute(&initScript, data); err != nil {

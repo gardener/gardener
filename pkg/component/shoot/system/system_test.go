@@ -634,7 +634,7 @@ var _ = Describe("ShootSystem", func() {
 				expectedConfigMap = func(caBundle string) *corev1.ConfigMap {
 					return &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "registry-ca-bundle", Namespace: "kube-system"},
-						Data:       map[string]string{"ca.b64": base64.StdEncoding.EncodeToString([]byte(caBundle))},
+						Data:       map[string]string{"bundle.crt": base64.StdEncoding.EncodeToString([]byte(caBundle))},
 					}
 				}
 				expectedRole = &rbacv1.Role{
