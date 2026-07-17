@@ -102,10 +102,10 @@ func deleteStaleGlobalMonitoringSecretReplicas(ctx context.Context, c client.Cli
 		return fmt.Errorf("failed to list global observability secret replicas: %w", err)
 	}
 
-	for _, s := range secretList.Items {
-		if s.Name != currentReplica.Name {
-			if err := c.Delete(ctx, s.DeepCopy()); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("failed to delete stale global observability secret replica %q: %w", s.Name, err)
+	for _, secret := range secretList.Items {
+		if secret.Name != currentReplica.Name {
+			if err := c.Delete(ctx, secret.DeepCopy()); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("failed to delete stale global observability secret replica %q: %w", secret.Name, err)
 			}
 		}
 	}
