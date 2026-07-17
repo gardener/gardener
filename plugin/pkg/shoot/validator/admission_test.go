@@ -6646,12 +6646,13 @@ var _ = Describe("validator", func() {
 					Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
 				})
 
-				It("should reject when duplicate region ConfigMaps reference the same cloud profile", func() {
+				It("should use the first ConfigMap when multiple region ConfigMaps reference the same cloud profile", func() {
 					duplicate := regionConfigMap.DeepCopy()
 					duplicate.Name = "scheduler-region-config-2"
 					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(duplicate)).To(Succeed())
-					err := admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)
-					Expect(err).To(MatchError(ContainSubstring("multiple scheduler region ConfigMaps")))
+					// The distance (50) from the first ConfigMap is within the default threshold (180), so the
+					// migration is allowed despite the duplicate ConfigMap.
+					Expect(admissionHandler.Validate(ctx, bindingAttrs(admission.Update), nil)).To(Succeed())
 				})
 
 				It("should skip the distance check when source and destination regions are equal", func() {

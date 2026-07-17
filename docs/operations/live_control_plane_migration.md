@@ -17,11 +17,11 @@ The `Shoot` and the involved `Seed`s must satisfy the following:
 - The `Shoot` is not hibernated and is not waking up (`spec.hibernation.enabled` and `.status.isHibernated` are both `false`).
 - The `Source Seed` and `Destination Seed` use the same cloud provider type.
 - The `Source Seed` and `Destination Seed` report the same gardenlet version.
-- The inter-region distance between the `Source Seed` and `Destination Seed` does not exceed the configured threshold. If the seeds are in the same region, this check is skipped.
+- The [inter-region](#inter-region-distance) distance between the `Source Seed` and `Destination Seed` does not exceed the configured threshold. If the seeds are in the same region, this check is skipped.
 
 ### Inter-region distance
 
-The distance check compares the `.spec.provider.region` of the two `Seed`s against a scheduler region `ConfigMap` in the `garden` namespace, labelled `scheduling.gardener.cloud/purpose: region-config` and annotated with `scheduling.gardener.cloud/cloudprofiles`. The default threshold is `180` and can be overridden per `ConfigMap` via `migration.gardener.cloud/inter-region-distance-threshold`.
+The distance check compares the `.spec.provider.region` of the two `Seed`s against a scheduler region `ConfigMap` in the `garden` namespace, labelled `scheduling.gardener.cloud/purpose: region-config` and annotated with `scheduling.gardener.cloud/cloudprofiles`. The `ConfigMap` maps each source region to the distances to other regions; the distance is an operator-defined metric (for example, network latency in milliseconds) used to decide how far apart two seeds may be. The default threshold is `180` (i.e. a maximum distance of 180 in the units used by the `ConfigMap`) and can be overridden per `ConfigMap` via `migration.gardener.cloud/inter-region-distance-threshold`.
 
 To allow migration between distant regions for a specific `Shoot`, set `migration.gardener.cloud/allow-distant-regions=true` on the `Shoot`.
 

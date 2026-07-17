@@ -1920,17 +1920,11 @@ func (c *validationContext) validateLiveMigrationPrerequisites(
 	}
 
 	if !helper.IsHAControlPlaneConfigured(c.shoot) {
-		allErrs = append(allErrs, field.Forbidden(
-			field.NewPath("spec", "controlPlane", "highAvailability"),
-			"shoot control plane must be configured for high availability to perform a live control plane migration",
-		))
+		allErrs = append(allErrs, field.Forbidden(seedNamePath, "shoot control plane must be configured for high availability to perform a live control plane migration"))
 	}
 
 	if helper.IsShootInHibernation(c.shoot) {
-		allErrs = append(allErrs, field.Forbidden(
-			field.NewPath("spec", "hibernation"),
-			"live control plane migration is not supported for hibernated or waking-up shoots",
-		))
+		allErrs = append(allErrs, field.Forbidden(seedNamePath, "live control plane migration is not supported for hibernated or waking-up shoots"))
 	}
 
 	sourceSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
@@ -2104,24 +2098,18 @@ func getRegionDistances(regionConfigMap *corev1.ConfigMap, sourceRegion string) 
 }
 
 // getRegionConfigMapFromLister lists region ConfigMaps from the garden namespace via the informer lister and returns
-// the one whose scheduling.gardener.cloud/cloudprofiles annotation references the given cloud profile name. It returns
-// an error if multiple ConfigMaps match.
+// the first one whose scheduling.gardener.cloud/cloudprofiles annotation references the given cloud profile name, or nil
+// if none matches. If multiple ConfigMaps match, the first one is returned (consistent with the scheduler).
 func getRegionConfigMapFromLister(configMapLister kubecorev1listers.ConfigMapLister, cloudProfileName string) (*corev1.ConfigMap, error) {
 	regionConfigMaps, err := configMapLister.ConfigMaps(v1beta1constants.GardenNamespace).List(labels.SelectorFromSet(labels.Set{
 		v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig,
 	}))
 	if err != nil {
-		return nil, fmt.Errorf("could not list region config ConfigMaps: %w", err)
+		return nil, fmt.Errorf("failed to list region ConfigMaps: %w", err)
 	}
 
-	matches := gardenerutils.FindRegionConfigMaps(regionConfigMaps, cloudProfileName)
-	switch len(matches) {
-	case 0:
-		return nil, nil
-	case 1:
+	if matches := gardenerutils.FindRegionConfigMaps(regionConfigMaps, cloudProfileName); len(matches) > 0 {
 		return matches[0], nil
-	default:
-		return nil, fmt.Errorf("multiple scheduler region ConfigMaps reference cloud profile %q: %s/%s and %s/%s",
-			cloudProfileName, matches[0].Namespace, matches[0].Name, matches[1].Namespace, matches[1].Name)
 	}
+	return nil, nil
 }

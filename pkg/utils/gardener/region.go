@@ -6,6 +6,7 @@ package gardener
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,7 +21,7 @@ import (
 func GetRegionConfigMaps(ctx context.Context, reader client.Reader, namespace, cloudProfileName string) ([]*corev1.ConfigMap, error) {
 	regionConfigList := &corev1.ConfigMapList{}
 	if err := reader.List(ctx, regionConfigList, client.InNamespace(namespace), client.MatchingLabels{v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list region ConfigMaps: %w", err)
 	}
 
 	regionConfigMaps := make([]*corev1.ConfigMap, 0, len(regionConfigList.Items))
