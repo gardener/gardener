@@ -23,6 +23,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -414,10 +415,15 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
+		deployKubeAPIServerServiceSNISettings = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
 			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		waitUntilKubeAPIServerSNISettingsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server service SNI settings are ready",
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Wait,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNISettings),
 		})
 		scaleEtcdAfterRestore = g.Add(flow.Task{
 			Name:         "Scaling main and events etcd after kube-apiserver is ready",
@@ -1123,6 +1129,12 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			}),
 			SkipIf:       !flowCtx.requestControlPlanePodsRestart,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up kube-apiserver TLS services",
+			Fn:           flow.TaskFn(botanist.DestroyKubeAPIServerTLSServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(o.Shoot.GetInfo()),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerSNISettingsReady),
 		})
 	)
 

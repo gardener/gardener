@@ -28,8 +28,6 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	if b.ShootUsesIstioTLSTermination() {
 		deployer = append(deployer, mutualTLSService)
 		deployer = append(deployer, upgradeService)
-	} else {
-		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
 	return component.OpWait(deployer...)
 }
@@ -78,6 +76,16 @@ func (b *Botanist) ShootUsesDNS() bool {
 // ShootUsesIstioTLSTermination returns true if the shoot uses Istio TLS termination aka L7 load-balancing.
 func (b *Botanist) ShootUsesIstioTLSTermination() bool {
 	return features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo())
+}
+
+// DestroyKubeAPIServerTLSServices destroys the MutualTLS and ConnectionUpgrade services if Istio TLS termination is disabled.
+func (b *Botanist) DestroyKubeAPIServerTLSServices(ctx context.Context) error {
+	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
+	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false)
+	return component.OpWait(
+		component.OpDestroy(mutualTLSService),
+		component.OpDestroy(upgradeService),
+	).Deploy(ctx)
 }
 
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.

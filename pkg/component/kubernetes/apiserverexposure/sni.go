@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -415,7 +416,25 @@ func (s *sni) Destroy(ctx context.Context) error {
 	)
 }
 
-func (s *sni) Wait(_ context.Context) error        { return nil }
+const timeoutForManagedResource = 2 * time.Minute
+
+func (s *sni) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutForManagedResource)
+	defer cancel()
+
+	var errs error
+
+	if s.valuesFunc().IstioTLSTermination {
+		if err := managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, managedResourceName); err != nil {
+			errs = errors.Join(err)
+		}
+		if err := managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, managedResourceNameIstioTLSSecrets); err != nil {
+			errs = errors.Join(err)
+		}
+	}
+	return errs
+}
+
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }
 
 func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
