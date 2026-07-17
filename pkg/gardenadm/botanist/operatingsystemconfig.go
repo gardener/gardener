@@ -146,7 +146,7 @@ func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secret
 		image.String(),
 		nodeagentcomponent.ComponentConfig(secretName, b.Shoot.KubernetesVersion, controlPlaneAddress, nil),
 		caBundle,
-		false,
+		b.RegistryCABundle != nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)

@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -171,13 +172,19 @@ func NewGardenadmBotanistWithoutResources(log logr.Logger) (*GardenadmBotanist, 
 		return nil, fmt.Errorf("failed fetching hostname: %w", err)
 	}
 
-	return &GardenadmBotanist{
+	b := &GardenadmBotanist{
 		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeGardenClient(), newFakeSeedClientSet(""))},
 
 		HostName: hostName,
 		DBus:     dbus.New(log),
 		FS:       afero.Afero{Fs: NewFs()},
-	}, nil
+	}
+
+	if caBundle := imagevector.ContainersCABundle(); caBundle != nil && caBundle.Inline != nil {
+		b.RegistryCABundle = caBundle.Inline
+	}
+
+	return b, nil
 }
 
 func newOperation(log logr.Logger, gardenClient client.Client, clientSet kubernetes.Interface) *operation.Operation {
@@ -233,6 +240,10 @@ func newBotanist(
 		if err != nil {
 			return nil, fmt.Errorf("failed creating seed object: %w", err)
 		}
+	}
+
+	if caBundle := imagevector.ContainersCABundle(); caBundle != nil && caBundle.Inline != nil {
+		o.RegistryCABundle = caBundle.Inline
 	}
 
 	return botanistpkg.New(ctx, o)
