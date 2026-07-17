@@ -157,18 +157,30 @@ Apart from Linux distributions and macOS, the local gardener setup can also run 
 
 While WSL1, plain docker for Windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
 
-* [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
-  * win-r -> optionalfeatures: "Container Server", "Container", "Hyper-V", "Virtual Machine Platform", "Windows Hypervisor Platform" enabled
-  * a windows .wslconfig with "networkingMode=mirrored" enabled
-* [Ubuntu 24.04 LTS on WSL2](https://canonical.com/blog/ubuntu-on-wsl-2-is-generally-available)
+* [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index) with the following configuration:
+  * Win-r -> optionalfeatures: enable the following features:
+    * Container Server
+    * Container
+    * Hyper-V
+    * Virtual Machine Platform
+    * Windows Hypervisor Platform
+  * .wslconfig file with
+    ```
+    networkingMode=mirrored
+    ```
+* [Ubuntu 24.04 LTS on WSL2](https://canonical.com/blog/ubuntu-on-wsl-2-is-generally-available) with the following configuration:
   * /etc/wsl.conf with:
-    * [network]
-    * generateResolvConf = false
-    * [boot]
-    * systemd=true
+      ```
+      [network]
+      generateResolvConf = false
+      [boot]
+      systemd=true
+      ```
   * /etc/resolv.conf with:
-    * nameserver 127.0.0.53
-    * nameserver 10.255.255.254
+    ```
+    nameserver 127.0.0.53
+    nameserver 10.255.255.254
+    ```
 * Docker 
   * either via [Install Docker in Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
   * or [Docker Desktop WSL2 Engine](https://docs.docker.com/docker-for-windows/wsl/)
