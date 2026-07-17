@@ -164,12 +164,12 @@ While WSL1, plain docker for Windows and various Linux distributions and local K
     * Hyper-V
     * Virtual Machine Platform
     * Windows Hypervisor Platform
-  * .wslconfig file with
+  * .wslconfig file (on Windows) with:
     ```
     networkingMode=mirrored
     ```
 * [Ubuntu 24.04 LTS on WSL2](https://canonical.com/blog/ubuntu-on-wsl-2-is-generally-available) with the following configuration:
-  * /etc/wsl.conf with:
+  * /etc/wsl.conf (in WSL) with:
       ```
       [network]
       generateResolvConf = false
@@ -181,8 +181,8 @@ While WSL1, plain docker for Windows and various Linux distributions and local K
     nameserver 127.0.0.53
     nameserver 10.255.255.254
     ```
-* Docker 
-  * either via [Install Docker in Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+* Docker
+  * installed either via [Install Docker in Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
   * or [Docker Desktop WSL2 Engine](https://docs.docker.com/docker-for-windows/wsl/)
 * Nodeless local garden (see below)
 
