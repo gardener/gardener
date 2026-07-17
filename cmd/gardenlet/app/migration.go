@@ -33,7 +33,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.RemoveHTTPProxyLegacyPort) {
-		if err := verifyRemoveHTTPProxyLegacyPortMigration(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
+		if err := VerifyRemoveHTTPProxyLegacyPortMigration(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
 			return fmt.Errorf("failed to verify migration for RemoveHTTPProxyLegacyPort feature gate: %w", err)
 		}
 	}
@@ -41,8 +41,10 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 	return nil
 }
 
+// VerifyRemoveHTTPProxyLegacyPortMigration returns an error if any shoot on this seed has not yet been reconfigured to
+// use the unified `http-proxy` port, i.e. if removing the legacy `tls-tunnel` port would break it.
 // TODO(jamand): Remove when feature gate RemoveHTTPProxyLegacyPort is removed.
-func verifyRemoveHTTPProxyLegacyPortMigration(ctx context.Context, gardenClient client.Client, seedName string) error {
+func VerifyRemoveHTTPProxyLegacyPortMigration(ctx context.Context, gardenClient client.Client, seedName string) error {
 	// List all (eligible) Shoot resources managed by this seed.
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := gardenClient.List(ctx, shootList); err != nil {
