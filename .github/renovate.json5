@@ -137,6 +137,7 @@
         '/.*gardener/etcd-druid$/',
         '/.*gardener/machine-controller-manager$/',
         '/.*gardener/terminal-controller-manager$/',
+        '/.*gardener/pvc-autoscaler$/',
         '/.*open-telemetry/opentelemetry-operator$/',
         '/sigs\\.k8s\\.io/controller-tools/',
       ],
@@ -304,13 +305,12 @@
       // Group PVC Autoscaler updates in one PR.
       groupName: 'pvc-autoscaler',
       matchDatasources: [
-        'docker',
         'go',
         'github-releases',
       ],
       matchPackageNames: [
         'github.com/gardener/pvc-autoscaler',
-        'europe-docker.pkg.dev/gardener-project/releases/gardener/pvc-autoscaler',
+        'gardener/pvc-autoscaler',
       ],
     },
     {
