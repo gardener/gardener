@@ -954,7 +954,7 @@ images:
   - name: envoy-proxy
     sourceRepository: github.com/envoyproxy/envoy
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy
-    tag: "distroless-v1.38.3"
+    tag: "distroless-v1.39.0"
     resourceId:
       version-template:
         type: 'jq'
