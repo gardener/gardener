@@ -7578,6 +7578,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 			})
+
+			DescribeTable("forbid certain operations when shoot is self-hosted",
+				func(operation, forbiddenOp string) {
+					shoot.Namespace = "garden"
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.SecretBindingName = nil
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", forbiddenOp)),
+					}))))
+					delete(shoot.Annotations, "gardener.cloud/operation")
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", forbiddenOp)),
+					}))))
+					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+				},
+
+				Entry("rotate-rollout-workers", "rotate-rollout-workers", "rotate-rollout-workers"),
+				Entry("rollout-workers", "rollout-workers", "rollout-workers"),
+			)
 		})
 
 		Context("scheduler name", func() {

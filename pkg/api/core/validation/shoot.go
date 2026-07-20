@@ -3186,6 +3186,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		allErrs            = field.ErrorList{}
 		encryptedResources = sets.New[schema.GroupResource]()
 		k8sLess134         = versionutils.ConstraintK8sLess134.CheckVersion(shoot.Spec.Kubernetes.Version)
+		isSelfHosted       = helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
 	)
 
 	if len(operations) == 0 && len(maintenanceOperations) == 0 {
@@ -3197,6 +3198,8 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 			return append(allErrs, field.NotSupported(fldPathOp, op, sets.List(availableShootOperations)))
 		} else if len(operations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
 			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
+		} else if isSelfHosted && !helper.HasManagedInfrastructure(shoot) && (strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)) {
+			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", op)))
 		}
 	}
 
@@ -3205,6 +3208,8 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 			return append(allErrs, field.NotSupported(fldPathMaintOp, op, sets.List(availableShootOperations)))
 		} else if len(maintenanceOperations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
 			return append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
+		} else if isSelfHosted && !helper.HasManagedInfrastructure(shoot) && (strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)) {
+			return append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", op)))
 		}
 	}
 
