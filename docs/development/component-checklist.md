@@ -53,7 +53,7 @@ This document provides a checklist for them that you can walk through.
    For self-hosted shoots components deployed by `gardenadm init` and `gardenlet` which are required to run the self-hosted shoot are system components as well.
 
    Shoot system components deployed via `gardener-resource-manager` are labelled with `resource.gardener.cloud/managed-by: gardener`. This makes Gardener adding required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes (for more information, see [System Components Webhook](../concepts/resource-manager.md#system-components-webhook)).
-   `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints. 
+   `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints.
    In the self-hosted shoot case the webhook is also enabled in namespaces labeled with `system-components-config.resources.gardener.cloud/consider=true`.
 
 ## Images
@@ -218,3 +218,20 @@ This document provides a checklist for them that you can walk through.
 
    Gardener offers to restart components during the maintenance time window. For more information, see [Restart Control Plane Controllers](../usage/shoot/shoot_maintenance.md#restart-control-plane-controllers) and [Restart Some Core Addons](../usage/shoot/shoot_maintenance.md#restart-some-core-addons).
    You can consider adding the needed label to your control plane component to get this automatic restart (probably not needed for most components).
+
+## Renovate Configuration
+
+When a new component is introduced, you might have to adapt [`.github/renovate.json5`](../../.github/renovate.json5) to handle its dependencies correctly.
+
+1. **Group related updates in one PR** ([example 1](https://github.com/gardener/gardener/blob/master/.github/renovate.json5#L199-L210), [example 2](https://github.com/gardener/gardener/blob/master/.github/renovate.json5#L246-L255))
+
+   If the component ships Go API types and its CRDs are generated dynamically via a `//go:generate` directive in a `doc.go` file ([pvc-autoscaler example](https://github.com/gardener/gardener/blob/master/pkg/component/autoscaling/pvcautoscaler/assets/doc.go), [opentelemetry-operator example](https://github.com/gardener/gardener/blob/master/pkg/component/observability/opentelemetry/operator/assets/doc.go)), the image bump and the `go.mod` bump must land together — a stale module would regenerate outdated CRDs.
+   Add a grouping rule under a common `groupName` covering both the image (with a `docker` or `github-releases` datasource) and the Go module (with a `go` datasource).
+
+   The Renovate package name for the image is derived from `imagevector/containers.yaml` per the [imagevector renovate config](https://github.com/gardener/ci-infra/blob/master/config/renovate/imagevector.json5) and depends on whether the image config has `sourceRepository` defined or not:
+   - **With `sourceRepository: github.com/<owner>/<repo>`**: datasource `github-releases`, package name `<owner>/<repo>` (e.g. `gardener/pvc-autoscaler`).
+   - **Without `sourceRepository`**: datasource `docker`, package name is the `repository:` field verbatim.
+
+2. **Trigger `make generate` when the Go API package is updated** ([example](https://github.com/gardener/gardener/blob/master/.github/renovate.json5#L138-L158))
+
+   Add the module path to the existing `postUpgradeTasks` rule that runs `make generate` so that new CRD fields are reflected in the generated manifests. The rule already covers paths matching `/.+/api(/.+|$)/` and `/.+/apis(/.+|$)/` generically — only add an explicit entry when the path does not match (e.g. `github.com/gardener/pvc-autoscaler`).
