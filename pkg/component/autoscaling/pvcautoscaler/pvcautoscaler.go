@@ -38,10 +38,9 @@ const (
 	// PVCAutoscalerGardenManagedResourceName is the name of the PVCAutoscaler managed resource for the garden cluster.
 	PVCAutoscalerGardenManagedResourceName = "pvc-autoscaler-garden"
 
-	name               = "pvc-autoscaler"
-	serviceAccountName = name
-	metricsPortName    = "metrics"
-	metricsPort        = int32(8080)
+	name            = "pvc-autoscaler"
+	metricsPortName = "metrics"
+	metricsPort     = int32(8080)
 )
 
 // Values keeps values for the PVCAutoscaler.
@@ -138,18 +137,18 @@ func (p *pvcAutoscaler) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.values.ManagedResourceName)
 }
 
-func getLabels() map[string]string {
+func (p *pvcAutoscaler) getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: name,
+		v1beta1constants.LabelApp: p.values.ManagedResourceName,
 	}
 }
 
 func (p *pvcAutoscaler) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
+			Name:      p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		AutomountServiceAccountToken: new(false),
 	}
@@ -159,7 +158,7 @@ func (p *pvcAutoscaler) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
-			Labels: getLabels(),
+			Labels: p.getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -214,8 +213,8 @@ func (p *pvcAutoscaler) clusterRole() *rbacv1.ClusterRole {
 func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
-			Labels: getLabels(),
+			Name:   "gardener.cloud:autoscaling:" + p.values.ManagedResourceName,
+			Labels: p.getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -224,7 +223,7 @@ func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccountName,
+			Name:      p.values.ManagedResourceName,
 			Namespace: p.namespace,
 		}},
 	}
@@ -233,9 +232,9 @@ func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func (p *pvcAutoscaler) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:      "gardener.cloud:autoscaling:" + p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -255,21 +254,21 @@ func (p *pvcAutoscaler) role() *rbacv1.Role {
 func (p *pvcAutoscaler) roleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:      "gardener.cloud:autoscaling:" + p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
+				Name:      p.values.ManagedResourceName,
 				Namespace: p.namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
-			Name:     "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:     "gardener.cloud:autoscaling:" + p.values.ManagedResourceName,
 		},
 	}
 }
@@ -277,9 +276,9 @@ func (p *pvcAutoscaler) roleBinding() *rbacv1.RoleBinding {
 func (p *pvcAutoscaler) service() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -290,7 +289,7 @@ func (p *pvcAutoscaler) service() *corev1.Service {
 					TargetPort: intstr.FromString(metricsPortName),
 				},
 			},
-			Selector: getLabels(),
+			Selector: p.getLabels(),
 		},
 	}
 }
@@ -298,9 +297,9 @@ func (p *pvcAutoscaler) service() *corev1.Service {
 func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.DeploymentNamePVCAutoscaler,
+			Name:      p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+			Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 			}),
 		},
@@ -308,18 +307,18 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             new(int32(1)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: p.getLabels(),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS:                               v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                  v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel(p.values.PrometheusServiceName, 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: serviceAccountName,
+					ServiceAccountName: p.values.ManagedResourceName,
 					PriorityClassName:  p.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
@@ -399,14 +398,14 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 func (p *pvcAutoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: new(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: p.getLabels(),
 			},
 			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
@@ -416,15 +415,15 @@ func (p *pvcAutoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 func (p *pvcAutoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      p.values.ManagedResourceName,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       v1beta1constants.DeploymentNamePVCAutoscaler,
+				Name:       p.values.ManagedResourceName,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
@@ -450,9 +449,9 @@ func (p *pvcAutoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAut
 
 func (p *pvcAutoscaler) serviceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(name, p.namespace, p.values.ServiceMonitorLabel),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(p.values.ManagedResourceName, p.namespace, p.values.ServiceMonitorLabel),
 		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Selector: metav1.LabelSelector{MatchLabels: p.getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: metricsPortName,
 				RelabelConfigs: []monitoringv1.RelabelConfig{
