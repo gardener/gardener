@@ -7,7 +7,6 @@ package bootstrappers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/discovery"
@@ -24,18 +23,13 @@ type Bootstrapper struct {
 }
 
 // Start runs as soon as the manager got leader.
-func (b *Bootstrapper) Start(parentCtx context.Context) error {
-	// Other controllers depend on garden cluster bootstrapping.
-	// Hence, if we can't bootstrap the garden cluster in a short timeout, terminate and try again after restart.
-	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
-	defer cancel()
-
+func (b *Bootstrapper) Start(_ context.Context) error {
 	kubernetesClient, err := kubernetesclientset.NewForConfig(b.RESTConfig)
 	if err != nil {
 		return fmt.Errorf("failed creating kubernetes client: %w", err)
 	}
 
-	if err := bootstrapCluster(ctx, kubernetesClient.Discovery()); err != nil {
+	if err := bootstrapCluster(kubernetesClient.Discovery()); err != nil {
 		return fmt.Errorf("failed bootstrapping garden cluster: %w", err)
 	}
 
@@ -43,7 +37,7 @@ func (b *Bootstrapper) Start(parentCtx context.Context) error {
 	return nil
 }
 
-func bootstrapCluster(ctx context.Context, discoveryClient discovery.DiscoveryInterface) error {
+func bootstrapCluster(discoveryClient discovery.DiscoveryInterface) error {
 	const minKubernetesVersion = "1.32"
 
 	serverVersion, err := discoveryClient.ServerVersion()

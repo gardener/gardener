@@ -5,8 +5,6 @@
 package bootstrappers
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/version"
@@ -15,10 +13,7 @@ import (
 )
 
 var _ = Describe("#bootstrapCluster", func() {
-	var (
-		fakeDiscoveryClient *fakediscovery.FakeDiscovery
-		ctx                 = context.TODO()
-	)
+	var fakeDiscoveryClient *fakediscovery.FakeDiscovery
 
 	BeforeEach(func() {
 		fakeDiscoveryClient = &fakediscovery.FakeDiscovery{Fake: &testing.Fake{}}
@@ -27,15 +22,15 @@ var _ = Describe("#bootstrapCluster", func() {
 
 	It("should return an error because the garden version cannot be parsed", func() {
 		fakeDiscoveryClient.FakedServerVersion.GitVersion = ""
-		Expect(bootstrapCluster(ctx, fakeDiscoveryClient)).To(MatchError(ContainSubstring("invalid semantic version")))
+		Expect(bootstrapCluster(fakeDiscoveryClient)).To(MatchError(ContainSubstring("invalid semantic version")))
 	})
 
 	It("should return an error because the garden version is too low", func() {
 		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.31.5"
-		Expect(bootstrapCluster(ctx, fakeDiscoveryClient)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.32")))
+		Expect(bootstrapCluster(fakeDiscoveryClient)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.32")))
 	})
 
 	It("should succeed when garden version meets the minimum requirement", func() {
-		Expect(bootstrapCluster(ctx, fakeDiscoveryClient)).To(Succeed())
+		Expect(bootstrapCluster(fakeDiscoveryClient)).To(Succeed())
 	})
 })

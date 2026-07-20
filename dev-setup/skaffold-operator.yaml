@@ -709,7 +709,6 @@ build:
             - pkg/utils/managedresources/builder
             - pkg/utils/retry
             - pkg/utils/secrets
-            - pkg/utils/secrets/manager
             - pkg/utils/signals
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
