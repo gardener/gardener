@@ -94,7 +94,7 @@ func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, globa
 }
 
 func deleteStaleGlobalMonitoringSecretReplicas(ctx context.Context, c client.Client, currentReplica *corev1.Secret) error {
-	secretList := &corev1.SecretList{}
+	secretList := &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "SecretList"}}
 	if err := c.List(ctx, secretList,
 		client.InNamespace(currentReplica.Namespace),
 		client.MatchingLabels{v1beta1constants.GardenerPurpose: LabelPurposeGlobalMonitoringSecret},
@@ -104,7 +104,7 @@ func deleteStaleGlobalMonitoringSecretReplicas(ctx context.Context, c client.Cli
 
 	for _, secret := range secretList.Items {
 		if secret.Name != currentReplica.Name {
-			if err := c.Delete(ctx, secret.DeepCopy()); client.IgnoreNotFound(err) != nil {
+			if err := c.Delete(ctx, &secret); client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("failed to delete stale global observability secret replica %q: %w", secret.Name, err)
 			}
 		}

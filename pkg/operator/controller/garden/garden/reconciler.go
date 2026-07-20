@@ -645,18 +645,12 @@ func (r *Reconciler) finalizeGlobalMonitoringSecretMigration(ctx context.Context
 		return fmt.Errorf("failed to delete migration secret %q from runtime cluster: %w", migrationSecret.Name, err)
 	}
 
-	secretList := &corev1.SecretList{}
 	secretSelector := client.MatchingLabelsSelector{Selector: labels.NewSelector().
 		Add(utils.MustNewRequirement(v1beta1constants.GardenerPurpose, selection.Equals, gardenerutils.LabelPurposeGlobalMonitoringSecret)).
 		Add(utils.MustNewRequirement(v1beta1constants.GardenRole, selection.DoesNotExist))}
-	if err := r.RuntimeClientSet.Client().List(ctx, secretList, client.InNamespace(r.GardenNamespace), secretSelector); err != nil {
-		return fmt.Errorf("failed to list global monitoring secret replicas in runtime cluster: %w", err)
-	}
-
-	for _, secret := range secretList.Items {
-		if err := r.RuntimeClientSet.Client().Delete(ctx, secret.DeepCopy()); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to delete stale global monitoring secret replica %q from runtime cluster: %w", secret.Name, err)
-		}
+	if err := r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{},
+		client.InNamespace(r.GardenNamespace), secretSelector); err != nil {
+		return fmt.Errorf("failed to delete stale global monitoring secret replicas from runtime cluster: %w", err)
 	}
 
 	return nil
