@@ -516,6 +516,21 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Garden
 
 	if kubeconfigFileExists {
 		b.Logger.Info("Found existing kubeconfig file, skipping initialization of control plane", "path", botanist.PathKubeconfig)
+
+		if opts.Force {
+			b.Logger.Info("Force flag is set, skipping check for existing gardenlet deployment in shoot control plane namespace")
+		} else {
+			clientSet, err := b.CreateClientSet(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed creating client set from existing kubeconfig file %s: %w", botanist.PathKubeconfig, err)
+			}
+
+			if gardenletExists, err := cmd.IsGardenletDeployed(ctx, clientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
+				return nil, fmt.Errorf("failed checking if gardenlet is already deployed: %w", err)
+			} else if gardenletExists {
+				return nil, fmt.Errorf("found existing gardenlet deployment in shoot control plane namespace %s, aborting initialization", b.Shoot.ControlPlaneNamespace)
+			}
+		}
 	}
 
 	var (

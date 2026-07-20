@@ -83,7 +83,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set for self-hosted shoot: %w", err)
 	}
 
-	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b); err != nil {
+	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
 		return fmt.Errorf("failed checking if gardenlet is already deployed: %w", err)
 	} else if !alreadyConnected || opts.Force {
 		bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.GardenScheme)
