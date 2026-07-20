@@ -108,6 +108,7 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden).
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
+		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
 		_                             = g.AddGroup(
@@ -120,46 +121,19 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
 		)
 
-		deployGardenerResourceManagerIntoPodNetwork = g.Add(flow.Task{
-			Name: "Redeploying gardener-resource-manager into pod network",
-			Fn: func(ctx context.Context) error {
-				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(false)
-				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(false)
+		reconcileGardenerResourceManagerInPodNetwork = g.AddGroup(
+			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden).
+				WithDependencies(reconcileSystemComponents).
+				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
+		)
 
-				if shootIsGarden {
-					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
-				}
-
-				return flow.Parallel(
-					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
-					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
-				)(ctx)
-			},
-			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
-			Dependencies: flow.NewTaskIDs(reconcileSystemComponents),
-		})
-		waitUntilGardenerResourceManagerInPodNetworkReady = g.Add(flow.Task{
-			Name: "Waiting until gardener-resource-manager (in pod network) reports readiness",
-			Fn: func(ctx context.Context) error {
-				if shootIsGarden {
-					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
-				}
-
-				return flow.Parallel(
-					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
-					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-				)(ctx)
-			},
-			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
-		})
 		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying extension controllers into pod network",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
 			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
 			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManagerInPodNetwork),
 		})
 		waitUntilExtensionControllersInPodNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until extension controllers (in pod network) report readiness",
@@ -170,7 +144,7 @@ func run(ctx context.Context, opts *Options) error {
 		syncPointBootstrapped = flow.NewTaskIDs(
 			reconcileNetworkPolicies,
 			reconcileGardenerResourceManager,
-			waitUntilGardenerResourceManagerInPodNetworkReady,
+			reconcileGardenerResourceManagerInPodNetwork,
 			reconcileExtensionControllers,
 			waitUntilExtensionControllersInPodNetworkReady,
 		)

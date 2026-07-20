@@ -135,14 +135,29 @@ func (b *Botanist) InitializeSecretsManagementTaskGroup() flow.TaskGroup {
 	}).WithDependencies(TaskGroupReconcileClusterResource)
 }
 
-// TaskGroupReconcileGardenerResourceManager is a flow.TaskID for a logical flow.TaskGroup.
-const TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcileGardenerResourceManager"
+const (
+	// TaskGroupReconcileGardenerResourceManager is a flow.TaskID for a logical flow.TaskGroup.
+	TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcileGardenerResourceManager"
+	// TaskGroupReconcileGardenerResourceManagerInPodNetwork is a flow.TaskID for a logical flow.TaskGroup.
+	TaskGroupReconcileGardenerResourceManagerInPodNetwork flow.TaskID = "TaskGroupReconcileGardenerResourceManagerInPodNetwork"
+)
 
 // ReconcileGardenerResourceManagerTaskGroup returns the flow.TaskGroup for deploying the gardener-resource-manager
 // instances. It waits for their readiness and also deploys the seed and shoot system resources afterwards.
 func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileGardenerResourceManager).WithDependencies(
+		groupID            = TaskGroupReconcileGardenerResourceManager
+		taskNameDeployment = "Deploying gardener-resource-manager"
+		taskNameWait       = "Waiting until gardener-resource-manager reports readiness"
+	)
+	if podNetworkAvailable {
+		groupID = TaskGroupReconcileGardenerResourceManagerInPodNetwork
+		taskNameDeployment = "Redeploying gardener-resource-manager into pod network"
+		taskNameWait = "Waiting until gardener-resource-manager (in pod network) reports readiness"
+	}
+
+	var (
+		g = flow.NewTaskGroup(groupID).WithDependencies(
 			TaskGroupDeployNamespaces,
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupReconcileCustomResourceDefinitions,
@@ -150,7 +165,7 @@ func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable
 		gardenadmBootstrap = b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
 
 		deployGardenerResourceManager = g.Add(flow.Task{
-			Name: "Deploying gardener-resource-manager",
+			Name: taskNameDeployment,
 			Fn: func(ctx context.Context) error {
 				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
@@ -167,8 +182,8 @@ func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable
 				)(ctx)
 			},
 		})
-		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
-			Name: "Waiting until gardener-resource-manager reports readiness",
+		_ = g.Add(flow.Task{
+			Name: taskNameWait,
 			Fn: func(ctx context.Context) error {
 				if shootIsGarden || gardenadmBootstrap {
 					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
@@ -181,18 +196,30 @@ func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+	)
+
+	return g
+}
+
+// TaskGroupReconcileSystemResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileSystemResources flow.TaskID = "TaskGroupReconcileSystemResources"
+
+// ReconcileSystemResourcesTaskGroup returns the flow.TaskGroup for deploying the system resources.
+func (b *Botanist) ReconcileSystemResourcesTaskGroup() flow.TaskGroup {
+	var (
+		g                  = flow.NewTaskGroup(TaskGroupReconcileSystemResources).WithDependencies(TaskGroupReconcileGardenerResourceManager)
+		gardenadmBootstrap = b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
+
 		_ = g.Add(flow.Task{
 			Name: "Deploying seed system resources",
 			Fn: func(ctx context.Context) error {
 				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{ManagePriorityClasses: true}).Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying shoot system resources",
-			Fn:           b.DeployShootSystem,
-			SkipIf:       gardenadmBootstrap,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+			Name:   "Deploying shoot system resources",
+			Fn:     b.DeployShootSystem,
+			SkipIf: gardenadmBootstrap,
 		})
 	)
 

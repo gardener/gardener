@@ -113,6 +113,7 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
 				WithDependencies(deployPriorityClassCritical),
 		)
+		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(true))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
 		syncPointBootstrapped         = flow.NewTaskIDs(
