@@ -324,3 +324,43 @@ func (b *Botanist) ReconcileShootNamespacesTaskGroup() flow.TaskGroup {
 
 	return g
 }
+
+// TaskGroupReconcileSystemComponents is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileSystemComponents flow.TaskID = "TaskGroupReconcileSystemComponents"
+
+// ReconcileSystemComponentsTaskGroup returns the flow.TaskGroup for reconciling shoot system components.
+func (b *Botanist) ReconcileSystemComponentsTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileSystemComponents).WithDependencies(
+			TaskGroupReconcileInfrastructure,
+			TaskGroupReconcileShootNamespaces,
+		)
+
+		_ = g.Add(flow.Task{
+			Name:   "Deploying kube-proxy system component",
+			Fn:     b.DeployKubeProxy,
+			SkipIf: !v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
+		})
+		deployNetwork = g.Add(flow.Task{
+			Name: "Deploying shoot network plugin",
+			Fn:   b.DeployNetwork,
+		})
+		waitUntilNetworkReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot network plugin has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.Network.Wait,
+			Dependencies: flow.NewTaskIDs(deployNetwork),
+		})
+		deployCoreDNS = g.Add(flow.Task{
+			Name:         "Deploying CoreDNS system component",
+			Fn:           b.DeployCoreDNS,
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until CoreDNS system component is ready",
+			Fn:           b.Shoot.Components.SystemComponents.CoreDNS.Wait,
+			Dependencies: flow.NewTaskIDs(deployCoreDNS),
+		})
+	)
+
+	return g
+}

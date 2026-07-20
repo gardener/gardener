@@ -86,10 +86,8 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	var (
-		g                = flow.NewGraph("init")
-		reporter         = flow.NewCommandLineProgressReporter(opts.ErrOut)
-		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
-		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
+		g           = flow.NewGraph("init")
+		allowBackup = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 
 		_                           = g.AddGroup(b.DeployNamespacesTaskGroup())
 		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
@@ -112,37 +110,15 @@ func run(ctx context.Context, opts *Options) error {
 		)
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
-		reconcileInfrastructure       = g.AddGroup(
+		_                             = g.AddGroup(
 			b.ReconcileInfrastructureTaskGroup().
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
-		reconcileShootNamespaces = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
-		_                        = g.Add(flow.Task{
-			Name:         "Deploying kube-proxy system component",
-			Fn:           b.DeployKubeProxy,
-			SkipIf:       !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(reconcileShootNamespaces, reconcileInfrastructure),
-		})
-		deployNetwork = g.Add(flow.Task{
-			Name:         "Deploying shoot network plugin",
-			Fn:           b.DeployNetwork,
-			Dependencies: flow.NewTaskIDs(reconcileShootNamespaces, reconcileInfrastructure),
-		})
-		waitUntilNetworkReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot network plugin has been reconciled",
-			Fn:           b.Shoot.Components.Extensions.Network.Wait,
-			Dependencies: flow.NewTaskIDs(deployNetwork),
-		})
-		deployCoreDNS = g.Add(flow.Task{
-			Name:         "Deploying CoreDNS system component",
-			Fn:           b.DeployCoreDNS,
-			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady, reconcileNetworkPolicies),
-		})
-		waitUntilCoreDNSReady = g.Add(flow.Task{
-			Name:         "Waiting until CoreDNS system component is ready",
-			Fn:           b.Shoot.Components.SystemComponents.CoreDNS.Wait,
-			Dependencies: flow.NewTaskIDs(deployCoreDNS),
-		})
+		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		reconcileSystemComponents = g.AddGroup(
+			b.ReconcileSystemComponentsTaskGroup().
+				WithDependencies(gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
+		)
 
 		deployGardenerResourceManagerIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying gardener-resource-manager into pod network",
@@ -160,7 +136,7 @@ func run(ctx context.Context, opts *Options) error {
 				)(ctx)
 			},
 			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilCoreDNSReady),
+			Dependencies: flow.NewTaskIDs(reconcileSystemComponents),
 		})
 		waitUntilGardenerResourceManagerInPodNetworkReady = g.Add(flow.Task{
 			Name: "Waiting until gardener-resource-manager (in pod network) reports readiness",
@@ -351,7 +327,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              opts.Log,
-		ProgressReporter: reporter,
+		ProgressReporter: flow.NewCommandLineProgressReporter(opts.ErrOut),
 	}); err != nil {
 		return flow.Errors(err)
 	}
