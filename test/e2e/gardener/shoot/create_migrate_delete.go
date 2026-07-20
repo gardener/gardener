@@ -44,7 +44,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			seedClientSourceCluster = s.SeedClient
 		})
 
-		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s)
+		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s.SeedClient, s.Shoot)
 
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
@@ -80,7 +80,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			Expect(shootmigration.CheckForOrphanedNonNamespacedResources(ctx, s.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
+		// the "infrastructure" (aka the machine pods), still exist in the "kind-gardener-local" cluster
+		ItShouldCompareMachinePodNamesAfter(seedClientSourceCluster, s.Shoot, machinePodNamesBeforeTest)
 
 		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
 			ItShouldInitializeShootClient(s)

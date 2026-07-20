@@ -6,7 +6,6 @@ package infrastructure
 
 import (
 	"context"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -16,8 +15,6 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
-	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -51,7 +48,7 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 			MatchLabels: machineSelector,
 		},
 		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			allowFromLoadBalancers(),
+			allowFromWorldToNodePorts(),
 			{From: machinePodPeers()}, // allow intra-machine communication
 			{From: bastionPodPeers(), Ports: sshPort()},
 		},
@@ -66,23 +63,7 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 	}
 
-	allowBastionPods := emptyNetworkPolicy("provider-local-allow-bastion-pods", namespace)
-	allowBastionPods.Spec = networkingv1.NetworkPolicySpec{
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: bastionSelector,
-		},
-		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			allowFromLoadBalancers(),
-		},
-		Egress: []networkingv1.NetworkPolicyEgressRule{
-			allowToDNS(),         // bastion pods use the in-cluster CoreDNS to resolve hostnames of machine pods.
-			allowToKindNetwork(), // required to reach registry
-			{To: machinePodPeers(), Ports: sshPort()},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-	}
-
-	return []client.Object{allowMachinePods, allowBastionPods, denyAll}
+	return []client.Object{allowMachinePods, denyAll}
 }
 
 func machinePodPeers() []networkingv1.NetworkPolicyPeer {
@@ -151,7 +132,7 @@ func allowToIstioGateways(cluster *extensionscontroller.Cluster) networkingv1.Ne
 		},
 	}
 	// For multi-zone seeds, also allow egress to the per-zone istio-ingress namespaces.
-	if len(cluster.Seed.Spec.Provider.Zones) > 1 {
+	if cluster.Seed != nil && len(cluster.Seed.Spec.Provider.Zones) > 1 {
 		for _, zone := range cluster.Seed.Spec.Provider.Zones {
 			istioGatewaysRule.To = append(istioGatewaysRule.To, networkingv1.NetworkPolicyPeer{
 				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
@@ -178,66 +159,13 @@ func allowToNodeLocalDNS() networkingv1.NetworkPolicyEgressRule {
 	}
 }
 
-func allowToDNS() networkingv1.NetworkPolicyEgressRule {
-	return networkingv1.NetworkPolicyEgressRule{
-		To: []networkingv1.NetworkPolicyPeer{
-			{
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						corev1.LabelMetadataName: metav1.NamespaceSystem,
-					},
-				},
-				PodSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      corednsconstants.LabelKey,
-						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{corednsconstants.LabelValue},
-					}},
-				},
-			},
-			{
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						corev1.LabelMetadataName: metav1.NamespaceSystem,
-					},
-				},
-				PodSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      corednsconstants.LabelKey,
-						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{nodelocaldnsconstants.LabelValue},
-					}},
-				},
-			},
-			// required for node local dns feature, allows egress traffic to node local dns cache
-			{
-				IPBlock: &networkingv1.IPBlock{
-					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
-					CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
-				},
-			},
-			{
-				IPBlock: &networkingv1.IPBlock{
-					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
-					CIDR: fmt.Sprintf("%s/128", nodelocaldnsconstants.IPVSIPv6Address),
-				},
-			},
-		},
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
-			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
-			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
-			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
-		},
-	}
-}
-
-func allowFromLoadBalancers() networkingv1.NetworkPolicyIngressRule {
+func allowFromWorldToNodePorts() networkingv1.NetworkPolicyIngressRule {
 	return networkingv1.NetworkPolicyIngressRule{
-		From: []networkingv1.NetworkPolicyPeer{
-			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
-			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
-		},
+		Ports: []networkingv1.NetworkPolicyPort{{
+			Port:     new(intstr.FromInt32(30000)),
+			EndPort:  new(int32(32767)),
+			Protocol: new(corev1.ProtocolTCP),
+		}},
 	}
 }
 

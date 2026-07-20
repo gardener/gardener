@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -23,6 +24,8 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
@@ -62,9 +65,10 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bastion *extens
 		userDataSecret = userDataSecretForBastion(bastion, technicalID)
 		pod            = podForBastion(bastion, technicalID, image, userDataSecret.Name)
 		service        = serviceForBastion(bastion, technicalID)
+		networkPolicy  = networkPolicyForBastion(bastion, technicalID)
 	)
 
-	for _, obj := range []client.Object{userDataSecret, pod, service} {
+	for _, obj := range []client.Object{userDataSecret, pod, service, networkPolicy} {
 		if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("failed to apply %T %q: %w", obj, client.ObjectKeyFromObject(obj), err)
 		}
@@ -105,10 +109,11 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bastion *extension
 		userDataSecret = userDataSecretForBastion(bastion, technicalID)
 		pod            = podForBastion(bastion, technicalID, "", "")
 		service        = serviceForBastion(bastion, technicalID)
+		networkPolicy  = networkPolicyForBastion(bastion, technicalID)
 
 		remainingObjects int
 	)
-	for _, obj := range []client.Object{userDataSecret, pod, service} {
+	for _, obj := range []client.Object{userDataSecret, pod, service, networkPolicy} {
 		if err := providerClient.Delete(ctx, obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -246,6 +251,98 @@ func serviceForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) 
 				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: new("ssh"),
 			}},
+		},
+	}
+}
+
+func networkPolicyForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) *networkingv1.NetworkPolicy {
+	objectMeta := objectMetaForBastion(bastion, technicalID)
+
+	return &networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: objectMeta,
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: objectMeta.DeepCopy().Labels,
+			},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				{
+					// allows traffic from world to the SSH port
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
+					},
+				},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				allowToDNS(), // bastion pods use the in-cluster CoreDNS to resolve hostnames of machine pods.
+				{
+					// allows traffic from bastion pods to machine pods on the SSH port
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+		},
+	}
+}
+
+func allowToDNS() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						corev1.LabelMetadataName: metav1.NamespaceSystem,
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      corednsconstants.LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{corednsconstants.LabelValue},
+					}},
+				},
+			},
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						corev1.LabelMetadataName: metav1.NamespaceSystem,
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      corednsconstants.LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{nodelocaldnsconstants.LabelValue},
+					}},
+				},
+			},
+			// required for node local dns feature, allows egress traffic to node local dns cache
+			{
+				IPBlock: &networkingv1.IPBlock{
+					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+					CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
+				},
+			},
+			{
+				IPBlock: &networkingv1.IPBlock{
+					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+					CIDR: fmt.Sprintf("%s/128", nodelocaldnsconstants.IPVSIPv6Address),
+				},
+			},
+		},
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
 		},
 	}
 }

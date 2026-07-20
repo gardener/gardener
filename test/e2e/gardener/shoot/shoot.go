@@ -258,17 +258,19 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 }
 
 // ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
-func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
+func ItShouldFindAllMachinePodsBefore(infraClient client.Reader, shoot *gardencorev1beta1.Shoot) sets.Set[string] {
 	GinkgoHelper()
 
 	machinePodNamesBeforeTest := sets.New[string]()
 
 	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
 		beforeStartMachinePodList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)), client.MatchingLabels{
-			"app":              "machine",
-			"machine-provider": "local",
-		})).Should(Succeed())
+		Eventually(ctx, func() error {
+			return infraClient.List(ctx, beforeStartMachinePodList, client.InNamespace(infrastructure.MachineNamespaceName(shoot.Status.TechnicalID)), client.MatchingLabels{
+				"app":              "machine",
+				"machine-provider": "local",
+			})
+		}).Should(Succeed())
 
 		for _, item := range beforeStartMachinePodList.Items {
 			machinePodNamesBeforeTest.Insert(item.Name)
@@ -279,22 +281,24 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
 }
 
 // ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
-func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeTest sets.Set[string]) {
+func ItShouldCompareMachinePodNamesAfter(infraClient client.Reader, shoot *gardencorev1beta1.Shoot, machinePodNamesBeforeTest sets.Set[string]) {
 	GinkgoHelper()
 
 	It("Compare machine pod names", func(ctx SpecContext) {
 		machinePodListAfterTest := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(machinePodListAfterTest, client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)), client.MatchingLabels{
-			"app":              "machine",
-			"machine-provider": "local",
-		})).Should(Succeed())
+		Eventually(ctx, func() error {
+			return infraClient.List(ctx, machinePodListAfterTest, client.InNamespace(infrastructure.MachineNamespaceName(shoot.Status.TechnicalID)), client.MatchingLabels{
+				"app":              "machine",
+				"machine-provider": "local",
+			})
+		}).Should(Succeed())
 
 		machinePodNamesAfterTest := sets.New[string]()
 		for _, item := range machinePodListAfterTest.Items {
 			machinePodNamesAfterTest.Insert(item.Name)
 		}
 
-		Expect(machinePodNamesBeforeTest.UnsortedList()).To(ConsistOf(machinePodNamesAfterTest.UnsortedList()))
+		Expect(machinePodNamesAfterTest.UnsortedList()).To(ConsistOf(machinePodNamesBeforeTest.UnsortedList()))
 	}, SpecTimeout(time.Minute))
 }
 

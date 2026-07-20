@@ -61,6 +61,10 @@ func VerifyBastion(s *ShootContext) {
 			}
 
 			DeferCleanup(func(ctx SpecContext) {
+				// skip cleanup if the tests failed, so we can collect logs
+				if CurrentSpecReport().Failed() {
+					return
+				}
 				Eventually(ctx, func() error {
 					return s.GardenClient.Delete(ctx, bastion)
 				}).Should(Or(Succeed(), BeNotFoundError()))
