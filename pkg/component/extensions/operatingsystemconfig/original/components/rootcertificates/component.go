@@ -20,17 +20,16 @@ import (
 )
 
 const (
-	// PathLocalSSLRootCerts is the path to the Gardener CAs. It can be used as trigger for other components to reload the CAs.
-	PathLocalSSLRootCerts = PathLocalSSLCerts + "/ROOTcerts.crt"
 	// PathLocalSSLCerts is the directory for local CA certificates.
 	PathLocalSSLCerts = "/var/lib/ca-certificates-local"
+	// PathLocalSSLRootCerts is the path to the Gardener CAs. It can be used as trigger for other components to reload the CAs.
+	PathLocalSSLRootCerts = PathLocalSSLCerts + "/ROOTcerts.crt"
 	// PathLocalSSLRegistryCACerts is the path to the registry CA certificate written during node init and OSC reconciliation.
 	PathLocalSSLRegistryCACerts = PathLocalSSLCerts + "/registry-ca.crt"
 	// PathPKITrustAnchors is the directory for PKI trust anchor certificates (RedHat/SUSE systems).
 	PathPKITrustAnchors = "/etc/pki/trust/anchors"
 	// PathPKITrustAnchorsRegistryCACerts is the path to the registry CA certificate in the PKI trust anchors (RedHat/SUSE systems).
 	PathPKITrustAnchorsRegistryCACerts = PathPKITrustAnchors + "/registry-ca.pem"
-
 	// PathUpdateLocalCACertificates is the path to the script that updates the local CA certificates.
 	PathUpdateLocalCACertificates = "/var/lib/ssl/update-local-ca-certificates.sh"
 )

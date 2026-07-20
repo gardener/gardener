@@ -78,7 +78,7 @@ type Values struct {
 	// EgressCIDRs are the egress CIDRs of the cluster, actual presence of this field depends on the implementation of the provider extension.
 	EgressCIDRs []net.IPNet
 	// RegistryCABundle is the PEM-encoded CA bundle for the container image registry. When non-nil,
-	// the system component creates a ConfigMap and RBAC in kube-public so that bootstrap tokens can
+	// the system component creates a ConfigMap and RBAC in kube-system namespace so that bootstrap tokens can
 	// fetch the CA before pulling the gardener-node-agent image.
 	RegistryCABundle *string
 }
