@@ -164,11 +164,11 @@ While WSL1, plain docker for Windows and various Linux distributions and local K
     * Hyper-V
     * Virtual Machine Platform
     * Windows Hypervisor Platform
-  * .wslconfig file (on Windows) with:
+  * [.wslconfig file (on Windows)](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#wslconfig) with:
     ```
     networkingMode=mirrored
     ```
-* [Ubuntu 24.04 LTS on WSL2](https://canonical.com/blog/ubuntu-on-wsl-2-is-generally-available) with the following configuration:
+* [Ubuntu 24.04 LTS on WSL2](https://ubuntu.com/wsl/docs/stable/howto/install-ubuntu-wsl2/) with the following configuration:
   * /etc/wsl.conf (in WSL) with:
       ```
       [network]
