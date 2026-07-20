@@ -14,8 +14,8 @@ import (
 // (via `WithDependencies`), and that dependency is expanded to a dependency on every task in the
 // referenced group when the group is added to a `Graph` via `Graph.AddGroup`.
 //
-// A `TaskGroup` value is safe to build up incrementally via the fluent `AddAll`/`WithDependencies`
-// methods before being added to a `Graph`.
+// A `TaskGroup` value is safe to build up incrementally via the fluent `AddAll`, `WithDependencies`
+// and `SkipIf` methods before being added to a `Graph`.
 type TaskGroup struct {
 	id    TaskID
 	tasks map[TaskID]Task
@@ -23,6 +23,10 @@ type TaskGroup struct {
 	// dependencies holds the `TaskID`s of tasks or groups this group depends on.
 	// When the group is added to a `Graph`, every task in the group inherits this set.
 	dependencies TaskIDs
+
+	// skipIf, when true, causes every task in the group to be marked as skipped when the group
+	// is added to a `Graph`. It is OR-ed with each task's own `Task.SkipIf`.
+	skipIf bool
 }
 
 // NewTaskGroup returns a new `TaskGroup` with the given id and the given initial tasks.
@@ -74,6 +78,14 @@ func (g TaskGroup) WithDependencies(dependencies ...TaskIDer) TaskGroup {
 	return g
 }
 
+// SkipIf marks every task in the group as skipped when the given condition evaluates to true.
+// Multiple calls OR the conditions together, and per-task `Task.SkipIf` values are preserved:
+// a task already flagged skipped stays skipped regardless of the group condition.
+func (g TaskGroup) SkipIf(skip bool) TaskGroup {
+	g.skipIf = g.skipIf || skip
+	return g
+}
+
 // AddGroup adds all tasks of the given `TaskGroup` to the graph as regular tasks and returns
 // their `TaskID`s so callers can wire them as dependencies of later `Add` calls.
 //
@@ -84,6 +96,7 @@ func (g TaskGroup) WithDependencies(dependencies ...TaskIDer) TaskGroup {
 //     dependencies already declared on the task itself.
 //   - Resolving a dependency that names another group (either the group value or its id) to
 //     the `TaskID`s of every task in that group.
+//   - OR-ing the group's `SkipIf` condition onto each task's own `Task.SkipIf`.
 //
 // Because resolution happens at `AddGroup` time, groups referenced by id via `WithDependencies`
 // must be added before the groups that depend on them; otherwise the id is treated as a plain
@@ -102,13 +115,14 @@ func (g *Graph) AddGroup(group TaskGroup) TaskIDs {
 		}
 	}
 
-	// Prepare the tasks by attaching the group-level dependencies.
+	// Prepare the tasks by attaching the group-level dependencies and OR-ing the group's `SkipIf` in.
 	pending := make(map[TaskID]Task, len(group.tasks))
 	for id, task := range group.tasks {
 		if task.Dependencies == nil {
 			task.Dependencies = make(TaskIDs, len(dependencies))
 		}
 		task.Dependencies.Insert(dependencies)
+		task.SkipIf = task.SkipIf || group.skipIf
 		pending[id] = task
 	}
 

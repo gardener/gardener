@@ -197,3 +197,32 @@ func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable
 
 	return g
 }
+
+// TaskGroupReconcileInfrastructure is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileInfrastructure flow.TaskID = "TaskGroupReconcileInfrastructure"
+
+// ReconcileInfrastructureTaskGroup returns the flow.TaskGroup for deploying the Infrastructure extension resource and
+// waiting for its readiness.
+func (b *Botanist) ReconcileInfrastructureTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileInfrastructure).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileGardenerResourceManager,
+		)
+
+		deployInfrastructure = g.Add(flow.Task{
+			Name:   "Deploying Shoot infrastructure",
+			Fn:     b.DeployInfrastructure,
+			SkipIf: !b.Shoot.HasManagedInfrastructure(),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until Shoot infrastructure has been reconciled",
+			Fn:           b.WaitForInfrastructure,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		})
+	)
+
+	return g
+}

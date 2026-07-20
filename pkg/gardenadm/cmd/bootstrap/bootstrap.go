@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
-	"github.com/gardener/gardener/pkg/gardenadm/botanist"
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
@@ -72,7 +72,7 @@ gardenadm bootstrap --config-dir /path/to/manifests`,
 
 // NewClientSetFromFile is an alias for botanist.NewClientSetFromFile.
 // Exposed for unit testing.
-var NewClientSetFromFile = botanist.NewClientSetFromFile
+var NewClientSetFromFile = gardenadmbotanist.NewClientSetFromFile
 
 func run(ctx context.Context, opts *Options) error {
 	clientSet, err := NewClientSetFromFile(opts.Kubeconfig, kubernetes.SeedScheme)
@@ -84,7 +84,7 @@ func run(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
+	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
 	if err != nil {
 		return err
 	}
@@ -120,18 +120,11 @@ func run(ctx context.Context, opts *Options) error {
 			reconcileExtensionControllers,
 		)
 
-		deployInfrastructure = g.Add(flow.Task{
-			Name:         "Deploying Shoot infrastructure",
-			Fn:           b.DeployInfrastructure,
-			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource],
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
-		})
-		waitUntilInfrastructureReady = g.Add(flow.Task{
-			Name:         "Waiting until Shoot infrastructure has been reconciled",
-			Fn:           b.WaitForInfrastructure,
-			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource],
-			Dependencies: flow.NewTaskIDs(deployInfrastructure),
-		})
+		reconcileInfrastructure = g.AddGroup(
+			b.ReconcileInfrastructureTaskGroup().
+				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers, gardenadmbotanist.TaskGroupReconcileNetworkPolicies).
+				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource]),
+		)
 
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying OperatingSystemConfig for control plane machines",
@@ -154,7 +147,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name:         "Deploying control plane machines",
 			Fn:           b.DeployWorker,
 			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
+			Dependencies: flow.NewTaskIDs(reconcileInfrastructure, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
 		})
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name:         "Waiting until control plane machines have been deployed",
@@ -219,7 +212,7 @@ func run(ctx context.Context, opts *Options) error {
 				b.Shoot.Components.Bastion.Values.IngressCIDRs = opts.BastionIngressCIDRs
 				return component.OpWait(b.Shoot.Components.Bastion).Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(reconcileInfrastructure),
 		})
 		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
@@ -258,8 +251,8 @@ func run(ctx context.Context, opts *Options) error {
 					WithSignalProcess(nodeinit.GardenadmBinaryName).
 					RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
 						fmt.Sprintf("%s%s init -d %q --log-level=%s",
-							botanist.ImageVectorOverrideEnv(),
-							nodeinit.GardenadmBinaryPath, botanist.ManifestsDir, opts.LogLevel,
+							gardenadmbotanist.ImageVectorOverrideEnv(),
+							nodeinit.GardenadmBinaryPath, gardenadmbotanist.ManifestsDir, opts.LogLevel,
 						),
 					)
 			}).Timeout(30 * time.Minute),

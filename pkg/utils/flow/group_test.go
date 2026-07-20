@@ -71,6 +71,61 @@ var _ = Describe("TaskGroup", func() {
 			Expect(func() { group.Add(flow.Task{Name: "a"}) }).To(Panic())
 		})
 	})
+
+	Describe("#SkipIf", func() {
+		It("should not skip tasks when the condition is false", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+			)
+
+			graph.AddGroup(flow.NewTaskGroup("group", rec.task("a"), rec.task("b")).SkipIf(false))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			Expect(rec.executed()).To(ConsistOf("a", "b"))
+		})
+
+		It("should skip every task in the group when the condition is true", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+			)
+
+			graph.AddGroup(flow.NewTaskGroup("group", rec.task("a"), rec.task("b")).SkipIf(true))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			Expect(rec.executed()).To(BeEmpty())
+		})
+
+		It("should OR multiple SkipIf calls", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+			)
+
+			graph.AddGroup(
+				flow.NewTaskGroup("group", rec.task("a")).SkipIf(false).SkipIf(true),
+			)
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			Expect(rec.executed()).To(BeEmpty())
+		})
+
+		It("should preserve a task's own SkipIf when the group's SkipIf is false", func() {
+			var (
+				rec      = &recorder{}
+				graph    = flow.NewGraph("foo")
+				skipped  = rec.task("skipped")
+				executed = rec.task("executed")
+			)
+			skipped.SkipIf = true
+
+			graph.AddGroup(flow.NewTaskGroup("group", skipped, executed).SkipIf(false))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			Expect(rec.executed()).To(ConsistOf("executed"))
+		})
+	})
 })
 
 var _ = Describe("Graph #AddGroup", func() {

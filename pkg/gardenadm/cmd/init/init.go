@@ -92,7 +92,7 @@ func run(ctx context.Context, opts *Options) error {
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
 		_                           = g.AddGroup(b.DeployNamespacesTaskGroup())
-		deployCloudProviderSecret   = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
 		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
 		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
 		initializeSecretsManagement = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
@@ -112,18 +112,10 @@ func run(ctx context.Context, opts *Options) error {
 		)
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
-		deployInfrastructure          = g.Add(flow.Task{
-			Name:         "Deploying Shoot infrastructure",
-			Fn:           b.DeployInfrastructure,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, reconcileExtensionControllers),
-		})
-		waitUntilInfrastructureReady = g.Add(flow.Task{
-			Name:         "Waiting until Shoot infrastructure has been reconciled",
-			Fn:           b.WaitForInfrastructure,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(deployInfrastructure),
-		})
+		reconcileInfrastructure       = g.AddGroup(
+			b.ReconcileInfrastructureTaskGroup().
+				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
+		)
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
@@ -138,12 +130,12 @@ func run(ctx context.Context, opts *Options) error {
 			Name:         "Deploying kube-proxy system component",
 			Fn:           b.DeployKubeProxy,
 			SkipIf:       !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, reconcileInfrastructure),
 		})
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           b.DeployNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, reconcileInfrastructure),
 		})
 		waitUntilNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
