@@ -126,27 +126,17 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(reconcileSystemComponents).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
-
-		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
-			Name: "Redeploying extension controllers into pod network",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.ReconcileExtensionControllerInstallations(ctx, false)
-			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
-			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManagerInPodNetwork),
-		})
-		waitUntilExtensionControllersInPodNetworkReady = g.Add(flow.Task{
-			Name:         "Waiting until extension controllers (in pod network) report readiness",
-			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
-			SkipIf:       podNetworkAvailable || opts.UseHostNetwork,
-			Dependencies: flow.NewTaskIDs(deployExtensionControllersIntoPodNetwork),
-		})
+		reconcileExtensionControllersInPodNetwork = g.AddGroup(
+			b.ReconcileExtensionControllersTaskGroup(true).
+				WithDependencies(reconcileGardenerResourceManagerInPodNetwork).
+				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
+		)
 		syncPointBootstrapped = flow.NewTaskIDs(
 			reconcileNetworkPolicies,
 			reconcileGardenerResourceManager,
 			reconcileGardenerResourceManagerInPodNetwork,
 			reconcileExtensionControllers,
-			waitUntilExtensionControllersInPodNetworkReady,
+			reconcileExtensionControllersInPodNetwork,
 		)
 
 		// When extension-based exposure is configured, first deploy the SelfHostedShootExposure object
