@@ -335,6 +335,7 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 								"--health-probe-bind-address=:8081",
 								"--metrics-bind-address=:8080",
 								"--leader-elect",
+								"--leader-election-id=" + p.values.ManagedResourceName,
 								"--interval=60s",
 								"--prometheus-address=http://" + p.values.PrometheusServiceName + "." + p.namespace + ".svc.cluster.local:80",
 							},
