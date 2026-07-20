@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
-	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -100,16 +99,10 @@ func run(ctx context.Context, opts *Options) error {
 		g        = flow.NewGraph("bootstrap")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
-		deployNamespaces                     = g.AddGroup(b.DeployNamespacesTaskGroup())
-		_                                    = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		ensureCustomResourceDefinitionsReady = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
-		reconcileClusterResource             = g.Add(flow.Task{
-			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
-			Fn: func(ctx context.Context) error {
-				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, b.Seed.GetInfo())
-			},
-			Dependencies: flow.NewTaskIDs(ensureCustomResourceDefinitionsReady),
-		})
+		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		reconcileClusterResource    = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing internal state of Gardener secrets manager",
 			Fn:           b.InitializeSecretsManagement,

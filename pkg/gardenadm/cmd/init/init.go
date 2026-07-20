@@ -16,7 +16,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
-	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -93,16 +92,10 @@ func run(ctx context.Context, opts *Options) error {
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
-		deployNamespaces                     = g.AddGroup(b.DeployNamespacesTaskGroup())
-		deployCloudProviderSecret            = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		ensureCustomResourceDefinitionsReady = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
-		reconcileClusterResource             = g.Add(flow.Task{
-			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
-			Fn: func(ctx context.Context) error {
-				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, nil)
-			},
-			Dependencies: flow.NewTaskIDs(ensureCustomResourceDefinitionsReady),
-		})
+		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
+		deployCloudProviderSecret   = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		reconcileClusterResource    = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing internal state of Gardener secrets manager",
 			Fn:           b.InitializeSecretsManagement,

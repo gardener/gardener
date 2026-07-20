@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -106,4 +107,17 @@ func (b *Botanist) ReconcileCustomResourceDefinitionsTaskGroup() flow.TaskGroup 
 	}
 
 	return flow.NewTaskGroup(TaskGroupReconcileCustomResourceDefinitions, tasks...)
+}
+
+// TaskGroupReconcileClusterResource is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileClusterResource flow.TaskID = "TaskGroupReconcileClusterResource"
+
+// ReconcileClusterResourceTaskGroup returns the flow.TaskGroup for reconciling the Cluster resource.
+func (b *Botanist) ReconcileClusterResourceTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(TaskGroupReconcileClusterResource, flow.Task{
+		Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
+		Fn: func(ctx context.Context) error {
+			return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, nil)
+		},
+	}).WithDependencies(TaskGroupReconcileCustomResourceDefinitions)
 }
