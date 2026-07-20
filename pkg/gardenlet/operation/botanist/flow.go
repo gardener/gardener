@@ -244,6 +244,33 @@ func (b *Botanist) ReconcileInfrastructureTaskGroup() flow.TaskGroup {
 	return g
 }
 
+// TaskGroupReconcileControlPlane is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileControlPlane flow.TaskID = "TaskGroupReconcileControlPlane"
+
+// ReconcileControlPlaneTaskGroup returns the flow.TaskGroup for deploying the ControlPlane extension resource and
+// waiting for its readiness.
+func (b *Botanist) ReconcileControlPlaneTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileControlPlane).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileGardenerResourceManager,
+		)
+
+		deployControlPlane = g.Add(flow.Task{
+			Name: "Deploying shoot control plane components",
+			Fn:   b.DeployControlPlane,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
+			Dependencies: flow.NewTaskIDs(deployControlPlane),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileOperatingSystemConfig is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileOperatingSystemConfig flow.TaskID = "TaskGroupReconcileOperatingSystemConfig"
 

@@ -207,16 +207,10 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       !allowBackup || opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
 		})
-		deployControlPlane = g.Add(flow.Task{
-			Name:         "Deploying shoot control plane components",
-			Fn:           b.DeployControlPlane,
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
-		})
-		waitUntilControlPlaneReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot control plane has been reconciled",
-			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
-			Dependencies: flow.NewTaskIDs(deployControlPlane),
-		})
+		reconcileControlPlane = g.AddGroup(
+			b.ReconcileControlPlaneTaskGroup().
+				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
+		)
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
@@ -249,7 +243,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: func(ctx context.Context) error {
 				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilEtcdsReady),
+			Dependencies: flow.NewTaskIDs(reconcileControlPlane, waitUntilEtcdsReady),
 		})
 		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
 			Name: "Waiting until control plane components (static pods) are ready",
