@@ -295,6 +295,11 @@ func (p *pvcAutoscaler) service() *corev1.Service {
 }
 
 func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
+	autoscalerName := ""
+	if p.values.ManagedResourceName == PVCAutoscalerGardenManagedResourceName {
+		autoscalerName = "garden"
+	}
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.values.ManagedResourceName,
@@ -336,6 +341,7 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 								"--metrics-bind-address=:8080",
 								"--leader-elect",
 								"--leader-election-id=" + p.values.ManagedResourceName,
+								"--autoscaler-name=" + autoscalerName,
 								"--interval=60s",
 								"--prometheus-address=http://" + p.values.PrometheusServiceName + "." + p.namespace + ".svc.cluster.local:80",
 							},
