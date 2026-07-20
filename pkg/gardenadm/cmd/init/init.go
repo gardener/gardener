@@ -111,12 +111,8 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
-		deployNetworkPolicies         = g.Add(flow.Task{
-			Name:         "Deploying network policies",
-			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, reconcileExtensionControllers),
-		})
-		deployInfrastructure = g.Add(flow.Task{
+		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
+		deployInfrastructure          = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
 			Fn:           b.DeployInfrastructure,
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
@@ -157,7 +153,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployCoreDNS = g.Add(flow.Task{
 			Name:         "Deploying CoreDNS system component",
 			Fn:           b.DeployCoreDNS,
-			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady, deployNetworkPolicies),
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady, reconcileNetworkPolicies),
 		})
 		waitUntilCoreDNSReady = g.Add(flow.Task{
 			Name:         "Waiting until CoreDNS system component is ready",
@@ -213,7 +209,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployExtensionControllersIntoPodNetwork),
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
-			deployNetworkPolicies,
+			reconcileNetworkPolicies,
 			reconcileGardenerResourceManager,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
 			reconcileExtensionControllers,

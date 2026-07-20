@@ -113,13 +113,9 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(deployPriorityClassCritical),
 		)
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(true))
-		deployNetworkPolicies         = g.Add(flow.Task{
-			Name:         "Deploying network policies",
-			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, reconcileExtensionControllers),
-		})
-		syncPointBootstrapped = flow.NewTaskIDs(
-			deployNetworkPolicies,
+		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
+		syncPointBootstrapped         = flow.NewTaskIDs(
+			reconcileNetworkPolicies,
 			reconcileGardenerResourceManager,
 			reconcileExtensionControllers,
 		)

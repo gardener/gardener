@@ -37,3 +37,14 @@ func (b *GardenadmBotanist) ReconcileExtensionControllersTaskGroup(podNetworkAva
 
 	return g
 }
+
+// TaskGroupReconcileNetworkPolicies is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileNetworkPolicies flow.TaskID = "TaskGroupReconcileNetworkPolicies"
+
+// ReconcileNetworkPoliciesTaskGroup returns the flow.TaskGroup for initializing the secret management.
+func (b *GardenadmBotanist) ReconcileNetworkPoliciesTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(TaskGroupReconcileNetworkPolicies, flow.Task{
+		Name: "Deploying network policies",
+		Fn:   b.ApplyNetworkPolicies,
+	}).WithDependencies(botanist.TaskGroupReconcileGardenerResourceManager, TaskGroupReconcileExtensionControllers)
+}
