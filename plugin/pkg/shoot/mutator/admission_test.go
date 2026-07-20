@@ -774,11 +774,11 @@ var _ = Describe("mutator", func() {
 			})
 
 			It("should not change architecture if it is already set", func() {
-				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureAMD64)
+				shoot.Spec.Provider.Workers[0].Machine.Architecture = new(v1beta1constants.ArchitectureARM64)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureAMD64)))
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(new(v1beta1constants.ArchitectureARM64)))
 			})
 
 			It("should infer architecture from machine type when architecture is nil and machine type supports exactly one architecture", func() {
