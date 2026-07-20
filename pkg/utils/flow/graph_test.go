@@ -28,4 +28,12 @@ var _ = Describe("Graph", func() {
 			}).To(Panic())
 		})
 	})
+
+	Describe("Task", func() {
+		Describe("#ID", func() {
+			It("should return the task ID derived from the name", func() {
+				Expect((&flow.Task{Name: "foo"}).ID()).To(Equal(flow.TaskID("foo")))
+			})
+		})
+	})
 })
