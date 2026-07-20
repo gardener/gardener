@@ -24,6 +24,7 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a
 
 ```
   -d, --config-dir string    Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
+      --force                If set, the init command will be executed even if the control plane is already initialized.
   -h, --help                 help for init
       --use-bootstrap-etcd   If set, the control plane continues using the bootstrap etcd instead of transitioning to etcd-druid. This can be useful for testing purposes to save time.
       --use-host-network     If set, gardener-resource-manager and extensions continue to run in host network instead of getting redeployed into the pod network after bootstrapping. This can be useful for testing purposes to save time.
