@@ -10111,6 +10111,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 	})
 
+	Describe("#ValidateHibernation", func() {
+		DescribeTable("validate hibernation",
+			func(hibernation *core.Hibernation, annotations map[string]string, isSelfHosted bool, matcher gomegatypes.GomegaMatcher) {
+				Expect(ValidateHibernation(annotations, hibernation, isSelfHosted, nil)).To(matcher)
+			},
+			Entry("nil hibernation", nil, nil, false, BeEmpty()),
+			Entry("hosted hibernation", &core.Hibernation{Enabled: new(true)}, nil, false, BeEmpty()),
+			Entry("self-hosted hibernation", &core.Hibernation{Enabled: new(true)}, nil, true, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Detail": Equal("hibernation is not supported for self-hosted shoots"),
+			})))),
+			Entry("forbidden annotation", &core.Hibernation{Enabled: new(true)}, map[string]string{"maintenance.gardener.cloud/operation": "rotate-credentials-start"}, false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Detail": Equal("shoot cannot be hibernated when maintenance.gardener.cloud/operation annotation contains rotate-credentials-start operation"),
+			})))),
+			Entry("multiple forbidden annotations", &core.Hibernation{Enabled: new(true)}, map[string]string{"maintenance.gardener.cloud/operation": "rotate-etcd-encryption-key;rotate-serviceaccount-key-start"}, false, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Detail": Equal("shoot cannot be hibernated when maintenance.gardener.cloud/operation annotation contains rotate-etcd-encryption-key operation"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Detail": Equal("shoot cannot be hibernated when maintenance.gardener.cloud/operation annotation contains rotate-serviceaccount-key-start operation"),
+				})),
+			)),
+		)
+	})
+
 	Describe("#ValidateHibernationSchedules", func() {
 		DescribeTable("validate hibernation schedules",
 			func(schedules []core.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {

@@ -336,7 +336,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
-	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
+	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, helper.IsShootSelfHosted(spec.Provider.Workers), fldPath.Child("hibernation"))...)
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
@@ -2880,11 +2880,15 @@ func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) 
 }
 
 // ValidateHibernation validates a Hibernation object.
-func ValidateHibernation(annotations map[string]string, hibernation *core.Hibernation, fldPath *field.Path) field.ErrorList {
+func ValidateHibernation(annotations map[string]string, hibernation *core.Hibernation, isSelfHosted bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if hibernation == nil {
 		return allErrs
+	}
+
+	if isSelfHosted {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "hibernation is not supported for self-hosted shoots"))
 	}
 
 	for _, op := range v1beta1helper.GetShootMaintenanceOperations(annotations) {
