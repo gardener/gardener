@@ -102,12 +102,8 @@ func run(ctx context.Context, opts *Options) error {
 		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
 		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
 		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
-		reconcileClusterResource    = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
-		initializeSecretsManagement = g.Add(flow.Task{
-			Name:         "Initializing internal state of Gardener secrets manager",
-			Fn:           b.InitializeSecretsManagement,
-			Dependencies: flow.NewTaskIDs(reconcileClusterResource),
-		})
+		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
+		initializeSecretsManagement = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
 		deployPriorityClassCritical = g.Add(flow.Task{
 			Name:         "Deploying PriorityClass for gardener-resource-manager",
 			Fn:           b.DeployPriorityClassCritical,

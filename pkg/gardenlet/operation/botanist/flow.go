@@ -121,3 +121,14 @@ func (b *Botanist) ReconcileClusterResourceTaskGroup() flow.TaskGroup {
 		},
 	}).WithDependencies(TaskGroupReconcileCustomResourceDefinitions)
 }
+
+// TaskGroupInitializeSecretsManagement is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupInitializeSecretsManagement flow.TaskID = "TaskGroupInitializeSecretsManagement"
+
+// InitializeSecretsManagementTaskGroup returns the flow.TaskGroup for initializing the secret management.
+func (b *Botanist) InitializeSecretsManagementTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(TaskGroupInitializeSecretsManagement, flow.Task{
+		Name: "Initializing internal state of Gardener secrets manager",
+		Fn:   b.InitializeSecretsManagement,
+	}).WithDependencies(TaskGroupReconcileClusterResource)
+}
