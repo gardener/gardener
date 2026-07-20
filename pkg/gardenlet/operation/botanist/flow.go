@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -196,6 +197,22 @@ func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable
 	)
 
 	return g
+}
+
+// TaskGroupReconcileMachineControllerManager is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileMachineControllerManager flow.TaskID = "TaskGroupReconcileMachineControllerManager"
+
+// ReconcileMachineControllerManagerTaskGroup returns the flow.TaskGroup for deploying the machine-controller-manager.
+func (b *Botanist) ReconcileMachineControllerManagerTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(TaskGroupReconcileMachineControllerManager, flow.Task{
+		Name:   "Deploying machine-controller-manager",
+		Fn:     flow.TaskFn(b.DeployMachineControllerManager).RetryUntilTimeout(time.Second, time.Minute),
+		SkipIf: !b.Shoot.HasManagedInfrastructure(),
+	}).WithDependencies(
+		TaskGroupInitializeSecretsManagement,
+		TaskGroupDeployCloudProviderSecret,
+		TaskGroupReconcileGardenerResourceManager,
+	)
 }
 
 // TaskGroupReconcileInfrastructure is a flow.TaskID for a logical flow.TaskGroup.

@@ -129,12 +129,10 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileInfrastructureTaskGroup().
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers, gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
 		)
-
-		deployMachineControllerManager = g.Add(flow.Task{
-			Name:         "Deploying machine-controller-manager",
-			Fn:           b.DeployMachineControllerManager,
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
-		})
+		_ = g.AddGroup(
+			b.ReconcileMachineControllerManagerTaskGroup().
+				WithDependencies(syncPointBootstrapped),
+		)
 
 		deployWorker = g.Add(flow.Task{
 			Name:         "Deploying control plane machines",

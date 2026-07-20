@@ -312,12 +312,10 @@ func run(ctx context.Context, opts *Options) error {
 			).RetryUntilTimeout(time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeControllerManagerIsActive),
 		})
-		deployMachineControllerManager = g.Add(flow.Task{
-			Name:         "Deploying machine-controller-manager",
-			Fn:           flow.TaskFn(b.DeployMachineControllerManager).RetryUntilTimeout(time.Second, time.Minute),
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(waitUntilWebhookComponentsReady),
-		})
+		_ = g.AddGroup(
+			b.ReconcileMachineControllerManagerTaskGroup().
+				WithDependencies(waitUntilWebhookComponentsReady),
+		)
 		deployWorker = g.Add(flow.Task{
 			Name:         "Deploying shoot worker pools",
 			Fn:           b.DeployWorker,
