@@ -110,28 +110,17 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden).
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
-		deployExtensionControllers = g.Add(flow.Task{
-			Name: "Deploying extension controllers",
-			Fn: func(ctx context.Context) error {
-				return b.ReconcileExtensionControllerInstallations(ctx, !podNetworkAvailable)
-			},
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
-		})
-		waitUntilExtensionControllersReady = g.Add(flow.Task{
-			Name:         "Waiting until extension controllers report readiness",
-			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
-			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
-		})
-		deployNetworkPolicies = g.Add(flow.Task{
+		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
+		deployNetworkPolicies         = g.Add(flow.Task{
 			Name:         "Deploying network policies",
 			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, deployExtensionControllers),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, reconcileExtensionControllers),
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
 			Fn:           b.DeployInfrastructure,
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, reconcileExtensionControllers),
 		})
 		waitUntilInfrastructureReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot infrastructure has been reconciled",
@@ -227,7 +216,7 @@ func run(ctx context.Context, opts *Options) error {
 			deployNetworkPolicies,
 			reconcileGardenerResourceManager,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
-			waitUntilExtensionControllersReady,
+			reconcileExtensionControllers,
 			waitUntilExtensionControllersInPodNetworkReady,
 		)
 

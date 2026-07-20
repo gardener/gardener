@@ -112,27 +112,16 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
 				WithDependencies(deployPriorityClassCritical),
 		)
-		deployExtensionControllers = g.Add(flow.Task{
-			Name: "Deploying extension controllers",
-			Fn: func(ctx context.Context) error {
-				return b.ReconcileExtensionControllerInstallations(ctx, false)
-			},
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
-		})
-		waitUntilExtensionControllersReady = g.Add(flow.Task{
-			Name:         "Waiting until extension controllers report readiness",
-			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
-			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
-		})
-		deployNetworkPolicies = g.Add(flow.Task{
+		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(true))
+		deployNetworkPolicies         = g.Add(flow.Task{
 			Name:         "Deploying network policies",
 			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, deployExtensionControllers),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, reconcileExtensionControllers),
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
 			deployNetworkPolicies,
 			reconcileGardenerResourceManager,
-			waitUntilExtensionControllersReady,
+			reconcileExtensionControllers,
 		)
 
 		deployInfrastructure = g.Add(flow.Task{
