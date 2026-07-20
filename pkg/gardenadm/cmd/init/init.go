@@ -93,18 +93,10 @@ func run(ctx context.Context, opts *Options) error {
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
-		deployNamespaces                   = g.AddGroup(b.DeployNamespacesTaskGroup())
-		deployCloudProviderSecret          = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		reconcileCustomResourceDefinitions = g.Add(flow.Task{
-			Name: "Reconciling CustomResourceDefinitions",
-			Fn:   b.ReconcileCustomResourceDefinitions,
-		})
-		ensureCustomResourceDefinitionsReady = g.Add(flow.Task{
-			Name:         "Ensuring CustomResourceDefinitions are ready",
-			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady).RetryUntilTimeout(time.Second, time.Minute),
-			Dependencies: flow.NewTaskIDs(reconcileCustomResourceDefinitions),
-		})
-		reconcileClusterResource = g.Add(flow.Task{
+		deployNamespaces                     = g.AddGroup(b.DeployNamespacesTaskGroup())
+		deployCloudProviderSecret            = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		ensureCustomResourceDefinitionsReady = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		reconcileClusterResource             = g.Add(flow.Task{
 			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
 			Fn: func(ctx context.Context) error {
 				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, nil)

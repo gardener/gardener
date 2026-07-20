@@ -100,18 +100,10 @@ func run(ctx context.Context, opts *Options) error {
 		g        = flow.NewGraph("bootstrap")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
-		deployNamespaces                   = g.AddGroup(b.DeployNamespacesTaskGroup())
-		_                                  = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		reconcileCustomResourceDefinitions = g.Add(flow.Task{
-			Name: "Reconciling CustomResourceDefinitions",
-			Fn:   b.ReconcileCustomResourceDefinitions,
-		})
-		ensureCustomResourceDefinitionsReady = g.Add(flow.Task{
-			Name:         "Ensuring CustomResourceDefinitions are ready",
-			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady).RetryUntilTimeout(time.Second, time.Minute),
-			Dependencies: flow.NewTaskIDs(reconcileCustomResourceDefinitions),
-		})
-		reconcileClusterResource = g.Add(flow.Task{
+		deployNamespaces                     = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                                    = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		ensureCustomResourceDefinitionsReady = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		reconcileClusterResource             = g.Add(flow.Task{
 			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
 			Fn: func(ctx context.Context) error {
 				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, b.Seed.GetInfo())

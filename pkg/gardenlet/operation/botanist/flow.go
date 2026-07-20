@@ -6,9 +6,18 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -45,4 +54,56 @@ func (b *Botanist) DeployCloudProviderSecretTaskGroup() flow.TaskGroup {
 		Fn:     b.DeployCloudProviderSecret,
 		SkipIf: b.Shoot.Credentials == nil,
 	}).WithDependencies(TaskGroupDeployNamespaces)
+}
+
+// TaskGroupReconcileCustomResourceDefinitions is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileCustomResourceDefinitions flow.TaskID = "TaskGroupReconcileCustomResourceDefinitions"
+
+// ReconcileCustomResourceDefinitionsTaskGroup returns the flow.TaskGroup for reconciling the CRDs used by Gardener.
+// Each CRD is deployed in an individual task, and it is waited until the CRDs are marked as ready/available.
+func (b *Botanist) ReconcileCustomResourceDefinitionsTaskGroup() flow.TaskGroup {
+	deployers := map[string]func() (component.DeployWaiter, error){
+		"VPA": func() (component.DeployWaiter, error) {
+			return vpa.NewCRD(b.SeedClientSet.Client(), nil)
+		},
+		"Prometheus": func() (component.DeployWaiter, error) {
+			return prometheusoperator.NewCRDs(b.SeedClientSet.Client())
+		},
+		"Fluent": func() (component.DeployWaiter, error) {
+			return fluentoperator.NewCRDs(b.SeedClientSet.Client())
+		},
+		"Extension": func() (component.DeployWaiter, error) {
+			return extensioncrds.NewCRD(b.SeedClientSet.Client(), true, true)
+		},
+		"ETCD": func() (component.DeployWaiter, error) {
+			return etcd.NewCRD(b.SeedClientSet.Client(), b.Shoot.KubernetesVersion)
+		},
+		"Istio": func() (component.DeployWaiter, error) {
+			return istio.NewCRD(b.SeedClientSet.Client())
+		},
+	}
+
+	if b.Shoot.HasManagedInfrastructure() {
+		deployers["Machine"] = func() (component.DeployWaiter, error) {
+			return machinecontrollermanager.NewCRD(b.SeedClientSet.Client())
+		}
+	}
+
+	tasks := make([]flow.Task, 0, len(deployers))
+
+	for description, newDeployer := range deployers {
+		tasks = append(tasks, flow.Task{
+			Name: fmt.Sprintf("Deploying %s CRDs", description),
+			Fn: func(ctx context.Context) error {
+				d, err := newDeployer()
+				if err != nil {
+					return fmt.Errorf("failed creating %s deployer: %w", description, err)
+				}
+
+				return component.OpWait(d).Deploy(ctx)
+			},
+		})
+	}
+
+	return flow.NewTaskGroup(TaskGroupReconcileCustomResourceDefinitions, tasks...)
 }
