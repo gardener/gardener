@@ -29,7 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -201,7 +201,7 @@ func isBootstrapEtcdStillRunning(ctx context.Context, b *botanist.GardenadmBotan
 	}
 
 	for _, pod := range podList.Items {
-		if strings.HasPrefix(pod.GetName(), bootstrap.NamePrefix) {
+		if strings.HasPrefix(pod.GetName(), bootstrapetcd.NamePrefix) {
 			return true, nil
 		}
 	}
