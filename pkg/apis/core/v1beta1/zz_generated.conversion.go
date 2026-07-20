@@ -4692,6 +4692,8 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.ImageMinimumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMinimumGCAge))
 	out.ImageMaximumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMaximumGCAge))
 	out.SingleProcessOOMKill = (*bool)(unsafe.Pointer(in.SingleProcessOOMKill))
+	out.ImagePullCredentialsVerificationPolicy = (*core.ImagePullCredentialsVerificationPolicy)(unsafe.Pointer(in.ImagePullCredentialsVerificationPolicy))
+	out.PreloadedImagesVerificationAllowlist = *(*[]string)(unsafe.Pointer(&in.PreloadedImagesVerificationAllowlist))
 	return nil
 }
 
@@ -4731,6 +4733,8 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.MemorySwap = (*MemorySwapConfiguration)(unsafe.Pointer(in.MemorySwap))
 	out.MaxParallelImagePulls = (*int32)(unsafe.Pointer(in.MaxParallelImagePulls))
 	out.SingleProcessOOMKill = (*bool)(unsafe.Pointer(in.SingleProcessOOMKill))
+	out.ImagePullCredentialsVerificationPolicy = (*ImagePullCredentialsVerificationPolicy)(unsafe.Pointer(in.ImagePullCredentialsVerificationPolicy))
+	out.PreloadedImagesVerificationAllowlist = *(*[]string)(unsafe.Pointer(&in.PreloadedImagesVerificationAllowlist))
 	return nil
 }
 

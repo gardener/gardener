@@ -3016,6 +3016,16 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ImagePullCredentialsVerificationPolicy != nil {
+		in, out := &in.ImagePullCredentialsVerificationPolicy, &out.ImagePullCredentialsVerificationPolicy
+		*out = new(ImagePullCredentialsVerificationPolicy)
+		**out = **in
+	}
+	if in.PreloadedImagesVerificationAllowlist != nil {
+		in, out := &in.PreloadedImagesVerificationAllowlist, &out.PreloadedImagesVerificationAllowlist
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

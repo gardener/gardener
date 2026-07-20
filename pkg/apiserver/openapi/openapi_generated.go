@@ -5418,6 +5418,27 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"imagePullCredentialsVerificationPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` and is only effective for Kubernetes versions >= 1.35. May be one of {\"NeverVerify\", \"NeverVerifyPreloadedImages\", \"NeverVerifyAllowlistedImages\", \"AlwaysVerify\"}.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"preloadedImagesVerificationAllowlist": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential re-verification for the \"NeverVerifyAllowlistedImages\" ImagePullCredentialsVerificationPolicy. The list accepts a full path segment wildcard suffix \"/*\". Only image specs without an image tag or digest must be used. It corresponds to the kubelet's `preloadedImagesVerificationAllowlist` and is only effective for Kubernetes versions >= 1.35.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

@@ -1777,6 +1777,21 @@ message KubeletConfig {
   // as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
   // +optional
   optional bool singleProcessOOMKill = 30;
+
+  // ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that
+  // already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` and is only
+  // effective for Kubernetes versions >= 1.35. May be one of {"NeverVerify", "NeverVerifyPreloadedImages",
+  // "NeverVerifyAllowlistedImages", "AlwaysVerify"}.
+  // +optional
+  optional string imagePullCredentialsVerificationPolicy = 31;
+
+  // PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential
+  // re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a
+  // full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It
+  // corresponds to the kubelet's `preloadedImagesVerificationAllowlist` and is only effective for Kubernetes versions
+  // >= 1.35.
+  // +optional
+  repeated string preloadedImagesVerificationAllowlist = 32;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
