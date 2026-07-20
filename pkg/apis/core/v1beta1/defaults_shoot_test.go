@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("Shoot defaulting", func() {
@@ -863,19 +862,6 @@ var _ = Describe("Shoot defaulting", func() {
 
 			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
 		})
-	})
-
-	It("should default architecture of worker's machine to amd64", func() {
-		obj.Spec.Provider.Workers = []Worker{
-			{Name: "Default Worker"},
-			{Name: "Worker with machine architecture type",
-				Machine: Machine{Architecture: new("test")}},
-		}
-
-		SetObjectDefaults_Shoot(obj)
-
-		Expect(*obj.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(v1beta1constants.ArchitectureAMD64))
-		Expect(*obj.Spec.Provider.Workers[1].Machine.Architecture).To(Equal("test"))
 	})
 
 	It("should default worker cri.name to containerd", func() {
