@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
@@ -22,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
@@ -95,21 +93,12 @@ func run(ctx context.Context, opts *Options) error {
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
-		deployControlPlaneNamespace = g.Add(flow.Task{
-			Name: "Deploying control plane namespace",
-			Fn:   b.DeployControlPlaneNamespace,
-		})
-		deployGardenNamespace = g.Add(flow.Task{
-			Name: "Deploying garden namespace",
-			Fn: func(ctx context.Context) error {
-				return gardenerutils.ReconcileGardenNamespace(ctx, b.SeedClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers).Zones, true, nil)
-			},
-		})
+		deployNamespaces          = g.AddGroup(b.DeployNamespacesTaskGroup())
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           b.DeployCloudProviderSecret,
 			SkipIf:       b.Shoot.Credentials == nil,
-			Dependencies: flow.NewTaskIDs(deployControlPlaneNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespaces),
 		})
 		reconcileCustomResourceDefinitions = g.Add(flow.Task{
 			Name: "Reconciling CustomResourceDefinitions",
@@ -159,7 +148,7 @@ func run(ctx context.Context, opts *Options) error {
 					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
 				)(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(approveGardenerNodeAgentCSR, deployGardenNamespace),
+			Dependencies: flow.NewTaskIDs(approveGardenerNodeAgentCSR, deployNamespaces),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name: "Waiting until gardener-resource-manager reports readiness",

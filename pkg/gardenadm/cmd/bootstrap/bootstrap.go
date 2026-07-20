@@ -100,15 +100,12 @@ func run(ctx context.Context, opts *Options) error {
 		g        = flow.NewGraph("bootstrap")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
-		deployNamespace = g.Add(flow.Task{
-			Name: "Deploying control plane namespace",
-			Fn:   b.DeployControlPlaneNamespace,
-		})
-		_ = g.Add(flow.Task{
+		deployNamespaces = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           b.DeployCloudProviderSecret,
 			SkipIf:       b.Shoot.Credentials == nil,
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespaces),
 		})
 		reconcileCustomResourceDefinitions = g.Add(flow.Task{
 			Name: "Reconciling CustomResourceDefinitions",
@@ -134,12 +131,12 @@ func run(ctx context.Context, opts *Options) error {
 		deployPriorityClassCritical = g.Add(flow.Task{
 			Name:         "Deploying PriorityClass for gardener-resource-manager",
 			Fn:           b.DeployPriorityClassCritical,
-			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
+			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
-			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement, deployPriorityClassCritical),
+			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement, deployPriorityClassCritical),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",
