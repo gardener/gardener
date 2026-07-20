@@ -116,26 +116,17 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileInfrastructureTaskGroup().
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
-		deployShootNamespaces = g.Add(flow.Task{
-			Name:         "Deploying shoot namespaces system component",
-			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
-			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
-		})
-		waitUntilShootNamespacesReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot namespaces have been reconciled",
-			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
-			Dependencies: flow.NewTaskIDs(deployShootNamespaces),
-		})
-		_ = g.Add(flow.Task{
+		reconcileShootNamespaces = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		_                        = g.Add(flow.Task{
 			Name:         "Deploying kube-proxy system component",
 			Fn:           b.DeployKubeProxy,
 			SkipIf:       !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, reconcileInfrastructure),
+			Dependencies: flow.NewTaskIDs(reconcileShootNamespaces, reconcileInfrastructure),
 		})
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           b.DeployNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilShootNamespacesReady, reconcileInfrastructure),
+			Dependencies: flow.NewTaskIDs(reconcileShootNamespaces, reconcileInfrastructure),
 		})
 		waitUntilNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",

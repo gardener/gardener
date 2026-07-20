@@ -226,3 +226,26 @@ func (b *Botanist) ReconcileInfrastructureTaskGroup() flow.TaskGroup {
 
 	return g
 }
+
+// TaskGroupReconcileShootNamespaces is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileShootNamespaces flow.TaskID = "TaskGroupReconcileShootNamespaces"
+
+// ReconcileShootNamespacesTaskGroup returns the flow.TaskGroup for deploying the shoot namespaces and waiting for their
+// readiness.
+func (b *Botanist) ReconcileShootNamespacesTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileShootNamespaces).WithDependencies(TaskGroupReconcileGardenerResourceManager)
+
+		deployShootNamespaces = g.Add(flow.Task{
+			Name: "Deploying shoot namespaces system component",
+			Fn:   b.Shoot.Components.SystemComponents.Namespaces.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until shoot namespaces have been reconciled",
+			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
+			Dependencies: flow.NewTaskIDs(deployShootNamespaces),
+		})
+	)
+
+	return g
+}
