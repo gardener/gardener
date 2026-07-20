@@ -227,6 +227,33 @@ func (b *Botanist) ReconcileInfrastructureTaskGroup() flow.TaskGroup {
 	return g
 }
 
+// TaskGroupReconcileOperatingSystemConfig is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileOperatingSystemConfig flow.TaskID = "TaskGroupReconcileOperatingSystemConfig"
+
+// ReconcileOperatingSystemConfigTaskGroup returns the flow.TaskGroup for deploying the OperatingSystemConfig extension
+// resource and waiting for its readiness.
+func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileOperatingSystemConfig).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileGardenerResourceManager,
+		)
+
+		deployOperatingSystemConfig = g.Add(flow.Task{
+			Name: "Deploying OperatingSystemConfig for control plane machines",
+			Fn:   b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until OperatingSystemConfig for control plane machines has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Wait,
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileShootNamespaces is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileShootNamespaces flow.TaskID = "TaskGroupReconcileShootNamespaces"
 

@@ -125,17 +125,10 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers, gardenadmbotanist.TaskGroupReconcileNetworkPolicies).
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource]),
 		)
-
-		deployOperatingSystemConfig = g.Add(flow.Task{
-			Name:         "Deploying OperatingSystemConfig for control plane machines",
-			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
-		})
-		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
-			Name:         "Waiting until OperatingSystemConfig for control plane machines has been reconciled",
-			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Wait,
-			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
-		})
+		reconcileOperatingSystemConfig = g.AddGroup(
+			b.ReconcileInfrastructureTaskGroup().
+				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers, gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
+		)
 
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",
@@ -147,7 +140,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name:         "Deploying control plane machines",
 			Fn:           b.DeployWorker,
 			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
-			Dependencies: flow.NewTaskIDs(reconcileInfrastructure, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
+			Dependencies: flow.NewTaskIDs(reconcileInfrastructure, reconcileOperatingSystemConfig, deployMachineControllerManager),
 		})
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name:         "Waiting until control plane machines have been deployed",
