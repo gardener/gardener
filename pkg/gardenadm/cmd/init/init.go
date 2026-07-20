@@ -93,13 +93,8 @@ func run(ctx context.Context, opts *Options) error {
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
-		deployNamespaces          = g.AddGroup(b.DeployNamespacesTaskGroup())
-		deployCloudProviderSecret = g.Add(flow.Task{
-			Name:         "Deploying cloud provider account secret",
-			Fn:           b.DeployCloudProviderSecret,
-			SkipIf:       b.Shoot.Credentials == nil,
-			Dependencies: flow.NewTaskIDs(deployNamespaces),
-		})
+		deployNamespaces                   = g.AddGroup(b.DeployNamespacesTaskGroup())
+		deployCloudProviderSecret          = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
 		reconcileCustomResourceDefinitions = g.Add(flow.Task{
 			Name: "Reconciling CustomResourceDefinitions",
 			Fn:   b.ReconcileCustomResourceDefinitions,

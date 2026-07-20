@@ -33,3 +33,16 @@ func (b *Botanist) DeployNamespacesTaskGroup() flow.TaskGroup {
 		},
 	)
 }
+
+// TaskGroupDeployCloudProviderSecret is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupDeployCloudProviderSecret flow.TaskID = "TaskGroupDeployCloudProviderSecret"
+
+// DeployCloudProviderSecretTaskGroup returns the flow.TaskGroup for deploying the cloud provider secret. This task is
+// skipped when no shoot credentials are configured.
+func (b *Botanist) DeployCloudProviderSecretTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(TaskGroupDeployCloudProviderSecret, flow.Task{
+		Name:   "Deploying cloud provider account secret",
+		Fn:     b.DeployCloudProviderSecret,
+		SkipIf: b.Shoot.Credentials == nil,
+	}).WithDependencies(TaskGroupDeployNamespaces)
+}

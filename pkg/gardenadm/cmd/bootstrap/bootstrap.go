@@ -100,13 +100,8 @@ func run(ctx context.Context, opts *Options) error {
 		g        = flow.NewGraph("bootstrap")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
-		deployNamespaces = g.AddGroup(b.DeployNamespacesTaskGroup())
-		_                = g.Add(flow.Task{
-			Name:         "Deploying cloud provider account secret",
-			Fn:           b.DeployCloudProviderSecret,
-			SkipIf:       b.Shoot.Credentials == nil,
-			Dependencies: flow.NewTaskIDs(deployNamespaces),
-		})
+		deployNamespaces                   = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                                  = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
 		reconcileCustomResourceDefinitions = g.Add(flow.Task{
 			Name: "Reconciling CustomResourceDefinitions",
 			Fn:   b.ReconcileCustomResourceDefinitions,
