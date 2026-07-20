@@ -316,25 +316,17 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileMachineControllerManagerTaskGroup().
 				WithDependencies(waitUntilWebhookComponentsReady),
 		)
-		deployWorker = g.Add(flow.Task{
-			Name:         "Deploying shoot worker pools",
-			Fn:           b.DeployWorker,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(deployMachineControllerManager),
-		})
-		waitUntilWorkerReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot worker nodes have been reconciled",
-			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(deployWorker),
-		})
+		reconcileWorker = g.AddGroup(
+			b.ReconcileWorkerTaskGroup().
+				WithDependencies(syncPointBootstrapped),
+		)
 		// We need to deploy the worker before activating the node-agent-authorizer. Without the machine objects,
 		// the node-agent-authorizer would reject requests from gardener-node-agent because it cannot find a corresponding
 		// machine for them.
 		finalizeGardenerNodeAgentBootstrapping = g.Add(flow.Task{
 			Name:         "Finalizing gardener-node-agent bootstrapping (remove cluster-admin access, activate node-agent authorizer)",
 			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(reconcileWorker),
 		})
 		waitUntilGardenerNodeAgentLeaseIsRenewed = g.Add(flow.Task{
 			Name:         "Waiting until gardener-node-agent lease is renewed",

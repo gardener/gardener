@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/publicip"
@@ -108,7 +109,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployPriorityClassCritical,
 			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
 		})
-		reconcileGardenerResourceManager = g.AddGroup(
+		_ = g.AddGroup(
 			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
 				WithDependencies(deployPriorityClassCritical),
 		)
@@ -116,40 +117,31 @@ func run(ctx context.Context, opts *Options) error {
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
 		syncPointBootstrapped         = flow.NewTaskIDs(
 			reconcileNetworkPolicies,
-			reconcileGardenerResourceManager,
 			reconcileExtensionControllers,
 		)
-
 		reconcileInfrastructure = g.AddGroup(
 			b.ReconcileInfrastructureTaskGroup().
-				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers, gardenadmbotanist.TaskGroupReconcileNetworkPolicies).
+				WithDependencies(syncPointBootstrapped).
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource]),
 		)
-		reconcileOperatingSystemConfig = g.AddGroup(
-			b.ReconcileInfrastructureTaskGroup().
-				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers, gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
+		_ = g.AddGroup(
+			b.ReconcileOperatingSystemConfigTaskGroup().
+				WithDependencies(syncPointBootstrapped),
 		)
 		_ = g.AddGroup(
 			b.ReconcileMachineControllerManagerTaskGroup().
 				WithDependencies(syncPointBootstrapped),
 		)
+		reconcileWorker = g.AddGroup(
+			b.ReconcileWorkerTaskGroup().
+				WithDependencies(syncPointBootstrapped, botanist.TaskGroupReconcileOperatingSystemConfig).
+				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource]),
+		)
 
-		deployWorker = g.Add(flow.Task{
-			Name:         "Deploying control plane machines",
-			Fn:           b.DeployWorker,
-			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
-			Dependencies: flow.NewTaskIDs(reconcileInfrastructure, reconcileOperatingSystemConfig, deployMachineControllerManager),
-		})
-		waitUntilWorkerReady = g.Add(flow.Task{
-			Name:         "Waiting until control plane machines have been deployed",
-			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
-			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource],
-			Dependencies: flow.NewTaskIDs(deployWorker),
-		})
 		listControlPlaneMachines = g.Add(flow.Task{
 			Name:         "Listing control plane machines",
 			Fn:           b.ListControlPlaneMachines,
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(reconcileWorker),
 		})
 
 		// Scale down machine-controller-manager to prevent it from interfering with Machine objects that will be migrated
@@ -161,7 +153,7 @@ func run(ctx context.Context, opts *Options) error {
 				b.Shoot.Components.ControlPlane.MachineControllerManager.SetReplicas(0)
 				return component.OpWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(reconcileWorker),
 		})
 
 		deployDNSRecord = g.Add(flow.Task{
