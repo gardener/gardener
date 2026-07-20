@@ -1436,6 +1436,23 @@ var _ = Describe("mutator", func() {
 					}))
 				})
 
+				It("should use updated machine image providerConfig even if name and version are unchanged", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo":"old-value"}`)}
+
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.Provider.Workers[0].Machine.Image.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo":"new-value"}`)}
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+						Name:           imageName1,
+						Version:        nonExpiredVersion,
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"new-value"}`)},
+					}))
+				})
+
 				It("should default a version prefix of an existing worker pool to the latest supported non-preview version", func() {
 					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
 					if !isCapabilityCloudProfile {
