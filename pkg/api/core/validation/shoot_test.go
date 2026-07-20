@@ -9768,6 +9768,75 @@ var _ = Describe("Shoot Validation Tests", func() {
 			),
 		)
 
+		DescribeTable("ImagePullCredentialsVerificationPolicy",
+			func(policy *string, version string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{}
+				if policy != nil {
+					kubeletConfig.ImagePullCredentialsVerificationPolicy = (*core.ImagePullCredentialsVerificationPolicy)(policy)
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow empty policy", nil, "1.35", BeEmpty()),
+			Entry("should allow NeverVerify on 1.35", new("NeverVerify"), "1.35", BeEmpty()),
+			Entry("should allow NeverVerifyPreloadedImages on 1.35", new("NeverVerifyPreloadedImages"), "1.35", BeEmpty()),
+			Entry("should allow NeverVerifyAllowlistedImages on 1.35", new("NeverVerifyAllowlistedImages"), "1.35", BeEmpty()),
+			Entry("should allow AlwaysVerify on 1.35", new("AlwaysVerify"), "1.35", BeEmpty()),
+			Entry("should forbid the field on Kubernetes < 1.35", new("NeverVerify"), "1.34", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("imagePullCredentialsVerificationPolicy"),
+					"Detail": Equal("imagePullCredentialsVerificationPolicy is only available for Kubernetes versions >= 1.35"),
+				}))),
+			),
+			Entry("should forbid an unsupported value", new("MagicVerify"), "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("imagePullCredentialsVerificationPolicy"),
+				}))),
+			),
+		)
+
+		DescribeTable("PreloadedImagesVerificationAllowlist",
+			func(policy *string, allowlist []string, version string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					PreloadedImagesVerificationAllowlist: allowlist,
+				}
+				if policy != nil {
+					kubeletConfig.ImagePullCredentialsVerificationPolicy = (*core.ImagePullCredentialsVerificationPolicy)(policy)
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow an empty allowlist", new("NeverVerifyAllowlistedImages"), nil, "1.35", BeEmpty()),
+			Entry("should allow the allowlist with NeverVerifyAllowlistedImages on 1.35", new("NeverVerifyAllowlistedImages"), []string{"registry.example.com/foo", "registry.example.com/bar/*"}, "1.35", BeEmpty()),
+			Entry("should forbid the allowlist on Kubernetes < 1.35", new("NeverVerifyAllowlistedImages"), []string{"registry.example.com/foo"}, "1.34", ContainElement(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("preloadedImagesVerificationAllowlist"),
+					"Detail": Equal("preloadedImagesVerificationAllowlist is only available for Kubernetes versions >= 1.35"),
+				}))),
+			),
+			Entry("should forbid the allowlist when policy is not NeverVerifyAllowlistedImages", new("NeverVerifyPreloadedImages"), []string{"registry.example.com/foo"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("preloadedImagesVerificationAllowlist"),
+					"Detail": Equal("preloadedImagesVerificationAllowlist may only be set when imagePullCredentialsVerificationPolicy is set to NeverVerifyAllowlistedImages"),
+				}))),
+			),
+			Entry("should forbid the allowlist when policy is not set", nil, []string{"registry.example.com/foo"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("preloadedImagesVerificationAllowlist"),
+					"Detail": Equal("preloadedImagesVerificationAllowlist may only be set when imagePullCredentialsVerificationPolicy is set to NeverVerifyAllowlistedImages"),
+				}))),
+			),
+		)
+
 		DescribeTable("EvictionHard & EvictionSoft",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

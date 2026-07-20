@@ -2585,6 +2585,31 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, kubernetesVersion s
 		}
 	}
 
+	if v := kubeletConfig.ImagePullCredentialsVerificationPolicy; v != nil {
+		path := fldPath.Child("imagePullCredentialsVerificationPolicy")
+
+		if versionutils.ConstraintK8sLess135.CheckVersion(kubernetesVersion) {
+			allErrs = append(allErrs, field.Forbidden(path, "imagePullCredentialsVerificationPolicy is only available for Kubernetes versions >= 1.35"))
+		}
+
+		supportedPolicies := []core.ImagePullCredentialsVerificationPolicy{core.NeverVerify, core.NeverVerifyPreloadedImages, core.NeverVerifyAllowlistedImages, core.AlwaysVerify}
+		if !slices.Contains(supportedPolicies, *v) {
+			allErrs = append(allErrs, field.NotSupported(path, *v, supportedPolicies))
+		}
+	}
+
+	if allowlist := kubeletConfig.PreloadedImagesVerificationAllowlist; allowlist != nil {
+		path := fldPath.Child("preloadedImagesVerificationAllowlist")
+
+		if versionutils.ConstraintK8sLess135.CheckVersion(kubernetesVersion) {
+			allErrs = append(allErrs, field.Forbidden(path, "preloadedImagesVerificationAllowlist is only available for Kubernetes versions >= 1.35"))
+		}
+
+		if policy := kubeletConfig.ImagePullCredentialsVerificationPolicy; policy == nil || *policy != core.NeverVerifyAllowlistedImages {
+			allErrs = append(allErrs, field.Forbidden(path, "preloadedImagesVerificationAllowlist may only be set when imagePullCredentialsVerificationPolicy is set to NeverVerifyAllowlistedImages"))
+		}
+	}
+
 	return allErrs
 }
 
