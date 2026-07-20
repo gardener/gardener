@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
-	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -109,29 +108,16 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployPriorityClassCritical,
 			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
 		})
-		deployGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Deploying gardener-resource-manager",
-			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
-			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement, deployPriorityClassCritical),
-		})
-		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
-			Name:         "Waiting until gardener-resource-manager reports readiness",
-			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying seed system resources",
-			Fn: func(ctx context.Context) error {
-				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{ManagePriorityClasses: true}).Deploy(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
-		})
+		reconcileGardenerResourceManager = g.AddGroup(
+			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
+				WithDependencies(deployPriorityClassCritical),
+		)
 		deployExtensionControllers = g.Add(flow.Task{
 			Name: "Deploying extension controllers",
 			Fn: func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
 		})
 		waitUntilExtensionControllersReady = g.Add(flow.Task{
 			Name:         "Waiting until extension controllers report readiness",
@@ -141,11 +127,11 @@ func run(ctx context.Context, opts *Options) error {
 		deployNetworkPolicies = g.Add(flow.Task{
 			Name:         "Deploying network policies",
 			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployExtensionControllers),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, deployExtensionControllers),
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
 			deployNetworkPolicies,
-			waitUntilGardenerResourceManagerReady,
+			reconcileGardenerResourceManager,
 			waitUntilExtensionControllersReady,
 		)
 

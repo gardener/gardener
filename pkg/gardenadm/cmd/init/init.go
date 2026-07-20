@@ -15,7 +15,6 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -92,7 +91,7 @@ func run(ctx context.Context, opts *Options) error {
 		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
-		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                           = g.AddGroup(b.DeployNamespacesTaskGroup())
 		deployCloudProviderSecret   = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
 		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
 		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
@@ -107,57 +106,16 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
-		deployGardenerResourceManager = g.Add(flow.Task{
-			Name: "Deploying gardener-resource-manager",
-			Fn: func(ctx context.Context) error {
-				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
-				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
-
-				if shootIsGarden {
-					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
-				}
-
-				// Deploy sequentially: only `RuntimeResourceManager` installs the `ManagedResource` CRD, and
-				// `ResourceManager.Deploy` creates a `ManagedResource` object on the same client.
-				return flow.Sequential(
-					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
-					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
-				)(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(approveGardenerNodeAgentCSR, deployNamespaces),
-		})
-		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
-			Name: "Waiting until gardener-resource-manager reports readiness",
-			Fn: func(ctx context.Context) error {
-				if shootIsGarden {
-					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
-				}
-
-				return flow.Parallel(
-					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
-					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-				)(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying seed system resources",
-			Fn: func(ctx context.Context) error {
-				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{ManagePriorityClasses: true}).Deploy(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying shoot system resources",
-			Fn:           b.DeployShootSystem,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
-		})
+		reconcileGardenerResourceManager = g.AddGroup(
+			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden).
+				WithDependencies(approveGardenerNodeAgentCSR),
+		)
 		deployExtensionControllers = g.Add(flow.Task{
 			Name: "Deploying extension controllers",
 			Fn: func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, !podNetworkAvailable)
 			},
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
 		})
 		waitUntilExtensionControllersReady = g.Add(flow.Task{
 			Name:         "Waiting until extension controllers report readiness",
@@ -167,7 +125,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployNetworkPolicies = g.Add(flow.Task{
 			Name:         "Deploying network policies",
 			Fn:           b.ApplyNetworkPolicies,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployExtensionControllers),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, deployExtensionControllers),
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
@@ -184,7 +142,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
 		})
 		waitUntilShootNamespacesReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespaces have been reconciled",
@@ -267,7 +225,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
 			deployNetworkPolicies,
-			waitUntilGardenerResourceManagerReady,
+			reconcileGardenerResourceManager,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
 			waitUntilExtensionControllersReady,
 			waitUntilExtensionControllersInPodNetworkReady,

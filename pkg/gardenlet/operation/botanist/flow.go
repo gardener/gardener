@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -131,4 +132,68 @@ func (b *Botanist) InitializeSecretsManagementTaskGroup() flow.TaskGroup {
 		Name: "Initializing internal state of Gardener secrets manager",
 		Fn:   b.InitializeSecretsManagement,
 	}).WithDependencies(TaskGroupReconcileClusterResource)
+}
+
+// TaskGroupReconcileGardenerResourceManager is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcileGardenerResourceManager"
+
+// ReconcileGardenerResourceManagerTaskGroup returns the flow.TaskGroup for deploying the gardener-resource-manager
+// instances. It waits for their readiness and also deploys the seed and shoot system resources afterwards.
+func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileGardenerResourceManager).WithDependencies(
+			TaskGroupDeployNamespaces,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileCustomResourceDefinitions,
+		)
+		gardenadmBootstrap = b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
+
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name: "Deploying gardener-resource-manager",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
+				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
+
+				if shootIsGarden || gardenadmBootstrap {
+					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+				}
+
+				// Deploy sequentially: only `RuntimeResourceManager` installs the `ManagedResource` CRD, and
+				// `ResourceManager.Deploy` creates a `ManagedResource` object on the same client.
+				return flow.Sequential(
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Deploy,
+					b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
+				)(ctx)
+			},
+		})
+		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
+			Name: "Waiting until gardener-resource-manager reports readiness",
+			Fn: func(ctx context.Context) error {
+				if shootIsGarden || gardenadmBootstrap {
+					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
+				}
+
+				return flow.Parallel(
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
+					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+				)(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying seed system resources",
+			Fn: func(ctx context.Context) error {
+				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{ManagePriorityClasses: true}).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying shoot system resources",
+			Fn:           b.DeployShootSystem,
+			SkipIf:       gardenadmBootstrap,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+	)
+
+	return g
 }
