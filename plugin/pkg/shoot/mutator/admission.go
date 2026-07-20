@@ -518,8 +518,11 @@ func (c *mutationContext) ensureMachineImage(oldWorkers []core.Worker, worker co
 		if oldWorker.Machine.Image.Name == worker.Machine.Image.Name {
 			// image name was not changed
 			if len(worker.Machine.Image.Version) == 0 || worker.Machine.Image.Version == oldWorker.Machine.Image.Version {
-				// if the version from the new worker is not specified or it is equal to the old worker image version -> keep the old one
-				return oldWorker.Machine.Image, nil
+				// if the version from the new worker is not specified, or it is equal to the old worker image version -> keep the old one
+				image := oldWorker.Machine.Image.DeepCopy()
+				// ensure provider config is updated
+				image.ProviderConfig = worker.Machine.Image.ProviderConfig
+				return image, nil
 			}
 		}
 	}
