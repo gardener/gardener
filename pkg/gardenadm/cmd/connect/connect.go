@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/oci"
@@ -196,7 +197,7 @@ Happy Gardening!
 func isBootstrapEtcdStillRunning(ctx context.Context, b *botanist.GardenadmBotanist) (bool, error) {
 	podList := &metav1.PartialObjectMetadataList{}
 	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
-	if err := b.SeedClientSet.Client().List(ctx, podList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, podList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{staticpod.LabelKeyIsStaticPod: staticpod.LabelValueIsStaticPod}); err != nil {
 		return false, fmt.Errorf("failed checking if bootstrap etcd still exists: %w", err)
 	}
 
