@@ -3611,6 +3611,43 @@ object (keys:string, values:string)
 </table>
 
 
+<h3 id="settingpersistentvolumeclaimautoscaler">SettingPersistentVolumeClaimAutoscaler
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#settings">Settings</a>)
+</p>
+
+<p>
+SettingPersistentVolumeClaimAutoscaler controls the pvc-autoscaler settings for the garden cluster.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<p>Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the<br />garden cluster.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="settingtopologyawarerouting">SettingTopologyAwareRouting
 </h3>
 
@@ -3755,6 +3792,18 @@ Settings contains certain settings for this cluster.
 <td>
 <em>(Optional)</em>
 <p>TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.<br />See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>persistentVolumeClaimAutoscaler</code></br>
+<em>
+<a href="#settingpersistentvolumeclaimautoscaler">SettingPersistentVolumeClaimAutoscaler</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler<br />components deployed in the garden cluster.</p>
 </td>
 </tr>
 
