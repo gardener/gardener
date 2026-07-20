@@ -386,8 +386,9 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 							Minimum: 2,
 							Maximum: 2,
 							Machine: gardencorev1beta1.Machine{
-								Image: &testMachineImage,
-								Type:  "large",
+								Image:        &testMachineImage,
+								Type:         "large",
+								Architecture: new(v1beta1constants.ArchitectureAMD64),
 							},
 						},
 						{
@@ -397,7 +398,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 							Machine: gardencorev1beta1.Machine{
 								Image:        &testMachineImage,
 								Type:         "large-arm",
-								Architecture: new("arm64"),
+								Architecture: new(v1beta1constants.ArchitectureARM64),
 							},
 						},
 					},
