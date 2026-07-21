@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
@@ -21,10 +22,7 @@ import (
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
-var (
-	machineSelector = map[string]string{"app": "machine"}
-	bastionSelector = map[string]string{"app": "bastion"}
-)
+var machineSelector = map[string]string{"app": "machine"}
 
 func reconcileNetworkPolicies(ctx context.Context, cl client.Client, namespace string, cluster *extensionscontroller.Cluster) error {
 	for _, obj := range networkPolicies(namespace, cluster) {
@@ -49,8 +47,8 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 		},
 		Ingress: []networkingv1.NetworkPolicyIngressRule{
 			allowFromWorldToNodePorts(),
+			allowFromBastionToSSH(),
 			{From: machinePodPeers()}, // allow intra-machine communication
-			{From: bastionPodPeers(), Ports: sshPort()},
 		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{
 			allowToIstioGateways(cluster), // kube-proxy might short-circuit traffic to the istio-ingressgateway pods
@@ -62,6 +60,10 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 		},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 	}
+	if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) {
+		// for self-hosted shoot exposure to work, we need to allow traffic from the load balancers to the control plane running in the machine pods.
+		allowMachinePods.Spec.Ingress = append(allowMachinePods.Spec.Ingress, allowFromLoadBalancersToKubeAPIServer())
+	}
 
 	return []client.Object{allowMachinePods, denyAll}
 }
@@ -70,18 +72,6 @@ func machinePodPeers() []networkingv1.NetworkPolicyPeer {
 	return []networkingv1.NetworkPolicyPeer{{
 		PodSelector: &metav1.LabelSelector{MatchLabels: machineSelector},
 	}}
-}
-
-func bastionPodPeers() []networkingv1.NetworkPolicyPeer {
-	return []networkingv1.NetworkPolicyPeer{{
-		PodSelector: &metav1.LabelSelector{MatchLabels: bastionSelector},
-	}}
-}
-
-func sshPort() []networkingv1.NetworkPolicyPort {
-	return []networkingv1.NetworkPolicyPort{
-		{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
-	}
 }
 
 func allowToPublicNetworks() networkingv1.NetworkPolicyEgressRule {
@@ -164,6 +154,33 @@ func allowFromWorldToNodePorts() networkingv1.NetworkPolicyIngressRule {
 		Ports: []networkingv1.NetworkPolicyPort{{
 			Port:     new(intstr.FromInt32(30000)),
 			EndPort:  new(int32(32767)),
+			Protocol: new(corev1.ProtocolTCP),
+		}},
+	}
+}
+
+func allowFromBastionToSSH() networkingv1.NetworkPolicyIngressRule {
+	return networkingv1.NetworkPolicyIngressRule{
+		From: []networkingv1.NetworkPolicyPeer{{
+			PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				"app": "bastion",
+			}},
+		}},
+		Ports: []networkingv1.NetworkPolicyPort{{
+			Port:     new(intstr.FromInt32(22)),
+			Protocol: new(corev1.ProtocolTCP),
+		}},
+	}
+}
+
+func allowFromLoadBalancersToKubeAPIServer() networkingv1.NetworkPolicyIngressRule {
+	return networkingv1.NetworkPolicyIngressRule{
+		From: []networkingv1.NetworkPolicyPeer{
+			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV4}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: loadbalancer.InternalRangeV6}},
+		},
+		Ports: []networkingv1.NetworkPolicyPort{{
+			Port:     new(intstr.FromInt32(443)),
 			Protocol: new(corev1.ProtocolTCP),
 		}},
 	}
