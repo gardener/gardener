@@ -258,18 +258,22 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 }
 
 // ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
-func ItShouldFindAllMachinePodsBefore(infraClient client.Reader, shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Client) sets.Set[string] {
 	GinkgoHelper()
 
 	machinePodNamesBeforeTest := sets.New[string]()
 
 	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
+		k8sClient := clientFn()
 		beforeStartMachinePodList := &corev1.PodList{}
 		Eventually(ctx, func() error {
-			return infraClient.List(ctx, beforeStartMachinePodList, client.InNamespace(infrastructure.MachineNamespaceName(shoot.Status.TechnicalID)), client.MatchingLabels{
-				"app":              "machine",
-				"machine-provider": "local",
-			})
+			return k8sClient.List(ctx, beforeStartMachinePodList,
+				client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)),
+				client.MatchingLabels{
+					"app":              "machine",
+					"machine-provider": "local",
+				},
+			)
 		}).Should(Succeed())
 
 		for _, item := range beforeStartMachinePodList.Items {
@@ -281,16 +285,20 @@ func ItShouldFindAllMachinePodsBefore(infraClient client.Reader, shoot *gardenco
 }
 
 // ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
-func ItShouldCompareMachinePodNamesAfter(infraClient client.Reader, shoot *gardencorev1beta1.Shoot, machinePodNamesBeforeTest sets.Set[string]) {
+func ItShouldCompareMachinePodNamesAfter(s *ShootContext, clientFn func() client.Client, machinePodNamesBeforeTest sets.Set[string]) {
 	GinkgoHelper()
 
 	It("Compare machine pod names", func(ctx SpecContext) {
+		k8sClient := clientFn()
 		machinePodListAfterTest := &corev1.PodList{}
 		Eventually(ctx, func() error {
-			return infraClient.List(ctx, machinePodListAfterTest, client.InNamespace(infrastructure.MachineNamespaceName(shoot.Status.TechnicalID)), client.MatchingLabels{
-				"app":              "machine",
-				"machine-provider": "local",
-			})
+			return k8sClient.List(ctx, machinePodListAfterTest,
+				client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)),
+				client.MatchingLabels{
+					"app":              "machine",
+					"machine-provider": "local",
+				},
+			)
 		}).Should(Succeed())
 
 		machinePodNamesAfterTest := sets.New[string]()

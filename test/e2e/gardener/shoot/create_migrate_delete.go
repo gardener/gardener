@@ -44,7 +44,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			seedClientSourceCluster = s.SeedClient
 		})
 
-		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s.SeedClient, s.Shoot)
+		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s, func() client.Client { return seedClientSourceCluster })
 
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
@@ -81,7 +81,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		}, SpecTimeout(time.Minute))
 
 		// the "infrastructure" (aka the machine pods), still exist in the "kind-gardener-local" cluster
-		ItShouldCompareMachinePodNamesAfter(seedClientSourceCluster, s.Shoot, machinePodNamesBeforeTest)
+		ItShouldCompareMachinePodNamesAfter(s, func() client.Client { return seedClientSourceCluster }, machinePodNamesBeforeTest)
 
 		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
 			ItShouldInitializeShootClient(s)
