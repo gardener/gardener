@@ -956,7 +956,7 @@ honor_labels: true`
 					BeforeEach(func() {
 						values.Ingress = &IngressValues{Host: ingressHost, IstioIngressGatewayNamespace: ingressNamespace}
 						deployer = New(logr.Discard(), fakeClient, namespace, values)
-						deployer.SetIngressAuthSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressAuthSecretName}})
+						deployer.SetIngressAuthSecretName(ingressAuthSecretName)
 						deployer.SetIngressWildcardCertSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressWildcardSecretName}})
 					})
 

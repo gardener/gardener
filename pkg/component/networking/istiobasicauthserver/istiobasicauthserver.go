@@ -202,6 +202,11 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 	)
 
 	for _, virtualService := range virtualServiceList.Items {
+		secretName := virtualService.Labels[v1beta1constants.LabelBasicAuthSecretName]
+		if secret, found := i.secretsManager.Get(secretName); found {
+			secretName = secret.Name
+		}
+
 		for _, host := range virtualService.Spec.Hosts {
 			// Use the first subdomain as the filename for the basic authentication data. Domains without '.' are ignored.
 			// The full domain is used to identify the filter chain via SNI in the EnvoyFilter configuration patch.
@@ -214,7 +219,7 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 				Name: subdomain,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: virtualService.Labels[v1beta1constants.LabelBasicAuthSecretName],
+						SecretName: secretName,
 						Items: []corev1.KeyToPath{
 							{
 								Key:  secretsutils.DataKeyAuth,
