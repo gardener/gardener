@@ -727,3 +727,8 @@ func (s *Shoot) HasManagedInfrastructure() bool {
 func (s *Shoot) HasExtensionExposure() bool {
 	return v1beta1helper.HasExtensionExposure(s.GetInfo())
 }
+
+// IsRestorePhase returns true when the shoot is in phase 'restore'.
+func (s *Shoot) IsRestorePhase() bool {
+	return v1beta1helper.ShootHasOperationType(s.GetInfo().Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore)
+}

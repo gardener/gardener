@@ -554,7 +554,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:   "Initializing secrets management",
 			Fn:     b.InitializeSecretsManagement,
-			SkipIf: kubeconfigFileExists && !b.IsRestorePhase(),
+			SkipIf: kubeconfigFileExists && !b.Shoot.IsRestorePhase(),
 		})
 		writeKubeletBootstrapKubeconfig = g.Add(flow.Task{
 			Name:         "Writing kubelet bootstrap kubeconfig with a fake token to disk to make kubelet start",
@@ -573,7 +573,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 			Fn: func(ctx context.Context) error {
 				return b.PersistBootstrapSecrets(ctx, opts.ConfigDir)
 			},
-			SkipIf:       b.IsRestorePhase(),
+			SkipIf:       b.Shoot.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfigSecretForNodeAgent),
 		})
 		applyOperatingSystemConfig = g.Add(flow.Task{
@@ -598,7 +598,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 				}
 				return b.CleanupBootstrapSecrets(opts.ConfigDir)
 			},
-			SkipIf:       kubeconfigFileExists && !b.IsRestorePhase(),
+			SkipIf:       kubeconfigFileExists && !b.Shoot.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet),
 		})
 	)

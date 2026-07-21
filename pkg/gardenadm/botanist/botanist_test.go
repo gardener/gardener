@@ -81,7 +81,7 @@ metadata:
 
 					Expect(b.Shoot.GetInfo().Status.LastOperation).NotTo(BeNil())
 					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
-					Expect(b.IsRestorePhase()).To(BeTrue())
+					Expect(b.Shoot.IsRestorePhase()).To(BeTrue())
 				})
 			})
 
@@ -108,7 +108,7 @@ metadata:
 
 					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
 					Expect(b.Shoot.GetShootState().Name).To(Equal("gardenadm"))
-					Expect(b.IsRestorePhase()).To(BeTrue())
+					Expect(b.Shoot.IsRestorePhase()).To(BeTrue())
 				})
 			})
 

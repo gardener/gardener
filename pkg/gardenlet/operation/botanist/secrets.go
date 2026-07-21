@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -41,7 +41,7 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 	// create corresponding secrets in the shoot namespace in the seed before initializing it. Note that this is
 	// explicitly only done in case of restoration to prevent split-brain situations as described in
 	// https://github.com/gardener/gardener/issues/5377.
-	if b.IsRestorePhase() {
+	if b.Shoot.IsRestorePhase() {
 		if err := b.restoreSecretsFromShootState(ctx); err != nil {
 			return err
 		}

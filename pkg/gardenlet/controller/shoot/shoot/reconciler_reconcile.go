@@ -301,13 +301,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           botanist.DestroySourceBackupEntry,
-			SkipIf:       !allowBackup || !botanist.IsRestorePhase(),
+			SkipIf:       !allowBackup || !botanist.Shoot.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until source backup entry has been deleted",
 			Fn:           botanist.Shoot.Components.SourceBackupEntry.WaitCleanup,
-			SkipIf:       !allowBackup || skipReadiness || !botanist.IsRestorePhase(),
+			SkipIf:       !allowBackup || skipReadiness || !botanist.Shoot.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(destroySourceBackupEntry),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
@@ -1076,7 +1076,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	if !r.ShootStateControllerEnabled && botanist.IsRestorePhase() {
+	if !r.ShootStateControllerEnabled && botanist.Shoot.IsRestorePhase() {
 		o.Logger.Info("Deleting Shoot State after successful restoration")
 		if err := shootstate.Delete(ctx, botanist.GardenClient, botanist.Shoot.GetInfo()); err != nil {
 			err = fmt.Errorf("failed to delete shoot state: %w", err)

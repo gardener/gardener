@@ -44,7 +44,7 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Network.SetPodCIDRs(b.Shoot.Networks.Pods)
 	b.Shoot.Components.Extensions.Network.SetServiceCIDRs(b.Shoot.Networks.Services)
 
-	if b.IsRestorePhase() {
+	if b.Shoot.IsRestorePhase() {
 		return b.Shoot.Components.Extensions.Network.Restore(ctx, b.Shoot.GetShootState())
 	}
 

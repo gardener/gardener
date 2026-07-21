@@ -201,7 +201,7 @@ func (b *Botanist) deployOrRestoreEtcd(ctx context.Context) error {
 }
 
 func (b *Botanist) isRestorationOfMultiNodeMainEtcdRequired(ctx context.Context) (bool, error) {
-	if !b.IsRestorePhase() || !v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+	if !b.Shoot.IsRestorePhase() || !v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		return false, nil
 	}
 

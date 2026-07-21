@@ -327,6 +327,22 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
+		Describe("#IsRestorePhase", func() {
+			It("should return false when last operation is nil", func() {
+				Expect(shoot.IsRestorePhase()).To(BeFalse())
+			})
+
+			It("should return false when last operation type is not Restore", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile}}})
+				Expect(shoot.IsRestorePhase()).To(BeFalse())
+			})
+
+			It("should return true when last operation type is Restore", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}}})
+				Expect(shoot.IsRestorePhase()).To(BeTrue())
+			})
+		})
+
 		Describe("#SortByIPFamilies", func() {
 			var (
 				ipv4CIDR1 = net.IPNet{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}

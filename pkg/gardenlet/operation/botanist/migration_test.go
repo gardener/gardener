@@ -338,12 +338,12 @@ var _ = Describe("migration", func() {
 	Describe("#IsRestorePhase", func() {
 		It("should return true", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}}})
-			Expect(botanist.IsRestorePhase()).To(BeTrue())
+			Expect(botanist.Shoot.IsRestorePhase()).To(BeTrue())
 		})
 
 		It("should return false", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}}})
-			Expect(botanist.IsRestorePhase()).To(BeFalse())
+			Expect(botanist.Shoot.IsRestorePhase()).To(BeFalse())
 		})
 	})
 

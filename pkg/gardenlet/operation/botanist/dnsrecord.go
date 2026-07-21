@@ -22,7 +22,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:         b.Shoot.ControlPlaneNamespace,
 		TTL:               b.dnsRecordTTLSeconds(),
-		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.IsRestorePhase(),
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.Shoot.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 		Labels: map[string]string{
 			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordExternal,
@@ -62,7 +62,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
 		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
 			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
-			b.IsRestorePhase(),
+			b.Shoot.IsRestorePhase(),
 		IPStack: gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 		Labels: map[string]string{
 			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordInternal,
@@ -157,7 +157,7 @@ func (b *Botanist) MigrateInternalDNSRecord(ctx context.Context) error {
 }
 
 func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
-	if b.IsRestorePhase() {
+	if b.Shoot.IsRestorePhase() {
 		return dnsRecord.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return dnsRecord.Deploy(ctx)
