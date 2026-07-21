@@ -524,30 +524,37 @@ func wasRemediatedByGardener(annotations map[string]string) bool {
 func (c *Constraint) checkIfHibernationScheduleProblematic() (gardencorev1beta1.ConditionStatus, string, string) {
 	shoot := c.shoot.GetInfo()
 
-	if shoot.Spec.Hibernation == nil || len(shoot.Spec.Hibernation.Schedules) == 0 {
-		return gardencorev1beta1.ConditionTrue,
-			"NoProblematicHibernationSchedule",
-			"Shoot does not have a hibernation schedule."
-	}
-
 	if v1beta1helper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer) != gardencorev1beta1.EncryptionProviderTypeAESGCM {
 		return gardencorev1beta1.ConditionTrue,
 			"NoProblematicHibernationSchedule",
 			"Shoot does not use AESGCM encryption for etcd."
 	}
 
-	if IsShootAlwaysHibernatedDuringMaintenance(shoot) {
+	if !v1beta1helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot) {
+		return gardencorev1beta1.ConditionTrue,
+			"NoProblematicHibernationSchedule",
+			"Automatic ETCD encryption key rotation is not enabled."
+	}
+
+	rotationPeriod := *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod
+	if !v1beta1helper.ETCDEncryptionKeyRotationPassedRotationPeriod(shoot, c.clock.Now(), rotationPeriod) {
+		return gardencorev1beta1.ConditionTrue,
+			"NoProblematicHibernationSchedule",
+			"The ETCD encryption key rotation period has not yet passed."
+	}
+
+	if IsShootHibernatedDuringNextMaintenanceWindow(shoot, c.clock.Now()) {
 		return gardencorev1beta1.ConditionFalse,
 			"MaintenanceWindowInHibernationWindow",
-			"The shoot uses AESGCM encryption for etcd and its maintenance window is entirely within the " +
-				"hibernation window. The ETCD encryption key auto-rotation will never be triggered automatically. " +
+			"The shoot uses AESGCM encryption for etcd and its ETCD encryption key rotation is overdue, " +
+				"but the next maintenance window falls within a hibernation interval. " +
+				"The ETCD encryption key auto-rotation cannot be triggered automatically. " +
 				"Please adjust the maintenance window or the hibernation schedule so that maintenance can run " +
 				"while the cluster is awake."
 	}
-
 	return gardencorev1beta1.ConditionTrue,
 		"NoProblematicHibernationSchedule",
-		"The maintenance window is not entirely within the hibernation window."
+		"The ETCD encryption key rotation is overdue but the next maintenance window is not within a hibernation interval."
 }
 
 func filterOptionalConstraints(required, optional []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {

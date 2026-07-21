@@ -5,7 +5,6 @@
 package care
 
 import (
-	"slices"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -13,22 +12,13 @@ import (
 	hibernationutils "github.com/gardener/gardener/pkg/utils/hibernation"
 )
 
-// Collect all events inside [simStart, simEnd) and sort by time.
-type hibernationScheduleEvent struct {
-	at        time.Time
-	operation hibernationutils.Operation
-}
-
-// IsShootAlwaysHibernatedDuringMaintenance returns true when the hibernation schedule of the shoot is such that the shoot is
-// always hibernated during the maintenance window.
-//
-// Because the hibernation schedules are defined by cron schedules, we determine this by running a simulation of all
-// wake-up and hibernation events and checking if any awake interval fully covers the maintenance window.
-func IsShootAlwaysHibernatedDuringMaintenance(shoot *gardencorev1beta1.Shoot) bool {
+// IsShootHibernatedDuringNextMaintenanceWindow reports whether the shoot could be in a hibernated state at any point
+// during its next maintenance window. Since Gardener only guarantees that maintenance starts at some point within the
+// window (not at its beginning), we compare against the end of the window — if a hibernation event falls before the
+// window closes, maintenance may never run. It only checks the very next hibernation and wake-up events, so it may
+// return false even if the shoot will be hibernated during the next maintenance window.
+func IsShootHibernatedDuringNextMaintenanceWindow(shoot *gardencorev1beta1.Shoot, now time.Time) bool {
 	if shoot.Spec.Maintenance == nil || shoot.Spec.Maintenance.TimeWindow == nil {
-		return false
-	}
-	if shoot.Spec.Hibernation == nil || len(shoot.Spec.Hibernation.Schedules) == 0 {
 		return false
 	}
 
@@ -39,81 +29,65 @@ func IsShootAlwaysHibernatedDuringMaintenance(shoot *gardencorev1beta1.Shoot) bo
 	if err != nil {
 		return false
 	}
+	nextMaintenanceEnd := maintenanceWindow.AdjustedEnd(now)
+	if !nextMaintenanceEnd.After(now) {
+		nextMaintenanceEnd = nextMaintenanceEnd.AddDate(0, 0, 1)
+	}
+	nextHibernateTime, nextWakeUpTime, err := parseNextHibernationEvents(shoot, now)
+	if err != nil {
+		return false
+	}
 
+	if shoot.Status.IsHibernated {
+		hasWakeUpBeforeMaintenance := nextWakeUpTime != nil && nextWakeUpTime.Before(nextMaintenanceEnd)
+
+		if !hasWakeUpBeforeMaintenance {
+			return true // never wakes up, or wakes up too late
+		}
+
+		reHibernatesBeforeMaintenance := nextHibernateTime != nil &&
+			nextHibernateTime.After(*nextWakeUpTime) &&
+			nextHibernateTime.Before(nextMaintenanceEnd)
+
+		return reHibernatesBeforeMaintenance
+	}
+
+	// shoot is currently awake
+
+	hibernatesBeforeMaintenance := nextHibernateTime != nil && nextHibernateTime.Before(nextMaintenanceEnd)
+	if !hibernatesBeforeMaintenance {
+		return false // stays awake all the way to maintenance
+	}
+
+	reWakesUpBeforeMaintenance := nextWakeUpTime != nil &&
+		nextWakeUpTime.After(*nextHibernateTime) &&
+		nextWakeUpTime.Before(nextMaintenanceEnd)
+
+	return !reWakesUpBeforeMaintenance
+}
+
+func parseNextHibernationEvents(shoot *gardencorev1beta1.Shoot, now time.Time) (*time.Time, *time.Time, error) {
+	if shoot.Spec.Hibernation == nil || len(shoot.Spec.Hibernation.Schedules) == 0 {
+		return nil, nil, nil
+	}
 	schedules, err := hibernationutils.Parse(shoot.Spec.Hibernation.Schedules)
-	if err != nil || len(schedules) == 0 {
-		return false
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// If there are no wake-up events at all we assume it's never awake during maintenance and return true
-	if hasWakeEvent := slices.ContainsFunc(schedules, func(s hibernationutils.ParsedSchedule) bool {
-		return s.Operation == hibernationutils.WakeUp
-	}); !hasWakeEvent {
-		return true
-	}
-
-	events, ok := simulateHibernationSchedule(schedules)
-	if !ok {
-		return false
-	}
-
-	return isAlwaysHibernatedDuringMaintenance(maintenanceWindow, events)
-}
-
-func simulateHibernationSchedule(schedules []hibernationutils.ParsedSchedule) (events []hibernationScheduleEvent, ok bool) {
-	const (
-		maxCronIter    = 10_000
-		simulationDays = 35 // should cover most realistic scenarios.
-	)
-
-	start := time.Date(2006, time.January, 2, 0, 0, 0, 0, time.UTC) // monday
-	end := start.Add(simulationDays * 24 * time.Hour)
-
-	// make sure there is a hibernate event end of the simulation window, so that the last interval is always closed
-	events = []hibernationScheduleEvent{
-		{at: end, operation: hibernationutils.Hibernate},
-	}
-	iter := 0
+	var nextHibernateTime, nextWakeUpTime *time.Time
 	for _, s := range schedules {
-		for t := s.Next(start); t.Before(end); t = s.Next(t) {
-			iter++
-			if iter > maxCronIter {
-				return nil, false // indicate that we reached the simulation limit
+		t := s.Next(now)
+		switch s.Operation {
+		case hibernationutils.Hibernate:
+			if nextHibernateTime == nil || t.Before(*nextHibernateTime) {
+				nextHibernateTime = &t
 			}
-			events = append(events, hibernationScheduleEvent{at: t, operation: s.Operation})
+		case hibernationutils.WakeUp:
+			if nextWakeUpTime == nil || t.Before(*nextWakeUpTime) {
+				nextWakeUpTime = &t
+			}
 		}
 	}
-	slices.SortFunc(events, func(a, b hibernationScheduleEvent) int { return a.at.Compare(b.at) })
-	events = slices.CompactFunc(events, func(e1, e2 hibernationScheduleEvent) bool {
-		return e1.operation == e2.operation
-	})
-	return events, true
-}
-
-func isAlwaysHibernatedDuringMaintenance(maintenanceWindow *timewindowutils.MaintenanceTimeWindow, events []hibernationScheduleEvent) bool {
-	maintenanceDuration := maintenanceWindow.Duration()
-
-	// iterate over all awake intervals. Since we know the simulation always contains alternating events, we can iterate
-	// with stepsize 2.
-	start := 0
-	if events[0].operation == hibernationutils.Hibernate {
-		start = 1
-	}
-	for i := start; i < len(events)-1; i += 2 {
-		awakeIntervalStart := events[i].at
-		awakeIntervalEnd := events[i+1].at
-
-		// Find the first maintenance window start on or after intervalStart.
-		maintenanceStart := maintenanceWindow.AdjustedBegin(awakeIntervalStart)
-		if maintenanceStart.Before(awakeIntervalStart) {
-			maintenanceStart = maintenanceStart.Add(24 * time.Hour)
-		}
-		// If the maintenance window ends before the end of the awake interval, then the maintenance window fits
-		// entirely inside the awake interval
-		if maintenanceStart.Add(maintenanceDuration).Before(awakeIntervalEnd) {
-			return false
-		}
-	}
-
-	return true
+	return nextHibernateTime, nextWakeUpTime, nil
 }

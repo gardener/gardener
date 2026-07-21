@@ -11,7 +11,6 @@ import (
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -500,7 +499,7 @@ var _ = Describe("Constraints", func() {
 			shoot.SetInfo(&gardencorev1beta1.Shoot{})
 
 			constraint = NewConstraint(
-				logr.Discard(),
+				GinkgoLogr,
 				shoot,
 				seedClient,
 				func() (kubernetes.Interface, bool, error) {
@@ -608,7 +607,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -627,7 +626,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -650,7 +649,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -685,7 +684,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -706,11 +705,23 @@ var _ = Describe("Constraints", func() {
 			Context("#HibernationScheduleProblematic", func() {
 				BeforeEach(func() {
 					shoot = &gardencorev1beta1.Shoot{
+						ObjectMeta: metav1.ObjectMeta{
+							CreationTimestamp: metav1.NewTime(clock.Now().Add(-48 * time.Hour)),
+						},
 						Spec: gardencorev1beta1.ShootSpec{
 							Kubernetes: gardencorev1beta1.Kubernetes{
 								KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 										Provider: gardencorev1beta1.EncryptionProvider{Type: new(gardencorev1beta1.EncryptionProviderTypeAESGCM)},
+									},
+								},
+							},
+							Maintenance: &gardencorev1beta1.Maintenance{
+								AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+									Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+										ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+											RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+										},
 									},
 								},
 							},
@@ -721,7 +732,7 @@ var _ = Describe("Constraints", func() {
 				JustBeforeEach(func() {
 					shootPkg := &shootpkg.Shoot{ControlPlaneNamespace: controlPlaneNamespace}
 					shootPkg.SetInfo(shoot)
-					constraint = NewConstraint(logr.Discard(), shootPkg, seedClient,
+					constraint = NewConstraint(GinkgoLogr, shootPkg, seedClient,
 						func() (kubernetes.Interface, bool, error) {
 							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
 						}, clock)
@@ -741,15 +752,13 @@ var _ = Describe("Constraints", func() {
 				})
 
 				It("should keep the constraint when AESGCM shoot maintenance window is within the hibernation window", func() {
-					shoot.Spec.Maintenance = &gardencorev1beta1.Maintenance{
-						TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
-							Begin: "220000+0000",
-							End:   "230000+0000",
-						},
+					shoot.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
+						Begin: "010000+0000",
+						End:   "020000+0000",
 					}
 					shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 						Schedules: []gardencorev1beta1.HibernationSchedule{
-							{Start: new("0 20 * * *"), End: new("0 8 * * *")},
+							{Start: new("0 0 * * *"), End: new("0 8 * * *")},
 						},
 					}
 
@@ -769,7 +778,7 @@ var _ = Describe("Constraints", func() {
 					}
 					shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 						Schedules: []gardencorev1beta1.HibernationSchedule{
-							{Start: new("0 20 * * *"), End: new("0 8 * * *")},
+							{Start: new("0 0 * * *"), End: new("0 8 * * *")},
 						},
 					}
 
@@ -784,8 +793,9 @@ var _ = Describe("Constraints", func() {
 							ControlPlaneNamespace: controlPlaneNamespace,
 							HibernationEnabled:    true,
 						}
+						shoot.Status.IsHibernated = true
 						shootPkg.SetInfo(shoot)
-						constraint = NewConstraint(logr.Discard(), shootPkg, seedClient,
+						constraint = NewConstraint(GinkgoLogr, shootPkg, seedClient,
 							func() (kubernetes.Interface, bool, error) {
 								return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
 							}, clock)
@@ -803,15 +813,13 @@ var _ = Describe("Constraints", func() {
 					})
 
 					It("should preserve the constraint when the configuration is problematic", func() {
-						shoot.Spec.Maintenance = &gardencorev1beta1.Maintenance{
-							TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
-								Begin: "220000+0000",
-								End:   "230000+0000",
-							},
+						shoot.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
+							Begin: "010000+0000",
+							End:   "020000+0000",
 						}
 						shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 							Schedules: []gardencorev1beta1.HibernationSchedule{
-								{Start: new("0 20 * * *"), End: new("0 8 * * *")},
+								{Start: new("0 0 * * *"), End: new("0 8 * * *")},
 							},
 						}
 
@@ -880,7 +888,7 @@ var _ = Describe("Constraints", func() {
 						shootPkg.SetInfo(shoot)
 
 						hibernatedConstraint = NewConstraint(
-							logr.Discard(),
+							GinkgoLogr,
 							shootPkg,
 							seedClient,
 							func() (kubernetes.Interface, bool, error) {
@@ -938,7 +946,7 @@ var _ = Describe("Constraints", func() {
 							},
 						})
 						constraint = NewConstraint(
-							logr.Discard(),
+							GinkgoLogr,
 							shootPkg,
 							seedClient,
 							func() (kubernetes.Interface, bool, error) {
@@ -1068,6 +1076,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -1084,6 +1093,7 @@ var _ = Describe("Constraints", func() {
 
 				Expect(constraints.ConvertToSlice()).To(ConsistOf(
 					hibernationPossibleConstraint,
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),

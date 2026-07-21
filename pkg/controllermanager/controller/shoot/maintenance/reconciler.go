@@ -669,7 +669,7 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 	)
 
 	if sshKeypairRotationEnabled && v1beta1helper.ShootEnablesSSHAccess(shoot) &&
-		sshKeypairRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod) {
+		v1beta1helper.SSHKeypairRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod) {
 		reason := "Automatic rotation of SSH keypair configured"
 		log.Info("SSH keypair for workers will be rotated", "reason", reason)
 		maintenanceResults[v1beta1constants.ShootOperationRotateSSHKeypair] = updateResult{
@@ -680,7 +680,7 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 	}
 
 	if observabilityPasswordsRotationEnabled &&
-		observabilityPasswordsRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod) {
+		v1beta1helper.ObservabilityRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod) {
 		reason := "Automatic rotation of observability passwords configured"
 		log.Info("Observability passwords will be rotated", "reason", reason)
 		maintenanceResults[v1beta1constants.OperationRotateObservabilityCredentials] = updateResult{
@@ -692,7 +692,7 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 
 	if etcdEncryptionKeyRotationEnabled &&
 		!v1beta1helper.HibernationIsEnabled(shoot) && // etcd encryption key rotation is not possible for hibernated shoots
-		etcdEncryptionKeyRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
+		v1beta1helper.ETCDEncryptionKeyRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod) {
 		if len(etcdEncryptionKeyRotationPhase) == 0 || etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationCompleted {
 			reason := "Automatic rotation of etcd encryption key configured"
 			log.Info("ETCD Encryption key will be rotated", "reason", reason)
@@ -712,51 +712,6 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 	}
 
 	return maintenanceResults
-}
-
-// sshKeypairRotationPassedRotationPeriod checks if the rotation period for ssh keypair has passed.
-func sshKeypairRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
-	// If the shoot has just been created or the credentials have never been rotated, use the shoot's creation timestamp to determine whether the rotation period has passed.
-	latestRotationCompletionTime := shoot.CreationTimestamp.Time
-
-	if shoot.Status.Credentials != nil &&
-		shoot.Status.Credentials.Rotation != nil &&
-		shoot.Status.Credentials.Rotation.SSHKeypair != nil &&
-		shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime != nil {
-		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime.Time
-	}
-
-	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
-}
-
-// observabilityPasswordsRotationPassedRotationPeriod checks if the rotation period for observability passwords has passed.
-func observabilityPasswordsRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
-	// If the shoot has just been created or the credentials have never been rotated, use the shoot's creation timestamp to determine whether the rotation period has passed.
-	latestRotationCompletionTime := shoot.CreationTimestamp.Time
-
-	if shoot.Status.Credentials != nil &&
-		shoot.Status.Credentials.Rotation != nil &&
-		shoot.Status.Credentials.Rotation.Observability != nil &&
-		shoot.Status.Credentials.Rotation.Observability.LastCompletionTime != nil {
-		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.Observability.LastCompletionTime.Time
-	}
-
-	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
-}
-
-// etcdEncryptionKeyRotationPassedRotationPeriod checks if the rotation period for the etcd encryption key has passed.
-func etcdEncryptionKeyRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
-	// If the shoot has just been created or the credentials have never been rotated, use the shoot's creation timestamp to determine whether the rotation period has passed.
-	latestRotationCompletionTime := shoot.CreationTimestamp.Time
-
-	if shoot.Status.Credentials != nil &&
-		shoot.Status.Credentials.Rotation != nil &&
-		shoot.Status.Credentials.Rotation.ETCDEncryptionKey != nil &&
-		shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTime != nil {
-		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTime.Time
-	}
-
-	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
 }
 
 func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
