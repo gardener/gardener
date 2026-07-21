@@ -61,10 +61,6 @@ type flowContext struct {
 // runReconcileShootFlow reconciles the Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object.
 func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *v1beta1helper.WrappedLastErrors {
-	if v1beta1helper.IsShootSelfHosted(o.Shoot.GetInfo().Spec.Provider.Workers) {
-		return nil
-	}
-
 	flowCtx := flowContext{
 		operationType:                  operationType,
 		allowBackup:                    v1beta1helper.GetBackupConfigForShoot(o.Shoot.GetInfo(), o.GetSeed()) != nil,
@@ -141,15 +137,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		flowCtx.deployKubeAPIServerTaskTimeout = kubeapiserver.TimeoutWaitForDeployment
 	}
 
-	var (
-		deployExtensionAfterKAPIMsg = "Deploying extension resources after kube-apiserver"
-		waitExtensionAfterKAPIMsg   = "Waiting until extension resources handled after kube-apiserver are ready"
-	)
-	if b.Shoot.HibernationEnabled {
-		deployExtensionAfterKAPIMsg = "Hibernating extension resources before kube-apiserver hibernation"
-		waitExtensionAfterKAPIMsg = "Waiting until extension resources hibernated before kube-apiserver hibernation are ready"
-	}
-
 	if flowCtx.hasNodesCIDR {
 		if err := b.UpdateDualStackMigrationConditionIfNeeded(ctx); err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
@@ -165,9 +152,78 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	var (
-		g = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(flowCtx.isRestoring, "restoration", "reconciliation")))
+	setupFlow := r.setupReconcileHostedShootFlow
+	if b.Shoot.IsSelfHosted() {
+		setupFlow = r.setupReconcileSelfHostedShootFlow
+	}
 
+	graph := flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(flowCtx.isRestoring, "restoration", "reconciliation")))
+	if err := setupFlow(b, flowCtx, graph); err != nil {
+		err = fmt.Errorf("setting up reconciliation flow failed: %w", err)
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+	}
+	f := graph.Compile()
+
+	if err := f.Run(ctx, flow.Opts{
+		Log:              b.Logger,
+		ProgressReporter: r.newProgressReporter(b.ReportShootProgress),
+		ErrorContext:     errorContext,
+		ErrorCleaner:     b.CleanShootTaskError,
+	}); err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
+	}
+
+	// TODO(rfranzke): Remove this if-condition once the Shoot controller flow has progressed.
+	if !b.Shoot.IsSelfHosted() {
+		b.Logger.Info("Cleaning no longer required secrets")
+		if err := b.SecretsManager.Cleanup(ctx); err != nil {
+			err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
+	}
+
+	if !r.ShootStateControllerEnabled && b.Shoot.IsRestorePhase() {
+		b.Logger.Info("Deleting Shoot State after successful restoration")
+		if err := shootstate.Delete(ctx, b.GardenClient, b.Shoot.GetInfo()); err != nil {
+			err = fmt.Errorf("failed to delete shoot state: %w", err)
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
+	}
+
+	// ensure that shoot client is invalidated after it has been hibernated
+	if b.Shoot.HibernationEnabled {
+		if err := b.ShootClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
+			err = fmt.Errorf("failed to invalidate shoot client: %w", err)
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
+	}
+
+	if _, ok := b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootSkipReadiness]; ok {
+		b.Logger.Info("Removing skip-readiness annotation")
+
+		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+			delete(shoot.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
+			return nil
+		}); err != nil {
+			return nil
+		}
+	}
+
+	b.Logger.Info("Successfully reconciled Shoot cluster", "operation", utils.IifString(flowCtx.isRestoring, "restored", "reconciled"))
+	return nil
+}
+
+func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flowCtx flowContext, g *flow.Graph) error {
+	var (
+		deployExtensionAfterKAPIMsg = "Deploying extension resources after kube-apiserver"
+		waitExtensionAfterKAPIMsg   = "Waiting until extension resources handled after kube-apiserver are ready"
+	)
+	if b.Shoot.HibernationEnabled {
+		deployExtensionAfterKAPIMsg = "Hibernating extension resources before kube-apiserver hibernation"
+		waitExtensionAfterKAPIMsg = "Waiting until extension resources hibernated before kube-apiserver hibernation are ready"
+	}
+
+	var (
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(b.DeployControlPlaneNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -1069,51 +1125,18 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 	)
 
-	f := g.Compile()
+	return nil
+}
 
-	if err := f.Run(ctx, flow.Opts{
-		Log:              b.Logger,
-		ProgressReporter: r.newProgressReporter(b.ReportShootProgress),
-		ErrorContext:     errorContext,
-		ErrorCleaner:     b.CleanShootTaskError,
-	}); err != nil {
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
-	}
-
-	b.Logger.Info("Cleaning no longer required secrets")
-	if err := b.SecretsManager.Cleanup(ctx); err != nil {
-		err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
-		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-	}
-
-	if !r.ShootStateControllerEnabled && b.Shoot.IsRestorePhase() {
-		b.Logger.Info("Deleting Shoot State after successful restoration")
-		if err := shootstate.Delete(ctx, b.GardenClient, b.Shoot.GetInfo()); err != nil {
-			err = fmt.Errorf("failed to delete shoot state: %w", err)
-			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-		}
-	}
-
-	// ensure that shoot client is invalidated after it has been hibernated
-	if b.Shoot.HibernationEnabled {
-		if err := b.ShootClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
-			err = fmt.Errorf("failed to invalidate shoot client: %w", err)
-			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-		}
-	}
-
-	if _, ok := b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootSkipReadiness]; ok {
-		b.Logger.Info("Removing skip-readiness annotation")
-
-		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
-			delete(shoot.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
+func (r *Reconciler) setupReconcileSelfHostedShootFlow(b *botanistpkg.Botanist, flowCtx flowContext, g *flow.Graph) error {
+	_ = g.Add(flow.Task{
+		Name: "TODO(rfranzke): Construct this flow as progress on GEP-28 progresses.",
+		Fn: func(_ context.Context) error {
+			b.Logger.Info("Hello world!", "operationType", flowCtx.operationType)
 			return nil
-		}); err != nil {
-			return nil
-		}
-	}
+		},
+	})
 
-	b.Logger.Info("Successfully reconciled Shoot cluster", "operation", utils.IifString(flowCtx.isRestoring, "restored", "reconciled"))
 	return nil
 }
 
