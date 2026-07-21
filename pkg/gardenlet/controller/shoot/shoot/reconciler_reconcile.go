@@ -208,7 +208,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 						return err
 					}
 				}
-				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployInfrastructure)
+				return removeTaskAnnotation(ctx, botanist, v1beta1constants.ShootTaskDeployInfrastructure)
 			}),
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
@@ -235,7 +235,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.DeployOrDestroyInternalDNSRecord(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordInternal)
+				return removeTaskAnnotation(ctx, botanist, v1beta1constants.ShootTaskDeployDNSRecordInternal)
 			}),
 			SkipIf:       o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
@@ -246,7 +246,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.DeployOrDestroyExternalDNSRecord(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordExternal)
+				return removeTaskAnnotation(ctx, botanist, v1beta1constants.ShootTaskDeployDNSRecordExternal)
 			}),
 			SkipIf:       o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
@@ -657,7 +657,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 					return err
 				}
 				if controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
-					return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartCoreAddons)
+					return removeTaskAnnotation(ctx, botanist, v1beta1constants.ShootTaskRestartCoreAddons)
 				}
 				return nil
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -1052,7 +1052,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.RestartControlPlanePods(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartControlPlanePods)
+				return removeTaskAnnotation(ctx, botanist, v1beta1constants.ShootTaskRestartControlPlanePods)
 			}),
 			SkipIf:       !requestControlPlanePodsRestart,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane),
@@ -1107,19 +1107,19 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	return nil
 }
 
-func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generation int64, tasksToRemove ...string) error {
+func removeTaskAnnotation(ctx context.Context, b *botanistpkg.Botanist, tasksToRemove ...string) error {
 	// Check if shoot generation was changed mid-air, i.e., whether we need to wait for the next reconciliation until we
 	// can safely remove the task annotations to ensure all required tasks are executed.
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := o.GardenClient.Get(ctx, client.ObjectKeyFromObject(o.Shoot.GetInfo()), shoot); err != nil {
+	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shoot); err != nil {
 		return err
 	}
 
-	if shoot.Generation != generation {
+	if shoot.Generation != b.Shoot.GetInfo().Generation {
 		return nil
 	}
 
-	return o.Shoot.UpdateInfo(ctx, o.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+	return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
