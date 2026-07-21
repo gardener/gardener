@@ -292,7 +292,7 @@ require (
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.23.0 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
-	github.com/onsi/gomega v1.42.0 // indirect
+	github.com/onsi/gomega v1.42.1 // indirect
 	github.com/openai/openai-go/v3 v3.32.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
