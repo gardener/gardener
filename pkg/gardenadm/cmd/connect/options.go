@@ -25,7 +25,7 @@ type Options struct {
 	BootstrapToken string
 	// CertificateAuthority is the CA bundle of the control plane.
 	CertificateAuthority []byte
-	// Force forces the deployment of gardenlet, even if it already exists.
+	// Force forces the deployment of gardenlet, even if it already exists or bootstrap etcd is still running.
 	Force bool
 }
 
@@ -65,5 +65,5 @@ func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.BytesBase64Var(&o.CertificateAuthority, "ca-certificate", nil, "Base64-encoded certificate authority bundle of the Gardener control plane")
 	fs.StringVar(&o.BootstrapToken, "bootstrap-token", "", "Bootstrap token for connecting the self-hosted shoot cluster to a garden cluster (create it with 'gardenadm token' in the garden cluster)")
-	fs.BoolVar(&o.Force, "force", false, "Forces the deployment of gardenlet, even if it already exists")
+	fs.BoolVar(&o.Force, "force", false, "Forces the deployment of gardenlet, even if it already exists or bootstrap etcd is still running")
 }

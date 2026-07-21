@@ -90,12 +90,19 @@ func run(ctx context.Context, opts *Options) error {
 	if bootstrapEtcdExists, err := isBootstrapEtcdStillRunning(ctx, b); err != nil {
 		return fmt.Errorf("failed checking if bootstrap etcd is still running: %w", err)
 	} else if bootstrapEtcdExists {
-		return fmt.Errorf("bootstrap etcd is still running in the self-hosted shoot cluster, please run 'gardenadm init --use-bootstrap-etcd=false' first")
+		if !opts.Force {
+			return fmt.Errorf("bootstrap etcd is still running in the self-hosted shoot cluster, please run 'gardenadm init --use-bootstrap-etcd=false' first")
+		}
+		opts.Log.Info("Warning: Bootstrap etcd is still running, --force override active")
 	}
 
 	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
 		return fmt.Errorf("failed checking if gardenlet is already deployed: %w", err)
 	} else if !alreadyConnected || opts.Force {
+		if alreadyConnected {
+			opts.Log.Info("Warning: Gardenlet is already deployed, --force override active")
+		}
+
 		bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.GardenScheme)
 		if err != nil {
 			return fmt.Errorf("failed creating a new bootstrap garden client set: %w", err)
@@ -207,7 +214,7 @@ func isBootstrapEtcdStillRunning(ctx context.Context, b *botanist.GardenadmBotan
 		}
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist) error {
