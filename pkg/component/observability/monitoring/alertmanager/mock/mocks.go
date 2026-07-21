@@ -69,16 +69,16 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
-// SetIngressAuthSecret mocks base method.
-func (m *MockInterface) SetIngressAuthSecret(arg0 *v1.Secret) {
+// SetIngressAuthSecretName mocks base method.
+func (m *MockInterface) SetIngressAuthSecretName(arg0 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetIngressAuthSecret", arg0)
+	m.ctrl.Call(m, "SetIngressAuthSecretName", arg0)
 }
 
-// SetIngressAuthSecret indicates an expected call of SetIngressAuthSecret.
-func (mr *MockInterfaceMockRecorder) SetIngressAuthSecret(arg0 any) *gomock.Call {
+// SetIngressAuthSecretName indicates an expected call of SetIngressAuthSecretName.
+func (mr *MockInterfaceMockRecorder) SetIngressAuthSecretName(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIngressAuthSecret", reflect.TypeOf((*MockInterface)(nil).SetIngressAuthSecret), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIngressAuthSecretName", reflect.TypeOf((*MockInterface)(nil).SetIngressAuthSecretName), arg0)
 }
 
 // SetIngressWildcardCertSecret mocks base method.
