@@ -17,6 +17,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.autoscalerName
+      name: AutoscalerName
+      type: string
     - jsonPath: .spec.targetRef.name
       name: Target
       type: string
@@ -48,6 +51,14 @@ spec:
             description: PersistentVolumeClaimAutoscalerSpec defines the desired state
               of the PersistentVolumeClaimAutoscaler.
             properties:
+              autoscalerName:
+                default: ""
+                description: |-
+                  AutoscalerName optionally assigns this PVCA to a named autoscaler instance.
+                  An autoscaler started with --autoscaler-name=<name> reconciles only PVCAs whose
+                  autoscalerName matches. An autoscaler started without --autoscaler-name reconciles
+                  only PVCAs with an empty autoscalerName. Defaults to "".
+                type: string
               targetRef:
                 description: |-
                   TargetRef specifies the reference to the workload controller (e.g., StatefulSet)
@@ -74,6 +85,21 @@ spec:
                   description: VolumePolicy defines the autoscaling policy for a specific
                     PVC
                   properties:
+                    match:
+                      default: {}
+                      description: Match specifies the matching criteria for selecting
+                        PVCs to which this policy applies.
+                      properties:
+                        name:
+                          default: '*'
+                          description: |-
+                            Name specifies the name of the PVC.
+                            It supports exact and glob pattern matching (e.g., "data-*" matches "data-pvc").
+                            Policies are evaluated in list order and the first matching policy is used.
+                            "*" can be used as a match-all policy.
+                          minLength: 1
+                          type: string
+                      type: object
                     maxCapacity:
                       anyOf:
                       - type: integer
@@ -84,9 +110,6 @@ spec:
                         [k8s.io/apimachinery/pkg/api/resource.Quantity] value.
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
-                      x-kubernetes-validations:
-                      - message: maxCapacity must be > 0
-                        rule: quantity(self).isGreaterThan(quantity('0'))
                     scaleUp:
                       default: {}
                       description: ScaleUp defines the rules for scaling up the PVC.
@@ -96,9 +119,6 @@ spec:
                             CooldownDuration specifies the minimum time that must elapse after a scaling
                             operation before another scaling operation can be triggered for the targeted PVC objects.
                           type: string
-                          x-kubernetes-validations:
-                          - message: cooldownDuration must be > 0s
-                            rule: duration(self) > duration('0s')
                         minStepAbsolute:
                           anyOf:
                           - type: integer
@@ -109,10 +129,6 @@ spec:
                             This ensures that the change in capacity is at least this amount, regardless of the percentage.
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                          x-kubernetes-validations:
-                          - message: minStepAbsolute must be > 1 if specified
-                            rule: self == null || quantity(self).compareTo(quantity('1Gi'))
-                              >= 0
                         stepPercent:
                           default: 10
                           description: StepPercent specifies the percentage by which
@@ -132,7 +148,6 @@ spec:
                   required:
                   - maxCapacity
                   type: object
-                maxItems: 1
                 minItems: 1
                 type: array
             required:
@@ -202,14 +217,18 @@ spec:
                   type: object
                 type: array
               lastCheck:
-                description: LastCheck specifies the last time the PVC was checked
-                  by the controller.
+                description: |-
+                  LastCheck specifies the last time the PVC was checked by the controller.
+
+                  Deprecated: this field is deprecated and is no longer maintained by the pvc-autoscaler. It will be removed in a future release.
                 format: date-time
                 type: string
               nextCheck:
                 description: |-
                   NextCheck specifies the next scheduled check of the PVC by the
                   controller.
+
+                  Deprecated: this field is deprecated and is no longer maintained by the pvc-autoscaler. It will be removed in a future release.
                 format: date-time
                 type: string
               volumeRecommendations:

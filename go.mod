@@ -24,7 +24,7 @@ require (
 	github.com/gardener/etcd-druid/api v0.37.0
 	github.com/gardener/gardener/pkg/apis v0.0.0
 	github.com/gardener/machine-controller-manager v0.62.1
-	github.com/gardener/pvc-autoscaler v0.2.0
+	github.com/gardener/pvc-autoscaler v0.3.0
 	github.com/gardener/terminal-controller-manager v0.37.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.3
@@ -38,7 +38,7 @@ require (
 	github.com/miekg/dns v1.1.72
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.32.0
-	github.com/onsi/gomega v1.42.0
+	github.com/onsi/gomega v1.42.1
 	github.com/open-telemetry/opentelemetry-operator/apis v0.156.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pelletier/go-toml v1.9.5
