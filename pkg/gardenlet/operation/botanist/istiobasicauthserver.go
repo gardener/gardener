@@ -19,6 +19,7 @@ func (b *Botanist) DefaultIstioBasicAuthServer() (component.DeployWaiter, error)
 
 	return shared.NewIstioBasicAuthServer(
 		b.SeedClientSet.Client(),
+		b.SeedClientSet.APIReader(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		b.WantsObservabilityComponents(),

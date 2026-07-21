@@ -1091,6 +1091,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
 	return sharedcomponent.NewIstioBasicAuthServer(
 		r.RuntimeClientSet.Client(),
+		r.RuntimeClientSet.APIReader(),
 		r.GardenNamespace,
 		secretsManager,
 		true,

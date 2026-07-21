@@ -66,6 +66,7 @@ type Values struct {
 
 type istioBasicAuthServer struct {
 	client         client.Client
+	apiReader      client.Reader
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
@@ -74,12 +75,14 @@ type istioBasicAuthServer struct {
 // New creates a new instance of an istio-basic-auth-server deployer.
 func New(
 	client client.Client,
+	apiReader client.Reader,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) component.DeployWaiter {
 	return &istioBasicAuthServer{
 		client:         client,
+		apiReader:      apiReader,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
@@ -214,6 +217,15 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 				return nil, nil, nil, fmt.Errorf("failed to find secret %q referenced by virtual service %q in the secrets manager", secretName, virtualService.Name)
 			}
 			secretName = secret.Name
+		} else {
+			// Use an uncached client to prevent race conditions between VirtualService updates by the GRM that reference
+			// secrets not managed by the secrets manager, and the istio-basic-auth-server deployer.
+			virtualServiceMetadata := &metav1.PartialObjectMetadata{}
+			virtualServiceMetadata.SetGroupVersionKind(istionetworkingv1beta1.SchemeGroupVersion.WithKind("VirtualService"))
+			if err := i.apiReader.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualServiceMetadata); err != nil {
+				return nil, nil, nil, fmt.Errorf("failed to get virtual service %q: %w", virtualService.Name, err)
+			}
+			secretName = virtualServiceMetadata.Labels[v1beta1constants.LabelBasicAuthSecretName]
 		}
 
 		for _, host := range virtualService.Spec.Hosts {
