@@ -7589,7 +7589,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", forbiddenOp)),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters with unmanaged infrastructure", forbiddenOp)),
 					}))))
 					delete(shoot.Annotations, "gardener.cloud/operation")
 
@@ -7597,7 +7597,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", forbiddenOp)),
+						"Detail": ContainSubstring(fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters with unmanaged infrastructure", forbiddenOp)),
 					}))))
 					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
 				},

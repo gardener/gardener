@@ -2888,7 +2888,7 @@ func ValidateHibernation(annotations map[string]string, hibernation *core.Hibern
 	}
 
 	if isSelfHosted {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "hibernation is not supported for self-hosted shoots"))
+		return append(allErrs, field.Forbidden(fldPath, "hibernation is not supported for self-hosted shoots"))
 	}
 
 	for _, op := range v1beta1helper.GetShootMaintenanceOperations(annotations) {
@@ -3199,7 +3199,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		} else if len(operations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
 			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
 		} else if isSelfHosted && !helper.HasManagedInfrastructure(shoot) && (strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)) {
-			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", op)))
+			return append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters with unmanaged infrastructure", op)))
 		}
 	}
 
@@ -3209,7 +3209,7 @@ func validateShootOperation(operations, maintenanceOperations []string, shoot *c
 		} else if len(maintenanceOperations) > 1 && !availableShootOperationsToRunInParallel.Has(op) && !strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) && !strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers) {
 			return append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted to be run in parallel with other operations", op)))
 		} else if isSelfHosted && !helper.HasManagedInfrastructure(shoot) && (strings.HasPrefix(op, v1beta1constants.OperationRotateRolloutWorkers) || strings.HasPrefix(op, v1beta1constants.OperationRolloutWorkers)) {
-			return append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters without managed infrastructure", op)))
+			return append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("operation '%s' is not permitted for self-hosted shoot clusters with unmanaged infrastructure", op)))
 		}
 	}
 
