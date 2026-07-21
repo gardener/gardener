@@ -246,3 +246,65 @@ Furthermore, all dashboards should contain the following time options:
   }
 }
 ```
+
+### Developing and Exporting Dashboards in a Local Setup
+
+Editing raw JSON by hand is impractical for non-trivial dashboards. The recommended workflow is to make changes interactively in the Plutono UI of your local development environment and then export the result back to the repository using `hack/export-dashboard.sh`.
+
+Because dashboards deployed by Gardener are *provisioned* (Plutono treats them as read-only), you need to temporarily lift those restrictions before you can save edits.
+
+#### Preparing the local environment
+
+1. **Stop Gardener from reconciling the Plutono ManagedResource** so your manual changes are not overwritten:
+
+   ```bash
+   kubectl annotate managedresource plutono resources.gardener.cloud/ignore=true
+   ```
+
+2. **Enable the login form** so you can authenticate as admin (it is disabled by default):
+
+   ```bash
+   kubectl edit deployment plutono
+   ```
+
+   Change the environment variable:
+
+   ```yaml
+   - name: PL_AUTH_DISABLE_LOGIN_FORM
+     value: "false"   # was "true"
+   ```
+
+3. **Retrieve the admin password**:
+
+   ```bash
+   kubectl get secret -l name=plutono-admin -o json \
+     | jq '.items[].data.password | @base64d' -r
+   ```
+
+4. **Port-forward Plutono** and log in at `http://localhost:3000` using username `admin` and the password retrieved in the previous step:
+
+   ```bash
+   kubectl port-forward deployment/plutono 3000
+   ```
+
+#### Editing the dashboard
+
+Because provisioned dashboards are still read-only in the UI, make a copy of the dashboard you want to edit (Plutono appends " Copy" to the title automatically). Edit the copy freely and save it — Plutono persists the changes in its database. Note the UID of the copy from the URL or from **Dashboard settings → JSON model**.
+
+#### Exporting the dashboard
+
+Once you are satisfied with the result, export the dashboard back to the repository file with:
+
+```bash
+hack/export-dashboard.sh <dashboard-uid> <original-uid> <path/to/dashboard.json>
+```
+
+For example:
+
+```bash
+hack/export-dashboard.sh abc123copy dns pkg/component/observability/plutono/dashboards/shoot/owners/worker/dns-dashboard.json
+```
+
+The script fetches the dashboard JSON from the Plutono API, resets the UID to the original value (`<original-uid>`), strips the " Copy" suffix from the title, and removes the ephemeral fields `id`, `iteration`, and `version` that Plutono adds internally — producing a clean, reviewable diff.
+
+After exporting, commit the updated JSON and open a pull request.
