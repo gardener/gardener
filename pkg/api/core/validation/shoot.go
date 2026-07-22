@@ -2377,10 +2377,6 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 	}
 
 	if worker.ControlPlane != nil {
-		if worker.Minimum != worker.Maximum {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("minimum"), worker.Minimum, "minimum must be equal to maximum for the control plane worker pool of self-hosted shoots"))
-		}
-
 		allErrs = append(allErrs, ValidateWorkerControlPlane(worker.ControlPlane, shootNamespace, shootProviderType, fldPath.Child("controlPlane"))...)
 	}
 
@@ -3609,6 +3605,11 @@ func validateSelfHostedShootControlPlane(spec *core.ShootSpec, fldPath *field.Pa
 
 	controlPlaneWorkerIdx := slices.IndexFunc(spec.Provider.Workers, func(w core.Worker) bool { return w.ControlPlane != nil })
 	workerPath := fldPath.Child("provider", "workers").Index(controlPlaneWorkerIdx)
+
+	// TODO(scheererj): Remove restriction controlPlaneWorker.Minimum != 1 with support for high availability
+	if controlPlaneWorker.Minimum != controlPlaneWorker.Maximum || controlPlaneWorker.Minimum != 1 {
+		allErrs = append(allErrs, field.Invalid(workerPath.Child("minimum"), controlPlaneWorker.Minimum, "self-hosted shoots only support minimum=maximum=1 for the control plane worker pool (might change in the future)"))
+	}
 
 	if spec.ControlPlane == nil || spec.ControlPlane.HighAvailability == nil {
 		if controlPlaneWorker.Maximum != 1 {
