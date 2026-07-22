@@ -1136,7 +1136,6 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prom
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
 
-	// fetch auth secret for ingress
 	prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
 
 	// fetch global monitoring secret for prometheus-aggregate scrape config
@@ -1301,7 +1300,6 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 }
 
 func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, prometheus prometheus.Interface) error {
-	// fetch auth secret for ingress
 	prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
 	return prometheus.Deploy(ctx)
 }
