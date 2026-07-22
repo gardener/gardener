@@ -88,9 +88,9 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return err
 	}
-	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForShoot(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
+	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForShoot(b.Shoot.GetInfo(), b.GetSeed(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
 
-	return gardenerutils.RequiredExtensionsReady(ctx, b.GardenClient, b.Seed.GetInfo().Name, requiredExtensions)
+	return gardenerutils.RequiredExtensionsReady(ctx, b.GardenClient, b.GetSeed(), b.Shoot.GetInfo(), requiredExtensions)
 }
 
 // outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver

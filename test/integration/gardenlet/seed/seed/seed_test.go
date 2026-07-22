@@ -733,7 +733,7 @@ var _ = Describe("Seed controller tests", func() {
 
 				// Wait for extension resources to be ready
 				Eventually(func() error {
-					return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
+					return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed, nil, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
 				}).WithTimeout(time.Minute).Should(Succeed())
 
 				By("Verify seed has extension label")
@@ -1103,7 +1103,7 @@ var _ = Describe("Seed controller tests", func() {
 					Expect(testClient.List(ctx, controllerRegistrationList)).To(Succeed())
 
 					Eventually(func() error {
-						return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
+						return gardenerutils.RequiredExtensionsReady(ctx, testClient, seed, nil, gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList))
 					}).WithTimeout(time.Minute).Should(Succeed())
 
 					By("Verify that seed system components have been deployed (without components managed by shoot gardenlet)")

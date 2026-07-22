@@ -576,7 +576,8 @@ var _ = Describe("utils", func() {
 
 			seedProvider       string
 			dnsProvider        string
-			seedName           string
+			seed               *gardencorev1beta1.Seed
+			shoot              *gardencorev1beta1.Shoot
 			requiredExtensions sets.Set[string]
 		)
 
@@ -590,12 +591,23 @@ var _ = Describe("utils", func() {
 					core.SeedRefName,
 					indexer.ControllerInstallationSeedRefNameIndexerFunc,
 				).
+				WithIndex(
+					&gardencorev1beta1.ControllerInstallation{},
+					core.ShootRefName,
+					indexer.ControllerInstallationShootRefNameIndexerFunc,
+				).
+				WithIndex(
+					&gardencorev1beta1.ControllerInstallation{},
+					core.ShootRefNamespace,
+					indexer.ControllerInstallationShootRefNamespaceIndexerFunc,
+				).
 				Build()
 
 			seedProvider = "seedProvider"
 			dnsProvider = "dnsProvider"
 
-			seedName = "seed"
+			seed = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed"}}
+			shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "garden-project"}}
 
 			requiredExtensions = sets.New(
 				"DNSRecord/"+dnsProvider,
@@ -616,7 +628,7 @@ var _ = Describe("utils", func() {
 
 		Context("when required ControllerInstallations are missing", func() {
 			It("should fail checking all required extensions", func() {
-				Expect(RequiredExtensionsReady(ctx, fakeClient, seedName, requiredExtensions)).To(MatchError("extension controllers missing or unready: map[ControlPlane/seedProvider:{} DNSRecord/dnsProvider:{} Infrastructure/seedProvider:{} Worker/seedProvider:{}]"))
+				Expect(RequiredExtensionsReady(ctx, fakeClient, seed, nil, requiredExtensions)).To(MatchError("extension controllers missing or unready: map[ControlPlane/seedProvider:{} DNSRecord/dnsProvider:{} Infrastructure/seedProvider:{} Worker/seedProvider:{}]"))
 			})
 		})
 
@@ -632,7 +644,7 @@ var _ = Describe("utils", func() {
 								Name: "foo",
 							},
 							SeedRef: &corev1.ObjectReference{
-								Name: seedName,
+								Name: seed.Name,
 							},
 						},
 						Status: gardencorev1beta1.ControllerInstallationStatus{
@@ -647,7 +659,7 @@ var _ = Describe("utils", func() {
 			})
 
 			It("should fail checking all required extensions", func() {
-				Expect(RequiredExtensionsReady(ctx, fakeClient, seedName, requiredExtensions)).To(MatchError("controllerregistrations.core.gardener.cloud \"foo\" not found"))
+				Expect(RequiredExtensionsReady(ctx, fakeClient, seed, nil, requiredExtensions)).To(MatchError("controllerregistrations.core.gardener.cloud \"foo\" not found"))
 			})
 		})
 
@@ -687,7 +699,11 @@ var _ = Describe("utils", func() {
 								Name: controllerRegistrations[0].Name,
 							},
 							SeedRef: &corev1.ObjectReference{
-								Name: seedName,
+								Name: seed.Name,
+							},
+							ShootRef: &corev1.ObjectReference{
+								Name:      shoot.Name,
+								Namespace: shoot.Namespace,
 							},
 						},
 						Status: gardencorev1beta1.ControllerInstallationStatus{
@@ -707,7 +723,11 @@ var _ = Describe("utils", func() {
 								Name: controllerRegistrations[1].Name,
 							},
 							SeedRef: &corev1.ObjectReference{
-								Name: seedName,
+								Name: seed.Name,
+							},
+							ShootRef: &corev1.ObjectReference{
+								Name:      shoot.Name,
+								Namespace: shoot.Namespace,
 							},
 						},
 					},
@@ -727,8 +747,12 @@ var _ = Describe("utils", func() {
 					}
 				})
 
-				It("should succeed checking all required extensions", func() {
-					Expect(RequiredExtensionsReady(ctx, fakeClient, seedName, requiredExtensions)).To(Succeed())
+				It("should succeed checking all required extensions filtered by seed", func() {
+					Expect(RequiredExtensionsReady(ctx, fakeClient, seed, nil, requiredExtensions)).To(Succeed())
+				})
+
+				It("should succeed checking all required extensions filtered by shoot", func() {
+					Expect(RequiredExtensionsReady(ctx, fakeClient, nil, shoot, requiredExtensions)).To(Succeed())
 				})
 			})
 
@@ -743,8 +767,12 @@ var _ = Describe("utils", func() {
 					}
 				})
 
-				It("should fail checking all required extensions", func() {
-					Expect(RequiredExtensionsReady(ctx, fakeClient, seedName, requiredExtensions)).To(MatchError("extension controllers missing or unready: map[DNSRecord/dnsProvider:{}]"))
+				It("should fail checking all required extensions filtered by seed", func() {
+					Expect(RequiredExtensionsReady(ctx, fakeClient, seed, nil, requiredExtensions)).To(MatchError("extension controllers missing or unready: map[DNSRecord/dnsProvider:{}]"))
+				})
+
+				It("should fail checking all required extensions filtered by shoot", func() {
+					Expect(RequiredExtensionsReady(ctx, fakeClient, nil, shoot, requiredExtensions)).To(MatchError("extension controllers missing or unready: map[DNSRecord/dnsProvider:{}]"))
 				})
 			})
 		})

@@ -306,7 +306,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name: "Waiting until required extensions are ready",
 			Fn: func(ctx context.Context) error {
 				return retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
-					if err := gardenerutils.RequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo().Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed.GetInfo(), controllerRegistrationList)); err != nil {
+					if err := gardenerutils.RequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo(), nil, gardenerutils.ComputeRequiredExtensionsForSeed(seed.GetInfo(), controllerRegistrationList)); err != nil {
 						return retry.MinorError(err)
 					}
 

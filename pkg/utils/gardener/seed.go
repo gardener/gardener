@@ -115,11 +115,16 @@ func ExtensionKindAndTypeForID(extensionID string) (extensionKind string, extens
 }
 
 // RequiredExtensionsReady checks if all required extensions for a seed exist and are ready.
-func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seedName string, requiredExtensions sets.Set[string]) error {
+func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, requiredExtensions sets.Set[string]) error {
+	var fieldSelector client.ListOption
+	if seed != nil {
+		fieldSelector = client.MatchingFields{core.SeedRefName: seed.Name}
+	} else if shoot != nil {
+		fieldSelector = client.MatchingFields{core.ShootRefName: shoot.Name, core.ShootRefNamespace: shoot.Namespace}
+	}
+
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{
-		core.SeedRefName: seedName,
-	}); err != nil {
+	if err := gardenClient.List(ctx, controllerInstallationList, fieldSelector); err != nil {
 		return err
 	}
 
