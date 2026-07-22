@@ -340,6 +340,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{gardencorev1beta1.GroupName},
 					Resources: []string{
 						"cloudprofiles",
+						"controllerregistrations",
 						"exposureclasses",
 						"seeds",
 					},

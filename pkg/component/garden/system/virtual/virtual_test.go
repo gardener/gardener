@@ -360,6 +360,7 @@ var _ = Describe("Virtual", func() {
 					APIGroups: []string{"core.gardener.cloud"},
 					Resources: []string{
 						"cloudprofiles",
+						"controllerregistrations",
 						"exposureclasses",
 						"seeds",
 					},

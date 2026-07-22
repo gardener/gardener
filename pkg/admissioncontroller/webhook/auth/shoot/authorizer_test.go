@@ -940,16 +940,12 @@ var _ = Describe("Shoot", func() {
 			})
 
 			When("requested for ControllerRegistrations", func() {
-				var (
-					name  string
-					attrs *auth.AttributesRecord
-				)
+				var attrs *auth.AttributesRecord
 
 				BeforeEach(func() {
-					name = "foo"
 					attrs = &auth.AttributesRecord{
 						User:            gardenletUser,
-						Name:            name,
+						Name:            "foo",
 						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
 						Resource:        "controllerregistrations",
 						ResourceRequest: true,
@@ -957,11 +953,10 @@ var _ = Describe("Shoot", func() {
 					}
 				})
 
-				DescribeTable("should return correct result if path exists",
+				DescribeTable("should allow without consulting the graph",
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerRegistration, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
@@ -972,6 +967,16 @@ var _ = Describe("Shoot", func() {
 					Entry("list", "list"),
 					Entry("watch", "watch"),
 				)
+
+				It("should allow list/watch without resource name", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
 
 				DescribeTable("should have no opinion because no allowed verb", func(verb string) {
 					attrs.Verb = verb
@@ -988,16 +993,6 @@ var _ = Describe("Shoot", func() {
 					Entry("deletecollection", "deletecollection"),
 				)
 
-				It("should have no opinion because path to shoot does not exist", func() {
-					graph.EXPECT().HasPathFrom(graphutils.VertexTypeControllerRegistration, "", name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
-
-					decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("no relationship found"))
-				})
-
 				It("should have no opinion because request is for a subresource", func() {
 					attrs.Subresource = "status"
 
@@ -1006,16 +1001,6 @@ var _ = Describe("Shoot", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
-				})
-
-				It("should have no opinion because no resource name is given", func() {
-					attrs.Name = ""
-
-					decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("No Object name found"))
 				})
 			})
 
