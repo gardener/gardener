@@ -590,16 +590,20 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 			}).RetryUntilTimeout(2*time.Second, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
 		})
-		_ = g.Add(flow.Task{
+		importSecrets = g.Add(flow.Task{
 			Name: "Importing secrets into control plane",
 			Fn: func(ctx context.Context) error {
-				if err := b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client()); err != nil {
-					return err
-				}
-				return b.CleanupBootstrapSecrets(opts.ConfigDir)
+				return b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client())
 			},
 			SkipIf:       kubeconfigFileExists && !b.Shoot.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting temporary ShootState containing bootstrap secrets",
+			Fn: func(_ context.Context) error {
+				return b.CleanupBootstrapSecrets(opts.ConfigDir)
+			},
+			Dependencies: flow.NewTaskIDs(importSecrets),
 		})
 	)
 
