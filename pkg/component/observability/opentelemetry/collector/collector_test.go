@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
-	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -531,7 +530,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      customResourcesManagedResourceName,
+				Name:      "opentelemetry-collector",
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
@@ -539,7 +538,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: otelv1beta1.GroupVersion.String(),
 					Kind:       "OpenTelemetryCollector",
-					Name:       collectorconstants.OpenTelemetryCollectorResourceName,
+					Name:       "opentelemetry-collector",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
@@ -547,7 +546,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: collectorconstants.ContainerName,
+							ContainerName: "otc-container",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("64Mi"),
 							},

@@ -48,6 +48,7 @@ const (
 	managedResourceNameTarget  = "logging-target"
 	managedResourceName        = "opentelemetry-collector"
 	serviceMonitorName         = "opentelemetry-collector"
+	vpaName                    = "opentelemetry-collector"
 	openTelemetryCollectorName = "gardener-opentelemetry-collector"
 
 	kubeRBACProxyName = "rbac-proxy"
@@ -266,7 +267,7 @@ func (o *otelCollector) WaitCleanup(ctx context.Context) error {
 func (o *otelCollector) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      managedResourceName,
+			Name:      vpaName,
 			Namespace: o.namespace,
 			Labels:    getLabels(),
 		},
