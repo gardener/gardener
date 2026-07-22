@@ -273,13 +273,14 @@ var _ = Describe("VictoriaLogs", func() {
 		})
 
 		DescribeTable("should successfully deploy all resources including the PersistentVolumeClaimAutoscaler when PVC autoscaler is enabled",
-			func(maxCapacity resource.Quantity) {
+			func(maxCapacity resource.Quantity, autoscalerName string) {
 				values = Values{
 					ImageRepository: imageRepository,
 					ImageTag:        imageTag,
 					PVCAutoscaling: PVCAutoscalingConfig{
-						Enabled:     true,
-						MaxCapacity: maxCapacity,
+						Enabled:        true,
+						MaxCapacity:    maxCapacity,
+						AutoscalerName: autoscalerName,
 					},
 				}
 				component = New(c, namespace, values)
@@ -293,11 +294,12 @@ var _ = Describe("VictoriaLogs", func() {
 					vpa,
 					serviceMonitor,
 					prometheusRule,
-					getPVCA(maxCapacity),
+					getPVCA(maxCapacity, autoscalerName),
 				))
 			},
-			Entry("shoot max capacity", resource.MustParse("40Gi")),
-			Entry("seed max capacity", resource.MustParse("200Gi")),
+			Entry("shoot max capacity", resource.MustParse("40Gi"), ""),
+			Entry("seed max capacity", resource.MustParse("200Gi"), ""),
+			Entry("garden max capacity", resource.MustParse("200Gi"), "garden"),
 		)
 
 		Context("when deployed in seed cluster", func() {
@@ -537,7 +539,7 @@ var _ = Describe("VictoriaLogs", func() {
 	})
 })
 
-func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func getPVCA(maxCapacity resource.Quantity, autoscalerName string) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      victorialogsconstants.VLSingleResourceName,
@@ -545,6 +547,7 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			AutoscalerName: autoscalerName,
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",

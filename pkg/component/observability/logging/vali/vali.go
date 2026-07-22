@@ -138,6 +138,10 @@ type PVCAutoscalingConfig struct {
 	Enabled bool
 	// MaxCapacity is the upper bound up to which the PVC may be scaled.
 	MaxCapacity resource.Quantity
+	// AutoscalerName is the name of the pvc-autoscaler instance that manages this PVCA.
+	// Must match the --autoscaler-name flag of the target controller instance.
+	// Empty string means the default (unnamed) instance.
+	AutoscalerName string
 }
 
 // Interface is the interface for the Vali deployer.
@@ -359,6 +363,7 @@ func (v *vali) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscalerv1alph
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			AutoscalerName: pvcAutoscaling.AutoscalerName,
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "StatefulSet",
