@@ -61,20 +61,6 @@ type flowContext struct {
 // runReconcileShootFlow reconciles the Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object.
 func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *v1beta1helper.WrappedLastErrors {
-	flowCtx := flowContext{
-		operationType:                  operationType,
-		allowBackup:                    v1beta1helper.GetBackupConfigForShoot(o.Shoot.GetInfo(), o.GetSeed()) != nil,
-		requestControlPlanePodsRestart: controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods),
-		kubeProxyEnabled:               v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
-		deployKubeAPIServerTaskTimeout: defaultTimeout,
-		shootSSHAccessEnabled:          v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo()),
-		skipReadiness:                  metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipReadiness),
-		isRestoring:                    operationType == gardencorev1beta1.LastOperationTypeRestore,
-		isRestoringHAControlPlane:      o.Shoot.IsRestorePhase() && v1beta1helper.IsHAControlPlaneConfigured(o.Shoot.GetInfo()),
-		isHibernatingShootWithWorkers:  o.Shoot.HibernationEnabled && !o.Shoot.GetInfo().Status.IsHibernated && !o.Shoot.IsWorkerless,
-	}
-	flowCtx.hasNodesCIDR = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && (o.Shoot.GetInfo().Status.Networking != nil || flowCtx.skipReadiness)
-
 	var tasksWithErrors []string
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
 		if lastError.TaskID != nil {
@@ -83,6 +69,21 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	var (
+		skipReadiness = metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipReadiness)
+		flowCtx       = flowContext{
+			operationType:                  operationType,
+			allowBackup:                    v1beta1helper.GetBackupConfigForShoot(o.Shoot.GetInfo(), o.GetSeed()) != nil,
+			hasNodesCIDR:                   o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && (o.Shoot.GetInfo().Status.Networking != nil || skipReadiness),
+			requestControlPlanePodsRestart: controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods),
+			kubeProxyEnabled:               v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
+			deployKubeAPIServerTaskTimeout: defaultTimeout,
+			shootSSHAccessEnabled:          v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo()),
+			skipReadiness:                  skipReadiness,
+			isRestoring:                    operationType == gardencorev1beta1.LastOperationTypeRestore,
+			isRestoringHAControlPlane:      o.Shoot.IsRestorePhase() && v1beta1helper.IsHAControlPlaneConfigured(o.Shoot.GetInfo()),
+			isHibernatingShootWithWorkers:  o.Shoot.HibernationEnabled && !o.Shoot.GetInfo().Status.IsHibernated && !o.Shoot.IsWorkerless,
+		}
+
 		b            *botanistpkg.Botanist
 		worker       *extensionsv1alpha1.Worker
 		errorContext = errors.NewErrorContext(fmt.Sprintf("Shoot cluster %s", utils.IifString(flowCtx.isRestoring, "restoration", "reconciliation")), tasksWithErrors)
