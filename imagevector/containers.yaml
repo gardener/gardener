@@ -974,28 +974,28 @@ images:
             teamname: 'gardener/gardener-core-networking-maintainers'
       - name: 'cloud.gardener.cnudie/dso/scanning-hints/package-versions'
         value:
-          # https://www.envoyproxy.io/docs/envoy/v1.37.0/intro/arch_overview/security/external_deps
+          # https://www.envoyproxy.io/docs/envoy/v1.39.0/intro/arch_overview/security/external_deps
           - name: 'v8'
-            version: '13.8.258.26'
+            version: '14.6.202.10'
           - name: 'grpc'
-            version: '1.76.0'
+            version: '1.81.1'
           - name: 'luajit'
             version: '871db2c'
           - name: 'nghttp2'
             version: '1.66.0'
           - name: 'protobuf'
-            version: '33.2'
+            version: '35.1'
           - name: 'fmt'
             version: '12.1.0'
           - name: 'boringssl'
-            version: '0.20250514.0'
+            version: '0.20260413.0'
           # lua version is unclear. lua runtime is luajit.
           # luajit is compatible with lua 5.1 but contains feature of lua 5.2 and 5.3
           # https://luajit.org/extensions.html
           - name: 'lua'
             version: '5.1'
           - name: 'yaml-cpp'
-            version: '0.8.0'
+            version: '0.9.0'
           - name: 'c-ares'
             version: '1.34.6'
   - name: apiserver-proxy-sidecar
