@@ -36,7 +36,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | VersionClassificationLifecycle | `false` | `Alpha` | `1.137` |         |
 | DisableNginxIngressInGarden    | `false` | `Alpha` | `1.142` | `1.147` |
 | DisableNginxIngressInGarden    | `true`  | `Beta`  | `1.148` |         |
-| DisableNginxIngressInSeed      | `false` | `Alpha` | `1.142` |         |
+| DisableNginxIngressInSeed      | `false` | `Alpha` | `1.142` | `1.147` |
+| DisableNginxIngressInSeed      | `true`  | `Beta`  | `1.148` |         |
 | DisableNginxIngressInShoot     | `false` | `Alpha` | `1.142` |         |
 | LiveControlPlaneMigration      | `false` | `Alpha` | `1.142` |         |
 | BackupEntryForGarden           | `false` | `Alpha` | `1.142` | `1.146` |
