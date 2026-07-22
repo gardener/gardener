@@ -56,7 +56,20 @@ case "$COMMAND" in
       if [[ "${FAST:-}" == "true" ]]; then
         GARDENADM_INIT_FLAGS="${GARDENADM_INIT_FLAGS:-} --use-bootstrap-etcd --use-host-network"
       fi
-      docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "gardenadm init -d /gardenadm/resources ${GARDENADM_INIT_FLAGS:-}"
+
+      # Skip `gardenadm init` if gardenlet is already running in the self-hosted shoot cluster (e.g., on a re-run of
+      # this script after a prior scenario reached level >= 4).Users can override this by passing `--force` via
+      # the `GARDENADM_INIT_FLAGS` env var.
+      skip_init=false
+      if [[ "${GARDENADM_INIT_FLAGS:-}" != *"--force"* ]] && \
+        docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c 'kubectl --kubeconfig /etc/kubernetes/admin.conf -n kube-system get deployment gardenlet' &>/dev/null; then
+        echo "gardenlet is already running in the self-hosted shoot cluster - skipping 'gardenadm init' (pass '--force' via GARDENADM_INIT_FLAGS to override)"
+        skip_init=true
+      fi
+      if [[ "$skip_init" == "false" ]]; then
+        docker compose -f "$GIND_COMPOSE_FILE" exec machine-0 bash -c "gardenadm init -d /gardenadm/resources ${GARDENADM_INIT_FLAGS:-}"
+      fi
+
       ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
     fi
 
