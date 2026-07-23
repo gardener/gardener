@@ -92,15 +92,6 @@ func allowToPublicNetworks() networkingv1.NetworkPolicyEgressRule {
 	}
 }
 
-func allowToKindNetwork() networkingv1.NetworkPolicyEgressRule {
-	return networkingv1.NetworkPolicyEgressRule{
-		To: []networkingv1.NetworkPolicyPeer{
-			{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/24"}},
-			{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::/64"}},
-		},
-	}
-}
-
 func allowToLoadBalancers() networkingv1.NetworkPolicyEgressRule {
 	return networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{
