@@ -15,7 +15,7 @@ import (
 type CloudProviderConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// RuntimeCluster configures how cloud-controller-manager-local connects to the runtime cluster (seed) of the shoot
+	// RuntimeCluster configures how cloud-controller-manager-local connects to the infrastructure cluster of the shoot
 	// cluster, i.e., the kind cluster where the shoot machine pods run.
 	// This is only required if the cloud-controller-manager-local is running for a shoot cluster, not for the kind
 	// cluster itself.

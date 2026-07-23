@@ -21,6 +21,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
 	"github.com/gardener/gardener/pkg/provider-local/charts"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -166,16 +167,8 @@ func (vp *valuesProvider) GetConfigChartValues(
 	var runtimeCluster map[string]any
 	if v1beta1helper.HasManagedInfrastructure(cluster.Shoot) {
 		runtimeCluster = map[string]any{
-			"namespace": cluster.Shoot.Status.TechnicalID,
-		}
-
-		// Use cloud-controller-manager's in-cluster credentials by default (ServiceAccount token for the runtime cluster).
-		// Use the kind kubeconfig from the cloudprovider secret for self-hosted shoots with managed infrastructure. This is
-		// done because the cloud-controller-manager runs in the self-hosted shoot, so the in-cluster credentials are for
-		// the shoot, not the runtime cluster.
-		// See https://github.com/gardener/gardener/blob/master/docs/extensions/provider-local.md#credentials.
-		if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) {
-			runtimeCluster["kubeconfig"] = "/var/run/secrets/gardener.cloud/cloudprovider/kubeconfig"
+			"namespace":  infrastructure.MachineNamespaceName(cluster.Shoot.Status.TechnicalID),
+			"kubeconfig": "/var/run/secrets/gardener.cloud/cloudprovider/kubeconfig",
 		}
 	}
 
