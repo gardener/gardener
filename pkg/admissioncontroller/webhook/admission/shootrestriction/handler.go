@@ -45,6 +45,7 @@ var (
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	configMapResource                 = corev1.Resource("configmaps")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
+	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	projectResource                   = gardencorev1beta1.Resource("projects")
@@ -83,8 +84,14 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 	case certificateSigningRequestResource:
 		return h.admitCertificateSigningRequest(gardenletShootInfo, userType, request)
 
+	case configMapResource:
+		return h.admitConfigMap(gardenletShootInfo, request)
+
 	case gardenletResource:
 		return h.admitCreateWithResourcePrefix(gardenletShootInfo, request)
+
+	case internalSecretResource:
+		return h.admitInternalSecret(gardenletShootInfo, request)
 
 	case leaseResource:
 		return h.admitLease(gardenletShootInfo, userType, request)
@@ -140,6 +147,32 @@ func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.Namesp
 	return h.admit(gardenletShootInfo, types.NamespacedName{Name: name, Namespace: namespace})
 }
 
+func (h *Handler) admitConfigMap(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// Check if the config map is related to a Shoot assigned to the seed the gardenlet is responsible for.
+	if shootName, ok := gardenerutils.IsShootProjectConfigMap(request.Name); ok {
+		return h.admit(gardenletShootInfo, types.NamespacedName{Name: shootName, Namespace: request.Namespace})
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+}
+
+func (h *Handler) admitInternalSecret(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// Check if the internal secret is related to a Shoot assigned to the seed the gardenlet is responsible for.
+	if shootName, ok := gardenerutils.IsShootProjectInternalSecret(request.Name); ok {
+		return h.admit(gardenletShootInfo, types.NamespacedName{Name: shootName, Namespace: request.Namespace})
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+}
+
 func (h *Handler) admitManagedSeed(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Update {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
@@ -159,6 +192,11 @@ func (h *Handler) admitManagedSeed(ctx context.Context, gardenletShootInfo types
 func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// Check if the secret is related to a Shoot assigned to the seed the gardenlet is responsible for.
+	if shootName, ok := gardenerutils.IsShootProjectSecret(request.Name); ok {
+		return h.admit(gardenletShootInfo, types.NamespacedName{Name: shootName, Namespace: request.Namespace})
 	}
 
 	// Check if the secret is related to a BackupBucket assigned to the Shoot the gardenlet is responsible for.
