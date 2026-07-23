@@ -131,7 +131,7 @@ const TaskGroupInitializeSecretsManagement flow.TaskID = "TaskGroupInitializeSec
 // InitializeSecretsManagementTaskGroup returns the flow.TaskGroup for initializing the secret management.
 func (b *Botanist) InitializeSecretsManagementTaskGroup() flow.TaskGroup {
 	return flow.NewTaskGroup(TaskGroupInitializeSecretsManagement, flow.Task{
-		Name: "Initializing internal state of Gardener secrets manager",
+		Name: "Initializing secrets management",
 		Fn:   b.InitializeSecretsManagement,
 	}).WithDependencies(TaskGroupReconcileClusterResource)
 }
