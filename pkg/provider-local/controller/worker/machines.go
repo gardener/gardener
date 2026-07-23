@@ -233,7 +233,7 @@ func (w *workerDelegate) PostReconcileHook(ctx context.Context) error {
 	// Overwrite only if Machine Image Version is not present to prevent overwriting the new version after an in-place update.
 
 	podList := &corev1.PodList{}
-	if err := w.providerClient.List(ctx, podList, client.InNamespace(w.cluster.Shoot.Status.TechnicalID), client.MatchingLabels{
+	if err := w.providerClient.List(ctx, podList, client.InNamespace(infrastructure.MachineNamespaceName(w.cluster.Shoot.Status.TechnicalID)), client.MatchingLabels{
 		"app":              "machine",
 		"machine-provider": "local",
 	}); err != nil {
