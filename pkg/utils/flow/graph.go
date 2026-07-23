@@ -48,7 +48,7 @@ type Tasks map[TaskID]*TaskSpec
 type Graph struct {
 	name   string
 	tasks  Tasks
-	groups map[TaskID]TaskGroup
+	groups map[TaskID]TaskIDs
 
 	// Clock is used to retrieve the current time.
 	Clock clock.Clock
@@ -61,7 +61,7 @@ func (g *Graph) Name() string {
 
 // NewGraph returns a new Graph with the given name.
 func NewGraph(name string) *Graph {
-	return &Graph{name: name, tasks: make(Tasks), groups: make(map[TaskID]TaskGroup), Clock: clock.RealClock{}}
+	return &Graph{name: name, tasks: make(Tasks), groups: make(map[TaskID]TaskIDs), Clock: clock.RealClock{}}
 }
 
 // Add adds the given Task to the graph.

@@ -72,6 +72,38 @@ var _ = Describe("TaskGroup", func() {
 		})
 	})
 
+	Describe("#WithID", func() {
+		It("should override the group id used for later `WithDependencies` lookups", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+			)
+
+			graph.AddGroup(flow.NewTaskGroup("original", rec.task("a")).WithID("aliased"))
+			graph.AddGroup(flow.NewTaskGroup("dependent", rec.task("b")).WithDependencies(flow.TaskID("aliased")))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			Expect(rec.executed()).To(Equal([]string{"a", "b"}))
+		})
+
+		It("should namespace contained task names so the same group can be added multiple times", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+				group = flow.NewTaskGroup("g", rec.task("first"), rec.task("second", flow.TaskID("first")))
+			)
+
+			// Adding the same group twice would normally panic on duplicate task ids. `WithID` on the second
+			// registration namespaces the task names so the graph stays valid.
+			graph.AddGroup(group)
+			graph.AddGroup(group.WithID("alias").WithDependencies(flow.TaskID("g")))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			// The recorder captures the original task names (twice, once per registration).
+			Expect(rec.executed()).To(Equal([]string{"first", "second", "first", "second"}))
+		})
+	})
+
 	Describe("#SkipIf", func() {
 		It("should not skip tasks when the condition is false", func() {
 			var (

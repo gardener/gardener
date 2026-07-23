@@ -12,41 +12,23 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-const (
-	// TaskGroupReconcileExtensionControllers is a flow.TaskID for a logical flow.TaskGroup.
-	TaskGroupReconcileExtensionControllers flow.TaskID = "TaskGroupReconcileExtensionControllers"
-	// TaskGroupReconcileExtensionControllersInPodNetwork is a flow.TaskID for a logical flow.TaskGroup.
-	TaskGroupReconcileExtensionControllersInPodNetwork flow.TaskID = "TaskGroupReconcileExtensionControllersInPodNetwork"
-)
+// TaskGroupReconcileExtensionControllers is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileExtensionControllers flow.TaskID = "TaskGroupReconcileExtensionControllers"
 
 // ReconcileExtensionControllersTaskGroup returns the flow.TaskGroup for deploying the extension controllers and waiting
-// for their readiness. If podNetworkAvailable is true, it returns the variant that redeploys the extension controllers
-// into the pod network and depends on the pod-network `gardener-resource-manager`.
+// for their readiness. If podNetworkAvailable is true, the deployment reconciles the controllers into the pod network.
 func (b *GardenadmBotanist) ReconcileExtensionControllersTaskGroup(podNetworkAvailable bool) flow.TaskGroup {
 	var (
-		groupID                                 = TaskGroupReconcileExtensionControllers
-		taskIDGardenerResourceManagerDependency = botanist.TaskGroupReconcileGardenerResourceManager
-		taskNameDeployment                      = "Deploying extension controllers"
-		taskNameWait                            = "Waiting until extension controllers report readiness"
-	)
-	if podNetworkAvailable {
-		groupID = TaskGroupReconcileExtensionControllersInPodNetwork
-		taskIDGardenerResourceManagerDependency = botanist.TaskGroupReconcileGardenerResourceManagerInPodNetwork
-		taskNameDeployment = "Redeploying extension controllers into pod network"
-		taskNameWait = "Waiting until extension controllers (in pod network) report readiness"
-	}
-
-	var (
-		g = flow.NewTaskGroup(groupID).WithDependencies(taskIDGardenerResourceManagerDependency)
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionControllers).WithDependencies(botanist.TaskGroupReconcileGardenerResourceManager)
 
 		deployExtensionControllers = g.Add(flow.Task{
-			Name: taskNameDeployment,
+			Name: "Deploying extension controllers",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, !podNetworkAvailable)
 			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
 		})
 		_ = g.Add(flow.Task{
-			Name:         taskNameWait,
+			Name:         "Waiting until extension controllers report readiness",
 			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
 			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
 		})

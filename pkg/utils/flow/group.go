@@ -27,6 +27,10 @@ type TaskGroup struct {
 	// dependency-respecting order without re-solving the dependency graph. The `tasks` map is
 	// retained for O(1) duplicate detection and intra-group dependency lookup.
 	taskOrder []TaskID
+	// originalID is the id assigned in `NewTaskGroup`. `WithID` updates `id` but leaves this untouched
+	// so `Graph.AddGroup` can detect an alias and namespace the contained task names — allowing the
+	// same group to be added multiple times to a graph under different aliases.
+	originalID TaskID
 
 	// dependencies holds the `TaskID`s of tasks or groups this group depends on.
 	// When the group is added to a `Graph`, every task in the group inherits this set.
@@ -41,6 +45,7 @@ type TaskGroup struct {
 func NewTaskGroup(id TaskID, tasks ...Task) TaskGroup {
 	return (TaskGroup{
 		id:           id,
+		originalID:   id,
 		tasks:        make(map[TaskID]Task, len(tasks)),
 		taskOrder:    make([]TaskID, 0, len(tasks)),
 		dependencies: make(TaskIDs),
@@ -96,6 +101,14 @@ func (g TaskGroup) SkipIf(skip bool) TaskGroup {
 	return g
 }
 
+// WithID overrides the group's id and returns the group for chaining. Useful when the same task group is added under
+// a different alias than the one baked in by its constructor, or when the same group is added multiple times to a
+// graph — `Graph.AddGroup` namespaces contained task names with the alias so their ids remain unique in the graph.
+func (g TaskGroup) WithID(id TaskID) TaskGroup {
+	g.id = id
+	return g
+}
+
 // AddGroup adds all tasks of the given `TaskGroup` to the graph as regular tasks and returns
 // their `TaskID`s so callers can wire them as dependencies of later `Add` calls.
 //
@@ -107,6 +120,9 @@ func (g TaskGroup) SkipIf(skip bool) TaskGroup {
 //   - Resolving a dependency that names another group (either the group value or its id) to
 //     the `TaskID`s of every task in that group.
 //   - OR-ing the group's `SkipIf` condition onto each task's own `Task.SkipIf`.
+//   - Namespacing task names with the group's alias when the group was renamed via `WithID`,
+//     so the same group can be added multiple times to the same graph without task-id
+//     collisions. Intra-group task-level dependencies are rewritten to the namespaced ids.
 //
 // Tasks are added in the order they were supplied to the group. Callers must ensure intra-group
 // dependencies are added before their dependents, just like when calling `Graph.Add` directly.
@@ -117,8 +133,6 @@ func (g TaskGroup) SkipIf(skip bool) TaskGroup {
 //
 // Like `Add`, this panics on duplicate task ids or unknown task-level dependencies.
 func (g *Graph) AddGroup(group TaskGroup) TaskIDs {
-	g.groups[group.id] = group
-
 	dependencies := make(TaskIDs, len(group.dependencies))
 	for dependency := range group.dependencies {
 		if gg, isGroup := g.groups[dependency]; isGroup {
@@ -128,16 +142,40 @@ func (g *Graph) AddGroup(group TaskGroup) TaskIDs {
 		}
 	}
 
+	// If the group was aliased via `WithID`, prefix contained task names with the alias so the same group can be
+	// added multiple times to the graph without task-id collisions. Intra-group dependencies must be rewritten to
+	// point at the namespaced ids.
+	aliased := group.id != group.originalID
+	rename := func(id TaskID) TaskID { return id }
+	if aliased {
+		rename = func(id TaskID) TaskID { return TaskID(string(group.id) + ": " + string(id)) }
+	}
+
 	ids := make(TaskIDs, len(group.tasks))
 	for _, id := range group.taskOrder {
 		task := group.tasks[id]
+		task.Name = string(rename(TaskID(task.Name)))
 		if task.Dependencies == nil {
 			task.Dependencies = make(TaskIDs, len(dependencies))
+		}
+		if aliased {
+			renamed := make(TaskIDs, len(task.Dependencies))
+			for depID := range task.Dependencies {
+				if _, inGroup := group.tasks[depID]; inGroup {
+					renamed.Insert(rename(depID))
+				} else {
+					renamed.Insert(depID)
+				}
+			}
+			task.Dependencies = renamed
 		}
 		task.Dependencies.Insert(dependencies)
 		task.SkipIf = task.SkipIf || group.skipIf
 		ids.Insert(g.Add(task))
 	}
 
+	// Register the group's namespaced task ids so later `AddGroup` calls can fan out this group's id
+	// via `WithDependencies` to the correct set of task ids in the graph.
+	g.groups[group.id] = ids
 	return ids
 }

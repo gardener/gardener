@@ -123,11 +123,13 @@ func run(ctx context.Context, opts *Options) error {
 
 		reconcileGardenerResourceManagerInPodNetwork = g.AddGroup(
 			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden).
+				WithID(botanist.TaskGroupReconcileGardenerResourceManager + "InPodNetwork").
 				WithDependencies(reconcileSystemComponents).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
 		reconcileExtensionControllersInPodNetwork = g.AddGroup(
 			b.ReconcileExtensionControllersTaskGroup(true).
+				WithID(gardenadmbotanist.TaskGroupReconcileExtensionControllers + "InPodNetwork").
 				WithDependencies(reconcileGardenerResourceManagerInPodNetwork).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
