@@ -136,12 +136,15 @@
     },
     {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
+      // Updates that match both this rule and the gomod make tidy rule above would run make generate only and
+      // silently skip make tidy, so this also runs make tidy.
       matchDatasources: [
         'go',
         'github-releases', // Required for the gardener groups.
       ],
       postUpgradeTasks: {
         commands: [
+          '/bin/bash -c "PATH=$PATH:$(go env GOROOT)/bin make tidy"',
           '/bin/bash -c "PATH=$PATH:$(go env GOROOT)/bin make generate MODE=sequential"',
         ],
         executionMode: 'branch',
