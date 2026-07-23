@@ -13,6 +13,7 @@ IS_GARDENER := $(shell go list -f '{{.Main}}' -m github.com/gardener/gardener)
 
 ifeq ($(IS_GARDENER),true)
 GARDENER_HACK_DIR          := ./hack
+GARDENER_TOOL_DIR          := ./hack/tools
 GARDENER_LOGCHECK_DIR      := ./hack/tools/logcheck
 else
 # dependency on github.com/gardener/gardener is optional.
@@ -226,17 +227,17 @@ $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGC
 endif
 
 $(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
-	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) $(GARDENER_HACK_DIR)/tools/install-promtool.sh
+	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) $(GARDENER_TOOL_DIR)/install-promtool.sh
 
 $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
-	@PROTOC_VERSION=$(PROTOC_VERSION) $(GARDENER_HACK_DIR)/tools/install-protoc.sh
+	@PROTOC_VERSION=$(PROTOC_VERSION) $(GARDENER_TOOL_DIR)/install-protoc.sh
 
 $(TYPOS): $(call tool_version_file,$(TYPOS),$(TYPOS_VERSION))
-	@TYPOS_VERSION=$(TYPOS_VERSION) bash $(GARDENER_HACK_DIR)/tools/install-typos.sh
+	@TYPOS_VERSION=$(TYPOS_VERSION) bash $(GARDENER_TOOL_DIR)/install-typos.sh
 
 ifeq ($(IS_GARDENER),true)
-$(REPORT_COLLECTOR): $(GARDENER_HACK_DIR)/tools/report-collector/*.go
-	go build -o $(REPORT_COLLECTOR) $(GARDENER_HACK_DIR)/tools/report-collector
+$(REPORT_COLLECTOR): $(GARDENER_TOOL_DIR)/report-collector/*.go
+	go build -o $(REPORT_COLLECTOR) $(GARDENER_TOOL_DIR)/report-collector
 else
 $(REPORT_COLLECTOR): go.mod
 	go build -o $(REPORT_COLLECTOR) github.com/gardener/gardener/hack/tools/report-collector
