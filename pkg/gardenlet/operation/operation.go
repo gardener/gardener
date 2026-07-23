@@ -263,6 +263,8 @@ func (b *Builder) Build(
 			}
 			operation.Seed = seed
 		}
+	} else {
+		operation.ShootClientSet = seedClientSet
 	}
 
 	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
