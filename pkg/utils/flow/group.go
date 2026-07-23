@@ -16,9 +16,17 @@ import (
 //
 // A `TaskGroup` value is safe to build up incrementally via the fluent `AddAll`, `WithDependencies`
 // and `SkipIf` methods before being added to a `Graph`.
+//
+// Tasks must be added in an order that respects intra-group task-level dependencies (dependencies
+// before dependents), mirroring `Graph.Add`. `Graph.AddGroup` iterates tasks in the order they were
+// added; an out-of-order dependency triggers the usual `g.Add` panic for the missing task.
 type TaskGroup struct {
 	id    TaskID
 	tasks map[TaskID]Task
+	// taskOrder preserves the insertion order of tasks so `Graph.AddGroup` can add them in a
+	// dependency-respecting order without re-solving the dependency graph. The `tasks` map is
+	// retained for O(1) duplicate detection and intra-group dependency lookup.
+	taskOrder []TaskID
 
 	// dependencies holds the `TaskID`s of tasks or groups this group depends on.
 	// When the group is added to a `Graph`, every task in the group inherits this set.
@@ -34,7 +42,8 @@ func NewTaskGroup(id TaskID, tasks ...Task) TaskGroup {
 	return (TaskGroup{
 		id:           id,
 		tasks:        make(map[TaskID]Task, len(tasks)),
-		dependencies: make(TaskIDs, len(tasks)),
+		taskOrder:    make([]TaskID, 0, len(tasks)),
+		dependencies: make(TaskIDs),
 	}).AddAll(tasks...)
 }
 
@@ -59,12 +68,13 @@ func (g TaskGroup) AddAll(tasks ...Task) TaskGroup {
 
 // Add adds a single task to the group and returns its `TaskID`.
 // It panics if a task with the same id is already present in the group.
-func (g TaskGroup) Add(task Task) TaskID {
+func (g *TaskGroup) Add(task Task) TaskID {
 	id := task.ID()
 	if _, ok := g.tasks[id]; ok {
 		panic(fmt.Sprintf("Task with id %q already exists in group %q", id, g.id))
 	}
 	g.tasks[id] = task
+	g.taskOrder = append(g.taskOrder, id)
 	return id
 }
 
@@ -98,6 +108,9 @@ func (g TaskGroup) SkipIf(skip bool) TaskGroup {
 //     the `TaskID`s of every task in that group.
 //   - OR-ing the group's `SkipIf` condition onto each task's own `Task.SkipIf`.
 //
+// Tasks are added in the order they were supplied to the group. Callers must ensure intra-group
+// dependencies are added before their dependents, just like when calling `Graph.Add` directly.
+//
 // Because resolution happens at `AddGroup` time, groups referenced by id via `WithDependencies`
 // must be added before the groups that depend on them; otherwise the id is treated as a plain
 // task id, which then panics for lack of a matching task.
@@ -106,7 +119,7 @@ func (g TaskGroup) SkipIf(skip bool) TaskGroup {
 func (g *Graph) AddGroup(group TaskGroup) TaskIDs {
 	g.groups[group.id] = group
 
-	dependencies := make(TaskIDs)
+	dependencies := make(TaskIDs, len(group.dependencies))
 	for dependency := range group.dependencies {
 		if gg, isGroup := g.groups[dependency]; isGroup {
 			dependencies.Insert(gg)
@@ -115,50 +128,15 @@ func (g *Graph) AddGroup(group TaskGroup) TaskIDs {
 		}
 	}
 
-	// Prepare the tasks by attaching the group-level dependencies and OR-ing the group's `SkipIf` in.
-	pending := make(map[TaskID]Task, len(group.tasks))
-	for id, task := range group.tasks {
+	ids := make(TaskIDs, len(group.tasks))
+	for _, id := range group.taskOrder {
+		task := group.tasks[id]
 		if task.Dependencies == nil {
 			task.Dependencies = make(TaskIDs, len(dependencies))
 		}
 		task.Dependencies.Insert(dependencies)
 		task.SkipIf = task.SkipIf || group.skipIf
-		pending[id] = task
-	}
-
-	// Delegate to `g.Add` in an order that respects intra-group task-level dependencies. Iterate until
-	// every task has been added; on each pass, add tasks whose intra-group dependencies have already
-	// been registered. Fail loudly on cycles or dangling intra-group dependencies to surface authoring
-	// bugs the same way `g.Add` would for a single-task graph.
-	ids := make(TaskIDs, len(group.tasks))
-	for len(pending) > 0 {
-		progress := false
-		for id, task := range pending {
-			ready := true
-			for dependencyID := range task.Dependencies {
-				if _, inGroup := group.tasks[dependencyID]; !inGroup {
-					continue
-				}
-				if _, added := g.tasks[dependencyID]; !added {
-					ready = false
-					break
-				}
-			}
-			if !ready {
-				continue
-			}
-			ids.Insert(g.Add(task))
-			delete(pending, id)
-			progress = true
-		}
-		if !progress {
-			// Every remaining task depends on another remaining task — either a cycle inside the group
-			// or a task-level dependency that names a task outside the group and outside the graph.
-			// Delegate to `g.Add` for one of them so it panics with its usual message.
-			for _, task := range pending {
-				g.Add(task)
-			}
-		}
+		ids.Insert(g.Add(task))
 	}
 
 	return ids

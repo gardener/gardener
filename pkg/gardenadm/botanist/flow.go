@@ -24,12 +24,14 @@ const (
 // into the pod network and depends on the pod-network `gardener-resource-manager`.
 func (b *GardenadmBotanist) ReconcileExtensionControllersTaskGroup(podNetworkAvailable bool) flow.TaskGroup {
 	var (
-		groupID, taskIDGardenerResourceManagerDependency = TaskGroupReconcileExtensionControllers, botanist.TaskGroupReconcileGardenerResourceManager
-		taskNameDeployment                               = "Deploying extension controllers"
-		taskNameWait                                     = "Waiting until extension controllers report readiness"
+		groupID                                 = TaskGroupReconcileExtensionControllers
+		taskIDGardenerResourceManagerDependency = botanist.TaskGroupReconcileGardenerResourceManager
+		taskNameDeployment                      = "Deploying extension controllers"
+		taskNameWait                            = "Waiting until extension controllers report readiness"
 	)
 	if podNetworkAvailable {
-		groupID, taskIDGardenerResourceManagerDependency = TaskGroupReconcileExtensionControllersInPodNetwork, botanist.TaskGroupReconcileGardenerResourceManagerInPodNetwork
+		groupID = TaskGroupReconcileExtensionControllersInPodNetwork
+		taskIDGardenerResourceManagerDependency = botanist.TaskGroupReconcileGardenerResourceManagerInPodNetwork
 		taskNameDeployment = "Redeploying extension controllers into pod network"
 		taskNameWait = "Waiting until extension controllers (in pod network) report readiness"
 	}
@@ -56,7 +58,7 @@ func (b *GardenadmBotanist) ReconcileExtensionControllersTaskGroup(podNetworkAva
 // TaskGroupReconcileNetworkPolicies is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileNetworkPolicies flow.TaskID = "TaskGroupReconcileNetworkPolicies"
 
-// ReconcileNetworkPoliciesTaskGroup returns the flow.TaskGroup for initializing the secret management.
+// ReconcileNetworkPoliciesTaskGroup returns the flow.TaskGroup for reconciling the network policies.
 func (b *GardenadmBotanist) ReconcileNetworkPoliciesTaskGroup() flow.TaskGroup {
 	return flow.NewTaskGroup(TaskGroupReconcileNetworkPolicies, flow.Task{
 		Name: "Deploying network policies",

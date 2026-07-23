@@ -29,7 +29,8 @@ import (
 const TaskGroupDeployNamespaces flow.TaskID = "TaskGroupDeployNamespaces"
 
 // DeployNamespacesTaskGroup returns the flow.TaskGroup for deploying the control plane namespace and the garden
-// namespace. The garden namespace is only deployed for self-hosted shoots.
+// namespace. The garden namespace is only deployed on machines that run the shoot's control plane, i.e., not during
+// `gardenadm bootstrap`.
 func (b *Botanist) DeployNamespacesTaskGroup() flow.TaskGroup {
 	return flow.NewTaskGroup(TaskGroupDeployNamespaces,
 		flow.Task{
@@ -167,12 +168,13 @@ func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: taskNameDeployment,
 			Fn: func(ctx context.Context) error {
-				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 
 				if shootIsGarden || gardenadmBootstrap {
 					return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 				}
+
+				b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 
 				// Deploy sequentially: only `RuntimeResourceManager` installs the `ManagedResource` CRD, and
 				// `ResourceManager.Deploy` creates a `ManagedResource` object on the same client.

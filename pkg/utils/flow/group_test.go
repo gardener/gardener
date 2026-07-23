@@ -205,9 +205,8 @@ var _ = Describe("Graph #AddGroup", func() {
 
 		Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
 		executed := rec.executed()
-		Expect(executed).To(ContainElements("pre", "extra", "a"))
-		Expect(slices.Index(executed, "a")).To(BeNumerically(">", slices.Index(executed, "pre")))
-		Expect(slices.Index(executed, "a")).To(BeNumerically(">", slices.Index(executed, "extra")))
+		Expect(executed[:2]).To(ConsistOf("pre", "extra"))
+		Expect(executed[2]).To(Equal("a"))
 	})
 
 	It("should panic when a task id already exists in the graph", func() {
@@ -219,24 +218,27 @@ var _ = Describe("Graph #AddGroup", func() {
 		}).To(Panic())
 	})
 
-	It("should respect intra-group task-level dependencies regardless of map iteration order", func() {
-		// `group.tasks` is a Go map; iterating it in insertion order is not guaranteed. Adding a task
-		// before its intra-group dependency has been registered would panic at `g.Add`. `AddGroup`
-		// must therefore add tasks in a dependency-respecting order. Run the scenario many times to
-		// beat the map-iteration randomness.
-		for range 50 {
-			var (
-				rec   = &recorder{}
-				graph = flow.NewGraph("foo")
-			)
+	It("should add tasks in the order they were supplied to the group", func() {
+		var (
+			rec   = &recorder{}
+			graph = flow.NewGraph("foo")
+		)
 
-			first := rec.task("first")
-			second := rec.task("second", flow.TaskID("first"))
-			third := rec.task("third", flow.TaskID("second"))
+		first := rec.task("first")
+		second := rec.task("second", flow.TaskID("first"))
+		third := rec.task("third", flow.TaskID("second"))
 
-			graph.AddGroup(flow.NewTaskGroup("group", third, first, second))
-			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
-			Expect(rec.executed()).To(Equal([]string{"first", "second", "third"}))
-		}
+		graph.AddGroup(flow.NewTaskGroup("group", first, second, third))
+		Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+		Expect(rec.executed()).To(Equal([]string{"first", "second", "third"}))
+	})
+
+	It("should panic when an intra-group dependency is supplied after its dependent", func() {
+		graph := flow.NewGraph("foo")
+
+		first := flow.Task{Name: "first"}
+		second := flow.Task{Name: "second", Dependencies: flow.NewTaskIDs(flow.TaskID("first"))}
+
+		Expect(func() { graph.AddGroup(flow.NewTaskGroup("group", second, first)) }).To(Panic())
 	})
 })
