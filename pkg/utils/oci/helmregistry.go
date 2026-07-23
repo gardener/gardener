@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -31,6 +32,9 @@ const (
 
 	localRegistryPattern = "registry.local.gardener.cloud:"
 )
+
+// chartsCABundleFunc is an alias for imagevector.ChartsCABundle. Exposed for testing purposes.
+var chartsCABundleFunc = imagevector.ChartsCABundle
 
 type secretNamespace struct{}
 
@@ -83,6 +87,7 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 
 	// Configure custom transport with CA bundle if provided
+	var caCertPool *x509.CertPool
 	if oci.CABundleSecretRef != nil {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.CABundleSecretRef.Name}}
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
@@ -96,11 +101,22 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
 		}
 
-		caCertPool := x509.NewCertPool()
+		caCertPool = x509.NewCertPool()
 		if !caCertPool.AppendCertsFromPEM(caBundle) {
 			return nil, errors.New("failed to append CA certificates from bundle")
 		}
+	}
 
+	if chartsCABundle := chartsCABundleFunc(); chartsCABundle != nil && chartsCABundle.Inline != nil {
+		if caCertPool == nil {
+			caCertPool = x509.NewCertPool()
+		}
+		if !caCertPool.AppendCertsFromPEM([]byte(*chartsCABundle.Inline)) {
+			return nil, errors.New("failed to append CA certificates from charts image vector bundle")
+		}
+	}
+
+	if caCertPool != nil {
 		transport := remote.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig = &tls.Config{
 			RootCAs:    caCertPool,

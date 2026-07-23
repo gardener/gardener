@@ -173,3 +173,18 @@ The respective component is responsible for using the overwritten images instead
 Some Gardener components might also deploy [packaged Helm charts](https://helm.sh/docs/helm/helm_package/) which are pulled from an OCI repository.
 The concepts are the very same as for the container images.
 The only difference is that the environment variable for overwriting this chart image vector is called `IMAGEVECTOR_OVERWRITE_CHARTS`.
+
+If the chart OCI registry uses a custom CA, you can supply it via `caBundle.inline` in the same override file.
+Gardener will automatically include this CA in the TLS trust store whenever it pulls an OCI Helm chart.
+
+```yaml
+images:
+- name: my-chart
+  repository: my-private-registry.example.com/charts/my-chart
+  tag: "1.2.3"
+caBundle:
+  inline: |
+    -----BEGIN CERTIFICATE-----
+    <base64-encoded DER certificate>
+    -----END CERTIFICATE-----
+```
