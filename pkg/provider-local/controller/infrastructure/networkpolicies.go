@@ -46,17 +46,17 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 			MatchLabels: machineSelector,
 		},
 		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			allowFromWorldToNodePorts(),
+			allowFromLoadBalancers(), // incoming LB traffic to node-ports + health check endpoint
 			allowFromBastionToSSH(),
 			{From: machinePodPeers()}, // allow intra-machine communication
 		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{
 			allowToIstioGateways(cluster), // kube-proxy might short-circuit traffic to the istio-ingressgateway pods
-			allowToKindNetwork(),          // required to reach registry, bind9 and LBs
-			allowToNodeLocalDNS(),         // machine pods explicitly use node-local DNS.
+			allowToBind9(),                // machine pods explicitly use node-local DNS.
 			allowToPublicNetworks(),       // In case we need to pull manifests from public registries, or a workload wants to reach the public internet
 			allowToLoadBalancers(),
 			{To: machinePodPeers()},
+			{To: kindPeers()}, // required to reach registry (mirrors) and LBs
 		},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 	}
@@ -72,6 +72,13 @@ func machinePodPeers() []networkingv1.NetworkPolicyPeer {
 	return []networkingv1.NetworkPolicyPeer{{
 		PodSelector: &metav1.LabelSelector{MatchLabels: machineSelector},
 	}}
+}
+
+func kindPeers() []networkingv1.NetworkPolicyPeer {
+	return []networkingv1.NetworkPolicyPeer{
+		{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/24"}},
+		{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::/64"}},
+	}
 }
 
 func allowToPublicNetworks() networkingv1.NetworkPolicyEgressRule {
@@ -136,7 +143,7 @@ func allowToIstioGateways(cluster *extensionscontroller.Cluster) networkingv1.Ne
 	return istioGatewaysRule
 }
 
-func allowToNodeLocalDNS() networkingv1.NetworkPolicyEgressRule {
+func allowToBind9() networkingv1.NetworkPolicyEgressRule {
 	return networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{
 			{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.255.53/32"}},
@@ -149,13 +156,20 @@ func allowToNodeLocalDNS() networkingv1.NetworkPolicyEgressRule {
 	}
 }
 
-func allowFromWorldToNodePorts() networkingv1.NetworkPolicyIngressRule {
+func allowFromLoadBalancers() networkingv1.NetworkPolicyIngressRule {
 	return networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{{
-			Port:     new(intstr.FromInt32(30000)),
-			EndPort:  new(int32(32767)),
-			Protocol: new(corev1.ProtocolTCP),
-		}},
+		From: kindPeers(),
+		Ports: []networkingv1.NetworkPolicyPort{
+			{
+				Port:     new(intstr.FromInt32(30000)),
+				EndPort:  new(int32(32767)),
+				Protocol: new(corev1.ProtocolTCP),
+			},
+			{
+				Port:     new(intstr.FromInt32(10256)),
+				Protocol: new(corev1.ProtocolTCP),
+			},
+		},
 	}
 }
 
