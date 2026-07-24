@@ -81,6 +81,12 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
+	case backupBucketResource:
+		return h.admitBackupBucket(gardenletShootInfo, request)
+
+	case backupEntryResource:
+		return h.admitBackupEntry(ctx, gardenletShootInfo, request)
+
 	case certificateSigningRequestResource:
 		return h.admitCertificateSigningRequest(gardenletShootInfo, userType, request)
 
@@ -118,6 +124,56 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 	}
 
 	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected resource: %q", requestResource))
+}
+
+func (h *Handler) admitBackupBucket(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := h.Decoder.Decode(request, backupBucket); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	if backupBucket.Spec.ShootRef == nil {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+	}
+
+	return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
+}
+
+func (h *Handler) admitBackupEntry(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	backupEntry := &gardencorev1beta1.BackupEntry{}
+	if err := h.Decoder.Decode(request, backupEntry); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	if backupEntry.Spec.ShootRef == nil {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+	}
+
+	if resp := h.admit(gardenletShootInfo, types.NamespacedName{Name: backupEntry.Spec.ShootRef.Name, Namespace: backupEntry.Spec.ShootRef.Namespace}); !resp.Allowed {
+		return resp
+	}
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := h.Client.Get(ctx, client.ObjectKey{Name: backupEntry.Spec.BucketName}, backupBucket); err != nil {
+		if apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusForbidden, err)
+		}
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if backupBucket.Spec.ShootRef == nil {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+	}
+
+	return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
 }
 
 func (h *Handler) admitCertificateSigningRequest(gardenletShootInfo types.NamespacedName, userType gardenletidentity.UserType, request admission.Request) admission.Response {

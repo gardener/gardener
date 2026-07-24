@@ -1158,16 +1158,42 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 	}
 
 	var (
-		_ = g.AddGroup(b.DeployNamespacesTaskGroup())
-		_ = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		_ = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
-		_ = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
-		_ = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
-		_ = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden))
-		_ = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
-		_ = g.AddGroup(b.ReconcileInfrastructureTaskGroup())
-		_ = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
-		_ = g.AddGroup(b.ReconcileSystemComponentsTaskGroup())
+		_                                = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                                = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		_                                = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		_                                = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
+		_                                = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
+		reconcileGardenerResourceManager = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden))
+		_                                = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
+		_                                = g.AddGroup(b.ReconcileInfrastructureTaskGroup())
+		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup())
+		_                                = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		reconcileSystemComponents        = g.AddGroup(b.ReconcileSystemComponentsTaskGroup())
+
+		deployBackupBucketInGarden = g.Add(flow.Task{
+			Name:         "Deploying BackupBucket for ETCD data",
+			Fn:           b.Shoot.Components.BackupBucket.Deploy,
+			SkipIf:       !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, reconcileSystemComponents),
+		})
+		waitUntilBackupBucketInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the backup bucket has been reconciled",
+			Fn:           b.Shoot.Components.BackupBucket.Wait,
+			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(deployBackupBucketInGarden),
+		})
+		deployBackupEntryInGarden = g.Add(flow.Task{
+			Name:         "Deploying BackupEntry for ETCD data",
+			Fn:           b.DeployBackupEntry,
+			SkipIf:       !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketInGardenReconciled),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until the backup entry has been reconciled",
+			Fn:           b.Shoot.Components.BackupEntry.Wait,
+			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
+		})
 	)
 
 	return nil
