@@ -5,8 +5,6 @@
 package shared
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -23,7 +21,7 @@ func NewPVCAutoscaler(
 	managedResourceName string,
 	prometheusServiceName string,
 	serviceMonitorLabel string,
-	injectScrapeTargetAnnotations func(*corev1.Service, ...networkingv1.NetworkPolicyPort) error,
+	isGardenCluster bool,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -37,12 +35,12 @@ func NewPVCAutoscaler(
 		c,
 		gardenNamespaceName,
 		pvcautoscaler.Values{
-			Image:                         image.String(),
-			PriorityClassName:             priorityClassName,
-			ManagedResourceName:           managedResourceName,
-			PrometheusServiceName:         prometheusServiceName,
-			ServiceMonitorLabel:           serviceMonitorLabel,
-			InjectScrapeTargetAnnotations: injectScrapeTargetAnnotations,
+			Image:                 image.String(),
+			PriorityClassName:     priorityClassName,
+			ManagedResourceName:   managedResourceName,
+			PrometheusServiceName: prometheusServiceName,
+			ServiceMonitorLabel:   serviceMonitorLabel,
+			IsGardenCluster:       isGardenCluster,
 		},
 	)
 
