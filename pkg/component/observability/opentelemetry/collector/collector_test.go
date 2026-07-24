@@ -14,7 +14,6 @@ import (
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -113,6 +112,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("ca-bundle")}})).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -195,10 +195,12 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-vali",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--insecure-listen-address=[::]:8081",
+				"--secure-listen-address=[::]:8081",
 				"--upstream=http://logging:3100/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
+				"--tls-cert-file=/tls/tls.crt",
+				"--tls-private-key-file=/tls/tls.key",
 				"--v=6",
 			},
 			Resources: corev1.ResourceRequirements{
@@ -216,6 +218,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
+				{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
 			},
 		}
 
@@ -223,10 +226,12 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-otlp",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--insecure-listen-address=[::]:8080",
+				"--secure-listen-address=[::]:8080",
 				"--upstream=http://127.0.0.1:4317/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
+				"--tls-cert-file=/tls/tls.crt",
+				"--tls-private-key-file=/tls/tls.key",
 				"--upstream-force-h2c",
 				"--v=6",
 			},
@@ -245,6 +250,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
+				{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
 			},
 		}
 
@@ -562,7 +568,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		}
 
 		openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
-		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
+		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume, {
+			Name: "tls-certificate",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: "logging-tls",
+				},
+			},
+		}}
 		openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: kubeRBACValiServicePort,
 		})
@@ -623,12 +636,12 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				getCaBundleSecret(),
 				vpa,
 				serviceMonitor,
 				serviceAccount,
 			))
 
-			// Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "logging-tls", Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -681,6 +694,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				getCaBundleSecret(),
 				vpa,
 				serviceMonitor,
 				serviceAccount,
@@ -728,6 +742,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		It("should use custom CA secret name for certificate signing", func() {
 			values.SecretNameServerCA = "custom-ca-secret"
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "custom-ca-secret", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("custom-ca-bundle")}})).To(Succeed())
 
 			component = New(c, namespace, values, fakeSecretManager)
 
@@ -741,6 +756,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		It("should use seed CA secret when SecretNameServerCA is set to SecretNameCASeed", func() {
 			values.SecretNameServerCA = v1beta1constants.SecretNameCASeed
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCASeed, Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("seed-ca-bundle")}})).To(Succeed())
 
 			component = New(c, namespace, values, fakeSecretManager)
 
@@ -771,6 +787,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				getCaBundleSecret(),
 				vpa,
 				serviceMonitor,
 				serviceAccount,
@@ -807,6 +824,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				getCaBundleSecret(),
 				vpa,
 				serviceMonitor,
 				serviceAccount,
@@ -1002,11 +1020,8 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 			Host:     "opentelemetry-collector-collector.some-namespace.svc.cluster.local",
 			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 				LoadBalancer: &istioapinetworkingv1beta1.LoadBalancerSettings{
-					LocalityLbSetting: &istioapinetworkingv1beta1.LocalityLoadBalancerSetting{
-						FailoverPriority: []string{"topology.kubernetes.io/zone"},
-						Enabled: &wrapperspb.BoolValue{
-							Value: true,
-						},
+					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
+						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
 					},
 				},
 				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
@@ -1021,8 +1036,11 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 						UseClientProtocol: true,
 					},
 				},
-				OutlierDetection: &istioapinetworkingv1beta1.OutlierDetection{},
-				Tls:              &istioapinetworkingv1beta1.ClientTLSSettings{},
+				Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+					CredentialName: "some-namespace-logging-" + v1beta1constants.SecretNameCACluster,
+					Sni:            ingressHost,
+				},
 			},
 		},
 	}
@@ -1036,6 +1054,19 @@ func getTLSSecret(tlsSecret *corev1.Secret) *corev1.Secret {
 			Labels:    getLabels(),
 		},
 		Data: tlsSecret.Data,
+	}
+}
+
+func getCaBundleSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "some-namespace-logging-" + v1beta1constants.SecretNameCACluster,
+			Namespace: "istio-ingress",
+			Labels:    getLabels(),
+		},
+		Data: map[string][]byte{
+			"cacert": []byte("ca-bundle"),
+		},
 	}
 }
 
