@@ -31,3 +31,9 @@ echo "Found etcd version string: $ETCD_VERSION"
 # Update images.yaml with the resolved etcd tag
 echo "Updating $1 with etcd $ETCD_VERSION tag"
 yq -i "(.images[] | select(.name == \"etcd\") ).tag = \"$ETCD_VERSION\"" "$1"
+
+# Extract etcd-backup-restore-next tag from etcd-druid images.yaml and update containers.yaml
+ETCDBRCTL_TAG=$(yq '.images[] | select(.name == "etcd-backup-restore-next") | .tag' "$WORKDIR/images.yaml")
+echo "Found etcd-backup-restore tag: $ETCDBRCTL_TAG"
+echo "Updating $1 with etcd-backup-restore $ETCDBRCTL_TAG tag"
+yq -i "(.images[] | select(.name == \"etcd-backup-restore\") ).tag = \"$ETCDBRCTL_TAG\"" "$1"

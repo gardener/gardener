@@ -61,6 +61,7 @@ func (b *Botanist) deployETCD(role string, bootstrapEtcdBackupPath string) func(
 				return fmt.Errorf("failed fetching image %s: %w", imagevector.ContainerImageNameEtcdBackupRestore, err)
 			}
 
+			//TODO(Kostov6): support any path after this information is extracted from the discovered backup resources
 			// Path structure: <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2
 			// Strip the trailing version dir (e.g. "v2") to get the etcd-main dir.
 			etcdMainDir := filepath.Dir(bootstrapEtcdBackupPath)               // .../etcd-main

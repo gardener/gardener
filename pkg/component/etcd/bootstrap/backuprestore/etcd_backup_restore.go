@@ -72,6 +72,7 @@ func (cfg *Config) InitContainer(role, dataVolumeName string) corev1.Container {
 			RunAsGroup:               new(int64(0)),
 			AllowPrivilegeEscalation: new(false),
 		},
+		// using initialize as restore is for manual/administrative restores
 		Args: []string{
 			"initialize",
 			"--storage-provider=Local",
