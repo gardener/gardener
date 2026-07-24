@@ -380,7 +380,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn: func(ctx context.Context) error {
-				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd)
+				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd, b.BackupDataPath)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilEtcdsReady),
 		})

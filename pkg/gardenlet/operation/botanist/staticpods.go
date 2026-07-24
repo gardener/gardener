@@ -40,7 +40,7 @@ type staticControlPlaneComponent struct {
 	mutate       func(*corev1.Pod)
 }
 
-func (b *Botanist) deployETCD(role string) func(context.Context) error {
+func (b *Botanist) deployETCD(role string, bootstrapEtcdBackupPath string) func(context.Context) error {
 	var portClient, portPeer, portMetrics int32 = 2379, 2380, 2381
 	if role == v1beta1constants.ETCDRoleEvents {
 		portClient, portPeer, portMetrics = etcdconstants.StaticPodPortEtcdEventsClient, 2383, 2384
@@ -68,7 +68,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	return b.DeployKubeAPIServer(ctx)
 }
 
-func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool) []staticControlPlaneComponent {
+func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool, bootstrapEtcdBackupPath string) []staticControlPlaneComponent {
 	var (
 		components []staticControlPlaneComponent
 
@@ -85,8 +85,8 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool) []staticC
 
 	if useBootstrapEtcd {
 		components = append(components,
-			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
-			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleMain, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
 		)
 	} else {
 		components = append(components,
@@ -105,12 +105,12 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool) []staticC
 // DeployStaticControlPlaneDeployments deploys the deployments for the static control plane components. It also updates
 // the OperatingSystemConfig, waits for it to be reconciled by the OS extension, and deploys the ManagedResource
 // containing the Secret with OperatingSystemConfig for gardener-node-agent.
-func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool) error {
-	if err := b.DeployControlPlaneDeployments(ctx, useBootstrapEtcd); err != nil {
+func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) error {
+	if err := b.DeployControlPlaneDeployments(ctx, useBootstrapEtcd, bootstrapEtcdBackupPath); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd); err != nil {
+	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, bootstrapEtcdBackupPath); err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 
@@ -127,8 +127,8 @@ func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useB
 }
 
 // DeployControlPlaneDeployments runs the Deploy function of the control plane components.
-func (b *Botanist) DeployControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool) error {
-	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd) {
+func (b *Botanist) DeployControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) error {
+	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, bootstrapEtcdBackupPath) {
 		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
 			return fmt.Errorf("failed deploying %q: %w", component.name, err)
 		}
@@ -185,8 +185,8 @@ func (b *Botanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Conte
 
 // DeployOperatingSystemConfigWithStaticPods deploys the OperatingSystemConfig containing the files for the control
 // plane components running as static pods.
-func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd bool) (*operatingsystemconfig.Data, string, error) {
-	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd)
+func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) (*operatingsystemconfig.Data, string, error) {
+	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd, bootstrapEtcdBackupPath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
@@ -248,10 +248,10 @@ func (s staticPods) allFiles() []extensionsv1alpha1.File {
 	return files
 }
 
-func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd bool) (staticPods, error) {
+func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) (staticPods, error) {
 	var pods staticPods
 
-	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd) {
+	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, bootstrapEtcdBackupPath) {
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: component.name, Namespace: b.Shoot.ControlPlaneNamespace}, component.targetObject); err != nil {
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
