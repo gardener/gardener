@@ -133,6 +133,10 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(reconcileGardenerResourceManagerInPodNetwork).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
+		reconcileControlPlane = g.AddGroup(
+			b.ReconcileControlPlaneTaskGroup().
+				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
+		)
 		syncPointBootstrapped = flow.NewTaskIDs(
 			reconcileNetworkPolicies,
 			reconcileGardenerResourceManager,
@@ -173,10 +177,7 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       !allowBackup || opts.UseBootstrapEtcd,
 			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
 		})
-		reconcileControlPlane = g.AddGroup(
-			b.ReconcileControlPlaneTaskGroup().
-				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
-		)
+
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
