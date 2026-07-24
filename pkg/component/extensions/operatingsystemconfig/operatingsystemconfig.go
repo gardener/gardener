@@ -56,8 +56,6 @@ const (
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
 	// of an OperatingSystemConfig resource.
 	DefaultTimeout = 3 * time.Minute
-	// WorkerPoolHashesSecretName is the name of the secret that tracks the OSC key calculation version used for each worker pool.
-	WorkerPoolHashesSecretName = "worker-pools-operatingsystemconfig-hashes" // #nosec G101 -- No credential.
 )
 
 // TimeNow returns the current time. Exposed for testing.
@@ -339,14 +337,7 @@ func (o *operatingSystemConfig) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes all the OperatingSystemConfig resources.
 func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
-	if err := o.deleteOperatingSystemConfigResources(ctx, sets.New[string]()); err != nil {
-		return err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
-	}
-	return client.IgnoreNotFound(o.client.Delete(ctx, secret))
+	return o.deleteOperatingSystemConfigResources(ctx, sets.New[string]())
 }
 
 func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context.Context, wantedOSCNames sets.Set[string]) error {
