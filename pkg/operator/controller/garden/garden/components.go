@@ -346,7 +346,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(garden, c.istio.GetValues().IngressGateway)
+	c.vali, err = r.newVali(garden.Spec.RuntimeCluster.Settings, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -390,7 +390,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(garden)
+	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings)
 	if err != nil {
 		return
 	}
@@ -505,7 +505,7 @@ func (r *Reconciler) newPVCAutoscaler(garden *operatorv1alpha1.Garden) (componen
 		pvcautoscaler.PVCAutoscalerGardenManagedResourceName,
 		"prometheus-garden",
 		gardenprometheus.Label,
-		gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets,
+		true,
 	)
 }
 
@@ -1452,7 +1452,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the vali config")
 	}
@@ -1471,7 +1471,7 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden, ingressGatewayValu
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
 		vali.PVCAutoscalingConfig{
-			Enabled:        pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
+			Enabled:        pvcAutoscalerEnabled(settings),
 			MaxCapacity:    resource.MustParse("200Gi"),
 			AutoscalerName: "garden",
 		},
@@ -1489,7 +1489,7 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden, ingressGatewayValu
 	return deployer, nil
 }
 
-func (r *Reconciler) newVictoriaLogs(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings) (component.DeployWaiter, error) {
 	deployer, err := sharedcomponent.NewVictoriaLogs(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1499,7 +1499,7 @@ func (r *Reconciler) newVictoriaLogs(garden *operatorv1alpha1.Garden) (component
 		nil,
 		true,
 		victorialogs.PVCAutoscalingConfig{
-			Enabled:        pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
+			Enabled:        pvcAutoscalerEnabled(settings),
 			MaxCapacity:    resource.MustParse("200Gi"),
 			AutoscalerName: "garden",
 		},

@@ -55,9 +55,8 @@ type Values struct {
 	PrometheusServiceName string
 	// ServiceMonitorLabel is the Prometheus instance label for the ServiceMonitor.
 	ServiceMonitorLabel string
-	// InjectScrapeTargetAnnotations injects the appropriate network policy annotation
-	// allowing Prometheus to scrape the metrics Service.
-	InjectScrapeTargetAnnotations func(*corev1.Service, ...networkingv1.NetworkPolicyPort) error
+	// IsGardenCluster specifies if PVCAutoscaler is being deployed in a cluster registered as a Garden.
+	IsGardenCluster bool
 }
 
 type pvcAutoscaler struct {
@@ -94,10 +93,15 @@ func (p *pvcAutoscaler) Deploy(ctx context.Context) error {
 		serviceMonitor     = p.serviceMonitor()
 	)
 
-	utilruntime.Must(p.values.InjectScrapeTargetAnnotations(service, networkingv1.NetworkPolicyPort{
+	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(metricsPort)),
 		Protocol: new(corev1.ProtocolTCP),
-	}))
+	}
+	if p.values.IsGardenCluster {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, metricsNetworkPolicyPort))
+	} else {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsNetworkPolicyPort))
+	}
 
 	serializedResources, err := registry.AddAllAndSerialize(
 		serviceAccount,

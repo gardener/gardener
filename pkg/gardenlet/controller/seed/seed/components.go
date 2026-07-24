@@ -890,7 +890,7 @@ func (r *Reconciler) newPVCAutoscaler(settings *gardencorev1beta1.SeedSettings) 
 		pvcautoscaler.PVCAutoscalerManagedResourceName,
 		"prometheus-cache",
 		seedprometheus.Label,
-		gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets,
+		false,
 	)
 }
 
