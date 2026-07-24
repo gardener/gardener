@@ -744,11 +744,30 @@ func PrepareGardenletChartValues(
 		return nil, fmt.Errorf("failed setting selfHostedShoot value for self-hosted shoot: %w", err)
 	}
 
-	return utils.SetToValuesMap(values, map[string]any{
+	values, err = utils.SetToValuesMap(values, map[string]any{
 		"key":      "node-role.kubernetes.io/control-plane",
 		"operator": "Exists",
 		"effect":   "NoSchedule",
 	}, "tolerations", 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed setting control-plane toleration for self-hosted shoot: %w", err)
+	}
+
+	// For unmanaged self-hosted shoots, gardenlet orchestrates in-place node updates and cordons the node during
+	// drain. Tolerate the unschedulable taint so the gardenlet pod can be rescheduled onto the (still-cordoned) node
+	// after a reboot, allowing gardenlet to stay responsible for uncordoning once the update completes.
+	if !v1beta1helper.HasManagedInfrastructure(shoot) {
+		values, err = utils.SetToValuesMap(values, map[string]any{
+			"key":      corev1.TaintNodeUnschedulable,
+			"operator": "Exists",
+			"effect":   "NoSchedule",
+		}, "tolerations", 1)
+		if err != nil {
+			return nil, fmt.Errorf("failed setting unschedulable toleration for unmanaged self-hosted shoot: %w", err)
+		}
+	}
+
+	return values, nil
 }
 
 // ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.

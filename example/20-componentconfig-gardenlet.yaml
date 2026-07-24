@@ -74,7 +74,7 @@ controllers:
   shootState:
     concurrentSyncs: 5
     syncPeriod: 6h
-  inPlaceUpdate:
+  shootInPlaceUpdate:
     drainTimeout: 20m
     updateTimeout: 30m
     podEvictionRetryInterval: 20s

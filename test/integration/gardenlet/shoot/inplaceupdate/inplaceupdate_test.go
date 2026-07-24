@@ -341,17 +341,13 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			setReadyForUpdateCondition(node, fakeClock.Now())
 
 			By("Create two GRM pods and one unrelated pod in the control plane namespace")
-			grm1 := newPod(uniqueName("grm-1"), testNamespace.Name, "", func(p *corev1.Pod) {
-				p.Spec.NodeName = ""
+			grm1 := newPod(uniqueName("grm-1"), testNamespace.Name, node.Name, func(p *corev1.Pod) {
 				p.Labels[v1beta1constants.LabelApp] = v1beta1constants.DeploymentNameGardenerResourceManager
 			})
-			grm2 := newPod(uniqueName("grm-2"), testNamespace.Name, "", func(p *corev1.Pod) {
-				p.Spec.NodeName = ""
+			grm2 := newPod(uniqueName("grm-2"), testNamespace.Name, node.Name, func(p *corev1.Pod) {
 				p.Labels[v1beta1constants.LabelApp] = v1beta1constants.DeploymentNameGardenerResourceManager
 			})
-			other := newPod(uniqueName("other"), testNamespace.Name, "", func(p *corev1.Pod) {
-				p.Spec.NodeName = ""
-			})
+			other := newPod(uniqueName("other"), testNamespace.Name, node.Name)
 			Expect(testClient.Create(ctx, grm1)).To(Succeed())
 			Expect(testClient.Create(ctx, grm2)).To(Succeed())
 			Expect(testClient.Create(ctx, other)).To(Succeed())

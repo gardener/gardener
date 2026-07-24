@@ -9,7 +9,7 @@ resources:
 
 patches:
 - path: patch-shoot.yaml
-# TODO(acumino): Uncomment this once the shoot reconciler is enabled in the gardenlet for self-hosted shoots.
+# TODO(acumino): Uncomment this once the gardenlet's Shoot flow starts reconciling OSCs for self-hosted shoots.
 # - patch: |
 #     - op: add
 #       path: /spec/provider/workers/0/updateStrategy

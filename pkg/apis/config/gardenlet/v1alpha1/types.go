@@ -193,9 +193,9 @@ type GardenletControllerConfiguration struct {
 	// ShootState defines the configuration of the ShootState controller.
 	// +optional
 	ShootState *ShootStateControllerConfiguration `json:"shootState,omitempty"`
-	// InPlaceUpdate defines the configuration of the InPlaceUpdate controller.
+	// ShootInPlaceUpdate defines the configuration of the ShootInPlaceUpdate controller.
 	// +optional
-	InPlaceUpdate *InPlaceUpdateControllerConfiguration `json:"inPlaceUpdate,omitempty"`
+	ShootInPlaceUpdate *ShootInPlaceUpdateControllerConfiguration `json:"shootInPlaceUpdate,omitempty"`
 	// ShootStatus defines the configuration of the ShootStatus controller.
 	// +optional
 	ShootStatus *ShootStatusControllerConfiguration `json:"shootStatus,omitempty"`
@@ -389,9 +389,9 @@ type ShootStatusControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
-// InPlaceUpdateControllerConfiguration defines the configuration of the InPlaceUpdate controller. It orchestrates
+// ShootInPlaceUpdateControllerConfiguration defines the configuration of the ShootInPlaceUpdate controller. It orchestrates
 // in-place node updates for self-hosted shoots (cordon, drain, and completion tracking).
-type InPlaceUpdateControllerConfiguration struct {
+type ShootInPlaceUpdateControllerConfiguration struct {
 	// DrainTimeout is the overall maximum duration for a node drain before remaining pods are force-deleted.
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`

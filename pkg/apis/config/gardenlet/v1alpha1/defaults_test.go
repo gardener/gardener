@@ -45,7 +45,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.SeedCare).NotTo(BeNil())
 			Expect(obj.Controllers.ShootState).NotTo(BeNil())
-			Expect(obj.Controllers.InPlaceUpdate).NotTo(BeNil())
+			Expect(obj.Controllers.ShootInPlaceUpdate).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(Equal(config.LogLevelInfo))
@@ -463,13 +463,13 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
-	Describe("InPlaceUpdateControllerConfiguration defaulting", func() {
+	Describe("ShootInPlaceUpdateControllerConfiguration defaulting", func() {
 		It("should default the in-place update controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.InPlaceUpdate.DrainTimeout).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
-			Expect(obj.Controllers.InPlaceUpdate.UpdateTimeout).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
-			Expect(obj.Controllers.InPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Second})))
+			Expect(obj.Controllers.ShootInPlaceUpdate.DrainTimeout).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
+			Expect(obj.Controllers.ShootInPlaceUpdate.UpdateTimeout).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
+			Expect(obj.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Second})))
 		})
 
 		It("should not overwrite already set values for the in-place update controller configuration", func() {
@@ -477,7 +477,7 @@ var _ = Describe("Defaults", func() {
 			updateTimeout := metav1.Duration{Duration: 10 * time.Minute}
 			podEvictionRetryInterval := metav1.Duration{Duration: 30 * time.Second}
 			obj.Controllers = &GardenletControllerConfiguration{
-				InPlaceUpdate: &InPlaceUpdateControllerConfiguration{
+				ShootInPlaceUpdate: &ShootInPlaceUpdateControllerConfiguration{
 					DrainTimeout:             &drainTimeout,
 					UpdateTimeout:            &updateTimeout,
 					PodEvictionRetryInterval: &podEvictionRetryInterval,
@@ -486,9 +486,9 @@ var _ = Describe("Defaults", func() {
 
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.InPlaceUpdate.DrainTimeout).To(PointTo(Equal(drainTimeout)))
-			Expect(obj.Controllers.InPlaceUpdate.UpdateTimeout).To(PointTo(Equal(updateTimeout)))
-			Expect(obj.Controllers.InPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(podEvictionRetryInterval)))
+			Expect(obj.Controllers.ShootInPlaceUpdate.DrainTimeout).To(PointTo(Equal(drainTimeout)))
+			Expect(obj.Controllers.ShootInPlaceUpdate.UpdateTimeout).To(PointTo(Equal(updateTimeout)))
+			Expect(obj.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(podEvictionRetryInterval)))
 		})
 	})
 

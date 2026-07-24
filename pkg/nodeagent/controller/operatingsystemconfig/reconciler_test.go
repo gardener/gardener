@@ -33,6 +33,7 @@ import (
 	nodeagenthelper "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
@@ -202,8 +203,10 @@ PRETTY_NAME="Garden Linux 1592Foo"
 	})
 
 	Context("#deleteRemainingPods", func() {
-		It("should delete all pods running on this node", func() {
-			pods := []*corev1.Pod{
+		var pods []*corev1.Pod
+
+		BeforeEach(func() {
+			pods = []*corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-1",
@@ -214,7 +217,8 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "pod-2",
+						Name:   "gardener-resource-manager",
+						Labels: map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager},
 					},
 					Spec: corev1.PodSpec{
 						NodeName: "test-node",
@@ -237,13 +241,28 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			DeferCleanup(func() {
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
+		})
 
-			Expect(reconciler.deleteRemainingPods(ctx, log, node, false)).To(Succeed())
-
+		remainingPodNames := func() []string {
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())
-			Expect(podList.Items).To(HaveLen(1))
-			Expect(podList.Items[0].Name).To(Equal("pod-3"))
+			names := make([]string, 0, len(podList.Items))
+			for _, pod := range podList.Items {
+				names = append(names, pod.Name)
+			}
+			return names
+		}
+
+		It("should delete all pods running on this node when skipGRM is false", func() {
+			Expect(reconciler.deleteRemainingPods(ctx, log, node, false)).To(Succeed())
+
+			Expect(remainingPodNames()).To(ConsistOf("pod-3"))
+		})
+
+		It("should skip gardener-resource-manager on this node when skipGRM is true", func() {
+			Expect(reconciler.deleteRemainingPods(ctx, log, node, true)).To(Succeed())
+
+			Expect(remainingPodNames()).To(ConsistOf("gardener-resource-manager", "pod-3"))
 		})
 	})
 

@@ -311,13 +311,13 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			}, SpecTimeout(5*time.Minute))
 
 			It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
-				Skip("TODO(acumino): Enable this test once the shoot reconciler is enabled in the gardenlet for self-hosted shoots.")
+				Skip("TODO(acumino): Enable this test once the gardenlet's Shoot flow starts reconciling OSCs for self-hosted shoots.")
 				initShootClientSet(ctx)
 			}, SpecTimeout(time.Minute))
 
 			Context("gardenlet in-place update orchestration", Ordered, Label("inplace-update"), func() {
 				BeforeEach(func() {
-					Skip("TODO(acumino): Enable these tests once the shoot reconciler is enabled in the gardenlet for self-hosted shoots.")
+					Skip("TODO(acumino): Enable these tests once the gardenlet's Shoot flow starts reconciling OSCs for self-hosted shoots.")
 				})
 
 				It("should trigger an in-place update by bumping the control-plane pool to the next minor Kubernetes version", func(ctx SpecContext) {

@@ -77,8 +77,8 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ShootState != nil {
 			SetDefaults_ShootStateControllerConfiguration(in.Controllers.ShootState)
 		}
-		if in.Controllers.InPlaceUpdate != nil {
-			SetDefaults_InPlaceUpdateControllerConfiguration(in.Controllers.InPlaceUpdate)
+		if in.Controllers.ShootInPlaceUpdate != nil {
+			SetDefaults_ShootInPlaceUpdateControllerConfiguration(in.Controllers.ShootInPlaceUpdate)
 		}
 		if in.Controllers.NetworkPolicy != nil {
 			SetDefaults_NetworkPolicyControllerConfiguration(in.Controllers.NetworkPolicy)

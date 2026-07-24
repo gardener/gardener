@@ -6,7 +6,6 @@ package inplaceupdate
 
 import (
 	"context"
-	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -37,16 +37,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, shootCluster cluster.Clus
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
-	if r.DrainTimeout == 0 {
-		r.DrainTimeout = 20 * time.Minute
-	}
-	if r.UpdateTimeout == 0 {
-		r.UpdateTimeout = 30 * time.Minute
-	}
-	if r.PodEvictionRetryInterval == 0 {
-		// Matches MCM's PodEvictionRetryInterval.
-		r.PodEvictionRetryInterval = 20 * time.Second
-	}
+	gardenletconfigv1alpha1.SetDefaults_ShootInPlaceUpdateControllerConfiguration(&r.Config)
 
 	return builder.
 		ControllerManagedBy(mgr).
@@ -81,11 +72,16 @@ func NodeInPlaceUpdateStatePredicate() predicate.Predicate {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return (!nodeNeedsDrain(e.ObjectOld) && nodeNeedsDrain(e.ObjectNew)) ||
-				nodeUpdateResult(e.ObjectOld) != nodeUpdateResult(e.ObjectNew)
+				nodeUpdateResult(e.ObjectOld) != nodeUpdateResult(e.ObjectNew) ||
+				(!nodeDrainStarted(e.ObjectOld) && nodeDrainStarted(e.ObjectNew))
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
+}
+
+func nodeDrainStarted(obj client.Object) bool {
+	return obj.GetAnnotations()[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != ""
 }
 
 func nodeNeedsDrain(obj client.Object) bool {

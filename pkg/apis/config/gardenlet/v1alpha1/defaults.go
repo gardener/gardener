@@ -164,8 +164,8 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ShootState == nil {
 		obj.ShootState = &ShootStateControllerConfiguration{}
 	}
-	if obj.InPlaceUpdate == nil {
-		obj.InPlaceUpdate = &InPlaceUpdateControllerConfiguration{}
+	if obj.ShootInPlaceUpdate == nil {
+		obj.ShootInPlaceUpdate = &ShootInPlaceUpdateControllerConfiguration{}
 	}
 	if obj.NetworkPolicy == nil {
 		obj.NetworkPolicy = &NetworkPolicyControllerConfiguration{}
@@ -389,8 +389,8 @@ func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConf
 	}
 }
 
-// SetDefaults_InPlaceUpdateControllerConfiguration sets defaults for the in-place update controller.
-func SetDefaults_InPlaceUpdateControllerConfiguration(obj *InPlaceUpdateControllerConfiguration) {
+// SetDefaults_ShootInPlaceUpdateControllerConfiguration sets defaults for the in-place update controller.
+func SetDefaults_ShootInPlaceUpdateControllerConfiguration(obj *ShootInPlaceUpdateControllerConfiguration) {
 	if obj.DrainTimeout == nil {
 		obj.DrainTimeout = &metav1.Duration{Duration: 20 * time.Minute}
 	}

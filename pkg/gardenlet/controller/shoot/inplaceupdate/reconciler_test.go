@@ -92,7 +92,7 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 
-	Describe("#NodeIsUnavailableForInPlaceUpdate", func() {
+	Describe("#NodeInPlaceUpdateOngoingOrFailed", func() {
 		It("should return true when the node is unschedulable and has the drain start annotation", func() {
 			node := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -100,7 +100,7 @@ var _ = Describe("Reconciler", func() {
 				},
 				Spec: corev1.NodeSpec{Unschedulable: true},
 			}
-			Expect(NodeIsUnavailableForInPlaceUpdate(node)).To(BeTrue())
+			Expect(NodeInPlaceUpdateOngoingOrFailed(node)).To(BeTrue())
 		})
 
 		It("should return true when the node is unschedulable and has a non-successful in-place update condition", func() {
@@ -112,7 +112,7 @@ var _ = Describe("Reconciler", func() {
 					Reason: machinev1alpha1.ReadyForUpdate,
 				}}},
 			}
-			Expect(NodeIsUnavailableForInPlaceUpdate(node)).To(BeTrue())
+			Expect(NodeInPlaceUpdateOngoingOrFailed(node)).To(BeTrue())
 		})
 
 		It("should return true when the node has the failed update-result label", func() {
@@ -121,12 +121,12 @@ var _ = Describe("Reconciler", func() {
 					machinev1alpha1.LabelKeyNodeUpdateResult: machinev1alpha1.LabelValueNodeUpdateFailed,
 				},
 			}}
-			Expect(NodeIsUnavailableForInPlaceUpdate(node)).To(BeTrue())
+			Expect(NodeInPlaceUpdateOngoingOrFailed(node)).To(BeTrue())
 		})
 
 		It("should return false for a schedulable node with no condition or label", func() {
 			node := &corev1.Node{}
-			Expect(NodeIsUnavailableForInPlaceUpdate(node)).To(BeFalse())
+			Expect(NodeInPlaceUpdateOngoingOrFailed(node)).To(BeFalse())
 		})
 
 		It("should return false for a successfully updated node (only the successful condition)", func() {
@@ -135,7 +135,7 @@ var _ = Describe("Reconciler", func() {
 				Status: corev1.ConditionTrue,
 				Reason: machinev1alpha1.UpdateSuccessful,
 			}}}}
-			Expect(NodeIsUnavailableForInPlaceUpdate(node)).To(BeFalse())
+			Expect(NodeInPlaceUpdateOngoingOrFailed(node)).To(BeFalse())
 		})
 	})
 
@@ -156,16 +156,6 @@ var _ = Describe("Reconciler", func() {
 				MaxUnavailable: new(intstr.FromInt(2)),
 			}}
 			Expect(MaxUnavailableForPool(workers, poolName, 5)).To(Equal(2))
-		})
-
-		It("should always return 1 for control-plane pools", func() {
-			workers := []gardencorev1beta1.Worker{{
-				Name:           poolName,
-				Maximum:        5,
-				MaxUnavailable: new(intstr.FromInt(3)),
-				ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
-			}}
-			Expect(MaxUnavailableForPool(workers, poolName, 5)).To(Equal(1))
 		})
 
 		It("should scale percentage against current node count", func() {
