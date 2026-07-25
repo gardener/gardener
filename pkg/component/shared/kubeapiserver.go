@@ -109,6 +109,7 @@ func NewKubeAPIServer(
 		defaultNotReadyTolerationSeconds         *int64
 		defaultUnreachableTolerationSeconds      *int64
 		eventTTL                                 *metav1.Duration
+		tlsMinVersion                            *string
 		featureGates                             map[string]bool
 		requests                                 *gardencorev1beta1.APIServerRequests
 		runtimeConfig                            map[string]bool
@@ -151,6 +152,7 @@ func NewKubeAPIServer(
 		defaultNotReadyTolerationSeconds = apiServerConfig.DefaultNotReadyTolerationSeconds
 		defaultUnreachableTolerationSeconds = apiServerConfig.DefaultUnreachableTolerationSeconds
 		eventTTL = apiServerConfig.EventTTL
+		tlsMinVersion = apiServerConfig.TLSMinVersion
 		featureGates = apiServerConfig.FeatureGates
 		logging = apiServerConfig.Logging
 		requests = apiServerConfig.Requests
@@ -202,6 +204,7 @@ func NewKubeAPIServer(
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
+			TLSMinVersion:                       tlsMinVersion,
 			Images:                              images,
 			IsWorkerless:                        isWorkerless,
 			NamePrefix:                          namePrefix,

@@ -766,6 +766,9 @@ type KubeAPIServerConfig struct {
 	EnableAnonymousAuthentication *bool // TODO(dimityrmirchev): Drop this field when support for Kubernetes 1.34 is dropped.
 	// EventTTL controls the amount of time to retain events.
 	EventTTL *metav1.Duration
+	// TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
+	// Supported values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13.
+	TLSMinVersion *string
 	// Logging contains configuration settings for the log verbosity and access logging
 	Logging *APIServerLogging
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute

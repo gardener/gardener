@@ -108,6 +108,8 @@ type Values struct {
 	DefaultUnreachableTolerationSeconds *int64
 	// EventTTL is the amount of time to retain events.
 	EventTTL *metav1.Duration
+	// TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
+	TLSMinVersion *string
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
 	ExternalHostname string
 	// Images is a set of container images used for the containers of the kube-apiserver pods.

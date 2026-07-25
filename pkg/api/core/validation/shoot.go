@@ -1881,6 +1881,13 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 		}
 	}
 
+	if kubeAPIServer.TLSMinVersion != nil {
+		validTLSVersions := sets.New("VersionTLS10", "VersionTLS11", "VersionTLS12", "VersionTLS13")
+		if !validTLSVersions.Has(*kubeAPIServer.TLSMinVersion) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("tlsMinVersion"), *kubeAPIServer.TLSMinVersion, sets.List(validTLSVersions)))
+		}
+	}
+
 	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(
 		kubeAPIServer.Autoscaling,
 		corev1.ResourceList{
