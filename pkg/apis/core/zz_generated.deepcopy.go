@@ -2738,6 +2738,11 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.TLSMinVersion != nil {
+		in, out := &in.TLSMinVersion, &out.TLSMinVersion
+		*out = new(string)
+		**out = **in
+	}
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(APIServerLogging)

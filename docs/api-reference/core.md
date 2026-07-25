@@ -5475,6 +5475,18 @@ boolean
 </tr>
 <tr>
 <td>
+<code>tlsMinVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.<br />Supported values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>logging</code></br>
 <em>
 <a href="#apiserverlogging">APIServerLogging</a>
