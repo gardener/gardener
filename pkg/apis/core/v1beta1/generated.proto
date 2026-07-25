@@ -1520,6 +1520,11 @@ message KubeAPIServerConfig {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
 
+  // TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
+  // Supported values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13.
+  // +optional
+  optional string tlsMinVersion = 20;
+
   // Logging contains configuration for the log level and HTTP access logs.
   // +optional
   optional APIServerLogging logging = 13;
