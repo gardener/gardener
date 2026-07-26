@@ -426,7 +426,7 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	}
 
 	if k.values.TLSMinVersion != nil {
-		out = append(out, "--tls-min-version="+*k.values.TLSMinVersion)
+		out = append(out, fmt.Sprintf("--tls-min-version=%s", *k.values.TLSMinVersion))
 	}
 
 	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
