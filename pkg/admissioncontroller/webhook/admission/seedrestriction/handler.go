@@ -391,10 +391,10 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		if shootNamespace, ok = secret.Labels[v1beta1constants.LabelShootNamespace]; !ok {
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelShootNamespace))
 		}
-		if publicKeyType, ok := secret.Labels[v1beta1constants.LabelPublicKeys]; !ok {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelPublicKeys))
+		if publicKeyType, ok := secret.Labels[v1beta1constants.LabelDiscoveryPublic]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelDiscoveryPublic))
 		} else if publicKeyType != v1beta1constants.LabelPublicKeysServiceAccount {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelDiscoveryPublic, v1beta1constants.LabelPublicKeysServiceAccount))
 		}
 
 		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}

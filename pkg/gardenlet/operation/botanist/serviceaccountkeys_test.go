@@ -92,11 +92,10 @@ var _ = Describe("ServiceAccountKeys", func() {
 				Namespace:       "gardener-system-shoot-issuer",
 				ResourceVersion: "1",
 				Labels: map[string]string{
-					"shoot.gardener.cloud/namespace":            "bar",
-					"authentication.gardener.cloud/public-keys": "serviceaccount", // TODO(vpnachev): Remove this label after v1.145 is released.
-					"discovery.gardener.cloud/public":           "serviceaccount",
-					"project.gardener.cloud/name":               "project-name",
-					"shoot.gardener.cloud/name":                 "foo",
+					"shoot.gardener.cloud/namespace":  "bar",
+					"discovery.gardener.cloud/public": "serviceaccount",
+					"project.gardener.cloud/name":     "project-name",
+					"shoot.gardener.cloud/name":       "foo",
 				},
 			},
 			Data: map[string][]byte{
