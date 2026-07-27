@@ -1,0 +1,18 @@
+name: Validate release-notes from PRs
+on:
+  pull_request:
+    types:
+    - opened
+    - edited
+    - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate-release-notes:
+    uses: gardener/cc-utils/.github/workflows/validate-release-notes.yaml@v1
+    permissions:
+      pull-requests: read
+    with:
+      pull-request-body: ${{ github.event.pull_request.body }}
