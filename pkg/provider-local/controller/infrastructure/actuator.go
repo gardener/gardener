@@ -63,7 +63,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		}
 	}
 
-	if err := reconcileNetworkPolicies(ctx, providerClient, MachineNamespaceName(cluster.Shoot.Status.TechnicalID), cluster); err != nil {
+	if err := reconcileNetworkPolicies(ctx, providerClient, NamespaceName(cluster.Shoot.Status.TechnicalID), cluster); err != nil {
 		return err
 	}
 
@@ -119,7 +119,7 @@ func namespace(technicalID string) *corev1.Namespace {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: MachineNamespaceName(technicalID),
+			Name: NamespaceName(technicalID),
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:        v1beta1constants.GardenRoleInfra,
 				v1beta1constants.LabelSeedProvider: local.Type,
@@ -128,8 +128,8 @@ func namespace(technicalID string) *corev1.Namespace {
 	}
 }
 
-// MachineNamespaceName returns the name of the namespace for machine pods for the given shoot namespace.
-func MachineNamespaceName(technicalID string) string {
+// NamespaceName returns the name of the namespace for machine pods for the given shoot namespace.
+func NamespaceName(technicalID string) string {
 	return "infra-" + technicalID
 }
 

@@ -167,7 +167,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	var runtimeCluster map[string]any
 	if v1beta1helper.HasManagedInfrastructure(cluster.Shoot) {
 		runtimeCluster = map[string]any{
-			"namespace":  infrastructure.MachineNamespaceName(cluster.Shoot.Status.TechnicalID),
+			"namespace":  infrastructure.NamespaceName(cluster.Shoot.Status.TechnicalID),
 			"kubeconfig": "/var/run/secrets/gardener.cloud/cloudprovider/kubeconfig",
 		}
 	}

@@ -135,7 +135,7 @@ func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {}
 // only check whether the `.ssh/authorized_keys` file on the worker nodes has the expected content.
 func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) ([]string, error) {
 	podList := &corev1.PodList{}
-	if err := v.SeedClient.List(ctx, podList, client.InNamespace(infrastructure.MachineNamespaceName(v.Shoot.Status.TechnicalID)), client.MatchingLabels{
+	if err := v.SeedClient.List(ctx, podList, client.InNamespace(infrastructure.NamespaceName(v.Shoot.Status.TechnicalID)), client.MatchingLabels{
 		"app":              "machine",
 		"machine-provider": "local",
 	}); err != nil {
@@ -150,7 +150,7 @@ func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) ([]stri
 	for _, pod := range podList.Items {
 		stdout, _, err := v.SeedClientSet.PodExecutor().Execute(
 			ctx,
-			infrastructure.MachineNamespaceName(v.Shoot.Status.TechnicalID),
+			infrastructure.NamespaceName(v.Shoot.Status.TechnicalID),
 			pod.Name,
 			"node",
 			"cat", "/home/gardener/.ssh/authorized_keys",

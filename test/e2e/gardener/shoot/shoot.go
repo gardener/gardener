@@ -268,7 +268,7 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Cl
 		beforeStartMachinePodList := &corev1.PodList{}
 		Eventually(ctx, func() error {
 			return k8sClient.List(ctx, beforeStartMachinePodList,
-				client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)),
+				client.InNamespace(infrastructure.NamespaceName(s.Shoot.Status.TechnicalID)),
 				client.MatchingLabels{
 					"app":              "machine",
 					"machine-provider": "local",
@@ -293,7 +293,7 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, clientFn func() client
 		machinePodListAfterTest := &corev1.PodList{}
 		Eventually(ctx, func() error {
 			return k8sClient.List(ctx, machinePodListAfterTest,
-				client.InNamespace(infrastructure.MachineNamespaceName(s.Shoot.Status.TechnicalID)),
+				client.InNamespace(infrastructure.NamespaceName(s.Shoot.Status.TechnicalID)),
 				client.MatchingLabels{
 					"app":              "machine",
 					"machine-provider": "local",

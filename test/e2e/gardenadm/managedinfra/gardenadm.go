@@ -109,7 +109,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			initialControlPlaneMachineName = machineList.Items[0].Name
 
 			podList := &corev1.PodList{}
-			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
+			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.NamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
 				Should(HaveField("Items", ConsistOf(HaveField("Status.Phase", corev1.PodRunning))))
 		}, SpecTimeout(time.Minute))
 
@@ -277,7 +277,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, shootKomega.Object(&machinev1alpha1.Machine{ObjectMeta: metav1.ObjectMeta{Name: initialControlPlaneMachineName, Namespace: "kube-system"}})).
 				Should(HaveField("Status.CurrentStatus.Phase", machinev1alpha1.MachineRunning))
 
-			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: infrastructure.MachineNamespaceName(technicalID)}})).
+			Eventually(ctx, Object(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "machine-" + initialControlPlaneMachineName, Namespace: infrastructure.NamespaceName(technicalID)}})).
 				Should(HaveField("Status.Phase", corev1.PodRunning))
 		}, SpecTimeout(time.Minute))
 
@@ -286,7 +286,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			// that provider-local correctly uses the kind kubeconfig in the cloudprovider secret to create a non-default
 			// provider client for managing machines.
 			podList := &corev1.PodList{}
-			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
+			Eventually(ctx, ObjectList(podList, client.InNamespace(infrastructure.NamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
 				Should(HaveField("Items", ContainElements(
 					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-control-plane-")),
 					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-worker-")),

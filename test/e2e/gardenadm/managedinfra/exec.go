@@ -89,7 +89,7 @@ func RunInMachine(ctx context.Context, technicalID string, ordinal int, cmd ...s
 	podName := machinePodName(ctx, technicalID, ordinal)
 	err := RuntimeClient.PodExecutor().ExecuteWithStreams(
 		ctx,
-		infrastructure.MachineNamespaceName(technicalID),
+		infrastructure.NamespaceName(technicalID),
 		podName,
 		ContainerName,
 		nil,
@@ -104,7 +104,7 @@ func machinePodName(ctx context.Context, technicalID string, ordinal int) string
 	GinkgoHelper()
 
 	podList := &corev1.PodList{}
-	Expect(RuntimeClient.Client().List(ctx, podList, client.InNamespace(infrastructure.MachineNamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).To(Succeed())
+	Expect(RuntimeClient.Client().List(ctx, podList, client.InNamespace(infrastructure.NamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).To(Succeed())
 
 	Expect(ordinal).To(BeNumerically("<", len(podList.Items)))
 

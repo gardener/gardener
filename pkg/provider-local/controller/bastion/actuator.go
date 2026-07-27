@@ -160,7 +160,7 @@ func bastionImage(cluster *extensionscontroller.Cluster) (string, error) {
 func objectMetaForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      "bastion-" + bastion.Name,
-		Namespace: infrastructure.MachineNamespaceName(technicalID),
+		Namespace: infrastructure.NamespaceName(technicalID),
 		Labels: map[string]string{
 			"app":     "bastion",
 			"bastion": bastion.Name,
