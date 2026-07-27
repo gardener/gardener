@@ -127,7 +127,7 @@ spec:
 
 ## CA Bundle for Private Registries
 
-If the registry used in the image vector overwrite is backed by a custom PKI (i.e., it presents a TLS certificate that is not trusted by the default system roots), you can supply the CA bundle alongside the image overrides in the same file:
+If the registry used in the image vector overwrite is backed by a custom CA (i.e., it presents a TLS certificate that is not trusted by the default system roots), you can supply the CA bundle alongside the image overrides in the same file:
 
 ```yaml
 images:
@@ -137,7 +137,7 @@ images:
 caBundle:
   inline: |
     -----BEGIN CERTIFICATE-----
-    <base64-encoded DER certificate>
+    <certificate data>
     -----END CERTIFICATE-----
 ```
 
@@ -199,6 +199,6 @@ images:
 caBundle:
   inline: |
     -----BEGIN CERTIFICATE-----
-    <base64-encoded DER certificate>
+    <certificate data>
     -----END CERTIFICATE-----
 ```
