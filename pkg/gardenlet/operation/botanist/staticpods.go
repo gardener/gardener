@@ -213,6 +213,7 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 
 	patch := client.MergeFrom(osc.DeepCopy())
 	osc.Spec.Files = append(osc.Spec.Files, files...)
+	metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 	if err := b.SeedClientSet.Client().Patch(ctx, osc, patch); err != nil {
 		return nil, "", fmt.Errorf("failed patching OperatingSystemConfig with additional files for static control plane pods: %w", err)
 	}
