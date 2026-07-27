@@ -95,8 +95,6 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 
 	return kubernetesutils.DeleteObjects(ctx, providerClient,
 		namespace(cluster.Shoot.Status.TechnicalID),
-		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(cluster.Shoot.Status.TechnicalID, string(gardencorev1beta1.IPFamilyIPv4))}},
-		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(cluster.Shoot.Status.TechnicalID, string(gardencorev1beta1.IPFamilyIPv6))}},
 	)
 }
 
@@ -121,8 +119,7 @@ func namespace(technicalID string) *corev1.Namespace {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: NamespaceName(technicalID),
 			Labels: map[string]string{
-				v1beta1constants.GardenRole:        v1beta1constants.GardenRoleInfra,
-				v1beta1constants.LabelSeedProvider: local.Type,
+				v1beta1constants.GardenRole: local.GardenRoleInfra,
 			},
 		},
 	}
