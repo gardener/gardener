@@ -293,6 +293,8 @@ func networkPolicyForBastion(bastion *extensionsv1alpha1.Bastion, technicalID st
 	}
 }
 
+// allowToDNS allows traffic to CoreDNS and NodeLocalDNS. This policy is mostly a copy from
+// the "allow-to-dns" policy in "pkg/controller/networkpolicy/reconciler.go"
 func allowToDNS() networkingv1.NetworkPolicyEgressRule {
 	return networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{
