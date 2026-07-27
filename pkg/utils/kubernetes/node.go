@@ -7,6 +7,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -61,4 +62,32 @@ func isKubernetesLabelNamespace(namespace string) bool {
 		return true
 	}
 	return false
+}
+
+// NodeInternalIP returns the internal IP of the given node, preferring the IP family indicated by preferIPv6.
+// Falls back to any NodeInternalIP address if no address of the preferred family is found.
+func NodeInternalIP(node corev1.Node, preferIPv6 bool) (net.IP, error) {
+	var fallback net.IP
+
+	for _, address := range node.Status.Addresses {
+		if address.Type != corev1.NodeInternalIP {
+			continue
+		}
+		ip := net.ParseIP(address.Address)
+		if ip == nil {
+			continue
+		}
+		if isIPv6 := ip.To4() == nil; isIPv6 == preferIPv6 {
+			return ip, nil
+		}
+		if fallback == nil {
+			fallback = ip
+		}
+	}
+
+	if fallback != nil {
+		return fallback, nil
+	}
+
+	return nil, fmt.Errorf("no %s address found in node %s", corev1.NodeInternalIP, node.Name)
 }

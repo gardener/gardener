@@ -1175,12 +1175,17 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 			SkipIf:       !flowCtx.allowBackup,
 			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketInGardenReconciled),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
 			Fn:           b.Shoot.Components.BackupEntry.Wait,
 			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup,
 			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
 		})
+
+		_ = g.AddGroup(
+			b.ReconcileETCDsTaskGroup(shootIsGarden).
+				WithDependencies(waitUntilBackupEntryInGardenReconciled),
+		)
 	)
 
 	return nil

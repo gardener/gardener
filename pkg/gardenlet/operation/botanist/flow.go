@@ -23,6 +23,7 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // TaskGroupDeployNamespaces is a flow.TaskID for a logical flow.TaskGroup.
@@ -401,6 +402,53 @@ func (b *Botanist) ReconcileSystemComponentsTaskGroup() flow.TaskGroup {
 			Name:         "Waiting until CoreDNS system component is ready",
 			Fn:           b.Shoot.Components.SystemComponents.CoreDNS.Wait,
 			Dependencies: flow.NewTaskIDs(deployCoreDNS),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupReconcileETCDs is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileETCDs flow.TaskID = "TaskGroupReconcileETCDs"
+
+// ReconcileETCDsTaskGroup returns the flow.TaskGroup for deploying etcd-druid, the ETCDs resources, and waiting for
+// their readiness.
+func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileETCDs).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileGardenerResourceManager,
+		)
+
+		deployEtcdDruid = g.Add(flow.Task{
+			Name:   "Deploying ETCD Druid",
+			Fn:     b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
+			SkipIf: shootIsGarden,
+		})
+		deployEtcds = g.Add(flow.Task{
+			Name: "Deploying main and events ETCDs",
+			Fn: func(ctx context.Context) error {
+				nodes, err := b.ListControlPlaneNodes(ctx)
+				if err != nil {
+					return fmt.Errorf("failed listing control plane nodes: %w", err)
+				}
+
+				ip, err := kubernetesutils.NodeInternalIP(nodes[0], b.Shoot.PreferIPv6())
+				if err != nil {
+					return fmt.Errorf("failed determining IP address of first control plane node: %w", err)
+				}
+
+				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(ip)
+				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(ip)
+				return b.DeployEtcd(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until main and event ETCDs have been reconciled",
+			Fn:           b.WaitUntilEtcdsReady,
+			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 	)
 
