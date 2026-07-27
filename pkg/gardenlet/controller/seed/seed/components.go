@@ -307,7 +307,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(seed.GetInfo().Spec.Settings)
+	c.victoriaLogs, err = r.newVictoriaLogs(seed)
 	if err != nil {
 		return
 	}
@@ -625,10 +625,15 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs(seedSettings *gardencorev1beta1.SeedSettings) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
+	}
+
+	pvcAutoscalerEnabled := v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings)
+	if pvcAutoscalerEnabled {
+		storage = new(resource.MustParse(seed.GetValidVolumeSize("5Gi")))
 	}
 
 	deployer, err := sharedcomponent.NewVictoriaLogs(
@@ -640,7 +645,7 @@ func (r *Reconciler) newVictoriaLogs(seedSettings *gardencorev1beta1.SeedSetting
 		storage,
 		false,
 		victorialogs.PVCAutoscalingConfig{
-			Enabled:     v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seedSettings),
+			Enabled:     pvcAutoscalerEnabled,
 			MaxCapacity: resource.MustParse("200Gi"),
 		},
 	)

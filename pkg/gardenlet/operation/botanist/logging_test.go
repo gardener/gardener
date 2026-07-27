@@ -8,11 +8,14 @@ import (
 	"context"
 	"fmt"
 
+	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	mockvali "github.com/gardener/gardener/pkg/component/observability/logging/vali/mock"
+	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 	mockcollector "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/mock"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -34,6 +38,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -376,4 +381,48 @@ var _ = Describe("Logging", func() {
 			})
 		})
 	})
+
+	DescribeTable("#DefaultVictoriaLogs PVC storage",
+		func(pvcAutoscalerEnabled bool, minimumVolumeSize *resource.Quantity, expectedStorage resource.Quantity) {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+			gardenletfeatures.RegisterFeatureGates()
+
+			var volume *gardencorev1beta1.SeedVolume
+			if minimumVolumeSize != nil {
+				volume = &gardencorev1beta1.SeedVolume{MinimumSize: minimumVolumeSize}
+			}
+
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Volume: volume,
+					Settings: &gardencorev1beta1.SeedSettings{
+						PersistentVolumeClaimAutoscaler: &gardencorev1beta1.SeedSettingPersistentVolumeClaimAutoscaler{
+							Enabled: pvcAutoscalerEnabled,
+						},
+					},
+				},
+			})
+
+			deployer, err := botanist.DefaultVictoriaLogs()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployer.Deploy(ctx)).To(Succeed())
+
+			objects, err := managedresources.GetObjects(ctx, fakeClient, controlPlaneNamespace, victorialogsconstants.ManagedResourceNameRuntime)
+			Expect(err).NotTo(HaveOccurred())
+
+			var vlSingle *victoriametricsv1.VLSingle
+			for _, obj := range objects {
+				if vl, ok := obj.(*victoriametricsv1.VLSingle); ok {
+					vlSingle = vl
+					break
+				}
+			}
+			Expect(vlSingle).NotTo(BeNil(), "expected a VLSingle resource in the VictoriaLogs managed resource")
+			Expect(vlSingle.Spec.Storage.Resources.Requests[corev1.ResourceStorage]).To(Equal(expectedStorage))
+		},
+		Entry("small volume when the PVC autoscaler is enabled", true, nil, resource.MustParse("5Gi")),
+		Entry("default volume when the PVC autoscaler is disabled", false, nil, resource.MustParse("30Gi")),
+		Entry("clamped to the seed minimum volume size when the PVC autoscaler is enabled", true, new(resource.MustParse("20Gi")), resource.MustParse("20Gi")),
+		Entry("initial size when it exceeds the seed minimum volume size", true, new(resource.MustParse("2Gi")), resource.MustParse("5Gi")),
+	)
 })
