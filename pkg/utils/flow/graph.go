@@ -19,6 +19,11 @@ type Task struct {
 	Dependencies TaskIDs
 }
 
+// ID returns the `TaskID` derived from the task's `Name`.
+func (t *Task) ID() TaskID {
+	return TaskID(t.Name)
+}
+
 // Spec returns the TaskSpec of a task.
 func (t *Task) Spec() *TaskSpec {
 	return &TaskSpec{
@@ -41,8 +46,9 @@ type Tasks map[TaskID]*TaskSpec
 
 // Graph is a builder for a Flow.
 type Graph struct {
-	name  string
-	tasks Tasks
+	name   string
+	tasks  Tasks
+	groups map[TaskID]TaskIDs
 
 	// Clock is used to retrieve the current time.
 	Clock clock.Clock
@@ -55,7 +61,7 @@ func (g *Graph) Name() string {
 
 // NewGraph returns a new Graph with the given name.
 func NewGraph(name string) *Graph {
-	return &Graph{name: name, tasks: make(Tasks), Clock: clock.RealClock{}}
+	return &Graph{name: name, tasks: make(Tasks), groups: make(map[TaskID]TaskIDs), Clock: clock.RealClock{}}
 }
 
 // Add adds the given Task to the graph.
@@ -63,7 +69,7 @@ func NewGraph(name string) *Graph {
 // - There is already a Task present with the same name
 // - One of the dependencies of the Task is not present
 func (g *Graph) Add(task Task) TaskID {
-	id := TaskID(task.Name)
+	id := task.ID()
 	if _, ok := g.tasks[id]; ok {
 		panic(fmt.Sprintf("Task with id %q already exists", id))
 	}
