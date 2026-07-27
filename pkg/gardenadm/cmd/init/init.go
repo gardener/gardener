@@ -133,7 +133,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(reconcileGardenerResourceManagerInPodNetwork).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
-		reconcileControlPlane = g.AddGroup(
+		_ = g.AddGroup(
 			b.ReconcileControlPlaneTaskGroup().
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
@@ -178,30 +178,18 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
 		})
 
-		reconcileETCDs = g.AddGroup(
+		_ = g.AddGroup(
 			b.ReconcileETCDsTaskGroup(shootIsGarden).
 				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
 				SkipIf(opts.UseBootstrapEtcd),
 		)
-		deployControlPlaneDeployments = g.Add(flow.Task{
-			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
-			Fn: func(ctx context.Context) error {
-				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd, b.BackupDataPath)
-			},
-			Dependencies: flow.NewTaskIDs(reconcileControlPlane, reconcileETCDs),
-		})
-		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
-			Name: "Waiting until control plane components (static pods) are ready",
-			Fn: func(ctx context.Context) error {
-				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
-			},
-			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
-		})
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd, opts.BackupDataPath))
+
 		_ = g.Add(flow.Task{
 			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",
 			Fn:           b.FinalizeEtcdBootstrapTransition,
 			SkipIf:       opts.UseBootstrapEtcd,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
+			Dependencies: flow.NewTaskIDs(reconcileStaticControlPlanePods),
 		})
 		// A lot of health checks rely on the kube-controller-manager being active. It might take some time after the
 		// etcd migration for the kube-controller-manager to become active again, so we explicitly wait for that here.
@@ -211,7 +199,7 @@ func run(ctx context.Context, opts *Options) error {
 				b.Shoot.Components.ControlPlane.KubeControllerManager.SetShootClient(b.SeedClientSet.Client())
 				return b.Shoot.Components.ControlPlane.KubeControllerManager.WaitForControllerToBeActive(ctx)
 			}).RetryUntilTimeout(time.Second, 5*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeploymentsReady),
+			Dependencies: flow.NewTaskIDs(reconcileStaticControlPlanePods),
 		})
 		// During the migration from the bootstrap etcds to the druid-managed etcds, components serving webhooks might be
 		// crash-looping while retrying to connect to the API server. Therefore, we explicitly wait for them to be healthy
