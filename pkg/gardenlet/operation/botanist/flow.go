@@ -454,3 +454,35 @@ func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden bool) flow.TaskGroup {
 
 	return g
 }
+
+// TaskGroupReconcileStaticPods is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileStaticPods flow.TaskID = "TaskGroupReconcileStaticPods"
+
+// ReconcileStaticControlPlanePodsTaskGroup returns the flow.TaskGroup for deploying etcd-druid, the ETCDs resources, and waiting for
+// their readiness.
+func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd bool, backupDataPath string) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileStaticPods).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileGardenerResourceManager,
+			TaskGroupReconcileControlPlane,
+			TaskGroupReconcileETCDs,
+		)
+
+		deployControlPlaneDeployments = g.Add(flow.Task{
+			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
+			Fn: func(ctx context.Context) error {
+				return b.DeployStaticControlPlaneDeployments(ctx, useBootstrapEtcd, backupDataPath)
+			},
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until control plane components (static pods) are ready",
+			Fn: func(ctx context.Context) error {
+				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
+			},
+			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
+	)
+
+	return g
+}
