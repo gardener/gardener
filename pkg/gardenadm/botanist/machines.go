@@ -36,6 +36,19 @@ func (b *GardenadmBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machi
 	return &b.controlPlaneMachines[index], nil
 }
 
+// ZoneForMachine returns the availability zone for the given machine by looking up its MachineClass.
+// Returns an empty string if the MachineClass has no NodeTemplate or zone set.
+func (b *GardenadmBotanist) ZoneForMachine(ctx context.Context, machine *machinev1alpha1.Machine) (string, error) {
+	machineClass := &machinev1alpha1.MachineClass{}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: machine.Spec.Class.Name, Namespace: b.Shoot.ControlPlaneNamespace}, machineClass); err != nil {
+		return "", fmt.Errorf("failed getting machine class %q: %w", machine.Spec.Class.Name, err)
+	}
+	if machineClass.NodeTemplate == nil {
+		return "", nil
+	}
+	return machineClass.NodeTemplate.Zone, nil
+}
+
 // addressTypePreference when picking a node/machine address. Higher value means higher priority.
 // Unknown address types have the lowest priority (0).
 var addressTypePreference = map[corev1.NodeAddressType]int{
