@@ -88,10 +88,7 @@ func run(ctx context.Context, opts *Options) error {
 	if bootstrapEtcdExists, err := isBootstrapEtcdStillRunning(ctx, b); err != nil {
 		return fmt.Errorf("failed checking if bootstrap etcd is still running: %w", err)
 	} else if bootstrapEtcdExists {
-		if !opts.Force {
-			return fmt.Errorf("bootstrap etcd is still running in the self-hosted shoot cluster, please run 'gardenadm init --use-bootstrap-etcd=false' first")
-		}
-		opts.Log.Info("Warning: Bootstrap etcd is still running, --force override active")
+		return fmt.Errorf("bootstrap etcd is still running in the self-hosted shoot cluster, please run 'gardenadm init --use-bootstrap-etcd=false' first")
 	}
 
 	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {

@@ -544,5 +544,40 @@ var _ = Describe("shoot", func() {
 				Expect(info.Status.TechnicalID).To(Equal("concurrent-write"))
 			})
 		})
+
+		Describe("#PreferIPv6", func() {
+			It("should return false when IPFamilies is empty", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{})
+				Expect(shoot.PreferIPv6()).To(BeFalse())
+			})
+
+			It("should return false for IPv4 single-stack", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+				}}})
+				Expect(shoot.PreferIPv6()).To(BeFalse())
+			})
+
+			It("should return true for IPv6 single-stack", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+				}}})
+				Expect(shoot.PreferIPv6()).To(BeTrue())
+			})
+
+			It("should return false for dual-stack with IPv4 primary", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6},
+				}}})
+				Expect(shoot.PreferIPv6()).To(BeFalse())
+			})
+
+			It("should return true for dual-stack with IPv6 primary", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4},
+				}}})
+				Expect(shoot.PreferIPv6()).To(BeTrue())
+			})
+		})
 	})
 })

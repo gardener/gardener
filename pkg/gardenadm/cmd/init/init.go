@@ -178,39 +178,17 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
 		})
 
-		deployEtcdDruid = g.Add(flow.Task{
-			Name:         "Deploying ETCD Druid",
-			Fn:           b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
-			SkipIf:       opts.UseBootstrapEtcd || shootIsGarden,
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
-		})
-		deployEtcds = g.Add(flow.Task{
-			Name: "Deploying main and events ETCDs",
-			Fn: func(ctx context.Context) error {
-				machineIP, err := b.MachineIP()
-				if err != nil {
-					return fmt.Errorf("failed determining the machine IP address")
-				}
-
-				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(machineIP)
-				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(machineIP)
-				return b.DeployEtcd(ctx)
-			},
-			SkipIf:       opts.UseBootstrapEtcd,
-			Dependencies: flow.NewTaskIDs(deployEtcdDruid, reconcileBackupEntry),
-		})
-		waitUntilEtcdsReady = g.Add(flow.Task{
-			Name:         "Waiting until main and event ETCDs have been reconciled",
-			Fn:           b.WaitUntilEtcdsReady,
-			SkipIf:       opts.UseBootstrapEtcd,
-			Dependencies: flow.NewTaskIDs(deployEtcds),
-		})
+		reconcileETCDs = g.AddGroup(
+			b.ReconcileETCDsTaskGroup(shootIsGarden).
+				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
+				SkipIf(opts.UseBootstrapEtcd),
+		)
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn: func(ctx context.Context) error {
 				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd, b.BackupDataPath)
 			},
-			Dependencies: flow.NewTaskIDs(reconcileControlPlane, waitUntilEtcdsReady),
+			Dependencies: flow.NewTaskIDs(reconcileControlPlane, reconcileETCDs),
 		})
 		waitUntilControlPlaneDeploymentsReady = g.Add(flow.Task{
 			Name: "Waiting until control plane components (static pods) are ready",
