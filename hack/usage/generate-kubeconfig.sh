@@ -30,6 +30,7 @@ cmd_shoot() {
   local namespace="garden-local"
   local shoot_name="local"
   local kubeconfig_type="admin"
+  local expiration_minutes=60
 
   while test $# -gt 0; do
     case "$1" in
@@ -41,6 +42,8 @@ cmd_shoot() {
         kubeconfig_type="admin" ;;
       --viewer)
         kubeconfig_type="viewer" ;;
+      --expirationMinutes)
+        shift; expiration_minutes="${1:-$expiration_minutes}" ;;
       --help|-h)
         cat <<EOF
 Usage: $(basename "$0") shoot [flags]
@@ -48,10 +51,11 @@ Usage: $(basename "$0") shoot [flags]
 Generate admin/viewer kubeconfig for a hosted shoot via the Gardener API.
 
 Flags:
-  --namespace <ns>      Shoot namespace (default: garden-local)
-  --shoot-name <name>   Shoot name (default: local)
-  --admin               Generate admin kubeconfig (default)
-  --viewer              Generate viewer kubeconfig
+  --namespace <ns>                Shoot namespace (default: garden-local)
+  --shoot-name <name>             Shoot name (default: local)
+  --admin                         Generate admin kubeconfig (default)
+  --viewer                        Generate viewer kubeconfig
+  --expirationMinutes <minutes>   kubeconfig validity in minutes (default: 60)
 EOF
         exit 0 ;;
       *)
@@ -73,7 +77,7 @@ EOF
     "apiVersion": "authentication.gardener.cloud/v1alpha1",
     "kind": "${kind}",
     "spec": {
-        "expirationSeconds": 3600
+        "expirationSeconds": $(( expiration_minutes * 60 ))
     }
 }
 EOF
