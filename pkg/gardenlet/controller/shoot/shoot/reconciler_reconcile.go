@@ -1186,7 +1186,12 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 			b.ReconcileETCDsTaskGroup(shootIsGarden).
 				WithDependencies(waitUntilBackupEntryInGardenReconciled),
 		)
-		_ = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false, ""))
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false, ""))
+		_                               = g.AddGroup(
+			b.ReconcileMachineControllerManagerTaskGroup().
+				WithDependencies(reconcileStaticControlPlanePods),
+		)
+		_ = g.AddGroup(b.ReconcileWorkerTaskGroup())
 	)
 
 	return nil

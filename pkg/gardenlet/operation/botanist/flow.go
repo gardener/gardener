@@ -317,8 +317,9 @@ func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup() flow.TaskGroup {
 // TaskGroupReconcileWorker is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileWorker flow.TaskID = "TaskGroupReconcileWorker"
 
-// ReconcileWorkerTaskGroup returns the flow.TaskGroup for deploying the Worker extension
-// resource and waiting for its readiness.
+// ReconcileWorkerTaskGroup returns the flow.TaskGroup for deploying the Worker extension resource. It waits until its
+// status was updated with the latest machine deployments, deploys cluster-autoscaler and finally waits for the pools
+// to get reconciled.
 func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileWorker).WithDependencies(
@@ -330,15 +331,31 @@ func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
 		)
 
 		deployWorker = g.Add(flow.Task{
-			Name:   "Deploying control plane machines",
+			Name:   "Configuring worker pools",
 			Fn:     b.DeployWorker,
 			SkipIf: !b.Shoot.HasManagedInfrastructure(),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until control plane machines have been deployed",
-			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
+		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
+			Name: "Waiting until worker resource status is updated with latest machine deployments",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
+			},
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(deployWorker),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying cluster-autoscaler",
+			Fn:           b.DeployClusterAutoscaler,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until worker pools have been reconciled",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Worker.Wait(ctx)
+			},
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 	)
 

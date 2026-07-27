@@ -215,6 +215,7 @@ func run(ctx context.Context, opts *Options) error {
 			).RetryUntilTimeout(time.Second, 5*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeControllerManagerIsActive),
 		})
+
 		_ = g.AddGroup(
 			b.ReconcileMachineControllerManagerTaskGroup().
 				WithDependencies(waitUntilWebhookComponentsReady),
@@ -223,6 +224,7 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileWorkerTaskGroup().
 				WithDependencies(syncPointBootstrapped),
 		)
+
 		// We need to deploy the worker before activating the node-agent-authorizer. Without the machine objects,
 		// the node-agent-authorizer would reject requests from gardener-node-agent because it cannot find a corresponding
 		// machine for them.
@@ -231,24 +233,10 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
 			Dependencies: flow.NewTaskIDs(reconcileWorker),
 		})
-		waitUntilGardenerNodeAgentLeaseIsRenewed = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Waiting until gardener-node-agent lease is renewed",
 			Fn:           b.WaitUntilGardenerNodeAgentLeaseIsRenewed,
 			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
-		})
-		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
-			Name: "Waiting until worker resource status is updated with latest machine deployments",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
-			},
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerNodeAgentLeaseIsRenewed),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying cluster-autoscaler",
-			Fn:           b.DeployClusterAutoscaler,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 	)
 
