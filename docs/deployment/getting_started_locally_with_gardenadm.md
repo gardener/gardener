@@ -376,7 +376,7 @@ For convenience a [helper script](../../hack/usage/generate-kubeconfig.sh) is pr
 By default, the script will generate an admin kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
 
 > [!NOTE]
-> If you want to extend the validity of the generated kubeconfig, you can use the `--expirationMinutes <minutes>` flag to specify the desired validity in minutes.
+> If you want to extend the validity of the generated kubeconfig, you can use the `--expiration-minutes <minutes>` flag to specify the desired validity in minutes.
 
 ```bash
 ./hack/usage/generate-kubeconfig.sh > admin-kubeconf.yaml

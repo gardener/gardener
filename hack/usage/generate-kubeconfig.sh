@@ -42,7 +42,7 @@ cmd_shoot() {
         kubeconfig_type="admin" ;;
       --viewer)
         kubeconfig_type="viewer" ;;
-      --expirationMinutes)
+      --expiration-minutes)
         shift; expiration_minutes="${1:-$expiration_minutes}" ;;
       --help|-h)
         cat <<EOF
@@ -55,7 +55,7 @@ Flags:
   --shoot-name <name>             Shoot name (default: local)
   --admin                         Generate admin kubeconfig (default)
   --viewer                        Generate viewer kubeconfig
-  --expirationMinutes <minutes>   kubeconfig validity in minutes (default: 60)
+  --expiration-minutes <minutes>  kubeconfig validity in minutes (default: 60)
 EOF
         exit 0 ;;
       *)
@@ -106,7 +106,7 @@ Flags:
   --garden-name <name>            Garden name (default: local, env: GARDEN_NAME)
   --runtime-kubeconfig <path>     Path to runtime cluster kubeconfig
                                   (default: dev-setup/kubeconfigs/runtime/kubeconfig,
-                                   env: RUNTIME_CLUSTER_KUBECONFIG)
+                                  env: RUNTIME_CLUSTER_KUBECONFIG)
 EOF
         exit 0 ;;
       *)
@@ -158,7 +158,7 @@ Flags:
                                   generate a client-cert kubeconfig
   --runtime-kubeconfig <path>     Path to the bootstrap cluster kubeconfig
                                   (default: dev-setup/kubeconfigs/runtime/kubeconfig,
-                                   env: KUBECONFIG_RUNTIME_CLUSTER)
+                                  env: KUBECONFIG_RUNTIME_CLUSTER)
 EOF
         exit 0 ;;
       *)
