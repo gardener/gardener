@@ -1022,10 +1022,6 @@ type KubeAPIServerConfig struct {
 	// Defaults to 1h.
 	// +optional
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
-	// TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
-	// Supported values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13.
-	// +optional
-	TLSMinVersion *string `json:"tlsMinVersion,omitempty" protobuf:"bytes,20,opt,name=tlsMinVersion"`
 	// Logging contains configuration for the log level and HTTP access logs.
 	// +optional
 	Logging *APIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
@@ -1053,6 +1049,10 @@ type KubeAPIServerConfig struct {
 	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
 	// +optional
 	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,19,opt,name=autoscaling"`
+	// TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
+	// Supported values: VersionTLS12, VersionTLS13.
+	// +optional
+	TLSMinVersion *string `json:"tlsMinVersion,omitempty" protobuf:"bytes,20,opt,name=tlsMinVersion"`
 }
 
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.

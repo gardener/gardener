@@ -5020,13 +5020,6 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},
-					"tlsMinVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "TLSMinVersion is the minimum TLS version accepted by the kube-apiserver. Supported values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"logging": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Logging contains configuration for the log level and HTTP access logs.",
@@ -5069,6 +5062,13 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 						SchemaProps: spec.SchemaProps{
 							Description: "Autoscaling contains auto-scaling configuration options for the kube-apiserver.",
 							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
+						},
+					},
+					"tlsMinVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TLSMinVersion is the minimum TLS version accepted by the kube-apiserver. Supported values: VersionTLS12, VersionTLS13.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

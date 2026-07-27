@@ -4518,7 +4518,6 @@ func autoConvert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Kub
 	out.Requests = (*core.APIServerRequests)(unsafe.Pointer(in.Requests))
 	out.EnableAnonymousAuthentication = (*bool)(unsafe.Pointer(in.EnableAnonymousAuthentication))
 	out.EventTTL = (*metav1.Duration)(unsafe.Pointer(in.EventTTL))
-	out.TLSMinVersion = (*string)(unsafe.Pointer(in.TLSMinVersion))
 	out.Logging = (*core.APIServerLogging)(unsafe.Pointer(in.Logging))
 	out.DefaultNotReadyTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultNotReadyTolerationSeconds))
 	out.DefaultUnreachableTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultUnreachableTolerationSeconds))
@@ -4526,6 +4525,7 @@ func autoConvert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Kub
 	out.StructuredAuthentication = (*core.StructuredAuthentication)(unsafe.Pointer(in.StructuredAuthentication))
 	out.StructuredAuthorization = (*core.StructuredAuthorization)(unsafe.Pointer(in.StructuredAuthorization))
 	out.Autoscaling = (*core.ControlPlaneAutoscaling)(unsafe.Pointer(in.Autoscaling))
+	out.TLSMinVersion = (*string)(unsafe.Pointer(in.TLSMinVersion))
 	return nil
 }
 
@@ -4557,7 +4557,6 @@ func autoConvert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *cor
 	out.Requests = (*APIServerRequests)(unsafe.Pointer(in.Requests))
 	out.EnableAnonymousAuthentication = (*bool)(unsafe.Pointer(in.EnableAnonymousAuthentication))
 	out.EventTTL = (*metav1.Duration)(unsafe.Pointer(in.EventTTL))
-	out.TLSMinVersion = (*string)(unsafe.Pointer(in.TLSMinVersion))
 	out.Logging = (*APIServerLogging)(unsafe.Pointer(in.Logging))
 	out.DefaultNotReadyTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultNotReadyTolerationSeconds))
 	out.DefaultUnreachableTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultUnreachableTolerationSeconds))
@@ -4565,6 +4564,7 @@ func autoConvert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *cor
 	out.StructuredAuthentication = (*StructuredAuthentication)(unsafe.Pointer(in.StructuredAuthentication))
 	out.StructuredAuthorization = (*StructuredAuthorization)(unsafe.Pointer(in.StructuredAuthorization))
 	out.Autoscaling = (*ControlPlaneAutoscaling)(unsafe.Pointer(in.Autoscaling))
+	out.TLSMinVersion = (*string)(unsafe.Pointer(in.TLSMinVersion))
 	return nil
 }
 
