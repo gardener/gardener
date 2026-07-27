@@ -30,8 +30,8 @@ const (
 // Interface contains functions for an alertmanager deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetIngressAuthSecret sets the ingress authentication secret name.
-	SetIngressAuthSecret(*corev1.Secret)
+	// SetIngressAuthSecretName sets the ingress authentication secret name.
+	SetIngressAuthSecretName(string)
 	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 }
@@ -149,9 +149,9 @@ func (a *alertManager) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, a.client, a.namespace, a.name())
 }
 
-func (a *alertManager) SetIngressAuthSecret(secret *corev1.Secret) {
-	if a.values.ExternalExposure != nil && secret != nil {
-		a.values.ExternalExposure.AuthSecretName = secret.Name
+func (a *alertManager) SetIngressAuthSecretName(name string) {
+	if a.values.ExternalExposure != nil {
+		a.values.ExternalExposure.AuthSecretName = name
 	}
 }
 

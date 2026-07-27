@@ -64,8 +64,8 @@ func ServicePorts() struct {
 // Interface contains functions for a Prometheus deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetIngressAuthSecret sets the ingress authentication secret name.
-	SetIngressAuthSecret(*corev1.Secret)
+	// SetIngressAuthSecretName sets the ingress authentication secret name.
+	SetIngressAuthSecretName(string)
 	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
@@ -349,9 +349,9 @@ func (p *prometheus) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.name())
 }
 
-func (p *prometheus) SetIngressAuthSecret(secret *corev1.Secret) {
-	if p.values.Ingress != nil && secret != nil {
-		p.values.Ingress.AuthSecretName = secret.Name
+func (p *prometheus) SetIngressAuthSecretName(name string) {
+	if p.values.Ingress != nil {
+		p.values.Ingress.AuthSecretName = name
 	}
 }
 

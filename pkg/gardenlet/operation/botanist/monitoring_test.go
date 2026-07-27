@@ -104,9 +104,7 @@ var _ = Describe("Monitoring", func() {
 
 		Context("deployment", func() {
 			It("should successfully deploy", func() {
-				alertManager.EXPECT().SetIngressAuthSecret(gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(s *corev1.Secret) {
-					Expect(s.Name).To(Equal(ingressAuthSecret.Name))
-				})
+				alertManager.EXPECT().SetIngressAuthSecretName(ingressAuthSecret.Name)
 				alertManager.EXPECT().SetIngressWildcardCertSecret(gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(s *corev1.Secret) {
 					Expect(s.Name).To(Equal(ingressWildcardSecret.Name))
 				})

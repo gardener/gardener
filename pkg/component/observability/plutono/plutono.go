@@ -797,23 +797,13 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	)
 
 	if p.values.IsGardenCluster {
-		credentialsSecret, found := p.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-		}
-
-		credentialsSecretName = credentialsSecret.Name
+		credentialsSecretName = v1beta1constants.SecretNameObservabilityIngress
 		caName = operatorv1alpha1.SecretNameCARuntime
 		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
-		credentialsSecret, found := p.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
-		}
-
-		credentialsSecretName = credentialsSecret.Name
+		credentialsSecretName = v1beta1constants.SecretNameObservabilityIngressUsers
 		caName = v1beta1constants.SecretNameCACluster
 		gatewayName = fmt.Sprintf("%s-%s", gatewayName, p.namespace)
 	}

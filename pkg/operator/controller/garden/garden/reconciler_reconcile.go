@@ -658,12 +658,7 @@ func (r *Reconciler) reconcile(
 		deployAlertmanager = g.Add(flow.Task{
 			Name: "Deploying Alertmanager",
 			Fn: func(ctx context.Context) error {
-				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-				if !found {
-					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-				}
-
-				c.alertManager.SetIngressAuthSecret(credentialsSecret)
+				c.alertManager.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
 				return c.alertManager.Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
@@ -682,7 +677,7 @@ func (r *Reconciler) reconcile(
 				}
 				discoveryServerEnabled := garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil
 				dashboardDomain := helper.PrimaryDashboardDomain(garden)
-				return r.deployGardenPrometheus(ctx, secretsManager, c.prometheusGarden, virtualClusterClient, aggregatePrometheusHost, dashboardDomain, discoveryServerEnabled)
+				return r.deployGardenPrometheus(ctx, c.prometheusGarden, virtualClusterClient, aggregatePrometheusHost, dashboardDomain, discoveryServerEnabled)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient, generateAndReplicateGlobalObservabilityIngressPassword),
 		})
@@ -694,7 +689,7 @@ func (r *Reconciler) reconcile(
 		deployPrometheusLongTerm = g.Add(flow.Task{
 			Name: "Deploying long-term Prometheus",
 			Fn: func(ctx context.Context) error {
-				return r.deployLongTermPrometheus(ctx, secretsManager, c.prometheusLongTerm)
+				return r.deployLongTermPrometheus(ctx, c.prometheusLongTerm)
 			},
 			Dependencies: flow.NewTaskIDs(deployPrometheusGarden),
 		})
@@ -1136,17 +1131,12 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(ctx context.Context, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, dashboardDomain string, discoveryServerEnabled bool) error {
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, dashboardDomain string, discoveryServerEnabled bool) error {
 	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
 
-	// fetch auth secret for ingress
-	credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-	}
-	prometheus.SetIngressAuthSecret(credentialsSecret)
+	prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
 
 	// fetch global monitoring secret for prometheus-aggregate scrape config
 	globalMonitoringSecretRuntime, err := r.getGlobalObservabilitySecret(ctx)
@@ -1309,13 +1299,8 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 	return component.OpWait(dashboard).Deploy(ctx)
 }
 
-func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, secretsManager secretsmanager.Interface, prometheus prometheus.Interface) error {
-	// fetch auth secret for ingress
-	credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-	}
-	prometheus.SetIngressAuthSecret(credentialsSecret)
+func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, prometheus prometheus.Interface) error {
+	prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
 	return prometheus.Deploy(ctx)
 }
 
