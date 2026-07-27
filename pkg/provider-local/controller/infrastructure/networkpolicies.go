@@ -51,12 +51,12 @@ func networkPolicies(namespace string, cluster *extensionscontroller.Cluster) []
 			{From: machinePodPeers()}, // allow intra-machine communication
 		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{
-			allowToIstioGateways(cluster), // kube-proxy might short-circuit traffic to the istio-ingressgateway pods
-			allowToBind9(),                // machine pods explicitly use node-local DNS.
-			allowToPublicNetworks(),       // In case we need to pull manifests from public registries, or a workload wants to reach the public internet
+			allowToIstioGateways(),  // kube-proxy might short-circuit traffic to the istio-ingressgateway pods
+			allowToBind9(),          // machine pods explicitly use this DNS, instead of in-cluster
+			allowToPublicNetworks(), // In case we need to pull manifests from public registries, or a workload wants to reach the public internet
 			allowToLoadBalancers(),
 			{To: machinePodPeers()},
-			{To: kindPeers()}, // required to reach registry (mirrors) and LBs
+			{To: kindPeers()}, // required to reach registry (mirrors)
 		},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 	}
@@ -101,13 +101,12 @@ func allowToLoadBalancers() networkingv1.NetworkPolicyEgressRule {
 	}
 }
 
-func allowToIstioGateways(cluster *extensionscontroller.Cluster) networkingv1.NetworkPolicyEgressRule {
-	istioGatewaysRule := networkingv1.NetworkPolicyEgressRule{
+func allowToIstioGateways() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{{
 			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-				"app":   "istio-ingressgateway",
-				"istio": "ingressgateway",
+				"app": "istio-ingressgateway", // covers any istio namespace (garden, seed, zonal, exposureClasses etc.)
 			}},
 		}},
 		Ports: []networkingv1.NetworkPolicyPort{
@@ -119,19 +118,6 @@ func allowToIstioGateways(cluster *extensionscontroller.Cluster) networkingv1.Ne
 			{Port: new(intstr.FromInt32(9443)), Protocol: new(corev1.ProtocolTCP)},
 		},
 	}
-	// For multi-zone seeds, also allow egress to the per-zone istio-ingress namespaces.
-	if cluster.Seed != nil && len(cluster.Seed.Spec.Provider.Zones) > 1 {
-		for _, zone := range cluster.Seed.Spec.Provider.Zones {
-			istioGatewaysRule.To = append(istioGatewaysRule.To, networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway--zone--" + zone,
-				}},
-			})
-		}
-	}
-	return istioGatewaysRule
 }
 
 func allowToBind9() networkingv1.NetworkPolicyEgressRule {

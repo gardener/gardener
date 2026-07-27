@@ -167,3 +167,18 @@ var _ = DescribeTable("#OverlapAny",
 	Entry("should detect overlap with dual-stack: IPv6 input, dual-stack list (overlap on IPv6)",
 		"2001:db8::/32", []string{"10.0.0.0/8", "2001:db8::/32"}, true),
 )
+
+var _ = DescribeTable("#ToCIDRStrings",
+	func(cidrs []net.IPNet, expected []string) {
+		Expect(ToCIDRStrings(cidrs...)).To(Equal(expected))
+	},
+	Entry("should work with nil list",
+		nil, []string{}),
+	Entry("should work with empty list",
+		[]net.IPNet{}, []string{}),
+	Entry("should work with a list",
+		[]net.IPNet{
+			{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)},
+			{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)},
+		}, []string{"10.0.0.0/8", "2001:db8::/64"}),
+)

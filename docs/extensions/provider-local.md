@@ -85,7 +85,7 @@ The controller supports A, AAAA, and CNAME record types.
 
 #### `Infrastructure`
 
-This controller creates the machine Pod namespace (`machine-pods-<technical-id>`) and an `IPPool` that the machine Pods will use.
+This controller creates the machine Pod namespace (`infra-<technical-id>`), an `IPPool` that the machine Pods will use, and `NetworkPolicies` for the machine pods.
 These resources are created in cluster specified by the `kubeconfig` in the provider secret.
 
 #### `Network`

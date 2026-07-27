@@ -92,7 +92,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bastion *extens
 
 	patch := client.MergeFrom(bastion.DeepCopy())
 	bastion.Status.Ingress = service.Status.LoadBalancer.Ingress[0].DeepCopy()
-	return providerClient.Status().Patch(ctx, bastion, patch)
+	return a.runtimeClient.Status().Patch(ctx, bastion, patch)
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
