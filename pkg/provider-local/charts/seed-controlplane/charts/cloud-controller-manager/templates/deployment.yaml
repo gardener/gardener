@@ -36,13 +36,22 @@ spec:
         # Case: CCM is responsible for shoot clusters - in addition, CCM also runs in the kind cluster's kube-system
         # namespace, but we don't deploy NetworkPolicies there, so no special labeling is needed.
         {{- if hasPrefix "shoot-" .Release.Namespace }}
-        # Case: CCM runs in shoot namespace next to control plane (hosted shoot scenario)
+        # Case: Hosted Shoot
         networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed # Allows communication to kube-apiserver
                                                                                # of shoot (e.g., for watching Services).
+       
+        {{- if .Values.hasManagedInfrastructure }}
         # Needed for looking up where machine pods are running for setting up routes on the load balancer containers.
+        # With managed infrastructure, we cannot tell where the infrastructure is running, so we need to allow
+        # communication to private networks, as this gives access to different local kind clusters.
+        networking.gardener.cloud/to-private-networks: allowed # Allows communication to any kind apiserver - needed
+                                                                # for looking up where machine pods are running for
+                                                                # setting up routes on the load balancer containers.
+        {{- else }}
         networking.gardener.cloud/to-runtime-apiserver: allowed # Allows communication to the kind apiserver - needed
                                                                 # for looking up where machine pods are running for
                                                                 # setting up routes on the load balancer containers.
+        {{- end }}
         {{- else }}
         # Case: CCM runs in kube-system namespace (self-hosted shoot scenario)
         networking.gardener.cloud/to-apiserver: allowed # Allows communication to kube-apiserver running in the cluster
