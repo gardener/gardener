@@ -35,16 +35,19 @@ spec:
             function envoy_on_request(request_handle)
               local streamInfo = request_handle:streamInfo()
               local rsn = streamInfo:requestedServerName()
-              if rsn == "" then return end
+
+              if rsn == nil or rsn == "" then
+                return
+              end
 
               local authority = request_handle:headers():get(":authority")
-              if authority == nil then return end
-
-              -- Strip trailing :443
-              local portSuffix = ":443"
-              if authority:sub(-#portSuffix) == portSuffix then
-                authority = authority:sub(1, -(#portSuffix + 1))
+              if authority == nil then
+                return
               end
+
+              -- Dynamically strip any trailing port (e.g. :443, :9443, etc.)
+              -- :%d+$ matches a colon followed by digits at the end of the string
+              authority = authority:gsub(":%d+$", "")
 
               if rsn ~= authority then
                 request_handle:respond({[":status"] = "421"}, "Misdirected Request")
