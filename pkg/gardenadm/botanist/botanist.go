@@ -34,9 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
-	gardenpkg "github.com/gardener/gardener/pkg/gardenlet/operation/garden"
-	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
-	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -175,8 +172,19 @@ func NewGardenadmBotanistWithoutResources(log logr.Logger) (*GardenadmBotanist, 
 		return nil, fmt.Errorf("failed fetching hostname: %w", err)
 	}
 
+	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
+
+	// Stub `Operation`; used only for hostname/client-set creation (e.g., `gardenadm join`).
 	b := &GardenadmBotanist{
-		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeGardenClient(), newFakeSeedClientSet(""))},
+		Botanist: &botanistpkg.Botanist{Operation: &operation.Operation{
+			Logger:         log,
+			Clock:          clock.RealClock{},
+			Config:         gardenletConfig,
+			GardenClient:   newFakeGardenClient(),
+			SeedClientSet:  newFakeSeedClientSet(""),
+			ShootClientSet: newFakeSeedClientSet(""),
+		}},
 
 		HostName: hostName,
 		DBus:     dbus.New(log),
@@ -188,20 +196,6 @@ func NewGardenadmBotanistWithoutResources(log logr.Logger) (*GardenadmBotanist, 
 	}
 
 	return b, nil
-}
-
-func newOperation(log logr.Logger, gardenClient client.Client, clientSet kubernetes.Interface) *operation.Operation {
-	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
-	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
-
-	return &operation.Operation{
-		Logger:         log,
-		Clock:          clock.RealClock{},
-		Config:         gardenletConfig,
-		GardenClient:   gardenClient,
-		SeedClientSet:  clientSet,
-		ShootClientSet: clientSet,
-	}
 }
 
 func newBotanist(
@@ -223,26 +217,39 @@ func newBotanist(
 		log.Info("Initializing gardenadm botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
-	var (
-		o   = newOperation(log, gardenClient, clientSet)
-		err error
-	)
-
-	o.Garden, err = newGardenObject(ctx, resources.Project)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating garden object: %w", err)
+	var seed *gardencorev1beta1.Seed
+	if !runsControlPlane {
+		seed = resources.Seed
 	}
 
-	o.Shoot, err = newShootObject(ctx, clientSet, gardenClient, resources, runsControlPlane)
+	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
+
+	o, err := operation.Initialize(
+		ctx,
+		log,
+		gardenClient,
+		clientSet,
+		nil, // gardenadm has no ShootClientMap
+		gardenletConfig,
+		&gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion},
+		resources.Shoot.Name, // matches `Seed.Status.ClusterIdentity` written by `initializeSeedResource`
+		resources.Shoot,
+		resources.Project,
+		resources.CloudProfile,
+		seed,
+		nil, // no `ExposureClass` in gardenadm
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating shoot object: %w", err)
+		return nil, fmt.Errorf("failed initializing operation: %w", err)
 	}
 
 	if !runsControlPlane {
-		o.Seed, err = seedpkg.NewBuilder().WithSeedObject(resources.Seed).Build(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed creating seed object: %w", err)
-		}
+		// In self-hosted shoot clusters, kube-system is used as the control plane namespace.
+		// However, when bootstrapping a self-hosted shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
+		// we want to avoid conflicts with kube-system components of the bootstrap cluster by placing all shoot-related
+		// components in another namespace. In this case, we use the technical ID as the control plane namespace, as usual.
+		o.Shoot.ControlPlaneNamespace = resources.Shoot.Status.TechnicalID
 	}
 
 	if caBundle := imagevector.ContainersCABundle(); caBundle != nil && caBundle.Inline != nil {
@@ -296,45 +303,6 @@ func initializeFakeGardenResources(
 	}
 
 	return nil
-}
-
-func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*gardenpkg.Garden, error) {
-	return gardenpkg.
-		NewBuilder().
-		WithProject(project).
-		Build(ctx)
-}
-
-func newShootObject(
-	ctx context.Context,
-	clientSet kubernetes.Interface,
-	gardenClient client.Client,
-	resources gardenadm.Resources,
-	runsControlPlane bool,
-) (
-	*shootpkg.Shoot,
-	error,
-) {
-	obj, err := shootpkg.
-		NewBuilder().
-		WithProjectName(resources.Project.Name).
-		WithCloudProfileObject(resources.CloudProfile).
-		WithShootObject(resources.Shoot).
-		WithShootCredentialsFrom(gardenClient).
-		Build(ctx, clientSet, gardenClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed building shoot object: %w", err)
-	}
-
-	// In self-hosted shoot clusters, kube-system is used as the control plane namespace.
-	// However, when bootstrapping a self-hosted shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
-	// we want to avoid conflicts with kube-system components of the bootstrap cluster by placing all shoot-related
-	// components in another namespace. In this case, we use the technical ID as the control plane namespace, as usual.
-	if !runsControlPlane {
-		obj.ControlPlaneNamespace = resources.Shoot.Status.TechnicalID
-	}
-
-	return obj, nil
 }
 
 func newFakeGardenClient() client.Client {
