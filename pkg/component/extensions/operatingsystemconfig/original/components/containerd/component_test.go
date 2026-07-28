@@ -40,7 +40,8 @@ Description=Rotate and Compress System Logs
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
 Restart=on-failure
 RestartSec=5
-StartLimitBurst=0
+StartLimitBurst=5
+StartLimitIntervalSec=30
 [Install]
 WantedBy=multi-user.target`),
 				FilePaths: []string{"/etc/systemd/containerd.conf"},
