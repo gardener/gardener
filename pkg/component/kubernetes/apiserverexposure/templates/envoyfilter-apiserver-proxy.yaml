@@ -130,6 +130,10 @@ spec:
                         request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", "86400000")
                         request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", "86400000")
                       end
+
+                      function envoy_on_response(response_handle)
+                        response_handle:headers():replace("strict-transport-security", "max-age=31536000")
+                      end
               - name: envoy.filters.http.router
                 typed_config:
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
