@@ -1086,6 +1086,11 @@ func getVirtualService() *istionetworkingv1beta1.VirtualService {
 						MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/vali/api/v1/push"},
 					},
 				}},
+				Headers: &istionetworkingv1alpha3.Headers{
+					Response: &istionetworkingv1alpha3.Headers_HeaderOperations{
+						Set: map[string]string{"strict-transport-security": "max-age=31536000"},
+					},
+				},
 				Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
 					Destination: &istionetworkingv1alpha3.Destination{
 						Host: "logging.shoot--foo--bar.svc.cluster.local",
