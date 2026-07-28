@@ -24,13 +24,13 @@ source $(dirname "${0}")/ci-common.sh
 
 ginkgo_flags=
 
-# If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.
-# This will add a JUnit view above the build log that shows an overview over successful and failed test cases.
+# If running in prow, we want to generate a machine-readable JUnit report under the location specified via $ARTIFACTS.
+# The report is written by the custom JUnit reporter registered in the test suite, which adds a JUnit view above the
+# build log that shows an overview over successful and failed test cases.
 if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   mkdir -p "$ARTIFACTS"
-  ginkgo_flags="--output-dir=$ARTIFACTS --junit-report=junit.xml"
   if [ "${JOB_TYPE:-}" != "periodic" ]; then
-    ginkgo_flags+=" --fail-fast"
+    ginkgo_flags="--fail-fast"
   fi
 fi
 
