@@ -452,9 +452,14 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
-			if numUnavailable == 0 && (numUpdated+numNeedUpdateManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
+			// When there are preserved failed machines in the cluster, if numUnavailable <= numPreservedFailed,
+			// it would mean all unavailable machines are preserved failed machines.
+			// In such cases, shoot reconciliation must be allowed to progress.
+			if (numUpdated+numNeedUpdateManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
 				numOldMachinesNotUpdateCandidateManualInPlace == 0 {
-				return retryutils.Ok()
+				if numUnavailable == 0 || (numPreservedFailed > 0 && numUnavailable <= numPreservedFailed) {
+					return retryutils.Ok()
+				}
 			}
 
 			if numUnavailable == 0 && numAvailable == numDesired && (numUpdated+numNeedUpdateManualInPlace) < numberOfAwakeMachines {
@@ -469,11 +474,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachinesNotUpdateCandidateManualInPlace)
 				break
 			}
-			if numUnavailable <= numPreservedFailed && (int(numHealthyDeployments) == len(wantedMachineDeployments)) {
-				// if the number of unavailable machines is not greater than the number of preserved failed machines, it means that all unavailable machines are preserved failed machines,
-				// hence we can exempt them from this check and allow shoot reconciliation to progress
-				return retryutils.Ok()
-			}
+
 			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d preserved failed machine(s), %d/%d machinedeployments available)...",
 				numAvailable, numDesired, numUpdated+numNeedUpdateManualInPlace, numDesired, numUnavailable, numPreservedFailed, numHealthyDeployments, len(wantedMachineDeployments))
 
