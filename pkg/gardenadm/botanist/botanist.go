@@ -59,7 +59,6 @@ type GardenadmBotanist struct {
 	Extensions []Extension
 	// Zone is the availability zone in which the new node is being added. This is used to set the
 	// topology.kubernetes.io/zone label on the node resource.
-	// This field is only relevant for shoot with unmanaged infrastructure.
 	Zone *string
 
 	operatingSystemConfigSecret *corev1.Secret
