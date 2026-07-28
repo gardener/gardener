@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ActuatorReconcile", func() {
@@ -639,5 +643,214 @@ var _ = Describe("ActuatorReconcile", func() {
 				"pool2": "04863233bf6b9bb0",
 			}))
 		})
+	})
+
+	Describe("#waitUntilWantedMachineDeploymentsAvailable", func() {
+		const (
+			namespace        = "test-namespace"
+			deploymentName   = "test-deployment"
+			machineClassName = "test-machine-class"
+			machineSetName   = "test-machine-set"
+		)
+
+		var (
+			ctx                       context.Context
+			seedClient                client.Client
+			actuator                  *genericActuator
+			cluster                   *extensionscontroller.Cluster
+			worker                    *extensionsv1alpha1.Worker
+			wantedMachineDeployments  extensionsworkercontroller.MachineDeployments
+			existingMachineClassNames sets.Set[string]
+
+			// healthyConditions makes a MachineDeployment pass CheckMachineDeployment
+			healthyConditions = []machinev1alpha1.MachineDeploymentCondition{
+				{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionTrue},
+				{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue},
+			}
+		)
+
+		buildMachineDeployment := func(status machinev1alpha1.MachineDeploymentStatus) {
+			mcd := &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deploymentName,
+					Namespace: namespace,
+				},
+				Spec: machinev1alpha1.MachineDeploymentSpec{
+					Replicas: status.Replicas,
+					Template: machinev1alpha1.MachineTemplateSpec{
+						Spec: machinev1alpha1.MachineSpec{
+							Class: machinev1alpha1.ClassSpec{
+								Name: machineClassName,
+							},
+						},
+					},
+				},
+				Status: status,
+			}
+			Expect(seedClient.Create(ctx, mcd)).To(Succeed())
+			Expect(seedClient.Status().Update(ctx, mcd)).To(Succeed())
+		}
+
+		buildMachineSet := func(name, className string) {
+			ms := &machinev1alpha1.MachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					OwnerReferences: []metav1.OwnerReference{
+						{Name: deploymentName, Kind: "MachineDeployment"},
+					},
+				},
+				Spec: machinev1alpha1.MachineSetSpec{
+					Template: machinev1alpha1.MachineTemplateSpec{
+						Spec: machinev1alpha1.MachineSpec{
+							Class: machinev1alpha1.ClassSpec{Name: className},
+						},
+					},
+				},
+			}
+			Expect(seedClient.Create(ctx, ms)).To(Succeed())
+		}
+
+		BeforeEach(func() {
+			ctx = context.Background()
+
+			fakeOps := &retryfake.Ops{MaxAttempts: 1}
+			DeferCleanup(test.WithVars(
+				&retryutils.Until, fakeOps.Until,
+				&retryutils.UntilTimeout, fakeOps.UntilTimeout,
+			))
+
+			seedClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.SeedScheme).
+				WithStatusSubresource(&machinev1alpha1.MachineDeployment{}).
+				WithObjectTracker(testing.NewObjectTracker(kubernetes.SeedScheme, scheme.Codecs.UniversalDecoder())).
+				Build()
+
+			actuator = &genericActuator{seedClient: seedClient}
+
+			worker = &extensionsv1alpha1.Worker{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "worker",
+					Namespace: namespace,
+				},
+			}
+
+			cluster = &extensionscontroller.Cluster{
+				Shoot: &gardencorev1beta1.Shoot{},
+			}
+
+			wantedMachineDeployments = extensionsworkercontroller.MachineDeployments{
+				{
+					Name:      deploymentName,
+					ClassName: machineClassName,
+				},
+			}
+
+			existingMachineClassNames = sets.New[string]()
+		})
+
+		It("should succeed when all machines are available and none are unavailable", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:            3,
+				UpdatedReplicas:     3,
+				AvailableReplicas:   3,
+				UnavailableReplicas: 0,
+				Conditions:          healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
+		})
+
+		It("should succeed when all unavailable machines are preserved failed machines", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                3,
+				UpdatedReplicas:         3,
+				AvailableReplicas:       2,
+				UnavailableReplicas:     1,
+				PreservedFailedReplicas: 1,
+				Conditions:              healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
+		})
+
+		It("should not succeed when more machines are unavailable than preserved failed machines", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                3,
+				UpdatedReplicas:         3,
+				AvailableReplicas:       1,
+				UnavailableReplicas:     2,
+				PreservedFailedReplicas: 1,
+				Conditions:              healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
+		It("should not succeed when rolling update is still in progress", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                3,
+				UpdatedReplicas:         2,
+				AvailableReplicas:       3,
+				UnavailableReplicas:     0,
+				PreservedFailedReplicas: 0,
+				Conditions:              healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
+		It("should not succeed when preserved failed machines exist but rolling update is still in progress", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                3,
+				UpdatedReplicas:         2,
+				AvailableReplicas:       2,
+				UnavailableReplicas:     1,
+				PreservedFailedReplicas: 1,
+				Conditions:              healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
+		It("should not succeed when the machine deployment is not healthy", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                3,
+				UpdatedReplicas:         3,
+				AvailableReplicas:       2,
+				UnavailableReplicas:     1,
+				PreservedFailedReplicas: 1,
+				// no conditions → CheckMachineDeployment returns error
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
+		It("should not succeed when there are no preserved failed machines and some machines are unavailable", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:            3,
+				UpdatedReplicas:     3,
+				AvailableReplicas:   2,
+				UnavailableReplicas: 1,
+				Conditions:          healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
 	})
 })
