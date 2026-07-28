@@ -263,6 +263,8 @@ func (b *Builder) Build(
 			}
 			operation.Seed = seed
 		}
+	} else {
+		operation.ShootClientSet = seedClientSet
 	}
 
 	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
@@ -277,10 +279,12 @@ func (b *Builder) Build(
 	}
 	operation.Shoot = shoot
 
-	// Get the ManagedSeed object for this shoot, if it exists.
-	operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
-	if err != nil {
-		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
+	if !isSelfHostedShoot {
+		// Get the ManagedSeed object for this shoot, if it exists. A self-hosted shoot is never a managed seed.
+		operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+		if err != nil {
+			return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
+		}
 	}
 
 	gardenerInfo, err := b.gardenerInfoFunc()
