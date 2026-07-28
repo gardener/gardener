@@ -5116,8 +5116,10 @@ spec:
                           minimum: -1
                           type: integer
                         send:
-                          description: send defines whether metric metadata is sent
-                            to the remote storage or not.
+                          description: |-
+                            send defines whether metric metadata is sent to the remote storage or not.
+
+                            The setting is ignored when Remote Write message's version 2.0 is used.
                           type: boolean
                         sendInterval:
                           description: sendInterval defines how frequently metric
@@ -5925,6 +5927,7 @@ spec:
 
                               Only applicable when the action is `HashMod`.
                             format: int64
+                            minimum: 0
                             type: integer
                           regex:
                             description: regex defines the regular expression against
