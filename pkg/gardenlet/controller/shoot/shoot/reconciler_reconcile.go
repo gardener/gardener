@@ -605,28 +605,15 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			deleteBastions,
 			waitUntilExtensionResourcesAfterKAPIReady,
 		))
-		deployNetwork = g.Add(flow.Task{
-			Name:         "Deploying shoot network plugin",
-			Fn:           flow.TaskFn(b.DeployNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilGardenerResourceManagerReady, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
-		waitUntilNetworkIsReady = g.Add(flow.Task{
-			Name: "Waiting until shoot network plugin has been reconciled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.Network.Wait(ctx)
-			}),
-			SkipIf:       b.Shoot.IsWorkerless || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployNetwork),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Check coreDNS migration",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.CheckDNSServiceMigration(ctx)
-			}),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilNetworkIsReady),
-		})
+		deployShootSystemResources = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(
+			deployReferencedResources,
+			waitUntilOperatingSystemConfigReady,
+			waitUntilControlPlaneReady,
+			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
+			waitUntilGardenerResourceManagerReady,
+			initializeShootClients,
+			waitUntilOperatingSystemConfigReady,
+		))
 		_ = g.Add(flow.Task{
 			Name: "Deploying shoot cluster identity",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -635,39 +622,10 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			SkipIf:       b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
-		deployShootSystemResources = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(
-			waitUntilControlPlaneReady,
-			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-			waitUntilGardenerResourceManagerReady,
-			initializeShootClients,
-			waitUntilOperatingSystemConfigReady,
-		))
 		_ = g.Add(flow.Task{
 			Name:         "Populating static manifests from seed to shoot",
 			Fn:           flow.TaskFn(b.PopulateStaticManifestsFromSeedToShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady),
-		})
-		deployCoreDNS = g.Add(flow.Task{
-			Name: "Deploying CoreDNS system component",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := b.DeployCoreDNS(ctx); err != nil {
-					return err
-				}
-				if controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
-					return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskRestartCoreAddons)
-				}
-				return nil
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
-		deployNodeLocalDNS = g.Add(flow.Task{
-			Name:   "Reconcile node-local-dns system component",
-			Fn:     flow.TaskFn(b.ReconcileNodeLocalDNS),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				deployGardenerResourceManager, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady, waitUntilNetworkIsReady),
 		})
 		deployMetricsServer = g.Add(flow.Task{
 			Name: "Deploying metrics-server system component",
@@ -694,29 +652,13 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
 				deployGardenerResourceManager, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
 		})
-		deployKubeProxy = g.Add(flow.Task{
-			Name:   "Deploying kube-proxy system component",
-			Fn:     flow.TaskFn(b.DeployKubeProxy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !flowCtx.kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deleting stale kube-proxy DaemonSets",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.SystemComponents.KubeProxy.DeleteStaleResources(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !flowCtx.kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(deployKubeProxy),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deleting kube-proxy system component",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.SystemComponents.KubeProxy.Destroy(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler),
-		})
+		reconcileSystemComponents = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness).WithDependencies(
+			waitUntilControlPlaneReady,
+			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
+			initializeShootClients,
+			ensureShootClusterIdentity,
+			deployKubeScheduler,
+		))
 		deployAPIServerProxy = g.Add(flow.Task{
 			Name:   "Deploying apiserver-proxy",
 			Fn:     flow.TaskFn(b.DeployAPIServerProxy).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -762,16 +704,13 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 		})
 
 		syncPointAllSystemComponentsDeployed = flow.NewTaskIDs(
-			waitUntilNetworkIsReady,
+			reconcileSystemComponents,
 			deployAPIServerProxy,
 			deployShootSystemResources,
-			deployCoreDNS,
 			deployNodeExporter,
-			deployNodeLocalDNS,
 			deployMetricsServer,
 			deployVPNShoot,
 			deployNodeProblemDetector,
-			deployKubeProxy,
 			deployBlackboxExporter,
 			deployKubernetesDashboard,
 			deployNginxIngressAddon,
@@ -787,7 +726,6 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			waitUntilInfrastructureReady,
 			initializeShootClients,
 			waitUntilOperatingSystemConfigReady,
-			waitUntilNetworkIsReady,
 			createNewServiceAccountSecrets,
 			scaleClusterAutoscalerToZero,
 		))
@@ -836,7 +774,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           b.WaitUntilTunnelConnectionExists,
 			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, reconcileSystemComponents, waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting until all shoot worker nodes have updated the operating system config",
@@ -1008,7 +946,7 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 		_                                = g.AddGroup(b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness))
 		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
 		_                                = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
-		reconcileSystemComponents        = g.AddGroup(b.ReconcileSystemComponentsTaskGroup())
+		reconcileSystemComponents        = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness))
 
 		deployBackupBucketInGarden = g.Add(flow.Task{
 			Name:         "Deploying BackupBucket for ETCD data",

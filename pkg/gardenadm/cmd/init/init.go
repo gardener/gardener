@@ -86,8 +86,9 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	var (
-		g           = flow.NewGraph("init")
-		allowBackup = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
+		g                = flow.NewGraph("init")
+		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
+		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
 		_                           = g.AddGroup(b.DeployNamespacesTaskGroup())
 		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
@@ -117,7 +118,7 @@ func run(ctx context.Context, opts *Options) error {
 		)
 		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(false))
 		reconcileSystemComponents = g.AddGroup(
-			b.ReconcileSystemComponentsTaskGroup().
+			b.ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
 		)
 

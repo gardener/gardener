@@ -478,36 +478,83 @@ func (b *Botanist) ReconcileShootNamespacesTaskGroup(skipReadiness bool) flow.Ta
 const TaskGroupReconcileSystemComponents flow.TaskID = "TaskGroupReconcileSystemComponents"
 
 // ReconcileSystemComponentsTaskGroup returns the flow.TaskGroup for reconciling shoot system components.
-func (b *Botanist) ReconcileSystemComponentsTaskGroup() flow.TaskGroup {
+func (b *Botanist) ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileSystemComponents).WithDependencies(
 			TaskGroupReconcileInfrastructure,
+			TaskGroupReconcileGardenerResourceManager,
 			TaskGroupReconcileShootNamespaces,
 		)
 
-		_ = g.Add(flow.Task{
-			Name:   "Deploying kube-proxy system component",
-			Fn:     b.DeployKubeProxy,
-			SkipIf: !v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy),
-		})
 		deployNetwork = g.Add(flow.Task{
-			Name: "Deploying shoot network plugin",
-			Fn:   b.DeployNetwork,
+			Name:   "Deploying shoot network plugin",
+			Fn:     b.DeployNetwork,
+			SkipIf: b.Shoot.IsWorkerless,
 		})
 		waitUntilNetworkReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot network plugin has been reconciled",
-			Fn:           b.Shoot.Components.Extensions.Network.Wait,
+			Name: "Waiting until shoot network plugin has been reconciled",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Network.Wait(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
+
+		deployKubeProxy = g.Add(flow.Task{
+			Name:   "Deploying kube-proxy system component",
+			Fn:     b.DeployKubeProxy,
+			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting stale kube-proxy DaemonSets",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.SystemComponents.KubeProxy.DeleteStaleResources(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled,
+			Dependencies: flow.NewTaskIDs(deployKubeProxy),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting kube-proxy system component",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.SystemComponents.KubeProxy.Destroy(ctx)
+			},
+			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || kubeProxyEnabled,
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Check CoreDNS migration status",
+			Fn:           b.CheckDNSServiceMigration,
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
+		})
 		deployCoreDNS = g.Add(flow.Task{
-			Name:         "Deploying CoreDNS system component",
-			Fn:           b.DeployCoreDNS,
+			Name: "Deploying CoreDNS system component",
+			Fn: func(ctx context.Context) error {
+				if err := b.DeployCoreDNS(ctx); err != nil {
+					return err
+				}
+				if controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
+					return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskRestartCoreAddons)
+				}
+				return nil
+			},
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until CoreDNS system component is ready",
-			Fn:           b.Shoot.Components.SystemComponents.CoreDNS.Wait,
+			Name: "Waiting until CoreDNS system component is ready",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.SystemComponents.CoreDNS.Wait(ctx)
+			},
 			Dependencies: flow.NewTaskIDs(deployCoreDNS),
+			SkipIf:       !b.Shoot.IsSelfHosted(),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Reconcile node-local-dns system component",
+			Fn:           b.ReconcileNodeLocalDNS,
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
 		})
 	)
 
