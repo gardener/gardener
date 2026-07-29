@@ -693,13 +693,13 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			SkipIf:       b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
-		deployShootSystemResources = g.Add(flow.Task{
-			Name:   "Deploying shoot system resources",
-			Fn:     flow.TaskFn(b.DeployShootSystem).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
-		})
+		deployShootSystemResources = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(
+			waitUntilControlPlaneReady,
+			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
+			waitUntilGardenerResourceManagerReady,
+			initializeShootClients,
+			waitUntilOperatingSystemConfigReady,
+		))
 		_ = g.Add(flow.Task{
 			Name:         "Populating static manifests from seed to shoot",
 			Fn:           flow.TaskFn(b.PopulateStaticManifestsFromSeedToShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
