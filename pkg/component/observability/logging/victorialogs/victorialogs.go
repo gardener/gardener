@@ -185,6 +185,11 @@ func (v *victoriaLogs) vlSingle() *victoriametricsv1.VLSingle {
 					},
 				},
 			},
+			StorageMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
+				Annotations: map[string]string{
+					"operator.victoriametrics.com/pvc-allow-volume-expansion": "false",
+				},
+			},
 			ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
 				EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Name: constants.ServiceName,
