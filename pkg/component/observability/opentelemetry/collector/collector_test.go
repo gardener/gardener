@@ -454,6 +454,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									},
 								},
 							},
+							"attributes/victorialogs": map[string]any{
+								"actions": []any{
+									map[string]any{
+										"key":    "host.name",
+										"action": "delete",
+									},
+								},
+							},
 						},
 					},
 					Exporters: otelv1beta1.AnyConfig{
@@ -759,7 +767,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
 				Exporters:  []string{"otlphttp/victorialogs"},
 				Receivers:  []string{"otlp"},
-				Processors: []string{"batch"},
+				Processors: []string{"memory_limiter", "attributes/victorialogs", "batch"},
 			}
 
 			Expect(customResourcesManagedResource).To(consistOf(
