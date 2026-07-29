@@ -672,7 +672,7 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			},
 			{
 				Name:  "WATCHDOG_THRESHOLD",
-				Value: "10",
+				Value: "8",
 			},
 			{
 				Name:  "WATCHDOG_COOLDOWN",
