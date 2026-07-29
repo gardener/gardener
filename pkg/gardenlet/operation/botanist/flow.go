@@ -270,7 +270,7 @@ const TaskGroupReconcileControlPlane flow.TaskID = "TaskGroupReconcileControlPla
 
 // ReconcileControlPlaneTaskGroup returns the flow.TaskGroup for deploying the ControlPlane extension resource and
 // waiting for its readiness.
-func (b *Botanist) ReconcileControlPlaneTaskGroup() flow.TaskGroup {
+func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileControlPlane).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
@@ -280,12 +280,16 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup() flow.TaskGroup {
 		)
 
 		deployControlPlane = g.Add(flow.Task{
-			Name: "Deploying shoot control plane components",
-			Fn:   b.DeployControlPlane,
+			Name:   "Deploying shoot control plane components",
+			Fn:     b.DeployControlPlane,
+			SkipIf: b.Shoot.IsWorkerless,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until shoot control plane has been reconciled",
-			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
+			Name: "Waiting until shoot control plane has been reconciled",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 	)

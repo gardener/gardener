@@ -134,7 +134,7 @@ func run(ctx context.Context, opts *Options) error {
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
 		_ = g.AddGroup(
-			b.ReconcileControlPlaneTaskGroup().
+			b.ReconcileControlPlaneTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
 		syncPointBootstrapped = flow.NewTaskIDs(
