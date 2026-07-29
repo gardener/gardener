@@ -439,20 +439,9 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
-		deployControlPlane = g.Add(flow.Task{
-			Name:         "Deploying shoot control plane components",
-			Fn:           flow.TaskFn(b.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
-		})
-		waitUntilControlPlaneReady = g.Add(flow.Task{
-			Name: "Waiting until shoot control plane has been reconciled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
-			}),
-			SkipIf:       b.Shoot.IsWorkerless || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployControlPlane),
-		})
+		waitUntilControlPlaneReady = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness).WithDependencies(
+			deployReferencedResources,
+		))
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           flow.TaskFn(b.Shoot.Components.SystemComponents.Namespaces.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -1084,7 +1073,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskRestartControlPlanePods)
 			}),
 			SkipIf:       !flowCtx.requestControlPlanePodsRestart,
-			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, waitUntilControlPlaneReady),
 		})
 	)
 
@@ -1108,7 +1097,7 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 		reconcileGardenerResourceManager = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden))
 		_                                = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		_                                = g.AddGroup(b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness))
-		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup())
+		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
 		_                                = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
 		reconcileSystemComponents        = g.AddGroup(b.ReconcileSystemComponentsTaskGroup())
 
