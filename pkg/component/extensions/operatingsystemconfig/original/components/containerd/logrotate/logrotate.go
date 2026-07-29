@@ -34,7 +34,6 @@ func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit,
     rotate 14
     copytruncate
     missingok
-    notifempty
     compress
     daily
     dateext

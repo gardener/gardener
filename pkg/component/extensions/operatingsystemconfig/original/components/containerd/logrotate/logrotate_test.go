@@ -71,7 +71,6 @@ WantedBy=multi-user.target`),
     rotate 14
     copytruncate
     missingok
-    notifempty
     compress
     daily
     dateext

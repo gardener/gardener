@@ -82,7 +82,6 @@ const logRotateData = `/var/log/pods/*/*/*.log {
     rotate 14
     copytruncate
     missingok
-    notifempty
     compress
     daily
     dateext
