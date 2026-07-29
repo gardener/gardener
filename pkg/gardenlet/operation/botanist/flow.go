@@ -57,7 +57,7 @@ func (b *Botanist) DeployCloudProviderSecretTaskGroup() flow.TaskGroup {
 	return flow.NewTaskGroup(TaskGroupDeployCloudProviderSecret, flow.Task{
 		Name:   "Deploying cloud provider account secret",
 		Fn:     b.DeployCloudProviderSecret,
-		SkipIf: b.Shoot.Credentials == nil,
+		SkipIf: b.Shoot.Credentials == nil || b.Shoot.IsWorkerless,
 	}).WithDependencies(TaskGroupDeployNamespaces)
 }
 

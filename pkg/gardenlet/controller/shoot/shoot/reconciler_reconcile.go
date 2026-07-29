@@ -232,12 +232,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			Fn:           flow.TaskFn(b.EnsureShootClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
-		deployCloudProviderSecret = g.Add(flow.Task{
-			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.TaskFn(b.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
+		deployCloudProviderSecret                    = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
 		reconcileIstioInternalLoadbalancingConfigMap = g.Add(flow.Task{
 			Name:         "Reconcile Istio internal load balancing ConfigMap",
 			Fn:           flow.TaskFn(b.ReconcileIstioInternalLoadBalancingConfigMap).RetryUntilTimeout(defaultInterval, defaultTimeout),
