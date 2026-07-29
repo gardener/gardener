@@ -202,6 +202,7 @@ build:
             - pkg/gardenlet/controller/backupentry
             - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
             - pkg/gardenlet/controller/controllerinstallation/utils
+            - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/features
             - pkg/gardenlet/operation
             - pkg/gardenlet/operation/botanist

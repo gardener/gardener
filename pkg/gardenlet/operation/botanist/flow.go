@@ -23,6 +23,7 @@ import (
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -569,21 +570,22 @@ const TaskGroupReconcileETCDs flow.TaskID = "TaskGroupReconcileETCDs"
 
 // ReconcileETCDsTaskGroup returns the flow.TaskGroup for deploying etcd-druid, the ETCDs resources, and waiting for
 // their readiness.
-func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden bool) flow.TaskGroup {
+func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden, isRestoringHAControlPlane, skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileETCDs).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupDeployCloudProviderSecret,
-			TaskGroupReconcileGardenerResourceManager,
 		)
 
 		deployEtcdDruid = g.Add(flow.Task{
-			Name:   "Deploying ETCD Druid",
-			Fn:     b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
-			SkipIf: shootIsGarden,
+			Name: "Deploying ETCD Druid",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.EtcdDruid.Deploy(ctx)
+			},
+			SkipIf: shootIsGarden || !b.Shoot.IsSelfHosted(),
 		})
-		deployEtcds = g.Add(flow.Task{
-			Name: "Deploying main and events ETCDs",
+		configureEtcd = g.Add(flow.Task{
+			Name: "Configuring static pod control plane node IP addresses for ETCDs",
 			Fn: func(ctx context.Context) error {
 				nodes, err := b.ListControlPlaneNodes(ctx)
 				if err != nil {
@@ -597,13 +599,19 @@ func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden bool) flow.TaskGroup {
 
 				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(ip)
 				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(ip)
-				return b.DeployEtcd(ctx)
+				return nil
 			},
-			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
+			SkipIf: !b.Shoot.IsSelfHosted(),
+		})
+		deployEtcds = g.Add(flow.Task{
+			Name:         "Deploying main and events ETCDs",
+			Fn:           flow.TaskFn(b.DeployEtcd).RetryUntilTimeout(5*time.Second, helper.GetEtcdDeployTimeout(b.Shoot, 30*time.Second)),
+			Dependencies: flow.NewTaskIDs(deployEtcdDruid, configureEtcd),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs have been reconciled",
 			Fn:           b.WaitUntilEtcdsReady,
+			SkipIf:       (!isRestoringHAControlPlane && b.Shoot.HibernationEnabled) || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 	)

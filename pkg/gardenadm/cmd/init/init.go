@@ -182,7 +182,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 
 		_ = g.AddGroup(
-			b.ReconcileETCDsTaskGroup(shootIsGarden).
+			b.ReconcileETCDsTaskGroup(shootIsGarden, false, false).
 				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
 				SkipIf(opts.UseBootstrapEtcd),
 		)

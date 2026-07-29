@@ -342,28 +342,21 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			SkipIf:       !flowCtx.isCopyOfBackupsRequired,
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdBackupsCopied),
 		})
-		deployETCD = g.Add(flow.Task{
-			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(b.DeployEtcd).RetryUntilTimeout(defaultInterval, helper.GetEtcdDeployTimeout(b.Shoot, defaultTimeout)),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
-		})
+		waitUntilEtcdReady = g.AddGroup(b.ReconcileETCDsTaskGroup(false, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness).WithDependencies(
+			waitUntilBackupEntryInGardenReconciled,
+			waitUntilEtcdBackupsCopied,
+		))
 		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           b.DestroySourceBackupEntry,
 			SkipIf:       !flowCtx.allowBackup || !b.Shoot.IsRestorePhase(),
-			Dependencies: flow.NewTaskIDs(deployETCD),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until source backup entry has been deleted",
 			Fn:           b.Shoot.Components.SourceBackupEntry.WaitCleanup,
 			SkipIf:       !flowCtx.allowBackup || flowCtx.skipReadiness || !b.Shoot.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(destroySourceBackupEntry),
-		})
-		waitUntilEtcdReady = g.Add(flow.Task{
-			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           b.WaitUntilEtcdsReady,
-			SkipIf:       (!flowCtx.isRestoringHAControlPlane && b.Shoot.HibernationEnabled) || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
 			Name:         "Deploying extension resources before kube-apiserver",
@@ -384,7 +377,6 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			}).RetryUntilTimeout(defaultInterval, flowCtx.deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
-				deployETCD,
 				waitUntilEtcdReady,
 				waitUntilKubeAPIServerServiceIsReady,
 				waitUntilExtensionResourcesBeforeKAPIReady,
@@ -993,7 +985,7 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 		})
 
 		_ = g.AddGroup(
-			b.ReconcileETCDsTaskGroup(shootIsGarden).
+			b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness).
 				WithDependencies(waitUntilBackupEntryInGardenReconciled),
 		)
 		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false, ""))
