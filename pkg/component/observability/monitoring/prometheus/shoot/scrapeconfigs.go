@@ -77,7 +77,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					Role:       monitoringv1alpha1.KubernetesRoleEndpoint,
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 				}},
-				SampleLimit: new(uint64(500)),
+				SampleLimit: new(int64(500)),
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
