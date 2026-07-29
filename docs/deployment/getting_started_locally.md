@@ -120,27 +120,31 @@ make gardener-dev SKAFFOLD_MODULE=gardenlet
 
 ## Debugging Gardener
 
+You can debug individual components by building the respective `-debug` targets, e.g.
+
 ```bash
-make gardener-debug
+make seed-debug
+```
+for the gardenlet,
+```bash
+make operator-debug
+```
+for the garden-operator, or
+```bash
+make cloud-provider-local-debug
+```
+for the local cloud provider extension.
+
+The latter two are using skaffold debugging features which inject a [Delve](https://github.com/go-delve/delve) entrypoint into the image. The first one does not
+change the entrypoint, so you will have to manually attach dlv after the pod is deployed. You can can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) provided in the `hack` directory:
+```bash
+./hack/attach-gardenlet-debugger.sh
 ```
 
-This is using skaffold debugging features. In the Gardener case, Go debugging using [Delve](https://github.com/go-delve/delve) is the most relevant use case.
 Please see the [skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) how to set up your IDE accordingly or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
-`SKAFFOLD_MODULE` environment variable is working the same way as described for [Developing Gardener](#developing-gardener). However, skaffold is not watching for changes when debugging,
-because it would like to avoid interrupting your debugging session.
-
-For example, if you want to debug gardenlet:
-
-```bash
-# initial deployment of all components
-make gardener-up
-# start debugging gardenlet without deploying other components
-make gardener-debug SKAFFOLD_MODULE=gardenlet
-```
-
-In debugging flow, skaffold builds your container images, reconfigures your pods and creates port forwardings for the `Delve` debugging ports to your localhost.
-The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod will be forwarded to `56269` and so on.
+In debugging flow, skaffold builds your container images, reconfigures your pods and creates port forwardings for the `Delve` debugging ports to your localhost (except for the gardenlet, where you have to forward the port yourself).
+The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod should be forwarded to `56269` and so on.
 Please check your console output for the concrete port-forwarding on your machine.
 
 > Note: Resuming or stopping only a single goroutine (Go Issue [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)) is currently not supported, so the action will cause all the goroutines to get activated or paused.

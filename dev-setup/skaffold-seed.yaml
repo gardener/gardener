@@ -620,6 +620,11 @@ profiles:
           dateTime:
             format: "20060102150405"
           name: timestamp
+  - name: debug
+    patches:
+      - op: add
+        path: /build/artifacts/0/ko/fromImage
+        value: gcr.io/k8s-skaffold/skaffold-debug-support/go:latest
   - name: single-node
     manifests:
       kustomize:

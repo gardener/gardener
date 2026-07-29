@@ -17,10 +17,13 @@ COMMAND="${1:-up}"
 VALID_COMMANDS=("up dev debug down")
 
 skaffold_command="run"
+skaffold_extra_profiles=""
 if [[ "$COMMAND" == "dev" ]]; then
   skaffold_command="dev"
+  COMMAND="up"
 elif [[ "$COMMAND" == "debug" ]]; then
-  skaffold_command="debug"
+  skaffold_extra_profiles="--profile=debug"
+  COMMAND="up"
 fi
 
 gardenlet_name="local"
@@ -52,6 +55,7 @@ case "$COMMAND" in
 
     skaffold $skaffold_command \
       -m gardenlet \
+      $skaffold_extra_profiles \
       --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
