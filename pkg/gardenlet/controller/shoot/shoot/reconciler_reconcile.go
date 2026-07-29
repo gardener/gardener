@@ -628,36 +628,13 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			SkipIf:       flowCtx.skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
 		})
-		deployOperatingSystemConfig = g.Add(flow.Task{
-			Name:         "Deploying operating system specific configuration for shoot workers",
-			Fn:           flow.TaskFn(b.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions, waitUntilExtensionResourcesAfterKAPIReady),
-		})
-		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
-			Name: "Waiting until operating system configurations for worker nodes have been reconciled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx)
-			}),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
-		})
-		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
-			Name: "Delete stale operating system config resources",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until stale operating system config resources are deleted",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx)
-			}),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
-		})
+		waitUntilOperatingSystemConfigReady = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(
+			deployReferencedResources,
+			waitUntilInfrastructureReady,
+			waitUntilControlPlaneReady,
+			deleteBastions,
+			waitUntilExtensionResourcesAfterKAPIReady,
+		))
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           flow.TaskFn(b.DeployNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),

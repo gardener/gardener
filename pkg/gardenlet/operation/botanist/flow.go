@@ -195,8 +195,7 @@ const TaskGroupReconcileSystemResources flow.TaskID = "TaskGroupReconcileSystemR
 // ReconcileSystemResourcesTaskGroup returns the flow.TaskGroup for deploying the system resources.
 func (b *Botanist) ReconcileSystemResourcesTaskGroup() flow.TaskGroup {
 	var (
-		g                  = flow.NewTaskGroup(TaskGroupReconcileSystemResources).WithDependencies(TaskGroupReconcileGardenerResourceManager)
-		gardenadmBootstrap = b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
+		g = flow.NewTaskGroup(TaskGroupReconcileSystemResources).WithDependencies(TaskGroupReconcileGardenerResourceManager)
 
 		_ = g.Add(flow.Task{
 			Name: "Deploying seed system resources",
@@ -208,7 +207,7 @@ func (b *Botanist) ReconcileSystemResourcesTaskGroup() flow.TaskGroup {
 		_ = g.Add(flow.Task{
 			Name:   "Deploying shoot system resources",
 			Fn:     b.DeployShootSystem,
-			SkipIf: gardenadmBootstrap || b.Shoot.HibernationEnabled,
+			SkipIf: b.isGardenadmBootstrap() || b.Shoot.HibernationEnabled,
 		})
 	)
 
@@ -299,7 +298,7 @@ const TaskGroupReconcileOperatingSystemConfig flow.TaskID = "TaskGroupReconcileO
 
 // ReconcileOperatingSystemConfigTaskGroup returns the flow.TaskGroup for deploying the OperatingSystemConfig extension
 // resource and waiting for its readiness.
-func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup() flow.TaskGroup {
+func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileOperatingSystemConfig).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
@@ -308,13 +307,38 @@ func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup() flow.TaskGroup {
 		)
 
 		deployOperatingSystemConfig = g.Add(flow.Task{
-			Name: "Deploying OperatingSystemConfig for control plane machines",
-			Fn:   b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy,
+			Name: "Deploying OperatingSystemConfig resources for worker pools",
+			Fn: func(ctx context.Context) error {
+				if b.isGardenadmBootstrap() {
+					return b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy(ctx)
+				}
+				return b.DeployOperatingSystemConfig(ctx)
+			},
+			SkipIf: b.Shoot.IsWorkerless,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until OperatingSystemConfig for control plane machines has been reconciled",
-			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Wait,
+			Name: "Waiting until OperatingSystemConfig for worker pools have been reconciled",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
+			Name: "Delete stale OperatingSystemConfig resources",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless || b.isGardenadmBootstrap(),
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until stale OperatingSystemConfig resources are deleted",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || skipReadiness || b.isGardenadmBootstrap(),
+			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
 		})
 	)
 
@@ -511,4 +535,8 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 	)
 
 	return g
+}
+
+func (b *Botanist) isGardenadmBootstrap() bool {
+	return b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
 }
