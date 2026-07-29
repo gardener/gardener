@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -394,11 +393,6 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
-	var ctx context.Context
-	enableWebhook, err := r.enablePodKubeAPIServerAPILoadBalanacingWebhook(ctx, features.DefaultFeatureGate.Enabled(features.IstioTLSTermination))
-	if err != nil {
-		return nil, err
-	}
 
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
@@ -414,7 +408,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		SecretNameServerCA:                        operatorv1alpha1.SecretNameCARuntime,
 		Zones:                                     garden.Spec.RuntimeCluster.Provider.Zones,
 		PodKubeAPIServerLoadBalancingWebhook: resourcemanager.PodKubeAPIServerLoadBalancingWebhook{
-			Enabled: enableWebhook,
+			Enabled: true,
 			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
 				{
 					NamespaceSelector: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
@@ -436,27 +430,6 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		VPAInPlaceUpdatesEnabled:             true,
 		SystemComponentsConfigWebhookEnabled: runtimeIsSelfHostedShoot,
 	})
-}
-
-// enablePodKubeAPIServerAPILoadBalanacingWebhook allows for the graceful disabling of the pod-kube-apiserver-load-balancing webhook.
-// The webhook is enabled immediately when IstioTLSTermination is enabled but is disabled only if no shoots are using Istio's TLS termination.
-func (r *Reconciler) enablePodKubeAPIServerAPILoadBalanacingWebhook(ctx context.Context, enableIstioTLSTermination bool) (bool, error) {
-	if enableIstioTLSTermination {
-		return true, nil
-	}
-
-	var envoyFilters networkingv1alpha3.EnvoyFilterList
-	if err := r.RuntimeClientSet.Client().List(ctx, &envoyFilters, client.InNamespace(v1beta1constants.DefaultSNIIngressNamespace)); err != nil {
-		return false, err
-	}
-
-	for _, envoyFilter := range envoyFilters.Items {
-		if strings.HasSuffix(envoyFilter.Name, kubeapiserverexposure.IstioTLSTerminationEnvoyFilterSuffix) {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
