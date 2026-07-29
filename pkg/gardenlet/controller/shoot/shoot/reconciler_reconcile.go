@@ -242,11 +242,10 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			Fn:           flow.TaskFn(b.ReconcileIstioInternalLoadBalancingConfigMap).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
-		initializeSecretsManagement = g.Add(flow.Task{
-			Name:         "Initializing secrets management",
-			Fn:           flow.TaskFn(b.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, reconcileIstioInternalLoadbalancingConfigMap),
-		})
+		initializeSecretsManagement = g.AddGroup(
+			b.InitializeSecretsManagementTaskGroup().
+				WithDependencies(reconcileIstioInternalLoadbalancingConfigMap),
+		)
 		initialValiDeployment = g.Add(flow.Task{
 			Name:         "Deploying initial shoot logging stack in Seed",
 			Fn:           flow.TaskFn(b.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
