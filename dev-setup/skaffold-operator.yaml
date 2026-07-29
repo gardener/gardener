@@ -133,6 +133,7 @@ build:
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
             - pkg/component/observability/monitoring/blackboxexporter/garden
+            - pkg/component/observability/monitoring/gardenermetricscollector
             - pkg/component/observability/monitoring/gardenermetricsexporter
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/monitoring/perses
