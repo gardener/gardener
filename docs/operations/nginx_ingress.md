@@ -174,6 +174,11 @@ Traefik offers an NGINX-compatible mode (`ingressProvider: KubernetesIngressNGIN
 
 While Traefik is almost compatible with nginx-ingress, some advanced nginx annotations may not be supported. Review the [Traefik documentation](https://doc.traefik.io/traefik/reference/routing-configuration/kubernetes/ingress-nginx/) for any specific features/annotations you rely on.
 
+> [!IMPORTANT]
+> **Migrating to Traefik via this extension cannot be done with zero downtime - in either mode.** You must disable and remove the nginx-ingress addon *first*, and only then install the Traefik extension.
+>
+> Therefore, for **both** modes: **disable the nginx-ingress addon and wait for it to be removed, then enable the Traefik extension.** Expect a downtime window between removing nginx-ingress and Traefik being ready plus DNS TTL/propagation. See [Step 3: Disable the Nginx Ingress Addon First](#step-3-disable-the-nginx-ingress-addon-first) below.
+
 > [!NOTE]
 > The `gardener-extension-shoot-traefik` extension must be enabled by your landscape operator before you can use it. Check with your Gardener administrator if it is available.
 
@@ -187,22 +192,32 @@ kubectl get controllerregistrations
 
 Look for a registration with `extension-shoot-traefik` or similar in the name.
 
-#### Step 2: Plan for Migration
+#### Step 2: Choose an `ingressProvider` Mode
 
-A migration with minimal downtime runs both nginx-ingress (existing) and Traefik (new) in parallel during the transition. Traffic is cut over per `Ingress` resource by changing the `ingressClassName`.
+The Traefik extension supports two `ingressProvider` modes. This choice affects how much you need to touch your `Ingress` resources, but **not** the migration order — in both cases you must remove the nginx-ingress addon before installing Traefik (see the note above).
 
-The high-level steps are:
+- **`KubernetesIngressNGINX` (NGINX-compatible mode)** — Traefik reuses the `nginx` `IngressClass`, so your existing `Ingress` resources keep `ingressClassName: nginx` and need **no changes**. Most `nginx.ingress.kubernetes.io/*` annotations are honored. Recommended when you rely on nginx annotations or want the least churn.
+- **`KubernetesIngress`** — Traefik uses its own `traefik` `IngressClass`. You must change `ingressClassName: nginx` → `ingressClassName: traefik` on each `Ingress`. nginx-specific annotations are **not** translated; convert them to Traefik `Middleware`/`IngressRoute` equivalents.
 
-1. Enable the `shoot-traefik` extension (Traefik is deployed alongside nginx-ingress).
-2. Migrate `Ingress` resources one by one or in batches by changing their ingress class.
-3. Verify each migrated service is working correctly with Traefik.
-4. Disable the nginx-ingress addon once all `Ingress` resources are migrated.
+In both modes the extension serves the same wildcard domain `*.ingress.<shoot-domain>` via its own `DNSRecord`, so your hostnames stay the same.
 
-Take special note about how you want to migrate DNS as it may cause downtime during the migration (see step 4 below).
+> [!WARNING]
+> Do **not** enable the `shoot-traefik` extension while the nginx-ingress addon is still enabled. Both create a wildcard `DNSRecord` for `*.ingress.<shoot-domain>` (and, in `KubernetesIngressNGINX` mode, both manage the `nginx` `IngressClass`). Running them together causes the conflicts and prevents the addon from being cleanly removed.
 
-#### Step 3: Enable the shoot-traefik Extension
+#### Step 3: Disable the Nginx Ingress Addon First
 
-Add the extension to your Shoot spec. Using NGINX-compatible mode is recommended for easier migration:
+Set `spec.addons.nginxIngress.enabled: false` and wait for the Shoot to reconcile. Gardener removes the nginx-ingress controller, its `LoadBalancer` Service, the `nginx` `IngressClass`, and the wildcard DNS record `*.ingress.<shoot-domain>`.
+
+```bash
+kubectl -n garden-my-project get shoot my-shoot -w
+```
+
+> [!NOTE]
+> From this point until Traefik is ready and DNS points to it, ingress traffic is interrupted. This is the downtime window (bounded at the end by DNS TTL/propagation once Traefik recreates the wildcard record).
+
+#### Step 4: Enable the shoot-traefik Extension
+
+Once the nginx-ingress addon has been removed, add the extension to your Shoot spec. Pick the `ingressProvider` you chose in Step 2 (`KubernetesIngressNGINX` shown here):
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -219,17 +234,16 @@ spec:
       replicas: 2
       # KubernetesIngressNGINX enables NGINX annotation compatibility
       ingressProvider: KubernetesIngressNGINX
-  # Keep nginx-ingress enabled during transition
+  # nginx-ingress addon MUST already be disabled (see Step 3)
   addons:
     nginxIngress:
-      enabled: true
+      enabled: false
 ```
 
 Apply the change and wait for the Shoot to reconcile:
 
 ```bash
 kubectl apply -f shoot.yaml
-# Wait for reconciliation
 kubectl -n garden-my-project get shoot my-shoot -w
 ```
 
@@ -241,72 +255,21 @@ kubectl -n kube-system get pods -l app=traefik
 kubectl -n kube-system get svc -l app=traefik
 ```
 
-Note the Traefik LoadBalancer IP or hostname — you will need it for DNS during the migration.
+#### Step 5: DNS and Ingress Class
 
-#### Step 4: Handle DNS
+The Traefik extension creates the wildcard DNS record `*.ingress.<shoot-domain>` (now pointing to Traefik's LoadBalancer). Your hostnames therefore stay the same in both modes.
 
-The nginx-ingress addon creates a wildcard DNS record `*.ingress.<shoot-domain>` automatically. Traefik gets its own LoadBalancer Service with a different IP or hostname.
-
-**Option A: Update the wildcard DNS record (cutover approach)**
-
-If you want all `*.ingress.<shoot-domain>` traffic to move to Traefik at once, you need to update the wildcard DNS record. This is typically managed by Gardener — disabling the nginx-ingress addon will remove the record, and you will need to re-create it pointing to Traefik using the `shoot-dns-service` extension or your cloud DNS provider directly.
+- **`KubernetesIngressNGINX` mode:** Traefik also provides the `nginx` `IngressClass`, so **your existing `Ingress` resources do not need to change** — they keep `ingressClassName: nginx` and are served by Traefik once DNS has propagated.
+- **`KubernetesIngress` mode:** Traefik uses the `traefik` `IngressClass`, so you must update each `Ingress` — see [Step 6](#step-6-update-ingress-resources-kubernetesingress-mode-only).
 
 > [!NOTE]
-> Please note that this approach may incur downtime depending on the DNS TTL and propagation time. If you want to avoid downtime, consider Option B below if your DNS provider supports it.
+> The switch is complete once the wildcard record resolves to Traefik's LoadBalancer. Expect a delay bounded by the DNS TTL and propagation time; combined with Step 3 this is the total downtime window.
 
-If your landscape has the [`gardener-extension-shoot-dns-service`](https://github.com/gardener/gardener-extension-shoot-dns-service) available, you can create a `DNSEntry` resource:
+#### Step 6: Update `Ingress` Resources (`KubernetesIngress` mode only)
 
-```yaml
-apiVersion: dns.gardener.cloud/v1alpha1
-kind: DNSEntry
-metadata:
-  name: ingress-wildcard
-  namespace: default  # in shoot cluster
-spec:
-  dnsName: "*.ingress.<your-shoot-domain>"
-  ttl: 120
-  targets:
-  - <traefik-loadbalancer-ip-or-hostname>
-```
+Skip this step if you chose `KubernetesIngressNGINX` mode.
 
-**Option B: Use per-Ingress hostnames (gradual approach)**
-
-For a more gradual migration without changing the wildcard DNS record, use different hostnames for migrated services:
-
-- Keep existing Ingresses at `*.ingress.<shoot-domain>` using nginx.
-- Create new Ingresses for migrated services at explicit hostnames managed via `shoot-dns-service`.
-
-#### Step 5: Handle Certificates
-
-**If you use [`cert-manager`](https://cert-manager.io/) or the [`gardener-extension-shoot-cert-service`](https://github.com/gardener/gardener-extension-shoot-cert-service):**
-
-Both [`cert-manager`](https://cert-manager.io/) and the [`gardener-extension-shoot-cert-service`](https://github.com/gardener/gardener-extension-shoot-cert-service) watch `Ingress` resources for certificate requests. After changing the `ingressClassName`, the certificate controller should continue to manage the certificates automatically, since they watch all `Ingress` resources regardless of class.
-
-Verify that your certificate annotations are present on the `Ingress` resources after migration:
-
-```yaml
-metadata:
-  annotations:
-    cert.gardener.cloud/purpose: managed   # for shoot-cert-service
-    # OR
-    cert-manager.io/cluster-issuer: my-issuer  # for cert-manager
-```
-
-**If you use TLS secrets referenced in `Ingress` resources:**
-
-No change is needed — the TLS secret reference in `spec.tls` works the same way with Traefik.
-
-```yaml
-spec:
-  tls:
-  - hosts:
-    - my-app.ingress.my-shoot.example.com
-    secretName: my-app-tls
-```
-
-#### Step 6: Migrate `Ingress` Resources
-
-For each `Ingress` resource, change the ingress class from `nginx` to `traefik`.
+For each `Ingress` resource, change the ingress class from `nginx` to `traefik`:
 
 **Before (nginx-ingress):**
 
@@ -335,7 +298,7 @@ spec:
     secretName: my-app-tls
 ```
 
-**After (Traefik with NGINX-compatible mode):**
+**After (Traefik with its own ingress class):**
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -363,52 +326,56 @@ spec:
 ```
 
 > [!TIP]
-> With `ingressProvider: KubernetesIngressNGINX`, most nginx-specific annotations are supported. However, some advanced nginx annotations (especially `nginx.ingress.kubernetes.io/server-snippet` and `nginx.ingress.kubernetes.io/configuration-snippet`) may not be compatible. Review [Traefik's documentation](https://doc.traefik.io/traefik/reference/routing-configuration/kubernetes/ingress-nginx/) for alternatives.
+> The `KubernetesIngress` provider does not translate nginx-specific annotations. If you rely on `nginx.ingress.kubernetes.io/*` annotations, either use `KubernetesIngressNGINX` mode instead or convert them to Traefik `Middleware`/`IngressRoute` equivalents. Review [Traefik's documentation](https://doc.traefik.io/traefik/).
 
 Apply the updated Ingress and verify the route is working via Traefik:
 
 ```bash
 kubectl apply -f ingress.yaml
-# Test the service via the Traefik load balancer
-curl -H "Host: my-app.ingress.my-shoot.example.com" http://<traefik-lb-ip>/
+curl -H "Host: my-app.ingress.my-shoot.example.com" https://<your-shoot-domain-or-lb>/
 ```
 
 Repeat for each `Ingress` resource.
 
-#### Step 7: Disable the Nginx Ingress Addon
+#### Step 7: Handle Certificates
 
-Once all `Ingress` resources have been migrated to Traefik and verified:
+**If you use [`cert-manager`](https://cert-manager.io/) or the [`gardener-extension-shoot-cert-service`](https://github.com/gardener/gardener-extension-shoot-cert-service):**
+
+Both [`cert-manager`](https://cert-manager.io/) and the [`gardener-extension-shoot-cert-service`](https://github.com/gardener/gardener-extension-shoot-cert-service) watch `Ingress` resources for certificate requests. They watch all `Ingress` resources regardless of class, so certificates continue to be managed automatically after migration.
+
+Verify that your certificate annotations are present on the `Ingress` resources after migration:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Shoot
 metadata:
-  name: my-shoot
-  namespace: garden-my-project
-spec:
-  extensions:
-  - type: shoot-traefik
-    providerConfig:
-      apiVersion: traefik.extensions.gardener.cloud/v1alpha1
-      kind: TraefikConfig
-      replicas: 2
-      ingressProvider: KubernetesIngressNGINX
-  addons:
-    nginxIngress:
-      enabled: false  # Disable nginx-ingress
+  annotations:
+    cert.gardener.cloud/purpose: managed   # for shoot-cert-service
+    # OR
+    cert-manager.io/cluster-issuer: my-issuer  # for cert-manager
 ```
 
-Apply and wait for reconciliation. Gardener will remove the nginx-ingress controller and its LoadBalancer Service. The wildcard DNS record `*.ingress.<shoot-domain>` will also be removed.
+**If you use TLS secrets referenced in `Ingress` resources:**
 
-### Zero-Downtime Migration: Step-by-Step Summary
+No change is needed — the TLS secret reference in `spec.tls` works the same way with Traefik.
 
-| Step | Action | Expected Downtime |
+Once DNS has propagated, verify your applications are reachable via Traefik over HTTPS:
+
+```bash
+curl -H "Host: my-app.ingress.my-shoot.example.com" https://<your-shoot-domain-or-lb>/
+```
+
+### Migration Summary
+
+The migration order is the same for both modes: **remove the nginx-ingress addon, then install Traefik.** There is no zero-downtime path with this extension, because Traefik always creates its own wildcard `DNSRecord` for `*.ingress.<shoot-domain>`, which conflicts with the addon's.
+
+| | `KubernetesIngressNGINX` | `KubernetesIngress` |
 |---|---|---|
-| 1 | Enable `shoot-traefik` extension alongside nginx-ingress | None |
-| 2 | Update DNS to point to Traefik LoadBalancer (if using wildcard cutover) | Brief (TTL-dependent) |
-| 3 | Migrate `Ingress` resources to `ingressClassName: traefik` one by one | None per Ingress (both controllers run in parallel) |
-| 4 | Verify certificate issuance and HTTPS still works | None |
-| 5 | Disable nginx-ingress addon | None (Traefik already serving traffic) |
+| `IngressClass` | `nginx` (reused) | `traefik` |
+| `Ingress` changes needed | None | `ingressClassName` → `traefik` (per `Ingress`) |
+| nginx annotations honored | Most | No (convert to Traefik CRDs) |
+| Wildcard `DNSRecord` conflict with addon | Yes | Yes |
+| `IngressClass` conflict with addon | Yes | No |
+| Must remove addon before installing Traefik | Yes | Yes |
+| Downtime | Yes | Yes |
 
 ### Nginx Ingress Annotations Reference
 
@@ -447,9 +414,14 @@ No. The Shoot addons field (which includes nginx-ingress) is forbidden for Kuber
 
 Contact your landscape operator to request it. Alternatively, you can deploy Traefik or another ingress controller (e.g., HAProxy Ingress, Contour, NGINX from F5) directly into your Shoot cluster as a regular workload, bypassing the Gardener extension mechanism. Manage the LoadBalancer Service and DNS records yourself in that case.
 
+**Q: Can I run the shoot-traefik extension alongside the nginx-ingress addon (in parallel)?**
+
+No — in **neither** mode. The Traefik extension always creates a wildcard `DNSRecord` for `*.ingress.<shoot-domain>` in the control plane, which is the same domain the nginx-ingress addon manages, so the two collide regardless of `ingressProvider`. In `ingressProvider: KubernetesIngressNGINX` mode there is an additional conflict: both also manage a `ManagedResource` for the `IngressClass` named `nginx`, which then flaps (continuously deleted and re-created) and prevents the addon from being cleanly removed. In both modes you must disable/remove the nginx-ingress addon **first**, then install Traefik. See [Step 3: Disable the Nginx Ingress Addon First](#step-3-disable-the-nginx-ingress-addon-first).
+
+**Q: Does the migration cause downtime?**
+
+Yes. Because the Traefik extension cannot run in parallel with the nginx-ingress addon (see above), you must remove the addon before installing Traefik. Ingress traffic is interrupted from the moment nginx-ingress is removed until Traefik is ready and the wildcard DNS record `*.ingress.<shoot-domain>` resolves to Traefik's LoadBalancer (bounded by the DNS TTL and propagation time). Keeping a low DNS TTL beforehand shortens the tail of this window.
+
 **Q: How do I handle the DNS wildcard record during migration?**
 
-The wildcard record `*.ingress.<shoot-domain>` is managed by Gardener and tied to the nginx-ingress addon. During parallel operation (both nginx and Traefik running), all `*.ingress.<shoot-domain>` traffic goes to nginx. To cut over, you either:
-- Update DNS to point the wildcard to Traefik's LoadBalancer (if using `shoot-dns-service`).
-- Move services to new hostnames that you manage yourself via `shoot-dns-service` or cloud DNS.
-- Accept a brief DNS TTL-length outage during the final cutover when you disable nginx.
+The wildcard record `*.ingress.<shoot-domain>` is managed by Gardener and tied to the ingress controller. When you disable the nginx-ingress addon, Gardener removes it; when you then enable the Traefik extension, the extension recreates the same wildcard record pointing to Traefik's LoadBalancer — in **both** `ingressProvider` modes. You do not create or manage this record yourself. The gap between removal and recreation (plus DNS TTL/propagation) is the downtime window.
