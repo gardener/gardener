@@ -112,7 +112,7 @@ func run(ctx context.Context, opts *Options) error {
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
 		_                             = g.AddGroup(
-			b.ReconcileInfrastructureTaskGroup().
+			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
 		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
