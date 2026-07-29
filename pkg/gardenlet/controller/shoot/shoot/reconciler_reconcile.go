@@ -836,12 +836,14 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			SkipIf:       b.Shoot.IsWorkerless || !b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployManagedResourceForGardenerNodeAgent),
 		})
-		deployMachineControllerManager = g.Add(flow.Task{
-			Name:         "Deploying machine-controller-manager",
-			Fn:           flow.TaskFn(b.DeployMachineControllerManager),
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady, createNewServiceAccountSecrets, scaleClusterAutoscalerToZero),
-		})
+		deployMachineControllerManager = g.AddGroup(b.ReconcileMachineControllerManagerTaskGroup().WithDependencies(
+			waitUntilInfrastructureReady,
+			initializeShootClients,
+			waitUntilOperatingSystemConfigReady,
+			waitUntilNetworkIsReady,
+			createNewServiceAccountSecrets,
+			scaleClusterAutoscalerToZero,
+		))
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(b.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
