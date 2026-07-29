@@ -10,6 +10,7 @@ import (
 	"time"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
@@ -355,7 +356,7 @@ const TaskGroupReconcileWorker flow.TaskID = "TaskGroupReconcileWorker"
 // ReconcileWorkerTaskGroup returns the flow.TaskGroup for deploying the Worker extension resource. It waits until its
 // status was updated with the latest machine deployments, deploys cluster-autoscaler and finally waits for the pools
 // to get reconciled.
-func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
+func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileWorker).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
@@ -363,12 +364,18 @@ func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
 			TaskGroupReconcileGardenerResourceManager,
 			TaskGroupReconcileInfrastructure,
 			TaskGroupReconcileMachineControllerManager,
+			TaskGroupReconcileSystemResources,
 		)
+
+		shootHasPendingInPlaceUpdateWorkers = func(shoot *gardencorev1beta1.Shoot) bool {
+			return shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
+				(len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0)
+		}
 
 		deployWorker = g.Add(flow.Task{
 			Name:   "Configuring worker pools",
 			Fn:     b.DeployWorker,
-			SkipIf: !b.Shoot.HasManagedInfrastructure(),
+			SkipIf: !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name: "Waiting until worker resource status is updated with latest machine deployments",
@@ -378,16 +385,61 @@ func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
+		deployExtensionResourcesAfterWorker = g.Add(flow.Task{
+			Name:         "Deploying extension resources after workers",
+			Fn:           b.DeployExtensionsAfterWorker,
+			SkipIf:       b.isGardenadmBootstrap() || b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources handled after workers are ready",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitAfterWorker,
+			SkipIf:       b.isGardenadmBootstrap() || b.Shoot.IsWorkerless || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterWorker),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",
 			Fn:           b.DeployClusterAutoscaler,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting until worker pools have been reconciled",
 			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.Worker.Wait(ctx)
+				if err := b.Shoot.Components.Extensions.Worker.Wait(ctx); err != nil {
+					return err
+				}
+
+				// If the worker is ready, all the AutoInPlaceUpdate worker pools should be updated already, so we can remove them from the status.
+				if shootHasPendingInPlaceUpdateWorkers(b.Shoot.GetInfo()) {
+					// gardenlet's shoot status reconciler might concurrently update the status, so we need to use optimistic locking.
+					if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, true, func(shoot *gardencorev1beta1.Shoot) error {
+						shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
+
+						if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+							shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+						}
+
+						if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+							shoot.Status.InPlaceUpdates = nil
+						}
+
+						return nil
+					}); err != nil {
+						return fmt.Errorf("failed to remove pending AutoInPlaceUpdate worker pools from status: %w", err)
+					}
+				}
+
+				// If there are no pending workers rollouts for in-place updates, we can remove the force in-place update annotation.
+				if (b.Shoot.GetInfo().Status.InPlaceUpdates == nil || b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil) &&
+					kubernetesutils.HasMetaDataAnnotation(b.Shoot.GetInfo(), v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
+					return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+						delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+						return nil
+					})
+				}
+
+				return nil
 			},
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),

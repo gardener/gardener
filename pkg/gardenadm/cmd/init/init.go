@@ -221,7 +221,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(waitUntilWebhookComponentsReady),
 		)
 		reconcileWorker = g.AddGroup(
-			b.ReconcileWorkerTaskGroup().
+			b.ReconcileWorkerTaskGroup(false).
 				WithDependencies(syncPointBootstrapped),
 		)
 
