@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -196,6 +197,25 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, poolName)
 		}
 
+		return nil
+	})
+}
+
+// RemoveTaskAnnotation removes the provided task annotations from the Shoot.
+func (b *Botanist) RemoveTaskAnnotation(ctx context.Context, tasksToRemove ...string) error {
+	// Check if shoot generation was changed mid-air, i.e., whether we need to wait for the next reconciliation until we
+	// can safely remove the task annotations to ensure all required tasks are executed.
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shoot); err != nil {
+		return err
+	}
+
+	if shoot.Generation != b.Shoot.GetInfo().Generation {
+		return nil
+	}
+
+	return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
 }

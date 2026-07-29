@@ -235,23 +235,29 @@ const TaskGroupReconcileInfrastructure flow.TaskID = "TaskGroupReconcileInfrastr
 
 // ReconcileInfrastructureTaskGroup returns the flow.TaskGroup for deploying the Infrastructure extension resource and
 // waiting for its readiness.
-func (b *Botanist) ReconcileInfrastructureTaskGroup() flow.TaskGroup {
+func (b *Botanist) ReconcileInfrastructureTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileInfrastructure).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupDeployCloudProviderSecret,
-			TaskGroupReconcileGardenerResourceManager,
 		)
 
 		deployInfrastructure = g.Add(flow.Task{
 			Name:   "Deploying Shoot infrastructure",
 			Fn:     b.DeployInfrastructure,
-			SkipIf: !b.Shoot.HasManagedInfrastructure(),
+			SkipIf: !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until Shoot infrastructure has been reconciled",
-			Fn:           b.WaitForInfrastructure,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Name: "Waiting until Shoot infrastructure has been reconciled",
+			Fn: func(ctx context.Context) error {
+				if !skipReadiness {
+					if err := b.WaitForInfrastructure(ctx); err != nil {
+						return err
+					}
+				}
+				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployInfrastructure)
+			},
+			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 	)

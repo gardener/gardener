@@ -121,7 +121,7 @@ func run(ctx context.Context, opts *Options) error {
 			reconcileExtensionControllers,
 		)
 		reconcileInfrastructure = g.AddGroup(
-			b.ReconcileInfrastructureTaskGroup().
+			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(syncPointBootstrapped).
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource]),
 		)
