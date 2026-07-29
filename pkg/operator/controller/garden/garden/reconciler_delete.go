@@ -107,6 +107,10 @@ func (r *Reconciler) delete(
 			Fn:   component.OpDestroyAndWait(c.gardenerMetricsExporter).Destroy,
 		})
 		_ = g.Add(flow.Task{
+			Name: "Destroying Gardener Metrics Collector",
+			Fn:   component.OpDestroyAndWait(c.gardenerMetricsCollector).Destroy,
+		})
+		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
 		})
