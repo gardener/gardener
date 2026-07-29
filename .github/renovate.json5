@@ -213,6 +213,19 @@
       ],
     },
     {
+      // Group victoria-operator updates in one PR.
+      groupName: 'victoria-operator',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/.*VictoriaMetrics/operator$/',
+        '/github\\.com/VictoriaMetrics/operator$/',
+        '/github\\.com/VictoriaMetrics/operator/api$/',
+      ],
+    },
+    {
       // Group Prometheus updates in one PR.
       groupName: 'prometheus',
       matchDatasources: [
@@ -533,6 +546,7 @@
         '!/fluent/.+/',
         '!/perses/.+/',
         '!/open-telemetry/.+/',
+        '!/VictoriaMetrics/.+/',
       ],
     },
     {
