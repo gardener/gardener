@@ -134,7 +134,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(syncPointBootstrapped),
 		)
 		reconcileWorker = g.AddGroup(
-			b.ReconcileWorkerTaskGroup().
+			b.ReconcileWorkerTaskGroup(false).
 				WithDependencies(syncPointBootstrapped, botanist.TaskGroupReconcileOperatingSystemConfig).
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource]),
 		)
