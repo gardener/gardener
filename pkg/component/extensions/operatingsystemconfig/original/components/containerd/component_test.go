@@ -38,6 +38,7 @@ var _ = Describe("Component", func() {
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
+ExecStartPost=/bin/sh -c 'find /var/log/pods -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d /var/log/pods ]'
 Restart=on-failure
 RestartSec=5
 StartLimitBurst=5

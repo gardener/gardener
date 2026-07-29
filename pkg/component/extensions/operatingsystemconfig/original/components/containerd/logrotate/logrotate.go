@@ -9,16 +9,15 @@ import (
 )
 
 // Config returns the content for logrotate units and files.
-// Whenever logrotate is ran, this config will:
-//   - keep only 14 old (rotated) logs, and will discard older logs.
-//
-// Prefix carries the target container runtime (such as  containerd, docker).
-// When containerd is used the log rotation based on size is performed by kubelet.
+// Prefix carries the target container runtime (such as containerd, docker).
 //
 // A security requirement mandates that no log entry older than 14 days is present on the host.
-// kubelet only supports size-based log rotation, not time-based retention, so
-// logrotate is used to enforce daily rotation and a 14-day retention window on top of the
-// kubelet's own size-based rotation.
+// kubelet only supports size-based log rotation, not time-based retention, so two mechanisms
+// are combined to enforce the 14-day retention window:
+//   - logrotate handles daily rotation and pruning of active log files (*.log).
+//   - a find command deletes kubelet's size-rotated files (*.log.*) older than 14 days,
+//     since logrotate can only prune files it rotated itself.
+//
 // For the historical context, see https://github.com/gardener/gardener/issues/653.
 //
 // The timer is configured with jitter to avoid all nodes rotating logs at the same time
@@ -52,6 +51,7 @@ func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit,
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
+ExecStartPost=/bin/sh -c 'find /var/log/pods -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d /var/log/pods ]'
 Restart=on-failure
 RestartSec=5
 StartLimitBurst=5
