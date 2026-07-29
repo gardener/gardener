@@ -196,19 +196,34 @@ Look for a registration with `extension-shoot-traefik` or similar in the name.
 
 The Traefik extension supports two `ingressProvider` modes. This choice affects how much you need to touch your `Ingress` resources, but **not** the migration order — in both cases you must remove the nginx-ingress addon before installing Traefik (see the note above).
 
-- **`KubernetesIngressNGINX` (NGINX-compatible mode)** — Traefik reuses the `nginx` `IngressClass`, so your existing `Ingress` resources keep `ingressClassName: nginx` and need **no changes**. Most `nginx.ingress.kubernetes.io/*` annotations are honored. Recommended when you rely on nginx annotations or want the least churn.
+- **`KubernetesIngressNGINX` (NGINX-compatible mode)** — Traefik reuses the `nginx` `IngressClass`, so your existing `Ingress` resources keep `ingressClassName: nginx` and need **no changes**. Most `nginx.ingress.kubernetes.io/*` annotations are honored. It is recommended when you rely on nginx annotations or want the least churn.
 - **`KubernetesIngress`** — Traefik uses its own `traefik` `IngressClass`. You must change `ingressClassName: nginx` → `ingressClassName: traefik` on each `Ingress`. nginx-specific annotations are **not** translated; convert them to Traefik `Middleware`/`IngressRoute` equivalents.
 
 In both modes the extension serves the same wildcard domain `*.ingress.<shoot-domain>` via its own `DNSRecord`, so your hostnames stay the same.
 
 > [!WARNING]
-> Do **not** enable the `shoot-traefik` extension while the nginx-ingress addon is still enabled. Both create a wildcard `DNSRecord` for `*.ingress.<shoot-domain>` (and, in `KubernetesIngressNGINX` mode, both manage the `nginx` `IngressClass`). Running them together causes the conflicts and prevents the addon from being cleanly removed.
+> Do **not** enable the `shoot-traefik` extension while the nginx-ingress addon is still enabled. Both create a wildcard `DNSRecord` for `*.ingress.<shoot-domain>` (and, in `KubernetesIngressNGINX` mode, both manage the `nginx` `IngressClass`). Running them together causes conflicts and prevents the addon from being cleanly removed.
 
-#### Step 3: Disable the Nginx Ingress Addon First
+#### Step 3: Disable the Nginx Ingress Addon
 
 Set `spec.addons.nginxIngress.enabled: false` and wait for the Shoot to reconcile. Gardener removes the nginx-ingress controller, its `LoadBalancer` Service, the `nginx` `IngressClass`, and the wildcard DNS record `*.ingress.<shoot-domain>`.
 
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: my-shoot
+  namespace: garden-my-project
+spec:
+  addons:
+    nginxIngress:
+      enabled: false
+```
+
+Apply the change and wait for the Shoot to reconcile:
+
 ```bash
+kubectl apply -f shoot.yaml
 kubectl -n garden-my-project get shoot my-shoot -w
 ```
 
@@ -234,10 +249,6 @@ spec:
       replicas: 2
       # KubernetesIngressNGINX enables NGINX annotation compatibility
       ingressProvider: KubernetesIngressNGINX
-  # nginx-ingress addon MUST already be disabled (see Step 3)
-  addons:
-    nginxIngress:
-      enabled: false
 ```
 
 Apply the change and wait for the Shoot to reconcile:
@@ -257,7 +268,7 @@ kubectl -n kube-system get svc -l app=traefik
 
 #### Step 5: DNS and Ingress Class
 
-The Traefik extension creates the wildcard DNS record `*.ingress.<shoot-domain>` (now pointing to Traefik's LoadBalancer). Your hostnames therefore stay the same in both modes.
+The Traefik extension creates the wildcard DNS record `*.ingress.<shoot-domain>` (now pointing to Traefik's LoadBalancer). Your domain names therefore stay the same in both modes.
 
 - **`KubernetesIngressNGINX` mode:** Traefik also provides the `nginx` `IngressClass`, so **your existing `Ingress` resources do not need to change** — they keep `ingressClassName: nginx` and are served by Traefik once DNS has propagated.
 - **`KubernetesIngress` mode:** Traefik uses the `traefik` `IngressClass`, so you must update each `Ingress` — see [Step 6](#step-6-update-ingress-resources-kubernetesingress-mode-only).
