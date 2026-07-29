@@ -161,7 +161,7 @@ func (p *pvcAutoscaler) serviceAccount() *corev1.ServiceAccount {
 func (p *pvcAutoscaler) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:   "gardener.cloud:autoscaling:" + p.values.ManagedResourceName,
 			Labels: p.getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -223,7 +223,7 @@ func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:     "gardener.cloud:autoscaling:" + p.values.ManagedResourceName,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
