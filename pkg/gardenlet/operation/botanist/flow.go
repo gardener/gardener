@@ -203,11 +203,12 @@ func (b *Botanist) ReconcileSystemResourcesTaskGroup() flow.TaskGroup {
 			Fn: func(ctx context.Context) error {
 				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{ManagePriorityClasses: true}).Deploy(ctx)
 			},
+			SkipIf: !b.Shoot.IsSelfHosted(),
 		})
 		_ = g.Add(flow.Task{
 			Name:   "Deploying shoot system resources",
 			Fn:     b.DeployShootSystem,
-			SkipIf: gardenadmBootstrap,
+			SkipIf: gardenadmBootstrap || b.Shoot.HibernationEnabled,
 		})
 	)
 
