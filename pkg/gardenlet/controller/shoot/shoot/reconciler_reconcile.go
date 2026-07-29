@@ -230,10 +230,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 	}
 
 	var (
-		deployNamespace = g.Add(flow.Task{
-			Name: "Deploying Shoot namespace in Seed",
-			Fn:   flow.TaskFn(b.DeployControlPlaneNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
+		deployNamespace            = g.AddGroup(b.DeployNamespacesTaskGroup())
 		ensureShootClusterIdentity = g.Add(flow.Task{
 			Name:         "Ensuring Shoot cluster identity",
 			Fn:           flow.TaskFn(b.EnsureShootClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
