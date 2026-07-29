@@ -26,6 +26,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -257,17 +258,23 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 }
 
 // ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
-func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
+func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Client) sets.Set[string] {
 	GinkgoHelper()
 
 	machinePodNamesBeforeTest := sets.New[string]()
 
 	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
+		k8sClient := clientFn()
 		beforeStartMachinePodList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
-			"app":              "machine",
-			"machine-provider": "local",
-		})).Should(Succeed())
+		Eventually(ctx, func() error {
+			return k8sClient.List(ctx, beforeStartMachinePodList,
+				client.InNamespace(infrastructure.NamespaceName(s.Shoot.Status.TechnicalID)),
+				client.MatchingLabels{
+					"app":              "machine",
+					"machine-provider": "local",
+				},
+			)
+		}).Should(Succeed())
 
 		for _, item := range beforeStartMachinePodList.Items {
 			machinePodNamesBeforeTest.Insert(item.Name)
@@ -278,22 +285,28 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
 }
 
 // ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
-func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeTest sets.Set[string]) {
+func ItShouldCompareMachinePodNamesAfter(s *ShootContext, clientFn func() client.Client, machinePodNamesBeforeTest sets.Set[string]) {
 	GinkgoHelper()
 
 	It("Compare machine pod names", func(ctx SpecContext) {
+		k8sClient := clientFn()
 		machinePodListAfterTest := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(machinePodListAfterTest, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
-			"app":              "machine",
-			"machine-provider": "local",
-		})).Should(Succeed())
+		Eventually(ctx, func() error {
+			return k8sClient.List(ctx, machinePodListAfterTest,
+				client.InNamespace(infrastructure.NamespaceName(s.Shoot.Status.TechnicalID)),
+				client.MatchingLabels{
+					"app":              "machine",
+					"machine-provider": "local",
+				},
+			)
+		}).Should(Succeed())
 
 		machinePodNamesAfterTest := sets.New[string]()
 		for _, item := range machinePodListAfterTest.Items {
 			machinePodNamesAfterTest.Insert(item.Name)
 		}
 
-		Expect(machinePodNamesBeforeTest.UnsortedList()).To(ConsistOf(machinePodNamesAfterTest.UnsortedList()))
+		Expect(machinePodNamesAfterTest.UnsortedList()).To(ConsistOf(machinePodNamesBeforeTest.UnsortedList()))
 	}, SpecTimeout(time.Minute))
 }
 

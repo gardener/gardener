@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	apiv1alpha1 "github.com/gardener/gardener/pkg/provider-local/machine-provider/api/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/machine-provider/api/validation"
@@ -36,7 +35,7 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("requested for provider '%s', we only support '%s'", req.MachineClass.Provider, apiv1alpha1.Provider))
 	}
 
-	providerClient, err := local.GetProviderClient(ctx, log, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
+	providerClient, err := local.GetProviderClient(ctx, d.runtimeClient, *req.MachineClass.CredentialsSecretRef)
 	if err != nil {
 		return nil, fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
@@ -145,20 +144,6 @@ func (d *localDriver) applyPod(
 		labelKeyProvider: apiv1alpha1.Provider,
 		labelKeyApp:      labelValueMachine,
 		labelKeyMachine:  req.Machine.Name,
-
-		// needed for machine pods to talk to containers in the kind network:
-		// - the local DNS server (bind9)
-		// - the local registry and registry caches
-		// - seed istio ingress-gateways
-		// - virtual garden istio ingress-gateway
-		"networking.gardener.cloud/to-private-networks": "allowed",
-		// needed for machine pods to talk to the outside world:
-		// - for pulling container images from the upstream registries as fallbacks if the cache doesn't work
-		"networking.gardener.cloud/to-public-networks": "allowed",
-		// needed for ManagedSeeds such that gardenlets deployed to these Machines can talk to the seed's kube-apiserver (which is the same like the garden cluster kube-apiserver)
-		"networking.gardener.cloud/to-runtime-apiserver": "allowed",
-
-		local.LabelNetworkPolicyToIstioIngressGateway: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 	pod.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{
@@ -225,7 +210,7 @@ func (d *localDriver) applyPod(
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  userDataSecret.Name,
-						DefaultMode: new(int32(0777)),
+						DefaultMode: new(int32(0o777)),
 					},
 				},
 			},

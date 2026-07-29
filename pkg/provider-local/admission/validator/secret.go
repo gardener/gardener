@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 type secretValidator struct{}
@@ -40,8 +41,8 @@ func (s *secretValidator) Validate(_ context.Context, newObj, oldObj client.Obje
 		}
 	}
 
-	if len(secret.Data) != 0 {
-		return fmt.Errorf("secret data should be empty")
+	if len(secret.Data[kubernetesclient.KubeConfig]) == 0 {
+		return fmt.Errorf("kubeconfig is missing")
 	}
 
 	return nil

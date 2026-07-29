@@ -11,11 +11,11 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionsbastion "github.com/gardener/gardener/extensions/pkg/bastion"
@@ -24,11 +24,12 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -36,32 +37,39 @@ import (
 const SSHPort = 22
 
 type actuator struct {
-	client client.Client
+	runtimeClient client.Client
 }
 
 func newActuator(mgr manager.Manager) bastion.Actuator {
 	return &actuator{
-		client: mgr.GetClient(),
+		runtimeClient: mgr.GetClient(),
 	}
 }
 
 func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
+		Name:      v1beta1constants.SecretNameCloudProvider,
+		Namespace: bastion.Namespace,
+	})
+	if err != nil {
+		return fmt.Errorf("could not create client for bastion resources: %w", err)
+	}
+
 	image, err := bastionImage(cluster)
 	if err != nil {
 		return err
 	}
 
 	var (
-		userDataSecret = userDataSecretForBastion(bastion)
-		pod            = podForBastion(bastion, image, userDataSecret.Name)
-		service        = serviceForBastion(bastion)
+		technicalID    = cluster.Shoot.Status.TechnicalID
+		userDataSecret = userDataSecretForBastion(bastion, technicalID)
+		pod            = podForBastion(bastion, technicalID, image, userDataSecret.Name)
+		service        = serviceForBastion(bastion, technicalID)
+		networkPolicy  = networkPolicyForBastion(bastion, technicalID)
 	)
 
-	for _, obj := range []client.Object{userDataSecret, pod, service} {
-		if err := controllerutil.SetControllerReference(bastion, obj, a.client.Scheme()); err != nil {
-			return fmt.Errorf("failed to set controller reference on %T %q: %w", obj, client.ObjectKeyFromObject(obj), err)
-		}
-		if err := a.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+	for _, obj := range []client.Object{userDataSecret, pod, service, networkPolicy} {
+		if err := providerClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("failed to apply %T %q: %w", obj, client.ObjectKeyFromObject(obj), err)
 		}
 	}
@@ -84,23 +92,43 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bastion *extens
 
 	patch := client.MergeFrom(bastion.DeepCopy())
 	bastion.Status.Ingress = service.Status.LoadBalancer.Ingress[0].DeepCopy()
-	return a.client.Status().Patch(ctx, bastion, patch)
+	return a.runtimeClient.Status().Patch(ctx, bastion, patch)
 }
 
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, bastion *extensionsv1alpha1.Bastion, _ *extensionscontroller.Cluster) error {
-	// Explicitly delete the Bastion Pod so that we can wait for it to terminate. The other objects will get cleaned up by
-	// the garbage collector (due to ownerReferences), but only after removing the Bastion's finalizer.
-	if err := a.client.Delete(ctx, podForBastion(bastion, "", "")); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Bastion Pod gone, releasing Bastion")
-			return nil
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) error {
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
+		Name:      v1beta1constants.SecretNameCloudProvider,
+		Namespace: bastion.Namespace,
+	})
+	if err != nil {
+		return fmt.Errorf("could not create client for bastion resources: %w", err)
+	}
+
+	var (
+		technicalID    = cluster.Shoot.Status.TechnicalID
+		userDataSecret = userDataSecretForBastion(bastion, technicalID)
+		pod            = podForBastion(bastion, technicalID, "", "")
+		service        = serviceForBastion(bastion, technicalID)
+		networkPolicy  = networkPolicyForBastion(bastion, technicalID)
+
+		remainingObjects int
+	)
+	for _, obj := range []client.Object{userDataSecret, pod, service, networkPolicy} {
+		if err := providerClient.Delete(ctx, obj); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("could not delete %T %q: %w", obj, client.ObjectKeyFromObject(obj), err)
 		}
-		return err
+		remainingObjects++
+	}
+	if remainingObjects == 0 {
+		return nil
 	}
 
 	return &reconcilerutils.RequeueAfterError{
 		RequeueAfter: 10 * time.Second,
-		Cause:        fmt.Errorf("waiting for Bastion Pod to terminate"),
+		Cause:        fmt.Errorf("waiting for %d bastion resources to be deleted", remainingObjects),
 	}
 }
 
@@ -129,10 +157,10 @@ func bastionImage(cluster *extensionscontroller.Cluster) (string, error) {
 	return image.Image, nil
 }
 
-func objectMetaForBastion(bastion *extensionsv1alpha1.Bastion) metav1.ObjectMeta {
+func objectMetaForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      "bastion-" + bastion.Name,
-		Namespace: bastion.Namespace,
+		Namespace: infrastructure.NamespaceName(technicalID),
 		Labels: map[string]string{
 			"app":     "bastion",
 			"bastion": bastion.Name,
@@ -140,24 +168,21 @@ func objectMetaForBastion(bastion *extensionsv1alpha1.Bastion) metav1.ObjectMeta
 	}
 }
 
-func userDataSecretForBastion(bastion *extensionsv1alpha1.Bastion) *corev1.Secret {
+func userDataSecretForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 		},
-		ObjectMeta: objectMetaForBastion(bastion),
+		ObjectMeta: objectMetaForBastion(bastion, technicalID),
 		Data: map[string][]byte{
 			"userdata": bastion.Spec.UserData,
 		},
 	}
 }
 
-func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretName string) *corev1.Pod {
-	objectMeta := objectMetaForBastion(bastion)
-	metav1.SetMetaDataLabel(&objectMeta, gardenerutils.NetworkPolicyLabel("machines", SSHPort), v1beta1constants.LabelNetworkPolicyAllowed)
-	metav1.SetMetaDataLabel(&objectMeta, v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed)
-
+func podForBastion(bastion *extensionsv1alpha1.Bastion, technicalID, image, userDataSecretName string) *corev1.Pod {
+	objectMeta := objectMetaForBastion(bastion, technicalID)
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -199,7 +224,7 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  userDataSecretName,
-							DefaultMode: new(int32(0777)),
+							DefaultMode: new(int32(0o777)),
 						},
 					},
 				},
@@ -208,9 +233,8 @@ func podForBastion(bastion *extensionsv1alpha1.Bastion, image, userDataSecretNam
 	}
 }
 
-func serviceForBastion(bastion *extensionsv1alpha1.Bastion) *corev1.Service {
-	objectMeta := objectMetaForBastion(bastion)
-	metav1.SetMetaDataAnnotation(&objectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, SSHPort))
+func serviceForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) *corev1.Service {
+	objectMeta := objectMetaForBastion(bastion, technicalID)
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -227,6 +251,100 @@ func serviceForBastion(bastion *extensionsv1alpha1.Bastion) *corev1.Service {
 				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: new("ssh"),
 			}},
+		},
+	}
+}
+
+func networkPolicyForBastion(bastion *extensionsv1alpha1.Bastion, technicalID string) *networkingv1.NetworkPolicy {
+	objectMeta := objectMetaForBastion(bastion, technicalID)
+
+	return &networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: networkingv1.SchemeGroupVersion.String(),
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: objectMeta,
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: objectMeta.DeepCopy().Labels,
+			},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				{
+					// allows traffic from world to the SSH port
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
+					},
+				},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				allowToDNS(), // bastion pods use the in-cluster CoreDNS to resolve hostnames of machine pods.
+				{
+					// allows traffic from bastion pods to machine pods on the SSH port
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Port: new(intstr.FromInt32(22)), Protocol: new(corev1.ProtocolTCP)},
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+		},
+	}
+}
+
+// allowToDNS allows traffic to CoreDNS and NodeLocalDNS. This policy is mostly a copy from
+// the "allow-to-dns" policy in "pkg/controller/networkpolicy/reconciler.go"
+func allowToDNS() networkingv1.NetworkPolicyEgressRule {
+	return networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						corev1.LabelMetadataName: metav1.NamespaceSystem,
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      corednsconstants.LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{corednsconstants.LabelValue},
+					}},
+				},
+			},
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						corev1.LabelMetadataName: metav1.NamespaceSystem,
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      corednsconstants.LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{nodelocaldnsconstants.LabelValue},
+					}},
+				},
+			},
+			// required for node local dns feature, allows egress traffic to node local dns cache
+			{
+				IPBlock: &networkingv1.IPBlock{
+					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+					CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
+				},
+			},
+			{
+				IPBlock: &networkingv1.IPBlock{
+					// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+					CIDR: fmt.Sprintf("%s/128", nodelocaldnsconstants.IPVSIPv6Address),
+				},
+			},
+		},
+		Ports: []networkingv1.NetworkPolicyPort{
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServiceServer))},
+			{Protocol: new(corev1.ProtocolUDP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
+			{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(corednsconstants.PortServer))},
 		},
 	}
 }

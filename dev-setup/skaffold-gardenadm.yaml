@@ -958,11 +958,16 @@ build:
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/proxy
+            - pkg/component/networking/coredns/constants
             - pkg/component/networking/istiobasicauthserver
+            - pkg/component/networking/nodelocaldns/constants
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/utils
+            - pkg/controller/networkpolicy
+            - pkg/controller/networkpolicy/helper
+            - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controllerutils
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
@@ -989,7 +994,6 @@ build:
             - pkg/provider-local/controller/extension/shootafterworker
             - pkg/provider-local/controller/healthcheck
             - pkg/provider-local/controller/infrastructure
-            - pkg/provider-local/controller/networkpolicy
             - pkg/provider-local/controller/operatingsystemconfig
             - pkg/provider-local/controller/selfhostedshootexposure
             - pkg/provider-local/controller/worker

@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -32,9 +33,6 @@ import (
 const portName = "https"
 
 type actuator struct {
-	// runtimeClient uses provider-local's in-cluster config, e.g., for the seed/bootstrap cluster it runs in.
-	// It's used to interact with extension objects. By default, it's also used as the provider runtimeClient to interact with
-	// infrastructure resources, unless a kubeconfig is specified in the cloudprovider secret.
 	runtimeClient client.Client
 }
 
@@ -48,14 +46,14 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, exposure *ext
 		return nil, err
 	}
 
-	providerNamespace := cluster.Shoot.Status.TechnicalID
-	service := serviceForExposure(exposure, providerNamespace)
+	infraNamespace := infrastructure.NamespaceName(cluster.Shoot.Status.TechnicalID)
+	service := serviceForExposure(exposure, infraNamespace)
 	if err := providerClient.Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 		return nil, fmt.Errorf("could not patch Service: %w", err)
 	}
 
 	for _, family := range endpointSliceFamiliesForCluster(cluster) {
-		slice, err := endpointSliceForExposure(exposure, providerNamespace, family)
+		slice, err := endpointSliceForExposure(exposure, infraNamespace, family)
 		if err != nil {
 			return nil, fmt.Errorf("could not build %s EndpointSlice: %w", family, err)
 		}
@@ -81,11 +79,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 		return err
 	}
 
-	providerNamespace := cluster.Shoot.Status.TechnicalID
+	infraNamespace := infrastructure.NamespaceName(cluster.Shoot.Status.TechnicalID)
 
 	// Explicitly delete the Service and wait for it to be gone so the LoadBalancer is deprovisioned before
 	// releasing the SelfHostedShootExposure.
-	err = providerClient.Delete(ctx, serviceForExposure(exposure, providerNamespace))
+	err = providerClient.Delete(ctx, serviceForExposure(exposure, infraNamespace))
 	if err == nil {
 		return &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
@@ -102,7 +100,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 		if err := providerClient.Delete(ctx, &discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      endpointSliceName(exposure, family),
-				Namespace: providerNamespace,
+				Namespace: infraNamespace,
 			},
 		}); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not delete %s EndpointSlice: %w", family, err)
@@ -112,11 +110,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, exposure *extens
 	return nil
 }
 
-func (a *actuator) providerClient(ctx context.Context, log logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
+func (a *actuator) providerClient(ctx context.Context, _ logr.Logger, exposure *extensionsv1alpha1.SelfHostedShootExposure) (client.Client, error) {
 	if exposure.Spec.CredentialsRef == nil {
 		return nil, fmt.Errorf("credentialsRef is required for the provider-local SelfHostedShootExposure implementation but is not set")
 	}
-	providerClient, err := local.GetProviderClient(ctx, log, a.runtimeClient, corev1.SecretReference{
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, corev1.SecretReference{
 		Name:      exposure.Spec.CredentialsRef.Name,
 		Namespace: exposure.Spec.CredentialsRef.Namespace,
 	})

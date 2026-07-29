@@ -15,6 +15,9 @@ const (
 	// Type is the type of resources managed by the local actuators.
 	Type = "local"
 
+	// GardenRoleInfra is the value of the GardenRole key indicating type 'infra'.
+	GardenRoleInfra = "infra"
+
 	// FieldOwner is a constant for the owner name in `.metadata.managedFields`.
 	FieldOwner = client.FieldOwner("gardener-extension-provider-local")
 
@@ -23,11 +26,6 @@ const (
 
 	// CloudControllerManagerName is a constant for the name of the cloud-controller-manager deployed by the controlplane controller.
 	CloudControllerManagerName = "cloud-controller-manager"
-
-	// LabelNetworkPolicyToIstioIngressGateway allows Egress from pods labeled with
-	// 'networking.gardener.cloud/to-istio-ingressgateway=allowed' to istio-ingressgateway pods running in
-	// 'istio-ingress' namespace.
-	LabelNetworkPolicyToIstioIngressGateway = "networking.gardener.cloud/to-istio-ingressgateway"
 )
 
 var (
