@@ -15,10 +15,15 @@ import (
 )
 
 var _ = Describe("#IsShootHibernatedDuringNextMaintenanceWindow", func() {
-	now := time.Date(2024, time.January, 8, 15, 0, 0, 0, time.UTC)
+	var (
+		now = time.Date(2024, time.January, 8, 15, 0, 0, 0, time.UTC)
 
-	// nowHibernated is inside a typical overnight hibernation window:
-	nowHibernated := time.Date(2024, time.January, 8, 21, 0, 0, 0, time.UTC)
+		// nowHibernated is inside a typical overnight hibernation window:
+		nowHibernated = time.Date(2024, time.January, 8, 21, 0, 0, 0, time.UTC)
+
+		nightlySchedule = gardencorev1beta1.HibernationSchedule{Start: new("0 20 * * *"), End: new("0 8 * * *")}
+		weekdaySchedule = gardencorev1beta1.HibernationSchedule{Start: new("0 20 * * 1-5"), End: new("0 8 * * 1-5")}
+	)
 
 	const (
 		// maintenance window 22:00–23:00 UTC (nightly)
@@ -51,9 +56,6 @@ var _ = Describe("#IsShootHibernatedDuringNextMaintenanceWindow", func() {
 	makeShootDefault := func(isHibernated bool, schedules ...gardencorev1beta1.HibernationSchedule) *gardencorev1beta1.Shoot {
 		return makeShoot(maintBegin, maintEnd, isHibernated, schedules...)
 	}
-
-	nightlySchedule := gardencorev1beta1.HibernationSchedule{Start: new("0 20 * * *"), End: new("0 8 * * *")}
-	weekdaySchedule := gardencorev1beta1.HibernationSchedule{Start: new("0 20 * * 1-5"), End: new("0 8 * * 1-5")}
 
 	DescribeTable("should return the expected result",
 		func(shoot *gardencorev1beta1.Shoot, t time.Time, expected bool) {
@@ -142,7 +144,7 @@ var _ = Describe("#IsShootHibernatedDuringNextMaintenanceWindow", func() {
 			makeShootDefault(true, gardencorev1beta1.HibernationSchedule{
 				Start: new("0 20 * * *"), End: new("30 22 * * *"),
 			}), nowHibernated,
-			false,
+			true,
 		),
 		Entry("hibernated: wake-up after maintenance window end",
 			makeShootDefault(true, gardencorev1beta1.HibernationSchedule{

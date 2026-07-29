@@ -22,51 +22,44 @@ func IsShootHibernatedDuringNextMaintenanceWindow(shoot *gardencorev1beta1.Shoot
 		return false
 	}
 
-	maintenanceWindow, err := timewindowutils.ParseMaintenanceTimeWindow(
-		shoot.Spec.Maintenance.TimeWindow.Begin,
-		shoot.Spec.Maintenance.TimeWindow.End,
-	)
+	maintenanceWindow, err := timewindowutils.ParseMaintenanceTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End)
 	if err != nil {
 		return false
 	}
+	nextMaintenanceBegin := maintenanceWindow.AdjustedBegin(now)
+	if !nextMaintenanceBegin.After(now) {
+		nextMaintenanceBegin = nextMaintenanceBegin.AddDate(0, 0, 1)
+	}
 	nextMaintenanceEnd := maintenanceWindow.AdjustedEnd(now)
-	if !nextMaintenanceEnd.After(now) {
+	if !nextMaintenanceEnd.After(nextMaintenanceBegin) {
 		nextMaintenanceEnd = nextMaintenanceEnd.AddDate(0, 0, 1)
 	}
+
 	nextHibernateTime, nextWakeUpTime, err := parseNextHibernationEvents(shoot, now)
 	if err != nil {
 		return false
 	}
 
 	if shoot.Status.IsHibernated {
-		hasWakeUpBeforeMaintenance := nextWakeUpTime != nil && nextWakeUpTime.Before(nextMaintenanceEnd)
-
-		if !hasWakeUpBeforeMaintenance {
+		if nextWakeUpTime == nil || nextWakeUpTime.After(nextMaintenanceBegin) {
 			return true // never wakes up, or wakes up too late
 		}
 
-		reHibernatesBeforeMaintenance := nextHibernateTime != nil &&
+		return nextHibernateTime != nil &&
 			nextHibernateTime.After(*nextWakeUpTime) &&
 			nextHibernateTime.Before(nextMaintenanceEnd)
-
-		return reHibernatesBeforeMaintenance
 	}
 
-	// shoot is currently awake
-
-	hibernatesBeforeMaintenance := nextHibernateTime != nil && nextHibernateTime.Before(nextMaintenanceEnd)
-	if !hibernatesBeforeMaintenance {
+	if nextHibernateTime == nil || nextHibernateTime.After(nextMaintenanceEnd) {
 		return false // stays awake all the way to maintenance
 	}
 
-	reWakesUpBeforeMaintenance := nextWakeUpTime != nil &&
-		nextWakeUpTime.After(*nextHibernateTime) &&
-		nextWakeUpTime.Before(nextMaintenanceEnd)
-
-	return !reWakesUpBeforeMaintenance
+	return nextWakeUpTime == nil ||
+		nextWakeUpTime.Before(*nextHibernateTime) ||
+		nextWakeUpTime.After(nextMaintenanceBegin)
 }
 
-func parseNextHibernationEvents(shoot *gardencorev1beta1.Shoot, now time.Time) (*time.Time, *time.Time, error) {
+func parseNextHibernationEvents(shoot *gardencorev1beta1.Shoot, now time.Time) (nextHibernateTime *time.Time, nextWakeUpTime *time.Time, err error) {
 	if shoot.Spec.Hibernation == nil || len(shoot.Spec.Hibernation.Schedules) == 0 {
 		return nil, nil, nil
 	}
@@ -75,7 +68,6 @@ func parseNextHibernationEvents(shoot *gardencorev1beta1.Shoot, now time.Time) (
 		return nil, nil, err
 	}
 
-	var nextHibernateTime, nextWakeUpTime *time.Time
 	for _, s := range schedules {
 		t := s.Next(now)
 		switch s.Operation {
