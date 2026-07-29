@@ -402,7 +402,7 @@ const TaskGroupReconcileShootNamespaces flow.TaskID = "TaskGroupReconcileShootNa
 
 // ReconcileShootNamespacesTaskGroup returns the flow.TaskGroup for deploying the shoot namespaces and waiting for their
 // readiness.
-func (b *Botanist) ReconcileShootNamespacesTaskGroup() flow.TaskGroup {
+func (b *Botanist) ReconcileShootNamespacesTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileShootNamespaces).WithDependencies(TaskGroupReconcileGardenerResourceManager)
 
@@ -413,6 +413,7 @@ func (b *Botanist) ReconcileShootNamespacesTaskGroup() flow.TaskGroup {
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespaces have been reconciled",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployShootNamespaces),
 		})
 	)

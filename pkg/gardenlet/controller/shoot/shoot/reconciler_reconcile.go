@@ -442,18 +442,8 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 		waitUntilControlPlaneReady = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness).WithDependencies(
 			deployReferencedResources,
 		))
-		deployShootNamespaces = g.Add(flow.Task{
-			Name:         "Deploying shoot namespaces system component",
-			Fn:           flow.TaskFn(b.Shoot.Components.SystemComponents.Namespaces.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
-		waitUntilShootNamespacesReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot namespaces have been reconciled",
-			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
-			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployShootNamespaces),
-		})
-		deployVPNSeedServer = g.Add(flow.Task{
+		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
+		deployVPNSeedServer           = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
 			Fn:           flow.TaskFn(b.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsWorkerless,
@@ -1098,7 +1088,7 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 		_                                = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		_                                = g.AddGroup(b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness))
 		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
-		_                                = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		_                                = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
 		reconcileSystemComponents        = g.AddGroup(b.ReconcileSystemComponentsTaskGroup())
 
 		deployBackupBucketInGarden = g.Add(flow.Task{

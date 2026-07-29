@@ -115,7 +115,7 @@ func run(ctx context.Context, opts *Options) error {
 			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
-		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(false))
 		reconcileSystemComponents = g.AddGroup(
 			b.ReconcileSystemComponentsTaskGroup().
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
