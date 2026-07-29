@@ -222,7 +222,7 @@ func (b *Botanist) ReconcileMachineControllerManagerTaskGroup() flow.TaskGroup {
 	return flow.NewTaskGroup(TaskGroupReconcileMachineControllerManager, flow.Task{
 		Name:   "Deploying machine-controller-manager",
 		Fn:     flow.TaskFn(b.DeployMachineControllerManager).RetryUntilTimeout(time.Second, time.Minute),
-		SkipIf: !b.Shoot.HasManagedInfrastructure(),
+		SkipIf: !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
 	}).WithDependencies(
 		TaskGroupInitializeSecretsManagement,
 		TaskGroupDeployCloudProviderSecret,
