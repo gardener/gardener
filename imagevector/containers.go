@@ -61,6 +61,8 @@ const (
 	ContainerImageNameGardenerDashboard = "gardener-dashboard"
 	// ContainerImageNameGardenerDiscoveryServer is a constant for an image in the image vector with name 'gardener-discovery-server'.
 	ContainerImageNameGardenerDiscoveryServer = "gardener-discovery-server"
+	// ContainerImageNameGardenerMetricsCollector is a constant for an image in the image vector with name 'gardener-metrics-collector'.
+	ContainerImageNameGardenerMetricsCollector = "gardener-metrics-collector"
 	// ContainerImageNameGardenerMetricsExporter is a constant for an image in the image vector with name 'gardener-metrics-exporter'.
 	ContainerImageNameGardenerMetricsExporter = "gardener-metrics-exporter"
 	// ContainerImageNameGardenerNodeAgent is a constant for an image in the image vector with name 'gardener-node-agent'.

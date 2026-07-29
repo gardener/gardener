@@ -196,6 +196,12 @@ images:
     sourceRepository: github.com/gardener/opentelemetry-collector
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/observability/opentelemetry-collector
     tag: "v0.0.1"
+  # The opentelemetry-collector image >= v0.0.2, which contains the gardener metrics receiver, is based on a Collector
+  # version that is not compatible to the Loki exporter anymore. A unified image can be used after the Vali removal.
+  - name: gardener-metrics-collector
+    sourceRepository: github.com/gardener/opentelemetry-collector
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/observability/opentelemetry-collector
+    tag: "v0.0.2"
   - name: victoria-logs
     sourceRepository: github.com/VictoriaMetrics/VictoriaLogs
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/victoriametrics/victoria-logs
