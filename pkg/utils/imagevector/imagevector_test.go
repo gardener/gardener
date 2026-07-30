@@ -382,8 +382,8 @@ images:
 				mergedVector, _, imagePullCredential, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
-				Expect(imagePullCredential).To(PointTo(Equal(ImagePullCredential{
-					Type:        ImagePullCredentialTypeStaticSecret,
+				Expect(imagePullCredential).To(PointTo(Equal(PullCredentials{
+					Type:        PullCredentialsTypeStaticSecret,
 					SecretNames: []string{"my-image-pull-secret"},
 				})))
 			})

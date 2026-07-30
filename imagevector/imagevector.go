@@ -22,13 +22,15 @@ var (
 	containersYAML                string
 	containersImageVector         imagevector.ImageVector
 	containersCABundle            *imagevector.CABundle
-	containersImagePullCredential *imagevector.ImagePullCredential
+	containersImagePullCredential *imagevector.PullCredentials
 
 	//go:embed charts.yaml
 	chartsYAML                string
 	chartsImageVector         imagevector.ImageVector
 	chartsCABundle            *imagevector.CABundle
-	chartsImagePullCredential *imagevector.ImagePullCredential
+	chartsImagePullCredential *imagevector.PullCredentials
+
+	allPullCredentials []*imagevector.PullCredentials
 )
 
 func init() {
@@ -50,6 +52,11 @@ func Containers() imagevector.ImageVector {
 	return containersImageVector
 }
 
+// ContainerImagePullCredential returns the global image pull credential for container images, if specified.
+func ContainerImagePullCredential() *imagevector.PullCredentials {
+	return containersImagePullCredential
+}
+
 // Charts is the image vector that contains all the needed Helm chart images.
 func Charts() imagevector.ImageVector {
 	return chartsImageVector
@@ -65,43 +72,38 @@ func ChartsCABundle() *imagevector.CABundle {
 	return chartsCABundle
 }
 
-// ContainerImagePullCredential returns the global image pull credential for container images, if specified.
-func ContainerImagePullCredential() *imagevector.ImagePullCredential {
-	return containersImagePullCredential
-}
-
 // ChartImagePullCredential returns the global image pull credential for Helm chart images, if specified.
-func ChartImagePullCredential() *imagevector.ImagePullCredential {
+func ChartImagePullCredential() *imagevector.PullCredentials {
 	return chartsImagePullCredential
 }
 
 // AllContainerImagePullCredentials returns all unique image pull credentials (global + per-image) for containers.
-func AllContainerImagePullCredentials() []*imagevector.ImagePullCredential {
+func AllContainerImagePullCredentials() []*imagevector.PullCredentials {
 	seen := sets.New[string]()
-	var result []*imagevector.ImagePullCredential
 
-	addCred := func(cred *imagevector.ImagePullCredential) {
+	addCred := func(cred *imagevector.PullCredentials) {
 		if cred == nil {
 			return
 		}
 		key := imagevector.CredentialKey(cred)
 		if !seen.Has(key) {
 			seen.Insert(key)
-			result = append(result, cred)
+			allPullCredentials = append(allPullCredentials, cred)
 		}
 	}
 
 	addCred(containersImagePullCredential)
-	for _, cred := range containersImageVector.AllImagePullCredentials() {
+	for _, cred := range containersImageVector.AllPullCredentials() {
 		addCred(cred)
 	}
-	return result
+
+	return allPullCredentials
 }
 
 // ContainerImagePullCredentialForImage returns the pull credential for a given container image reference.
 // It first checks for a per-image credential, then falls back to the global credential.
 // Returns nil if no credential is configured for the image.
-func ContainerImagePullCredentialForImage(containerImage string) *imagevector.ImagePullCredential {
+func ContainerImagePullCredentialForImage(containerImage string) *imagevector.PullCredentials {
 	if perImage := containersImageVector.ImagePullCredentialForContainerImage(containerImage); perImage != nil {
 		return perImage
 	}

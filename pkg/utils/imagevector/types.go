@@ -12,18 +12,18 @@ type CABundle struct {
 	Inline *string `json:"inline,omitempty" yaml:"inline,omitempty"`
 }
 
-// ImagePullCredentialType defines the mechanism used to provide image pull credentials.
-type ImagePullCredentialType string
+// PullCredentialsType defines the mechanism used to provide image pull credentials.
+type PullCredentialsType string
 
 const (
-	// ImagePullCredentialTypeStaticSecret uses a static dockerconfigjson Secret.
-	ImagePullCredentialTypeStaticSecret ImagePullCredentialType = "StaticSecret"
+	// PullCredentialsTypeStaticSecret uses a static dockerconfigjson Secret.
+	PullCredentialsTypeStaticSecret PullCredentialsType = "StaticSecret"
 )
 
-// ImagePullCredential defines how image pull credentials are provided.
-type ImagePullCredential struct {
+// PullCredentials defines how image pull credentials are provided.
+type PullCredentials struct {
 	// Type is the credential delivery mechanism.
-	Type ImagePullCredentialType `json:"type" yaml:"type"`
+	Type PullCredentialsType `json:"type" yaml:"type"`
 	// SecretNames is the list of dockerconfigjson Secret names.
 	// Required when Type is StaticSecret.
 	// +optional
@@ -56,7 +56,7 @@ type ImageSource struct {
 	// ImagePullCredential specifies how to authenticate when pulling this image.
 	// When set, it overrides the global imagePullCredential for this specific image.
 	// +optional
-	ImagePullCredential *ImagePullCredential `json:"imagePullCredential,omitempty" yaml:"imagePullCredential,omitempty"`
+	PullCredentials *PullCredentials `json:"pullCredentials,omitempty" yaml:"pullCredentials,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
@@ -67,8 +67,8 @@ type Image struct {
 	Tag        *string
 	Version    *string
 
-	// ImagePullCredential is the per-image pull credential, if configured.
-	ImagePullCredential *ImagePullCredential
+	// PullCredentials is the per-image pull credential, if configured.
+	PullCredentials *PullCredentials
 }
 
 // ImageVector is a list of image sources.
