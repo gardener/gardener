@@ -502,9 +502,6 @@ func (r *Reconciler) newPVCAutoscaler(garden *operatorv1alpha1.Garden) (componen
 		r.GardenNamespace,
 		pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
 		v1beta1constants.PriorityClassNameGardenSystem100,
-		pvcautoscaler.PVCAutoscalerGardenManagedResourceName,
-		"prometheus-garden",
-		gardenprometheus.Label,
 		true,
 	)
 }
@@ -1471,9 +1468,8 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
 		vali.PVCAutoscalingConfig{
-			Enabled:        pvcAutoscalerEnabled(settings),
-			MaxCapacity:    resource.MustParse("200Gi"),
-			AutoscalerName: "garden",
+			Enabled:     pvcAutoscalerEnabled(settings),
+			MaxCapacity: resource.MustParse("200Gi"),
 		},
 	)
 	if err != nil {
@@ -1499,9 +1495,8 @@ func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings) (compo
 		nil,
 		true,
 		victorialogs.PVCAutoscalingConfig{
-			Enabled:        pvcAutoscalerEnabled(settings),
-			MaxCapacity:    resource.MustParse("200Gi"),
-			AutoscalerName: "garden",
+			Enabled:     pvcAutoscalerEnabled(settings),
+			MaxCapacity: resource.MustParse("200Gi"),
 		},
 	)
 	if err != nil {

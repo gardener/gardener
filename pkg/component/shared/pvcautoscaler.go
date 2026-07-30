@@ -18,9 +18,6 @@ func NewPVCAutoscaler(
 	gardenNamespaceName string,
 	enabled bool,
 	priorityClassName string,
-	managedResourceName string,
-	prometheusServiceName string,
-	serviceMonitorLabel string,
 	isGardenCluster bool,
 ) (
 	deployer component.DeployWaiter,
@@ -35,12 +32,9 @@ func NewPVCAutoscaler(
 		c,
 		gardenNamespaceName,
 		pvcautoscaler.Values{
-			Image:                 image.String(),
-			PriorityClassName:     priorityClassName,
-			ManagedResourceName:   managedResourceName,
-			PrometheusServiceName: prometheusServiceName,
-			ServiceMonitorLabel:   serviceMonitorLabel,
-			IsGardenCluster:       isGardenCluster,
+			Image:             image.String(),
+			PriorityClassName: priorityClassName,
+			IsGardenCluster:   isGardenCluster,
 		},
 	)
 

@@ -377,7 +377,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		DescribeTable("should deploy the PersistentVolumeClaimAutoscaler when PVCAutoscaler is enabled",
-			func(maxCapacity resource.Quantity, autoscalerName string) {
+			func(maxCapacity resource.Quantity, isGardenCluster bool) {
 				valiDeployer := New(
 					c,
 					namespace,
@@ -396,23 +396,27 @@ var _ = Describe("Vali", func() {
 						ClusterType:                  "shoot",
 						IngressHost:                  valiHost,
 						IstioIngressGatewayNamespace: "istio-ingress",
-						IsGardenCluster:              false,
+						IsGardenCluster:              isGardenCluster,
 						PVCAutoscaling: PVCAutoscalingConfig{
-							Enabled:        true,
-							MaxCapacity:    maxCapacity,
-							AutoscalerName: autoscalerName,
+							Enabled:     true,
+							MaxCapacity: maxCapacity,
 						},
 					},
 				)
+
+				autoscalerName := ""
+				if isGardenCluster {
+					autoscalerName = "garden"
+				}
 
 				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 
 				Expect(managedResource).To(NewManagedResourceContainsObjectsMatcher(c)(getPVCA(maxCapacity, autoscalerName)))
 			},
-			Entry("shoot max capacity", resource.MustParse("40Gi"), ""),
-			Entry("seed max capacity", resource.MustParse("200Gi"), ""),
-			Entry("garden max capacity", resource.MustParse("200Gi"), "garden"),
+			Entry("shoot max capacity", resource.MustParse("40Gi"), false),
+			Entry("seed max capacity", resource.MustParse("200Gi"), false),
+			Entry("garden max capacity", resource.MustParse("200Gi"), true),
 		)
 	})
 

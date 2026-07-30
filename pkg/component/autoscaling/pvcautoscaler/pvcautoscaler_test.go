@@ -76,11 +76,8 @@ var _ = Describe("PVCAutoscaler", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		comp = NewPVCAutoscaler(c, namespace, Values{
-			Image:                 image,
-			PriorityClassName:     priorityClassName,
-			ManagedResourceName:   PVCAutoscalerManagedResourceName,
-			PrometheusServiceName: "prometheus-cache",
-			ServiceMonitorLabel:   seed.Label,
+			Image:             image,
+			PriorityClassName: priorityClassName,
 		})
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
