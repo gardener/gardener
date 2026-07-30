@@ -107,8 +107,12 @@ func (cfg *Config) InitContainer(dataVolumeName string) corev1.Container {
 			RunAsGroup:               new(int64(0)),
 			AllowPrivilegeEscalation: new(false),
 		},
-		// using initialize as restore is for manual/administrative restores
 		Args: []string{
+			// using "initialize" (instead of the "restore" command) as it is the safer, idempotent
+			// choice for a re-runnable init container: it validates the existing data directory and
+			// only restores from the backup store when the data is missing or corrupt (in contrast to
+			// "restore" which unconditionally overwrites the data directory from the latest snapshot
+			// without validation, and would roll back healthy state on every pod restart)
 			"initialize",
 			"--storage-provider=Local",
 			"--store-container=" + cfg.StoreContainer,
