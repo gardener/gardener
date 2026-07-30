@@ -23,136 +23,183 @@ var _ = Describe("CloudProfile Helper", func() {
 	Context("calculate the current lifecycle classification", func() {
 		var now = time.Now()
 
-		It("only version is given", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.33.0",
+		When("no classification is specified", func() {
+			It("only version is given", func() {
+				version := core.ExpirableVersion{
+					Version: "1.33.0",
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationSupported))
+				Expect(VersionIsActive(version)).To(BeTrue())
 			})
-			Expect(classification).To(Equal(core.ClassificationSupported))
 		})
 
-		It("unavailable classification due to scheduled lifecycle start in the future", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.33.0",
-				Lifecycle: []core.LifecycleStage{
-					{
-						Classification: core.ClassificationSupported,
-						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
+		When("lifecycle is specified", func() {
+			It("unavailable classification due to scheduled lifecycle start in the future", func() {
+				version := core.ExpirableVersion{
+					Version: "1.33.0",
+					Lifecycle: []core.LifecycleStage{
+						{
+							Classification: core.ClassificationSupported,
+							StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
+						},
 					},
-				},
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationUnavailable))
+				Expect(VersionIsActive(version)).To(BeFalse())
 			})
-			Expect(classification).To(Equal(core.ClassificationUnavailable))
+
+			It("version is in preview stage", func() {
+				version := core.ExpirableVersion{
+					Version: "1.33.0",
+					Lifecycle: []core.LifecycleStage{
+						{
+							Classification: core.ClassificationPreview,
+							StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationSupported,
+							StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
+						},
+					},
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationPreview))
+				Expect(VersionIsActive(version)).To(BeTrue())
+			})
+
+			It("full version lifecycle with version currently in supported stage", func() {
+				version := core.ExpirableVersion{
+					Version: "1.33.0",
+					Lifecycle: []core.LifecycleStage{
+						{
+							Classification: core.ClassificationPreview,
+							StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationSupported,
+							StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationDeprecated,
+							StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationExpired,
+							StartTime:      new(metav1.NewTime(now.Add(8 * time.Hour))),
+						},
+					},
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationSupported))
+				Expect(VersionIsActive(version)).To(BeTrue())
+			})
+
+			It("version is deprecated", func() {
+				version := core.ExpirableVersion{
+					Version: "1.33.0",
+					Lifecycle: []core.LifecycleStage{
+						{
+							Classification: core.ClassificationSupported,
+							StartTime:      new(metav1.NewTime(now.Add(-4 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationDeprecated,
+							StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationExpired,
+							StartTime:      new(metav1.NewTime(now.Add(1 * time.Hour))),
+						},
+					},
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationDeprecated))
+				Expect(VersionIsActive(version)).To(BeTrue())
+			})
+
+			It("version is expired", func() {
+				version := core.ExpirableVersion{
+					Version: "1.33.0",
+					Lifecycle: []core.LifecycleStage{
+						{
+							Classification: core.ClassificationSupported,
+							StartTime:      new(metav1.NewTime(now.Add(-4 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationDeprecated,
+							StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationExpired,
+							StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
+						},
+					},
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationExpired))
+				Expect(VersionIsActive(version)).To(BeFalse())
+			})
+
+			It("first lifecycle start time field is optional", func() {
+				version := core.ExpirableVersion{
+					Version: "1.28.5",
+					Lifecycle: []core.LifecycleStage{
+						{
+							Classification: core.ClassificationPreview,
+						},
+						{
+							Classification: core.ClassificationSupported,
+							StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationDeprecated,
+							StartTime:      new(metav1.NewTime(now.Add(4 * time.Hour))),
+						},
+						{
+							Classification: core.ClassificationExpired,
+							StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
+						},
+					},
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationPreview))
+				Expect(VersionIsActive(version)).To(BeTrue())
+			})
 		})
 
-		It("version is in preview stage", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.33.0",
-				Lifecycle: []core.LifecycleStage{
-					{
-						Classification: core.ClassificationPreview,
-						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationSupported,
-						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
-					},
-				},
+		When("legacy classification is specified", func() {
+			It("determining preview for expiration date in the future", func() {
+				version := core.ExpirableVersion{
+					Classification: new(core.ClassificationPreview),
+					Version:        "1.28.0",
+					ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationPreview))
+				Expect(VersionIsActive(version)).To(BeTrue())
 			})
-			Expect(classification).To(Equal(core.ClassificationPreview))
-		})
 
-		It("full version lifecycle with version currently in supported stage", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.33.0",
-				Lifecycle: []core.LifecycleStage{
-					{
-						Classification: core.ClassificationPreview,
-						StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationSupported,
-						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationDeprecated,
-						StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationExpired,
-						StartTime:      new(metav1.NewTime(now.Add(8 * time.Hour))),
-					},
-				},
+			It("determining supported", func() {
+				version := core.ExpirableVersion{
+					Classification: new(core.ClassificationSupported),
+					Version:        "1.28.0",
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationSupported))
+				Expect(VersionIsActive(version)).To(BeTrue())
 			})
-			Expect(classification).To(Equal(core.ClassificationSupported))
-		})
 
-		It("version is expired", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.33.0",
-				Lifecycle: []core.LifecycleStage{
-					{
-						Classification: core.ClassificationSupported,
-						StartTime:      new(metav1.NewTime(now.Add(-4 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationDeprecated,
-						StartTime:      new(metav1.NewTime(now.Add(-3 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationExpired,
-						StartTime:      new(metav1.NewTime(now.Add(-1 * time.Hour))),
-					},
-				},
+			It("determining deprecated for expiration date in the future", func() {
+				version := core.ExpirableVersion{
+					Classification: new(core.ClassificationDeprecated),
+					ExpirationDate: new(metav1.NewTime(now.Add(1 * time.Hour))),
+					Version:        "1.28.0",
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationDeprecated))
+				Expect(VersionIsActive(version)).To(BeTrue())
 			})
-			Expect(classification).To(Equal(core.ClassificationExpired))
-		})
 
-		It("first lifecycle start time field is optional", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Version: "1.28.5",
-				Lifecycle: []core.LifecycleStage{
-					{
-						Classification: core.ClassificationPreview,
-					},
-					{
-						Classification: core.ClassificationSupported,
-						StartTime:      new(metav1.NewTime(now.Add(3 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationDeprecated,
-						StartTime:      new(metav1.NewTime(now.Add(4 * time.Hour))),
-					},
-					{
-						Classification: core.ClassificationExpired,
-						StartTime:      new(metav1.NewTime(now.Add(5 * time.Hour))),
-					},
-				},
+			It("determining expired for expiration date in the past", func() {
+				version := core.ExpirableVersion{
+					ExpirationDate: new(metav1.NewTime(now.Add(-1 * time.Hour))),
+					Version:        "1.28.0",
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationExpired))
+				Expect(VersionIsActive(version)).To(BeFalse())
 			})
-			Expect(classification).To(Equal(core.ClassificationPreview))
-		})
-
-		It("determining supported for deprecated classification field", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Classification: new(core.ClassificationSupported),
-				Version:        "1.28.0",
-			})
-			Expect(classification).To(Equal(core.ClassificationSupported))
-		})
-
-		It("determining expired for deprecated expiration date field", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				ExpirationDate: new(metav1.NewTime(now.Add(-1 * time.Hour))),
-				Version:        "1.28.0",
-			})
-			Expect(classification).To(Equal(core.ClassificationExpired))
-		})
-
-		It("determining preview for deprecated classification and expiration date field", func() {
-			classification := CurrentLifecycleClassification(core.ExpirableVersion{
-				Classification: new(core.ClassificationPreview),
-				Version:        "1.28.0",
-				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
-			})
-			Expect(classification).To(Equal(core.ClassificationPreview))
 		})
 	})
 
@@ -513,11 +560,9 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			Expect(diff.RemovedVersionClassifications["image-1"]["version-1"]).To(Equal(
-				sets.Set[core.VersionClassification]{
-					classificationSupported: {},
-				},
-			))
+			Expect(diff.RemovedVersionClassifications["image-1"]["version-1"].UnsortedList()).To(
+				ConsistOf(core.ClassificationSupported),
+			)
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})

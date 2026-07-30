@@ -65,15 +65,6 @@ var _ = Describe("API Types", func() {
 		})
 	})
 
-	DescribeTable("#VersionClassification.IsActive", func(v VersionClassification, want bool) {
-		Expect(v.IsActive()).To(Equal(want))
-	},
-		Entry("#ClassificationUnavailable is not active", ClassificationUnavailable, false),
-		Entry("#ClassificationPreview is active", ClassificationPreview, true),
-		Entry("#ClassificationSupported is active", ClassificationSupported, true),
-		Entry("#ClassificationDeprecated is active", ClassificationDeprecated, true),
-		Entry("#ClassificationExpired is not active", ClassificationExpired, false),
-	)
 	Describe("#GetCapabilitiesWithAppliedDefaults", func() {
 		It("should apply default values when capabilities are nil", func() {
 			var capabilities Capabilities
