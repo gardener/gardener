@@ -138,10 +138,6 @@ type PVCAutoscalingConfig struct {
 	Enabled bool
 	// MaxCapacity is the upper bound up to which the PVC may be scaled.
 	MaxCapacity resource.Quantity
-	// AutoscalerName is the name of the pvc-autoscaler instance that manages this PVCA.
-	// Must match the --autoscaler-name flag of the target controller instance.
-	// Empty string means the default (unnamed) instance.
-	AutoscalerName string
 }
 
 // Interface is the interface for the Vali deployer.
@@ -363,7 +359,7 @@ func (v *vali) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscalerv1alph
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
-			AutoscalerName: pvcAutoscaling.AutoscalerName,
+			AutoscalerName: v.getAutoscalerName(),
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "StatefulSet",
@@ -925,6 +921,16 @@ func (v *vali) getPrometheusLabel() string {
 		return shoot.Label
 	}
 	return aggregate.Label
+}
+
+// getAutoscalerName returns the name of the pvc-autoscaler instance that manages the Vali PVCA. It must match the
+// --autoscaler-name flag of the pvc-autoscaler instance running in the cluster where Vali is deployed. The empty string
+// denotes the default (unnamed) instance running in seeds.
+func (v *vali) getAutoscalerName() string {
+	if v.values.IsGardenCluster {
+		return "garden"
+	}
+	return ""
 }
 
 func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {

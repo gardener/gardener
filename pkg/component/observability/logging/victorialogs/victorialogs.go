@@ -68,10 +68,6 @@ type PVCAutoscalingConfig struct {
 	Enabled bool
 	// MaxCapacity is the upper bound up to which the PVC may be scaled.
 	MaxCapacity resource.Quantity
-	// AutoscalerName is the name of the pvc-autoscaler instance that manages this PVCA.
-	// Must match the --autoscaler-name flag of the target controller instance.
-	// Empty string means the default (unnamed) instance.
-	AutoscalerName string
 }
 
 type victoriaLogs struct {
@@ -266,7 +262,7 @@ func (v *victoriaLogs) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscal
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
-			AutoscalerName: pvcAutoscaling.AutoscalerName,
+			AutoscalerName: v.getAutoscalerName(),
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
@@ -294,6 +290,16 @@ func (v *victoriaLogs) getPrometheusLabel() string {
 		return seed.Label
 	}
 	return shoot.Label
+}
+
+// getAutoscalerName returns the name of the pvc-autoscaler instance that manages the VictoriaLogs PVCA. It must match
+// the --autoscaler-name flag of the pvc-autoscaler instance running in the cluster where VictoriaLogs is deployed. The
+// empty string denotes the default (unnamed) instance running in seeds.
+func (v *victoriaLogs) getAutoscalerName() string {
+	if v.values.ClusterType == component.ClusterTypeSeed && v.values.IsGardenCluster {
+		return garden.Label
+	}
+	return ""
 }
 
 func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {

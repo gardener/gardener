@@ -273,14 +273,13 @@ var _ = Describe("VictoriaLogs", func() {
 		})
 
 		DescribeTable("should successfully deploy all resources including the PersistentVolumeClaimAutoscaler when PVC autoscaler is enabled",
-			func(maxCapacity resource.Quantity, autoscalerName string) {
+			func(maxCapacity resource.Quantity) {
 				values = Values{
 					ImageRepository: imageRepository,
 					ImageTag:        imageTag,
 					PVCAutoscaling: PVCAutoscalingConfig{
-						Enabled:        true,
-						MaxCapacity:    maxCapacity,
-						AutoscalerName: autoscalerName,
+						Enabled:     true,
+						MaxCapacity: maxCapacity,
 					},
 				}
 				component = New(c, namespace, values)
@@ -294,12 +293,11 @@ var _ = Describe("VictoriaLogs", func() {
 					vpa,
 					serviceMonitor,
 					prometheusRule,
-					getPVCA(maxCapacity, autoscalerName),
+					getPVCA(maxCapacity, ""),
 				))
 			},
-			Entry("shoot max capacity", resource.MustParse("40Gi"), ""),
-			Entry("seed max capacity", resource.MustParse("200Gi"), ""),
-			Entry("garden max capacity", resource.MustParse("200Gi"), "garden"),
+			Entry("shoot max capacity", resource.MustParse("40Gi")),
+			Entry("seed max capacity", resource.MustParse("200Gi")),
 		)
 
 		Context("when deployed in seed cluster", func() {
@@ -352,6 +350,10 @@ var _ = Describe("VictoriaLogs", func() {
 					ImageTag:        imageTag,
 					ClusterType:     componentpkg.ClusterTypeSeed,
 					IsGardenCluster: true,
+					PVCAutoscaling: PVCAutoscalingConfig{
+						Enabled:     true,
+						MaxCapacity: resource.MustParse("200Gi"),
+					},
 				}
 				component = New(c, namespace, values)
 			})
@@ -383,6 +385,7 @@ var _ = Describe("VictoriaLogs", func() {
 					vpa,
 					expectedServiceMonitor,
 					expectedPrometheusRule,
+					getPVCA(resource.MustParse("200Gi"), "garden"),
 				))
 			})
 		})
