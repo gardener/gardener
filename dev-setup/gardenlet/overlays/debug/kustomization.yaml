@@ -4,5 +4,17 @@ kind: Kustomization
 resources:
 - ../single-node
 
-components:
-- ../../components/debug
+patches:
+  - patch: |
+      - op: add
+        path: /spec/config/leaderElection
+        value:
+          leaderElect: false
+      - op: add
+        path: /spec/config/server
+        value:
+          healthProbes:
+            enable: false
+    target:
+      group: seedmanagement.gardener.cloud
+      kind: Gardenlet
