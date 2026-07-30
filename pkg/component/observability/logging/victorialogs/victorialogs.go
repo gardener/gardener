@@ -293,12 +293,18 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-				"app.kubernetes.io/name":      "vlsingle",
-				"app.kubernetes.io/instance":  constants.VLSingleResourceName,
-				"app.kubernetes.io/component": "monitoring",
-				"managed-by":                  "vm-operator",
-			}},
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/name":      "vlsingle",
+					"app.kubernetes.io/instance":  constants.VLSingleResourceName,
+					"app.kubernetes.io/component": "monitoring",
+					"managed-by":                  "vm-operator",
+				},
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      "operator.victoriametrics.com/additional-service",
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				}},
+			},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: "http",
 				RelabelConfigs: []monitoringv1.RelabelConfig{
