@@ -142,11 +142,11 @@ You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) pro
 ./hack/attach-gardenlet-debugger.sh
 ```
 
+To step through and application with a debugger, you will need to attach your IDE to the port that was forwarded to your localhost.
+The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod should be forwarded to `56269`, and so on.
+Check your console output for the concrete port forwarding on your machine.
 See the [Skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) for details on how to set up your IDE, or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
-In the debugging flow, Skaffold builds your container images, reconfigures your pods, and creates port forwardings for the `Delve` debugging ports to your localhost, except for the gardenlet, where you have to forward the port yourself.
-
-The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod should be forwarded to `56269`, and so on. Check your console output for the concrete port forwarding on your machine.
 
 > Note: Resuming or stopping only a single goroutine is currently not supported (Go issues [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)), so the action causes all goroutines to be resumed or paused.
 > See the [vscode-go wiki](https://github.com/golang/vscode-go/wiki/debugging#connecting-to-headless-delve-with-target-specified-at-server-start-up).
