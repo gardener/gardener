@@ -5,8 +5,12 @@
 package imagevector
 
 import (
+	"time"
+
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateImageVector validates the given ImageVector.
@@ -81,6 +85,23 @@ func validateImageSource(imageSource *ImageSource, fldPath *field.Path) field.Er
 	return allErrs
 }
 
+// ValidateCABundle validates the given CABundle.
+func ValidateCABundle(source *CABundle, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if source == nil || source.Inline == nil {
+		return allErrs
+	}
+
+	if cert, err := utils.DecodeCertificate([]byte(*source.Inline)); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("inline"), *source.Inline, "not a valid PEM-encoded certificate"))
+	} else if time.Now().After(cert.NotAfter) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("inline"), *source.Inline, "certificate has expired"))
+	}
+
+	return allErrs
+}
+
 func validateComponentImageVector(componentImageVector *ComponentImageVector, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -90,9 +111,8 @@ func validateComponentImageVector(componentImageVector *ComponentImageVector, fl
 	}
 
 	// Read (and validate) imageVectorOverwrite as image vector
-	imageVector, err := Read([]byte(componentImageVector.ImageVectorOverwrite))
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("imageVectorOverwrite"), imageVector, err.Error()))
+	if _, _, err := Read([]byte(componentImageVector.ImageVectorOverwrite)); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("imageVectorOverwrite"), componentImageVector.ImageVectorOverwrite, err.Error()))
 	}
 
 	return allErrs

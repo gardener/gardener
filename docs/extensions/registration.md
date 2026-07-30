@@ -261,6 +261,11 @@ data:
   bundle.crt: <base64-encoded-ca-bundle>
 ```
 
+> [!NOTE]
+> If you configure a `caBundle` in the Charts image vector override (`IMAGEVECTOR_OVERWRITE_CHARTS`), Gardener automatically includes that CA in the TLS trust store for every OCI Helm chart pull.
+> This means you do not need to repeat the same CA secret for every `Extension` or `ControllerDeployment` that uses the same private registry.
+> See [Helm Chart Image Vector](../deployment/image_vector.md#helm-chart-image-vector) for details.
+
 The downloaded chart is cached in memory. It is recommended to always specify a digest, because if it is not specified, the manifest is fetched in every reconciliation to compare the digest with the local cache.
 
 ### Helm Values

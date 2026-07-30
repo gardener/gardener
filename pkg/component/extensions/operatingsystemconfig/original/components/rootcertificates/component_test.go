@@ -20,8 +20,10 @@ var _ = Describe("Component", func() {
 			component components.Component
 			ctx       components.Context
 
-			caBundle       = "some-non-base64-encoded-ca-bundle"
-			caBundleBase64 = utils.EncodeBase64([]byte(caBundle))
+			caBundle            = "some-non-base64-encoded-ca-bundle"
+			caBundleBase64      = utils.EncodeBase64([]byte(caBundle))
+			registryCABundle    = "registry-ca"
+			registryCABundleB64 = utils.EncodeBase64([]byte(registryCABundle))
 		)
 
 		BeforeEach(func() {
@@ -72,26 +74,19 @@ set -o nounset
 set -o pipefail
 
 if [[ -f "/etc/debian_version" ]]; then
-    # Copy certificates from default "localcertsdir" because /usr is mounted read-only in Garden Linux.
-    # See https://github.com/gardenlinux/gardenlinux/issues/1490
     mkdir -p "/var/lib/ca-certificates-local"
     if [[ -d "/usr/local/share/ca-certificates" && -n "$(ls -A '/usr/local/share/ca-certificates')" ]]; then
         cp -af /usr/local/share/ca-certificates/* "/var/lib/ca-certificates-local"
     fi
-    # localcertsdir is supported on Debian based OS only
     /usr/sbin/update-ca-certificates --fresh --localcertsdir "/var/lib/ca-certificates-local"
-    exit
-fi
-
-if grep -q flatcar "/etc/os-release"; then
-    # Flatcar needs the file in /etc/ssl/certs/ with .pem file extension
-    cp "/var/lib/ca-certificates-local/ROOTcerts.crt" /etc/ssl/certs/ROOTcerts.pem
-    # Flatcar does not support --fresh
+elif grep -q flatcar "/etc/os-release"; then
+    for f in "/var/lib/ca-certificates-local"/*.crt; do
+        [ -f "$f" ] && cp "$f" "/etc/ssl/certs/$(basename "${f%.crt}").pem"
+    done
     /usr/sbin/update-ca-certificates
-    exit
+else
+    /usr/sbin/update-ca-certificates --fresh
 fi
-
-/usr/sbin/update-ca-certificates --fresh
 `)),
 						},
 					},
@@ -120,6 +115,43 @@ fi
 
 			Expect(units).To(ConsistOf(updateCACertsUnit))
 			Expect(files).To(ConsistOf(updateCACertsFiles))
+		})
+
+		When("RegistryCABundle is set", func() {
+			BeforeEach(func() {
+				ctx.RegistryCABundle = &registryCABundle
+			})
+
+			It("should include the registry CA as a separate file and not merge it into ROOTcerts.crt", func() {
+				units, files, err := component.Config(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(units).To(HaveLen(1))
+				Expect(units[0].FilePaths).To(ContainElement(PathLocalSSLRegistryCACerts))
+
+				Expect(files).To(ContainElements(
+					extensionsv1alpha1.File{
+						Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
+						Permissions: new(uint32(0644)),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     caBundleBase64,
+							},
+						},
+					},
+					extensionsv1alpha1.File{
+						Path:        PathLocalSSLRegistryCACerts,
+						Permissions: new(uint32(0644)),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     registryCABundleB64,
+							},
+						},
+					},
+				))
+			})
 		})
 	})
 })

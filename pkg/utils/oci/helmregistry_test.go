@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net"
 
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -16,17 +17,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("helmregistry", func() {
 	var (
-		hr  *HelmRegistry
-		rc  *recordingCache
-		ctx context.Context
+		fakeClient client.Client
+		hr         *HelmRegistry
+		rc         *recordingCache
+		ctx        context.Context
 
 		caBundleSecretName = "test-ca-bundle"
 		caBundleSecret     *corev1.Secret
@@ -55,7 +61,7 @@ var _ = Describe("helmregistry", func() {
 			},
 		}
 
-		fakeClient := fake.NewClientBuilder().WithObjects(caBundleSecret, pullSecret).Build()
+		fakeClient = fake.NewClientBuilder().WithObjects(caBundleSecret, pullSecret).Build()
 		hr = &HelmRegistry{cache: rc, client: fakeClient}
 		authProvider.receivedAuthorization = "" // Reset before test
 	})
@@ -194,10 +200,9 @@ var _ = Describe("helmregistry", func() {
 				"bundle.crt": []byte("invalid-pem-data"),
 			},
 		}
-		fakeClient := fake.NewClientBuilder().WithObjects(invalidCABundleSecret).Build()
-		invalidHr := &HelmRegistry{cache: rc, client: fakeClient}
+		Expect(fakeClient.Create(ctx, invalidCABundleSecret)).To(Succeed())
 
-		_, err := invalidHr.Pull(ctx, &gardencorev1.OCIRepository{
+		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
 			Repository:        new(registryAddress + "/charts/example"),
 			Tag:               new("0.1.0"),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: "invalid-ca-bundle"},
@@ -224,6 +229,104 @@ var _ = Describe("helmregistry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
 		Expect(authProvider.receivedAuthorization).To(Equal(fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("foo:bar")))))
+	})
+
+	It("should include ChartsCABundle certs in the TLS cert pool", func() {
+		wrongCA, err := (&secretsutils.CertificateSecretConfig{
+			Name:        "wrong-ca",
+			CommonName:  "WrongCA",
+			CertType:    secretsutils.CACert,
+			IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		}).GenerateCertificate()
+		Expect(err).NotTo(HaveOccurred())
+		wrongCAData := wrongCA.SecretData()
+
+		wrongCASecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "wrong-ca-bundle",
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+			Data: map[string][]byte{
+				secretsutils.DataKeyCertificateBundle: wrongCAData[secretsutils.DataKeyCertificateCA],
+			},
+		}
+
+		Expect(fakeClient.Create(ctx, wrongCASecret)).To(Succeed())
+
+		inline := string(testCACert)
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{Inline: &inline}
+		}))
+
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: "wrong-ca-bundle"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+	})
+
+	It("should not break the pull when ChartsCABundle contains a wrong CA alongside the correct secret CA", func() {
+		wrongCA, err := (&secretsutils.CertificateSecretConfig{
+			Name:        "wrong-ca",
+			CommonName:  "WrongCA",
+			CertType:    secretsutils.CACert,
+			IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		}).GenerateCertificate()
+		Expect(err).NotTo(HaveOccurred())
+		wrongCAData := wrongCA.SecretData()
+
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{Inline: new(string(wrongCAData[secretsutils.DataKeyCertificateCA]))}
+		}))
+
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+	})
+
+	It("should not fail when ChartsCABundle.Inline is nil", func() {
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{}
+		}))
+
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository:        new(registryAddress + "/charts/example"),
+			Tag:               new("0.1.0"),
+			CABundleSecretRef: &corev1.LocalObjectReference{Name: caBundleSecretName},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+	})
+
+	It("should pull chart using ChartsCABundle as the sole CA (no caBundleSecretRef)", func() {
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{Inline: new(string(testCACert))}
+		}))
+
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository: new(registryAddress + "/charts/example"),
+			Tag:        new("0.1.0"),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+	})
+
+	It("should return error when ChartsCABundle contains invalid PEM", func() {
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{Inline: new("invalid-pem-data")}
+		}))
+
+		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository: new(registryAddress + "/charts/example"),
+			Tag:        new("0.1.0"),
+		})
+		Expect(err).To(MatchError("failed to append CA certificates from charts image vector bundle"))
 	})
 })
 

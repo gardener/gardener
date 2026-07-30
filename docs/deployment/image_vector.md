@@ -68,7 +68,8 @@ In these cases, you might want to overwrite certain images, e.g., point the `pau
 
 :warning: If you specify an image that does not fit to the resource manifest, then the reconciliations might fail.
 
-In order to overwrite the images, you must provide a similar file to the Gardener component:
+In order to overwrite the images, you must provide a similar file to the Gardener component.
+If your registry requires a custom CA, you can also supply a `caBundle` in the same file (see [CA Bundle for Private Registries](#ca-bundle-for-private-registries)):
 
 ```yaml
 images:
@@ -124,6 +125,37 @@ spec:
           name: gardenlet-images-overwrite
 ```
 
+## CA Bundle for Private Registries
+
+If the registry used in the image vector overwrite is backed by a custom CA (i.e., it presents a TLS certificate that is not trusted by the default system roots), you can supply the CA bundle alongside the image overrides in the same file:
+
+```yaml
+images:
+- name: pause-container
+  repository: my-private-registry.example.com/pause
+  tag: "3.5"
+caBundle:
+  inline: |
+    -----BEGIN CERTIFICATE-----
+    <certificate data>
+    -----END CERTIFICATE-----
+```
+
+The `caBundle.inline` field accepts a PEM-encoded CA certificate bundle.
+If set for `gardenlet`, it will distribute the CA certificate bundle to the worker nodes of every shoot managed by this seed, so that containerd on those nodes trusts the registry when pulling images.
+
+> [!IMPORTANT]
+> Only the **gardenlet**'s image vector `caBundle` is distributed to shoot worker nodes.
+> Setting `caBundle` in the `gardener-operator`'s image vector override does not install the CA on any nodes.
+> For the runtime/soil cluster itself, custom CAs must be installed on nodes by other means (e.g., via the cloud provider's node configuration API).
+
+If extensions deployed by gardenlet use container images from a private registry with a custom CA, that CA must also be included in the gardenlet's image vector `caBundle`.
+This is the only mechanism for installing custom CAs on shoot worker nodes — the `caBundleSecretRef` on an `Extension` or `ControllerDeployment` only covers TLS for pulling the Helm chart archive and does not affect containerd's trust store on the nodes.
+In practice this means operators should consolidate all private registry CAs (both their own and those required by extensions) into the gardenlet's `IMAGEVECTOR_OVERWRITE` `caBundle`.
+
+> [!NOTE]
+> The certificate must be a CA certificate and must not be expired. Gardener validates both conditions when loading the image vector overwrite file.
+
 ## Image Vectors for Dependent Components
 
 Gardener is deploying a lot of different components that might deploy other images themselves.
@@ -150,3 +182,23 @@ The respective component is responsible for using the overwritten images instead
 Some Gardener components might also deploy [packaged Helm charts](https://helm.sh/docs/helm/helm_package/) which are pulled from an OCI repository.
 The concepts are the very same as for the container images.
 The only difference is that the environment variable for overwriting this chart image vector is called `IMAGEVECTOR_OVERWRITE_CHARTS`.
+
+If the chart OCI registry uses a custom CA, you can supply it via `caBundle.inline` in the same override file.
+Gardener will automatically include this CA in the TLS trust store whenever it pulls an OCI Helm chart.
+
+> [!IMPORTANT]
+> The `caBundle` here (like `caBundleSecretRef` on an `Extension` or `ControllerDeployment`) only secures the TLS connection used to pull the chart archive from the OCI registry.
+> It does **not** install that CA on shoot worker nodes.
+> Container images referenced inside those Helm charts will only be trusted by containerd if the CA is also present in the gardenlet's `IMAGEVECTOR_OVERWRITE` `caBundle` (see [CA Bundle for Private Registries](#ca-bundle-for-private-registries)).
+
+```yaml
+images:
+- name: my-chart
+  repository: my-private-registry.example.com/charts/my-chart
+  tag: "1.2.3"
+caBundle:
+  inline: |
+    -----BEGIN CERTIFICATE-----
+    <certificate data>
+    -----END CERTIFICATE-----
+```

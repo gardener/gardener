@@ -215,6 +215,11 @@ spec:
 
 If your OCI registry uses a custom or self-signed TLS certificate, you can provide a CA bundle. For registries requiring authentication, you can reference a pull secret.
 
+> [!NOTE]
+> If you configure a `caBundle` in the Charts image vector override (`IMAGEVECTOR_OVERWRITE_CHARTS`), Gardener automatically includes that CA in the TLS trust store for every OCI Helm chart pull.
+> This means you do not need to repeat the same CA secret for every `Extension` that uses the same private registry.
+> See [Helm Chart Image Vector](image_vector.md#helm-chart-image-vector) for details.
+
 ```yaml
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Extension
