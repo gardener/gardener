@@ -154,9 +154,9 @@ This means that when a goroutine of the gardenlet, or any other gardener-core co
 
 Skaffold automatically increases the `timeoutSeconds` of liveness and readiness probes to `600`. However, we have still encountered problems where pods were killed after a while during debugging.
 
-Therefore, leader election, health checks, and readiness checks for the `gardenlet` and `gardener-operator` are disabled when debugging.
+Therefore, leader election, health checks, and readiness checks for the respective components are disabled when debugging.
 
-If you have similar problems with other components that are not deployed by Skaffold, you can temporarily turn off leader election and disable liveness and readiness probes there as well.
+If you have similar problems with other components, you can temporarily turn off leader election and disable liveness and readiness probes there as well.
 
 ### Debugging in GoLand
 
