@@ -44,7 +44,7 @@ var (
 	newWorkerPoolKubernetesVersion   = flag.String("k8s-version-worker-pools", "", "the version to use for .spec.provider.workers[].kubernetes.version (only when not equal to .spec.kubernetes.version)")
 )
 
-const UpdateKubernetesVersionTimeout = 45 * time.Minute
+const UpdateKubernetesVersionTimeout = 1 * time.Hour
 
 func init() {
 	framework.RegisterShootFrameworkFlags()
