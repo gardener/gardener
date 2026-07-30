@@ -25,3 +25,7 @@ patches:
       path: /spec/provider/workers/0/controlPlane/exposure
       value:
         extension: {}
+    - op: add
+      path: /spec/provider/workers/0/zones
+      value:
+        - local
