@@ -40,7 +40,7 @@
       },
       "id": 102,
       "panels": [],
-      "title": "API Server Vitals",
+      "title": "API Server Overview",
       "type": "row"
     },
     {
@@ -49,7 +49,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Number of instances api server is unreachable",
+      "description": "Number of unreachable API server instances",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -146,7 +146,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "kube-apiserver disruption events in the last 5 minutes.",
+      "description": "Number of kube-apiserver restarts.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -188,7 +188,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{container=\"kube-apiserver\"}[5m])) by (pod)",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{container=\"kube-apiserver\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "{{pod}} - Restarted",
           "refId": "A"
@@ -243,7 +243,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "OOM kill events on the kube-apiserver container.",
+      "description": "Number of kube-apiserver OOM events.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -285,7 +285,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(container_oom_events_total{container=\"kube-apiserver\"}[5m])) by (pod)",
+          "expr": "sum(increase(container_oom_events_total{container=\"kube-apiserver\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "{{pod}} - OOM",
           "refId": "A"
@@ -340,7 +340,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Shows CPU usage in terms of percentage",
+      "description": "Shows CPU utilization as percentage",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -392,7 +392,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "API Server CPU usage",
+      "title": "API Server CPU utilization",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -437,7 +437,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Shows memory usage in terms of percentage",
+      "description": "Shows memory utilization as percentage",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -489,7 +489,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "API Server memory usage",
+      "title": "API Server memory utilization",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2112,7 +2112,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(code,resource,subresource)",
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(code, resource, subresource)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -2339,7 +2339,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_request_total{verb=~\"$verb\",pod=~\"$pod\"}[$__rate_interval])) by(code,resource,verb,subresource)",
+          "expr": "sum(rate(apiserver_request_total{verb=~\"$verb\",pod=~\"$pod\"}[$__rate_interval])) by(code, resource, verb, subresource)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -2353,7 +2353,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "API Server Request Rates Per Code, Verb And Resource",
+      "title": "Request Rates Per Code, Verb And Resource",
       "tooltip": {
         "msResolution": false,
         "shared": false,
