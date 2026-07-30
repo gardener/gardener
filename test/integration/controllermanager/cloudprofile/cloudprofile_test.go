@@ -237,7 +237,7 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 
 		It("should patch the status versions after the CloudProfile spec changed with new classification", func() {
 			var (
-				now    = time.Now()
+				now    = fakeClock.Now()
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 				past   = &metav1.Time{Time: now.Add(-24 * time.Hour)}
 			)
