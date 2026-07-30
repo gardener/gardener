@@ -106,6 +106,15 @@ var _ = Describe("Etcd", func() {
 			Expect(cm.Data).To(HaveKey("etcd.conf.yaml"))
 
 			Expect(statefulSet.Spec.Template.Spec.InitContainers).To(HaveLen(1))
+			Expect(statefulSet.Spec.Template.Spec.InitContainers[0].Name).To(Equal("etcdbrctl-initialize"))
+			Expect(statefulSet.Spec.Template.Spec.InitContainers[0].Args).To(Equal([]string{
+				"initialize",
+				"--storage-provider=Local",
+				"--store-container=my-bucket",
+				"--store-prefix=prefix",
+				"--data-dir=/var/lib/etcd-main/data/new.etcd",
+				"--restoration-temp-snapshots-dir=/tmp/restorationtmp",
+			}))
 			Expect(statefulSet.Spec.Template.Spec.InitContainers[0].VolumeMounts).To(ContainElement(
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-conf"), "MountPath": Equal("/var/etcd/config")}),
 			))

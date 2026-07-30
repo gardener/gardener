@@ -5,11 +5,13 @@
 package backuprestore
 
 import (
+	"fmt"
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
 )
@@ -31,7 +33,7 @@ const (
 
 // Config contains configuration for running etcdbrctl initialize before starting the bootstrap etcd.
 //
-// The init container is only added when this config is not nil.
+// The etcdbrctl-initialize init container is only added when this config is not nil.
 type Config struct {
 	EtcdbrctlImage        string
 	StoreContainer        string
@@ -39,14 +41,44 @@ type Config struct {
 	BackupBucketsHostPath string
 }
 
-// ShouldRun reports whether the backup-restore init container should be injected.
+// ConfigFromBackupDataPath builds a Config from the local backup data path on the node and the etcdbrctl image.
+// The path is expected to have the structure:
+//
+//	<backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2
+func ConfigFromBackupDataPath(path, etcdbrctlImage string) (*Config, error) {
+	if path == "" {
+		return nil, fmt.Errorf("backup data path must not be empty")
+	}
+
+	// Strip the trailing version dir (e.g. "v2") to get the etcd-main dir, then walk up the structure.
+	etcdMainDir := filepath.Dir(path)                                  // .../etcd-main
+	entryDir := filepath.Dir(etcdMainDir)                              // .../<namespace>--<uid>
+	bucketDir := filepath.Dir(entryDir)                                // .../<bucketName>
+	backupBucketsRoot := filepath.Dir(bucketDir)                       // <backupBucketsRoot>
+	storeContainer := filepath.Base(bucketDir)                         // <bucketName>
+	storePrefix := filepath.Join(filepath.Base(entryDir), "etcd-main") // <namespace>--<uid>/etcd-main
+
+	if storeContainer == "" || storeContainer == "." || storeContainer == string(filepath.Separator) ||
+		backupBucketsRoot == "" || filepath.Base(entryDir) == "." {
+		return nil, fmt.Errorf("backup data path %q does not have the expected structure <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2", path)
+	}
+
+	return &Config{
+		EtcdbrctlImage:        etcdbrctlImage,
+		StoreContainer:        storeContainer,
+		StorePrefix:           storePrefix,
+		BackupBucketsHostPath: backupBucketsRoot,
+	}, nil
+}
+
+// ShouldRun reports whether the etcdbrctl-initialize init container should be injected.
 func (cfg *Config) ShouldRun() bool {
 	return cfg != nil &&
 		cfg.BackupBucketsHostPath != "" &&
 		cfg.StoreContainer != ""
 }
 
-// ConfigMap returns the fully populated etcd-config ConfigMap for the etcdbrctl init container.
+// ConfigMap returns the fully populated etcd-config ConfigMap for the etcdbrctl-initialize init container.
 func (cfg *Config) ConfigMap(namespace string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -60,8 +92,11 @@ func (cfg *Config) ConfigMap(namespace string) *corev1.ConfigMap {
 }
 
 // InitContainer returns the etcdbrctl-initialize init container spec.
-func (cfg *Config) InitContainer(role, dataVolumeName string) corev1.Container {
-	dataDir := staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(role))
+//
+// The backup-restore initialization only ever runs for the main etcd (see ShouldRun and the caller in
+// staticpods.go), hence the main etcd's data directory is used directly.
+func (cfg *Config) InitContainer(dataVolumeName string) corev1.Container {
+	dataDir := staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(v1beta1constants.ETCDRoleMain))
 
 	return corev1.Container{
 		Name:            "etcdbrctl-initialize",
@@ -87,14 +122,14 @@ func (cfg *Config) InitContainer(role, dataVolumeName string) corev1.Container {
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: volumeNameBackupBuckets, MountPath: volumeMountPathBackupBuckets},
-			{Name: dataVolumeName, MountPath: staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(role))},
+			{Name: dataVolumeName, MountPath: dataDir},
 			{Name: volumeNameRestoreTmp, MountPath: volumeMountPathRestoreTmp},
 			{Name: volumeNameEtcdConf, MountPath: volumeMountPathEtcdConf},
 		},
 	}
 }
 
-// Volumes returns the volumes needed by the backup-restore init container.
+// Volumes returns the volumes needed by the etcdbrctl-initialize init container.
 func (cfg *Config) Volumes() []corev1.Volume {
 	return []corev1.Volume{
 		{Name: volumeNameBackupBuckets, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: cfg.BackupBucketsHostPath, Type: new(corev1.HostPathDirectoryOrCreate)}}},
@@ -116,7 +151,6 @@ client-transport-security:
   client-cert-auth: true
   key-file: /var/etcd/ssl/server/tls.key
   trusted-ca-file: /var/etcd/ssl/ca/bundle.crt
-data-dir: /var/etcd/data/new.etcd
 enable-v2: false
 initial-advertise-peer-urls:
   etcd-bootstrap-main:
