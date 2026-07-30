@@ -574,6 +574,9 @@ type ServerConfiguration struct {
 
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
+	// Enable controls whether the server is started. Defaults to true, can be set to false for debugging.
+	// +optional
+	Enable *bool `json:"enable,omitempty"`
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.

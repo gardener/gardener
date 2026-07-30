@@ -621,6 +621,10 @@ profiles:
             format: "20060102150405"
           name: timestamp
   - name: debug
+    manifests:
+      kustomize:
+        paths:
+          - dev-setup/gardenlet/overlays/debug
     patches:
       - op: add
         path: /build/artifacts/0/ko/fromImage
