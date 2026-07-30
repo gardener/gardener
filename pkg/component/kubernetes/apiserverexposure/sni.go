@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -422,17 +421,15 @@ func (s *sni) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutForManagedResource)
 	defer cancel()
 
-	var errs error
-
 	if s.valuesFunc().IstioTLSTermination {
 		if err := managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, managedResourceName); err != nil {
-			errs = errors.Join(err)
+			return err
 		}
 		if err := managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, managedResourceNameIstioTLSSecrets); err != nil {
-			errs = errors.Join(err)
+			return err
 		}
 	}
-	return errs
+	return nil
 }
 
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }

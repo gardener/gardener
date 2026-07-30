@@ -845,7 +845,7 @@ var _ = Describe("#SNI", func() {
 					Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 				})
 
-				It("should fail because the ManagedResource doesn't become healthy", func() {
+				It("should fail because the SNI ManagedResource doesn't become healthy", func() {
 					fakeOps.MaxAttempts = 2
 
 					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
@@ -864,6 +864,54 @@ var _ = Describe("#SNI", func() {
 								{
 									Type:   resourcesv1alpha1.ResourcesHealthy,
 									Status: gardencorev1beta1.ConditionFalse,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceTLSSecrets.Name,
+							Namespace:  expectedManagedResourceTLSSecrets.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+				})
+
+				It("should fail because the Istio TLS Secrets ManagedResource doesn't become healthy", func() {
+					fakeOps.MaxAttempts = 2
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceSNI.Name,
+							Namespace:  expectedManagedResourceSNI.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
 								},
 							},
 						},

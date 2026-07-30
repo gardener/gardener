@@ -416,13 +416,14 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployKubeAPIServerServiceSNISettings = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
+			Name:         "Deploying and waiting for Kubernetes API server service SNI settings in the Seed cluster",
 			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
-		waitUntilKubeAPIServerSNISettingsReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server service SNI settings are ready",
-			Fn:           b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Wait,
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up stale Kubernetes API server services in the Seed cluster",
+			Fn:           flow.TaskFn(b.CleanupKubeAPIServerLoadBalancingServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && b.ShootUsesIstioTLSTermination(),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNISettings),
 		})
 		scaleEtcdAfterRestore = g.Add(flow.Task{
@@ -1129,12 +1130,6 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			}),
 			SkipIf:       !flowCtx.requestControlPlanePodsRestart,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Cleaning up kube-apiserver TLS services",
-			Fn:           flow.TaskFn(b.DestroyKubeAPIServerTLSServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerSNISettingsReady),
 		})
 	)
 

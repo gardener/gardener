@@ -78,8 +78,8 @@ func (b *Botanist) ShootUsesIstioTLSTermination() bool {
 	return features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo())
 }
 
-// DestroyKubeAPIServerTLSServices destroys the MutualTLS and ConnectionUpgrade services if Istio TLS termination is disabled.
-func (b *Botanist) DestroyKubeAPIServerTLSServices(ctx context.Context) error {
+// CleanupKubeAPIServerLoadBalancingServices destroys the MutualTLS and ConnectionUpgrade services.
+func (b *Botanist) CleanupKubeAPIServerLoadBalancingServices(ctx context.Context) error {
 	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
 	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false)
 	return component.OpWait(
@@ -127,7 +127,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 
 // DeployKubeAPIServerSNI deploys the kube-apiserver SNI resources.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
+	return component.OpWait(b.Shoot.Components.ControlPlane.KubeAPIServerSNI).Deploy(ctx)
 }
 
 func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {

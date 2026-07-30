@@ -319,13 +319,16 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployKubeAPIServerServiceSNI = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service SNI",
-			Fn:           c.kubeAPIServerSNI.Deploy,
+			Name:         "Deploying and waiting for Kubernetes API server service SNI",
+			Fn:           component.OpWait(c.kubeAPIServerSNI).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
-		waitUntilKubeAPIServerServiceSNIReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server service SNI is ready",
-			Fn:           c.kubeAPIServerSNI.Wait,
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up kube-apiserver TLS services",
+			Fn: func(ctx context.Context) error {
+				return r.cleanupKubeAPIServerTLSServices(ctx, log, garden, c.istio.GetValues().IngressGateway)
+			},
+			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNI),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
@@ -746,14 +749,6 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Deploying victoria-operator",
 			Fn:   c.victoriaOperator.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Cleaning up kube-apiserver TLS services",
-			Fn: func(ctx context.Context) error {
-				return r.cleanupKubeAPIServerTLSServices(ctx, log, garden, c.istio.GetValues().IngressGateway)
-			},
-			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceSNIReady),
 		})
 	)
 
@@ -1601,13 +1596,12 @@ func (r *Reconciler) cleanupKubeAPIServerTLSServices(ctx context.Context, log lo
 
 	deployer := []component.Deployer{}
 
-	if !features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
-		upgradeService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix)
+	mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
+	upgradeService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix)
 
-		deployer = append(deployer, component.OpDestroy(mutualTLSService))
-		deployer = append(deployer, component.OpDestroy(upgradeService))
-	}
+	deployer = append(deployer, component.OpDestroy(mutualTLSService))
+	deployer = append(deployer, component.OpDestroy(upgradeService))
+
 	return component.OpWait(
 		deployer...,
 	).Deploy(ctx)
