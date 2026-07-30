@@ -525,6 +525,7 @@ type VictoriaLogs struct {
 type GardenVictoriaLogs struct {
 	// Storage is the disk storage capacity of VictoriaLogs.
 	// Defaults to 100Gi.
+	// If pvc-autoscaler is enabled, this value is ignored and the initial size is set to 5Gi.
 	// +optional
 	Storage *resource.Quantity `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
