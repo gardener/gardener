@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
@@ -49,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if cloudProfile.DeletionTimestamp != nil {
-		return r.delete(ctx, cloudProfile)
+		return r.delete(ctx, log, cloudProfile)
 	}
 
 	if !controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
@@ -71,9 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 // delete deletes the CloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
 // no Shoots, Seeds, or other NamespacedCloudProfiles are assigned to the CloudProfile anymore.
 // If this is the case, the controller will remove the finalizers from the CloudProfile so that it can be garbage collected.
-func (r *Reconciler) delete(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) (reconcile.Result, error) {
-	log := logf.FromContext(ctx)
-
+func (r *Reconciler) delete(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (reconcile.Result, error) {
 	if !sets.New(cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
@@ -118,7 +118,7 @@ func (r *Reconciler) delete(ctx context.Context, cloudProfile *gardencorev1beta1
 
 // patchCloudProfileStatusVersions generate the cloudProfile status from the given cloudProfile spec.
 func (r *Reconciler) patchCloudProfileStatusVersions(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) error {
-	patch := client.MergeFrom(cloudProfile.DeepCopy())
+	cloudProfileBefore := cloudProfile.DeepCopy()
 	cloudProfile.Status.Kubernetes = nil
 	cloudProfile.Status.MachineImages = nil
 
@@ -156,5 +156,8 @@ func (r *Reconciler) patchCloudProfileStatusVersions(ctx context.Context, cloudP
 			cloudProfile.Status.MachineImages = append(cloudProfile.Status.MachineImages, imageStatus)
 		}
 	}
-	return r.Client.Status().Patch(ctx, cloudProfile, patch)
+	if equality.Semantic.DeepEqual(cloudProfileBefore, cloudProfile) {
+		return nil
+	}
+	return r.Client.Status().Patch(ctx, cloudProfile, client.MergeFrom(cloudProfileBefore))
 }
