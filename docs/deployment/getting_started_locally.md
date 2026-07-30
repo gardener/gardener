@@ -144,8 +144,6 @@ You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) pro
 
 To step through the code with a debugger, you will need to attach your IDE to the port that was forwarded to your localhost.
 The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod should be forwarded to `56269`, and so on.
-Check your console output for the concrete port forwarding on your machine.
-
 See the [Skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) for details on how to set up your IDE, or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
 
