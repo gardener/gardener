@@ -83,7 +83,7 @@ spec:
         - --authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         {{- end }}
-        - --leader-elect=true
+        - --leader-elect={{ .Values.leaderElection }}
         - --secure-port={{ .Values.server.port }}
         {{- if .Values.server.tlsSecret }}
         - --tls-cert-file=/var/lib/cloud-controller-manager-server/tls.crt
@@ -100,6 +100,7 @@ spec:
         - containerPort: {{ .Values.server.port }}
           name: metrics
           protocol: TCP
+        {{- if .Values.healthProbes.enable }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -110,6 +111,7 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 15
+        {{- end }}
         resources:
           requests:
             cpu: 50m
