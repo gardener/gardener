@@ -128,21 +128,21 @@ for the gardenlet,
 ```bash
 make operator-debug
 ```
-for the garden-operator, and
+for the gardener-operator, and
 ```bash
 make cloud-provider-local-debug
 ```
 for the local cloud provider extension.
 
-The latter two use Skaffold debugging features, which inject a [Delve](https://github.com/go-delve/delve) entrypoint into the image.
-The first one does not change the entrypoint, so you must manually attach `dlv` after the pod is deployed.
+The latter two make targets use Skaffold debugging features, which inject a [Delve](https://github.com/go-delve/delve) entrypoint into the image.
+The `make seed-debug` does not change the entrypoint, so you must manually attach `dlv` after the pod is deployed.
 You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) provided in the `hack` directory:
 
 ```bash
 ./hack/attach-gardenlet-debugger.sh
 ```
 
-To step through the code with a debugger, you will need to attach your IDE to the port that was forwarded to your localhost.
+To step through the code with a debugger, attach your IDE to the port forwarded to localhost on your host machine.
 The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod should be forwarded to `56269`, and so on.
 See the [Skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) for details on how to set up your IDE, or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
@@ -154,7 +154,7 @@ This means that when a goroutine of the gardenlet, or any other gardener-core co
 
 Skaffold automatically increases the `timeoutSeconds` of liveness and readiness probes to `600`. However, we have still encountered problems where pods were killed after a while during debugging.
 
-Therefore, leader election, health checks, and readiness checks for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardenlet`, and `operator` are disabled when debugging.
+Therefore, leader election, health checks, and readiness checks for the `gardenlet` and `gardener-operator` are disabled when debugging.
 
 If you have similar problems with other components that are not deployed by Skaffold, you can temporarily turn off leader election and disable liveness and readiness probes there as well.
 
