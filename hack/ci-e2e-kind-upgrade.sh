@@ -55,6 +55,14 @@ function copy_kubeconfig_files_to_old_gardener_version_folder() {
   cp "$KUBECONFIG_RUNTIME_CLUSTER"  "dev-setup/${KUBECONFIG_RUNTIME_CLUSTER#*/dev-setup/}"
   cp "$KUBECONFIG_SEED_CLUSTER"     "dev-setup/${KUBECONFIG_SEED_CLUSTER#*/dev-setup/}"
   cp "$KUBECONFIG_SEED_SECRET_PATH" "dev-setup/${KUBECONFIG_SEED_SECRET_PATH#*/dev-setup/}"
+
+  # Also copy the provider-local kubeconfigs that 'dev-setup/kind.sh up' writes. These are used by kustomize when
+  # building the gardenconfig overlays (secret-project-garden and secret-project-local secretGenerators).
+  for credential_path in \
+    "gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig" \
+    "gardenconfig/components/credentials/secret-project-local/kubeconfig/kubeconfig"; do
+    cp "${KUBECONFIG_RUNTIME_CLUSTER%/kubeconfigs/*}/$credential_path" "dev-setup/$credential_path"
+  done
 }
 
 # copy_virtual_garden_kubeconfig_from_old_gardener_version_folder copies the virtual garden kubeconfig from the 'previous
