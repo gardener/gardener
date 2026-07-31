@@ -106,7 +106,7 @@ func (r *Reconciler) delete(
 			Name: "Destroying Gardener Metrics Exporter",
 			Fn:   component.OpDestroyAndWait(c.gardenerMetricsExporter).Destroy,
 		})
-		_ = g.Add(flow.Task{
+		destroyGardenerMetricsCollector = g.Add(flow.Task{
 			Name: "Destroying Gardener Metrics Collector",
 			Fn:   component.OpDestroyAndWait(c.gardenerMetricsCollector).Destroy,
 		})
@@ -364,7 +364,7 @@ func (r *Reconciler) delete(
 		destroyOpenTelemetryOperator = g.Add(flow.Task{
 			Name:         "Destroying OpenTelemetry Operator",
 			Fn:           component.OpDestroyAndWait(c.openTelemetryOperator).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyOpenTelemetryCollector, syncPointVirtualGardenControlPlaneDestroyed),
+			Dependencies: flow.NewTaskIDs(destroyOpenTelemetryCollector, destroyGardenerMetricsCollector, syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyFluentOperatorCustomResources = g.Add(flow.Task{
 			Name:         "Destroying fluent-operator custom resources",
