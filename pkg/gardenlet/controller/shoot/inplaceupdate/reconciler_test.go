@@ -31,26 +31,6 @@ var _ = Describe("Reconciler", func() {
 			Expect(ShouldSkipPod(&corev1.Pod{Status: corev1.PodStatus{Phase: corev1.PodFailed}})).To(BeTrue())
 		})
 
-		It("should skip mirror pods", func() {
-			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{corev1.MirrorPodAnnotationKey: "abc"},
-			}}
-			Expect(ShouldSkipPod(pod)).To(BeTrue())
-		})
-
-		It("should skip DaemonSet owned pods", func() {
-			isController := true
-			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{{
-					Kind:       "DaemonSet",
-					APIVersion: "apps/v1",
-					Name:       "ds",
-					Controller: &isController,
-				}},
-			}}
-			Expect(ShouldSkipPod(pod)).To(BeTrue())
-		})
-
 		It("should skip gardenlet pods", func() {
 			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{v1beta1constants.LabelRole: "gardenlet"},

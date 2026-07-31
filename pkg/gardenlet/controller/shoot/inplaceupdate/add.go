@@ -6,9 +6,11 @@ package inplaceupdate
 
 import (
 	"context"
+	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +35,13 @@ const ControllerName = "shoot-inplace-update"
 func (r *Reconciler) AddToManager(mgr manager.Manager, shootCluster cluster.Cluster) error {
 	if r.ShootClient == nil {
 		r.ShootClient = shootCluster.GetClient()
+	}
+	if r.ShootClientSet == nil {
+		clientSet, err := kubernetesclientset.NewForConfig(shootCluster.GetConfig())
+		if err != nil {
+			return fmt.Errorf("failed creating client-go clientset for the shoot cluster: %w", err)
+		}
+		r.ShootClientSet = clientSet
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}

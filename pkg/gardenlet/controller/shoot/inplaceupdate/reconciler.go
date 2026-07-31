@@ -7,17 +7,19 @@ package inplaceupdate
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"slices"
+	"sync"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -28,13 +30,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // Reconciler orchestrates in-place updates for all nodes in a worker pool.
 type Reconciler struct {
-	ShootClient client.Client
-	Clock       clock.Clock
-	Config      gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration
+	ShootClient    client.Client
+	ShootClientSet kubernetesclientset.Interface
+	Clock          clock.Clock
+	Config         gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration
 }
 
 // Reconcile processes all in-place-update state for a single worker pool.
@@ -113,51 +117,36 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		inProgress++
 	}
 
-	needsRequeue := false
+	var (
+		drainFns     []flow.TaskFn
+		requeueMu    sync.Mutex
+		needsRequeue bool
+	)
+
 	for i := range nodeList.Items {
 		node := &nodeList.Items[i]
 		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] == "" || !node.Spec.Unschedulable {
 			continue
 		}
 
-		drainTimedOut := r.isDrainTimedOut(log, node)
-
-		if err := r.evictPods(ctx, log, node, drainTimedOut); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to evict pods from node %s: %w", node.Name, err)
-		}
-
-		remaining, err := r.listEvictablePods(ctx, node.Name)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to list remaining pods on node %s: %w", node.Name, err)
-		}
-
-		if len(remaining) > 0 {
-			if !drainTimedOut {
-				log.Info("Pods still terminating on node, will retry", "node", node.Name, "count", len(remaining))
-				needsRequeue = true
-				continue
-			}
-			log.Info("Drain timed out, force-deleting remaining pods", "node", node.Name, "count", len(remaining))
-			for _, pod := range remaining {
-				if err := r.ShootClient.Delete(ctx, &pod, client.GracePeriodSeconds(0)); client.IgnoreNotFound(err) != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to force-delete pod %s/%s: %w", pod.Namespace, pod.Name, err)
+		drainFns = append(drainFns, func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, time.Minute)
+			defer cancel()
+			if err := r.drainAndMarkReady(ctx, log, node); err != nil {
+				if ctx.Err() != nil {
+					return fmt.Errorf("context cancelled while draining node %s: %w", node.Name, ctx.Err())
 				}
+				log.Info("Drain not complete yet, will retry", "node", node.Name, "reason", err.Error())
+				requeueMu.Lock()
+				needsRequeue = true
+				requeueMu.Unlock()
 			}
-		}
+			return nil
+		})
+	}
 
-		patch := client.MergeFrom(node.DeepCopy())
-		r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.ReadyForUpdate, "Node drained and ready for in-place update")
-		if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to set NodeInPlaceUpdate condition on node %s: %w", node.Name, err)
-		}
-
-		patch = client.MergeFrom(node.DeepCopy())
-		delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain)
-		delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime)
-		if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove drain annotations from node %s: %w", node.Name, err)
-		}
-		log.Info("Drain complete, node ready for in-place update", "node", node.Name)
+	if err := flow.Parallel(drainFns...)(ctx); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if needsRequeue {
@@ -168,16 +157,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// requeue just before the earliest timeout so we can detect a stuck GNA.
 	requeueAfter := time.Duration(math.MaxInt64)
 	for _, node := range nodeList.Items {
-		for _, cond := range node.Status.Conditions {
-			if cond.Type != machinev1alpha1.NodeInPlaceUpdate ||
-				cond.Status != corev1.ConditionTrue ||
-				cond.Reason != machinev1alpha1.ReadyForUpdate {
-				continue
+		if idx := slices.IndexFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
+			return cond.Type == machinev1alpha1.NodeInPlaceUpdate &&
+				cond.Status == corev1.ConditionTrue &&
+				cond.Reason == machinev1alpha1.ReadyForUpdate
+		}); idx >= 0 {
+			remaining := r.Config.UpdateTimeout.Duration - r.Clock.Since(node.Status.Conditions[idx].LastTransitionTime.Time)
+			// A node may have reached (or crossed) its update timeout between the first list (where isUpdateTimedOut
+			// is evaluated) and this point. Do not drop it: schedule a short requeue so the next reconcile's
+			// isUpdateTimedOut check fires and marks the update failed. Otherwise the node would stay ReadyForUpdate
+			// forever, permanently consuming a maxUnavailable slot with nothing re-enqueuing the pool.
+			if remaining <= 0 {
+				remaining = time.Second
 			}
-			remaining := r.Config.UpdateTimeout.Duration - r.Clock.Since(cond.LastTransitionTime.Time)
-			if remaining > 0 {
-				requeueAfter = min(remaining, requeueAfter)
-			}
+			requeueAfter = min(remaining, requeueAfter)
 		}
 	}
 	if requeueAfter < math.MaxInt64 {
@@ -220,8 +213,9 @@ func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.
 
 	patch = client.MergeFrom(node.DeepCopy())
 	delete(node.Labels, machinev1alpha1.LabelKeyNodeUpdateResult)
+	node.Spec.Unschedulable = false
 	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("failed to remove update-result label from node %s: %w", node.Name, err)
+		return fmt.Errorf("failed to remove update-result label and uncordon node %s: %w", node.Name, err)
 	}
 	log.Info("Cleaned up node after successful in-place update")
 	return nil
@@ -274,84 +268,108 @@ func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, no
 	return nil
 }
 
-// evictPods attempts to evict all evictable pods from the node. If drainTimedOut is true,
-// pods that are PDB-protected are force-deleted instead of retried.
-// The drain approach (evict, honor PDBs, retry, force-delete after a timeout) mirrors the
-// node drain logic the machine-controller-manager performs for managed shoots.
-func (r *Reconciler) evictPods(ctx context.Context, log logr.Logger, node *corev1.Node, drainTimedOut bool) error {
-	log = log.WithValues("node", node.Name)
-
-	pods, err := r.listEvictablePods(ctx, node.Name)
-	if err != nil {
+// drainAndMarkReady drains the node and, on success, marks it ready for the in-place update (sets the ReadyForUpdate
+// condition and removes the drain annotations).
+func (r *Reconciler) drainAndMarkReady(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	if err := r.drainNode(ctx, node); err != nil {
 		return err
 	}
 
-	for _, pod := range pods {
-		eviction := &policyv1.Eviction{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pod.Name,
-				Namespace: pod.Namespace,
-			},
-		}
-		if err := r.ShootClient.SubResource("eviction").Create(ctx, &pod, eviction); client.IgnoreNotFound(err) != nil {
-			if apierrors.IsTooManyRequests(err) {
-				if drainTimedOut {
-					log.Info("Drain timed out, force-deleting PDB-protected pod", "pod", client.ObjectKeyFromObject(&pod))
-					if err := r.ShootClient.Delete(ctx, &pod, client.GracePeriodSeconds(0)); client.IgnoreNotFound(err) != nil {
-						return fmt.Errorf("failed to force-delete pod %s/%s: %w", pod.Namespace, pod.Name, err)
-					}
-				} else {
-					log.V(1).Info("Pod eviction blocked by PDB, will retry", "pod", client.ObjectKeyFromObject(&pod))
-				}
-				continue
-			}
-			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
-		}
+	patch := client.MergeFrom(node.DeepCopy())
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.ReadyForUpdate, "Node drained and ready for in-place update")
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to set NodeInPlaceUpdate condition on node %s: %w", node.Name, err)
 	}
 
+	patch = client.MergeFrom(node.DeepCopy())
+	delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain)
+	delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime)
+	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to remove drain annotations from node %s: %w", node.Name, err)
+	}
+
+	log.Info("Drain complete, node ready for in-place update", "node", node.Name)
 	return nil
 }
 
-func (r *Reconciler) isDrainTimedOut(log logr.Logger, node *corev1.Node) bool {
-	startTimeStr, ok := node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime]
-	if !ok {
+// drainNode drains the node using the machine-controller-manager drain library's RunDrain. It gracefully evicts
+// pods honoring PodDisruptionBudgets, retrying for up to DrainTimeout, and then force-deletes any pods still
+// remaining.
+//
+// Volume attach/detach/reattach handling is skipped via SkipVolumeHandling: self-hosted shoots with
+// unmanaged infrastructure run their own CSI drivers, so gardener cannot generically track volumes.
+func (r *Reconciler) drainNode(ctx context.Context, node *corev1.Node) error {
+	forceDeletePods := r.drainTimedOut(node)
+	maxEvictRetries := int32(r.Config.DrainTimeout.Duration / r.Config.PodEvictionRetryInterval.Duration)
+
+	drainOptions := drain.NewDrainOptions(
+		r.ShootClientSet,
+		nil,
+		r.Config.DrainTimeout.Duration,
+		maxEvictRetries,
+		r.Config.DrainTimeout.Duration,
+		r.Config.DrainTimeout.Duration,
+		node.Name,
+		-1,
+		forceDeletePods,
+		true,
+		true,
+		true,
+		io.Discard,
+		io.Discard,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+	drainOptions.SkipVolumeHandling = true
+	drainOptions.AdditionalPodFilters = []drain.AdditionalPodFilter{skipPodFilter}
+	drainOptions.SetPodProvider(&podProvider{client: r.ShootClient})
+
+	return drainOptions.RunDrain(ctx)
+}
+
+func (r *Reconciler) drainTimedOut(node *corev1.Node) bool {
+	startStr := node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime]
+	if startStr == "" {
 		return false
 	}
-	startTime, err := time.Parse(time.RFC3339, startTimeStr)
+	startTime, err := time.Parse(time.RFC3339, startStr)
 	if err != nil {
-		// The annotation value is malformed. Treat the drain as timed out so the node is
-		// not stuck waiting forever; the force-delete path will unblock it.
-		log.Error(err, "Failed to parse drain-start-time annotation, treating drain as timed out", "node", node.Name, "value", startTimeStr)
 		return true
 	}
 	return r.Clock.Since(startTime) > r.Config.DrainTimeout.Duration
 }
 
-func (r *Reconciler) listEvictablePods(ctx context.Context, nodeName string) ([]corev1.Pod, error) {
+// podProvider adapts a controller-runtime client.Client to MCM's drain.PodProvider, listing pods on a node via the
+// spec.nodeName field selector.
+type podProvider struct {
+	client client.Client
+}
+
+// PodsForNode returns all pods scheduled on the given node.
+func (p *podProvider) PodsForNode(ctx context.Context, nodeName string) ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	if err := r.ShootClient.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
+	if err := p.client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
 		return nil, fmt.Errorf("failed to list pods on node %s: %w", nodeName, err)
 	}
+	return podList.Items, nil
+}
 
-	var evictable []corev1.Pod
-	for _, pod := range podList.Items {
-		if ShouldSkipPod(&pod) {
-			continue
-		}
-		evictable = append(evictable, pod)
-	}
-	return evictable, nil
+// skipPodFilter is a drain.AdditionalPodFilter that excludes (returns false for) pods which must not be evicted
+// during an in-place node drain.
+func skipPodFilter(pod corev1.Pod) bool {
+	return !ShouldSkipPod(&pod)
 }
 
 // ShouldSkipPod returns true if the given pod should not be evicted during a node drain.
 func ShouldSkipPod(pod *corev1.Pod) bool {
+	// Skip already-finished pods; there is nothing to drain.
 	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
-		return true
-	}
-	if _, isMirror := pod.Annotations[corev1.MirrorPodAnnotationKey]; isMirror {
-		return true
-	}
-	if controllerRef := metav1.GetControllerOf(pod); controllerRef != nil && controllerRef.Kind == "DaemonSet" {
 		return true
 	}
 	// Skip the gardenlet pod, it performs the drain and must not evict itself.

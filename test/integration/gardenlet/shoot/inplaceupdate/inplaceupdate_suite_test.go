@@ -31,6 +31,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -198,6 +199,11 @@ var _ = BeforeSuite(func() {
 	Expect((&inplaceupdate.Reconciler{
 		ShootClient: mgr.GetClient(),
 		Clock:       fakeClock,
+		Config: gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration{
+			DrainTimeout:             &metav1.Duration{Duration: 2 * time.Second},
+			UpdateTimeout:            &metav1.Duration{Duration: 30 * time.Minute},
+			PodEvictionRetryInterval: &metav1.Duration{Duration: time.Second},
+		},
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")

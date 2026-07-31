@@ -125,8 +125,9 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			node := newNode(uniqueName("timeout"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
-			// The finalizer keeps the pod around after eviction so the drain cannot complete on its own,
-			// forcing the reconciler down the drain-timeout force-delete path.
+			// The finalizer keeps the pod around after eviction so graceful termination cannot complete, forcing
+			// the drain down the timeout-triggered force-delete path (RunDrain force-deletes once its DrainTimeout
+			// elapses).
 			pod := newPod(uniqueName("pod"), testNamespace.Name, node.Name, func(p *corev1.Pod) {
 				p.Finalizers = []string{finalizerKeepAlive}
 			})
@@ -141,34 +142,34 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(node.Annotations).To(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
 			}).Should(Succeed())
 
-			By("Confirm the drain does not complete while the pod is stuck")
+			By("The remaining pod is force-deleted once the drain timeout is exceeded")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+				g.Expect(pod.DeletionTimestamp).NotTo(BeNil())
+			}).Should(Succeed())
+
+			By("Confirm the drain does not complete while the finalizer keeps the pod around")
 			Consistently(func(g Gomega) {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 				g.Expect(findCondition(node)).To(BeNil())
 			}, 2*time.Second, 200*time.Millisecond).Should(Succeed())
 
-			By("Step past the drain timeout")
-			fakeClock.Step(21 * time.Minute)
-
-			// Re-trigger reconcile by toggling needs-drain, rather than waiting for the requeue interval.
+			By("Remove the finalizer and delete the pod so the drain can complete")
+			removeFinalizers(pod)
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, pod, client.GracePeriodSeconds(0)))).To(Succeed())
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-				patch := client.MergeFrom(node.DeepCopy())
-				delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain)
-				g.Expect(testClient.Patch(ctx, node, patch)).To(Succeed())
+				err := testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)
+				g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "pod should be gone")
 			}).Should(Succeed())
-			addNeedsDrain(node)
 
-			By("The remaining pod is force-deleted and the drain completes")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-				g.Expect(pod.DeletionTimestamp).NotTo(BeNil())
-			}).Should(Succeed())
+			By("The drain completes and ReadyForUpdate is set")
+			// The drain progresses across requeues (each reconcile does one bounded eviction pass), so allow a few
+			// requeue cycles for the now-deleted pod to be observed and the drain to finish.
 			Eventually(func(g Gomega) {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
 				g.Expect(findCondition(node)).To(matchCondition(machinev1alpha1.ReadyForUpdate))
-			}).Should(Succeed())
+			}).WithTimeout(15 * time.Second).Should(Succeed())
 		})
 
 		It("should respect the pool's MaxUnavailable when multiple nodes need drain", func() {
@@ -355,12 +356,12 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			By("Set update-result=successful to trigger reconcile")
 			setUpdateResultLabel(node, machinev1alpha1.LabelValueNodeUpdateSuccessful)
 
-			By("Wait for cleanup: label removed, condition set to UpdateSuccessful, GRM pods deleted")
+			By("Wait for cleanup: label removed, condition set to UpdateSuccessful, node uncordoned, GRM pods deleted")
 			Eventually(func(g Gomega) {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 				g.Expect(node.Labels).NotTo(HaveKey(machinev1alpha1.LabelKeyNodeUpdateResult))
 				g.Expect(findCondition(node)).To(matchCondition(machinev1alpha1.UpdateSuccessful))
-				g.Expect(node.Spec.Unschedulable).To(BeTrue())
+				g.Expect(node.Spec.Unschedulable).To(BeFalse())
 			}).Should(Succeed())
 
 			Eventually(func(g Gomega) {
