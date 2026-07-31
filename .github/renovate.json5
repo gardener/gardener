@@ -157,6 +157,7 @@
         '/.*gardener/terminal-controller-manager$/',
         '/.*gardener/pvc-autoscaler$/',
         '/.*open-telemetry/opentelemetry-operator$/',
+        '/.*VictoriaMetrics/operator(/.+|$)/',
         '/sigs\\.k8s\\.io/controller-tools/',
       ],
     },
