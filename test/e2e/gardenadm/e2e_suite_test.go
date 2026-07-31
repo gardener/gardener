@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/test/e2e"
 	_ "github.com/gardener/gardener/test/e2e/gardenadm/managedinfra"
 	_ "github.com/gardener/gardener/test/e2e/gardenadm/unmanagedinfra"
 )
@@ -25,3 +26,5 @@ func TestE2E(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 })
+
+var _ = e2e.CustomJUnitReport()

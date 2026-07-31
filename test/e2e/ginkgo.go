@@ -5,7 +5,14 @@
 package e2e
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/reporters"
+	"github.com/onsi/ginkgo/v2/types"
+	. "github.com/onsi/gomega"
 )
 
 // BeforeTestSetup looks like a ginkgo setup node but runs the given function right away, i.e., during ginkgo's tree
@@ -31,4 +38,28 @@ func BeforeTestSetup(f func()) {
 	// Recover from panics that might happen by calling Fail() during the test setup.
 	defer GinkgoRecover()
 	f()
+}
+
+// CustomJUnitReport registers a ReportAfterSuite node that writes a JUnit XML report to $ARTIFACTS/junit.xml.
+// Specs that were interrupted by another parallel Ginkgo process due to --fail-fast are reported as skipped instead of
+// errored, so that only the actual failure (in the other process) is visible in the report.
+// Call this function via a top-level var in your suite file:
+//
+//	var _ = e2e.CustomJUnitReport()
+func CustomJUnitReport() bool {
+	return ReportAfterSuite("Custom JUnit report", func(report Report) {
+		artifactsDir := os.Getenv("ARTIFACTS")
+		if artifactsDir == "" {
+			return
+		}
+
+		for i, sr := range report.SpecReports {
+			if sr.State == types.SpecStateInterrupted &&
+				strings.Contains(sr.Failure.Message, "Interrupted by Other Ginkgo Process") {
+				report.SpecReports[i].State = types.SpecStateSkipped
+			}
+		}
+
+		Expect(reporters.GenerateJUnitReport(report, filepath.Join(artifactsDir, "junit.xml"))).To(Succeed())
+	})
 }

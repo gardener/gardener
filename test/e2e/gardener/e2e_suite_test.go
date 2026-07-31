@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/test/e2e"
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -33,3 +34,5 @@ func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test E2E Gardener Suite")
 }
+
+var _ = e2e.CustomJUnitReport()
