@@ -106,7 +106,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 		reconcileGardenerResourceManager = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden).
+			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, false).
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
@@ -123,7 +123,7 @@ func run(ctx context.Context, opts *Options) error {
 		)
 
 		reconcileGardenerResourceManagerInPodNetwork = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden).
+			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden, false).
 				WithID(botanist.TaskGroupReconcileGardenerResourceManager + "InPodNetwork").
 				WithDependencies(reconcileSystemComponents).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),

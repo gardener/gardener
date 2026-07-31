@@ -1119,6 +1119,7 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 			func() string {
 				return operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer
 			},
+			false,
 		)
 	}
 }

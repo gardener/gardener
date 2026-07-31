@@ -131,6 +131,23 @@ func (b *Botanist) DefaultRuntimeGardenerResourceManager() (resourcemanager.Inte
 	})
 }
 
+// DeployRuntimeGardenerResourceManager deploys the runtime gardener-resource-manager
+func (b *Botanist) DeployRuntimeGardenerResourceManager(ctx context.Context) error {
+	return shared.DeployGardenerResourceManager(
+		ctx,
+		b.SeedClientSet.Client(),
+		b.Clock,
+		b.SecretsManager,
+		b.Shoot.Components.ControlPlane.RuntimeResourceManager,
+		v1beta1constants.GardenNamespace,
+		func(ctx context.Context) (int32, error) {
+			return b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2)
+		},
+		func() string { return b.Shoot.ComputeInClusterAPIServerAddress(true) },
+		b.Shoot.IsSelfHosted(),
+	)
+}
+
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	return shared.DeployGardenerResourceManager(
@@ -143,7 +160,9 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		func(ctx context.Context) (int32, error) {
 			return b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2)
 		},
-		func() string { return b.Shoot.ComputeInClusterAPIServerAddress(true) })
+		func() string { return b.Shoot.ComputeInClusterAPIServerAddress(true) },
+		b.Shoot.IsSelfHosted(),
+	)
 }
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment

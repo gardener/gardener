@@ -235,7 +235,7 @@ var _ = Describe("ResourceManager", func() {
 				})
 
 				It("should set the secrets and deploy", func() {
-					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 
 					Expect(resourceManager.Replicas).To(PointTo(Equal(int32(2))))
 					Expect(resourceManager.Secrets.BootstrapKubeconfig).To(BeNil())
@@ -244,7 +244,7 @@ var _ = Describe("ResourceManager", func() {
 
 				It("should fail when the deploy function fails", func() {
 					resourceManager.DeployError = fakeErr
-					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(MatchError(fakeErr))
 				})
 			})
 		})
@@ -265,13 +265,13 @@ var _ = Describe("ResourceManager", func() {
 
 				Context("deploy with 2 replicas", func() {
 					It("bootstraps because the shoot access secret was not found", func() {
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 
 					It("bootstraps because the shoot access secret was never reconciled", func() {
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 
 					It("bootstraps because the shoot access secret was not renewed", func() {
@@ -279,7 +279,7 @@ var _ = Describe("ResourceManager", func() {
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 
 					It("bootstraps because the shoot token expired while the shoot was hibernated", func() {
@@ -290,13 +290,13 @@ var _ = Describe("ResourceManager", func() {
 						// Simulate time passing while the shoot was hibernated: clock advances past the renew timestamp.
 						fakeClock.Step(2 * time.Hour)
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 
 					It("bootstraps because the managed resource was not found", func() {
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 
 					It("bootstraps because the managed resource indicates that the shoot access token lost access", func() {
@@ -309,7 +309,7 @@ var _ = Describe("ResourceManager", func() {
 						}
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 
 					It("bootstraps because the managed resource indicates that the shoot access token was invalidated", func() {
@@ -322,7 +322,7 @@ var _ = Describe("ResourceManager", func() {
 						}
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(Succeed())
 					})
 				})
 			})
@@ -342,7 +342,7 @@ var _ = Describe("ResourceManager", func() {
 					k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 					sm = fakesecretsmanager.New(fakeClient, namespace)
 
-					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(MatchError(fakeErr))
 				})
 
 				Context("waiting for bootstrapping process", func() {
@@ -357,14 +357,14 @@ var _ = Describe("ResourceManager", func() {
 						shootAccessSecret.Annotations = nil
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(ContainSubstring("token not yet generated")))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false)).To(MatchError(ContainSubstring("token not yet generated")))
 					})
 
 					It("fails because the shoot access token renew timestamp cannot be parsed", func() {
 						shootAccessSecret.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"}
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring("could not parse renew timestamp"))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false).Error()).To(ContainSubstring("could not parse renew timestamp"))
 					})
 
 					It("fails because the shoot access token was not renewed", func() {
@@ -372,7 +372,7 @@ var _ = Describe("ResourceManager", func() {
 						Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring("token not yet renewed"))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false).Error()).To(ContainSubstring("token not yet renewed"))
 					})
 
 					It("fails because the managed resource is not getting healthy", func() {
@@ -383,7 +383,7 @@ var _ = Describe("ResourceManager", func() {
 						}
 						Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
-						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", namespace, managedResource.Name)))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), fakeClock, sm, resourceManager, namespace, setReplicas, getAPIServerAddress, false).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", namespace, managedResource.Name)))
 					})
 				})
 			})
