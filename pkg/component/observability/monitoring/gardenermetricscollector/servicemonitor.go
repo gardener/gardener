@@ -12,11 +12,19 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
 
+const (
+	openTelemetryCollectorServiceTypeLabel = "operator.opentelemetry.io/collector-service-type"
+	openTelemetryCollectorBaseServiceType  = "base"
+)
+
 func (g *gardenerMetricsCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
+	selectorLabels := GetLabels()
+	selectorLabels[openTelemetryCollectorServiceTypeLabel] = openTelemetryCollectorBaseServiceType
+
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: monitoringutils.ConfigObjectMeta(openTelemetryCollectorName, g.namespace, garden.Label),
 		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{MatchLabels: GetLabels()},
+			Selector: metav1.LabelSelector{MatchLabels: selectorLabels},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: metricsPortName,
 				RelabelConfigs: []monitoringv1.RelabelConfig{
