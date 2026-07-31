@@ -1594,15 +1594,11 @@ func (r *Reconciler) cleanupKubeAPIServerTLSServices(ctx context.Context, log lo
 		return fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	deployer := []component.Deployer{}
-
 	mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
 	upgradeService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix)
 
-	deployer = append(deployer, component.OpDestroy(mutualTLSService))
-	deployer = append(deployer, component.OpDestroy(upgradeService))
-
 	return component.OpWait(
-		deployer...,
+		component.OpDestroy(mutualTLSService),
+		component.OpDestroy(upgradeService),
 	).Deploy(ctx)
 }

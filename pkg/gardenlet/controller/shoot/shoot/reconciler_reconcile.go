@@ -23,7 +23,6 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -423,7 +422,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up stale Kubernetes API server services in the Seed cluster",
 			Fn:           flow.TaskFn(b.CleanupKubeAPIServerLoadBalancingServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && b.ShootUsesIstioTLSTermination(),
+			SkipIf:       b.ShootUsesIstioTLSTermination(),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNISettings),
 		})
 		scaleEtcdAfterRestore = g.Add(flow.Task{
