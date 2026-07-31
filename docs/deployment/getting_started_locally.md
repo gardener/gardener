@@ -139,7 +139,7 @@ The `make seed-debug` does not change the entrypoint, so you must manually attac
 You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) provided in the `hack` directory:
 
 ```bash
-./hack/attach-gardenlet-debugger.sh
+./hack/attach-debugger-gardenlet.sh
 ```
 
 To step through the code with a debugger, attach your IDE to the port forwarded to localhost on your host machine.
