@@ -26,6 +26,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricscollector"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -63,9 +64,10 @@ var _ = Describe("GardenerMetricsCollector", func() {
 			"role": "gardener-metrics",
 		}
 
-		serviceAccount         *corev1.ServiceAccount
-		openTelemetryCollector *otelv1beta1.OpenTelemetryCollector
-		serviceMonitor         *monitoringv1.ServiceMonitor
+		serviceAccount                *corev1.ServiceAccount
+		openTelemetryCollector        *otelv1beta1.OpenTelemetryCollector
+		serviceMonitor                *monitoringv1.ServiceMonitor
+		internalMetricsServiceMonitor *monitoringv1.ServiceMonitor
 
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
@@ -131,7 +133,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 					"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
 				},
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2723}]`,
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2723},{"protocol":"TCP","port":8888}]`,
 				},
 			},
 			Spec: otelv1beta1.OpenTelemetryCollectorSpec{
@@ -213,6 +215,25 @@ var _ = Describe("GardenerMetricsCollector", func() {
 						},
 					},
 					Service: otelv1beta1.Service{
+						Telemetry: &otelv1beta1.AnyConfig{
+							Object: map[string]any{
+								"metrics": map[string]any{
+									"level": "basic",
+									"readers": []any{
+										map[string]any{
+											"pull": map[string]any{
+												"exporter": map[string]any{
+													"prometheus": map[string]any{
+														"host": "[::]",
+														"port": float64(8888),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 						Pipelines: map[string]*otelv1beta1.Pipeline{
 							"metrics": {
 								Receivers: []string{"gardener"},
@@ -243,6 +264,53 @@ var _ = Describe("GardenerMetricsCollector", func() {
 						Replacement: new("gardener-metrics"),
 						TargetLabel: "job",
 					}},
+				}},
+			},
+		}
+
+		internalMetricsServiceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-metrics-monitoring",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app": "gardener",
+					"operator.opentelemetry.io/collector-service-type": "monitoring",
+					"role": "gardener-metrics",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "monitoring",
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action:      "replace",
+						Replacement: new("gardener-metrics"),
+						TargetLabel: "job",
+					}},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"otelcol_exporter_enqueue_failed_metric_points",
+						"otelcol_exporter_queue_capacity",
+						"otelcol_exporter_queue_size",
+						"otelcol_exporter_send_failed_metric_points",
+						"otelcol_exporter_sent_metric_points",
+						"otelcol_process_cpu_seconds",
+						"otelcol_process_cpu_seconds_total",
+						"otelcol_process_memory_rss",
+						"otelcol_process_memory_rss_bytes",
+						"otelcol_process_runtime_heap_alloc_bytes",
+						"otelcol_process_runtime_total_alloc_bytes_total",
+						"otelcol_process_runtime_total_sys_memory_bytes",
+						"otelcol_process_uptime",
+						"otelcol_process_uptime_seconds_total",
+						"otelcol_processor_incoming_items",
+						"otelcol_processor_incoming_items_total",
+						"otelcol_processor_outgoing_items",
+						"otelcol_processor_outgoing_items_total",
+						"otelcol_receiver_accepted_metric_points",
+						"otelcol_receiver_refused_metric_points",
+						"otelcol_scraper_errored_metric_points",
+						"otelcol_scraper_scraped_metric_points",
+					),
 				}},
 			},
 		}
@@ -359,6 +427,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 					serviceAccount,
 					openTelemetryCollector,
 					serviceMonitor,
+					internalMetricsServiceMonitor,
 				))
 
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
