@@ -68,7 +68,7 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 // SetDefaults_ServerConfiguration sets defaults for the configuration of the HTTP server.
 func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	if obj.HealthProbes == nil {
-		obj.HealthProbes = &Server{}
+		obj.HealthProbes = &HealthProbesServer{}
 	}
 	if obj.HealthProbes.Port == 0 {
 		obj.HealthProbes.Port = 2728
