@@ -131,6 +131,12 @@ If it's visible, operators should be aware that the annotated resources may dive
 This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis. The constraint is not added to `.status.constraints` when no failed machines are currently preserved.
 See [Machine Preservation](shoot_machine_preservation.md) for more details.
 
+**`AutomaticCredentialsRotationPossible`**:
+
+This optional constraint indicates whether an overdue automatic ETCD encryption key rotation can run during the next maintenance window. It is relevant only to Shoots that use the `aesgcm` encryption provider and have automatic ETCD encryption key rotation enabled.
+The constraint is omitted when automatic rotation is not required or can run. It is added with status `False` when the next maintenance window is affected by hibernation, because ETCD encryption key rotation requires a running ETCD and `kube-apiserver`.
+If it is present, adjust the maintenance window or hibernation schedule so that maintenance runs while the Shoot is awake. See [ETCD Encryption Key](../shoot-operations/shoot_credentials_rotation.md#etcd-encryption-key) for details.
+
 
 ### Last Operation
 

@@ -518,7 +518,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
-							{Type: gardencorev1beta1.ShootHibernationScheduleProblematic},
+							{Type: gardencorev1beta1.ShootAutomaticCredentialsRotationPossible},
 							{Type: gardencorev1beta1.ShootHasIgnoredManagedResources},
 							{Type: gardencorev1beta1.ShootPreservedFailedMachinesAbsent},
 						},
@@ -702,7 +702,7 @@ var _ = Describe("Constraints", func() {
 				})
 			})
 
-			Context("#HibernationScheduleProblematic", func() {
+			Context("#AutomaticCredentialsRotationPossible", func() {
 				BeforeEach(func() {
 					shoot = &gardencorev1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{
@@ -741,13 +741,13 @@ var _ = Describe("Constraints", func() {
 				It("should remove the constraint when shoot does not use AESGCM encryption", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = new(gardencorev1beta1.EncryptionProviderTypeSecretbox)
 					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-						OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 					))
 				})
 
 				It("should remove the constraint when shoot uses AESGCM but has no hibernation schedule", func() {
 					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-						OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 					))
 				})
 
@@ -763,9 +763,9 @@ var _ = Describe("Constraints", func() {
 					}
 
 					Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
-						OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 						WithStatus(gardencorev1beta1.ConditionProgressing),
-						WithReason("MaintenanceWindowInHibernationWindow"),
+						WithReason("MaintenanceWindowDuringHibernation"),
 					))
 				})
 
@@ -783,7 +783,7 @@ var _ = Describe("Constraints", func() {
 					}
 
 					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-						OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 					))
 				})
 
@@ -804,11 +804,11 @@ var _ = Describe("Constraints", func() {
 
 					It("should remove the constraint when there is no problematic schedule", func() {
 						shoot.Status.Constraints = []gardencorev1beta1.Condition{
-							{Type: gardencorev1beta1.ShootHibernationScheduleProblematic, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ShootAutomaticCredentialsRotationPossible, Status: gardencorev1beta1.ConditionTrue},
 						}
 
 						Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-							OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
+							OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 						))
 					})
 
@@ -824,8 +824,8 @@ var _ = Describe("Constraints", func() {
 						}
 
 						Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
-							OfType(gardencorev1beta1.ShootHibernationScheduleProblematic),
-							WithReason("MaintenanceWindowInHibernationWindow"),
+							OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
+							WithReason("MaintenanceWindowDuringHibernation"),
 						))
 					})
 				})
@@ -1114,7 +1114,7 @@ var _ = Describe("Constraints", func() {
 					OfType("CACertificateValiditiesAcceptable"),
 					OfType("CRDsWithProblematicConversionWebhooks"),
 					OfType("ManualInPlaceWorkersUpdated"),
-					OfType("HibernationScheduleProblematic"),
+					OfType("AutomaticCredentialsRotationPossible"),
 					OfType("HasIgnoredManagedResources"),
 					OfType("PreservedFailedMachinesAbsent"),
 				))
@@ -1131,7 +1131,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("CACertificateValiditiesAcceptable"),
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
 					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
-					gardencorev1beta1.ConditionType("HibernationScheduleProblematic"),
+					gardencorev1beta1.ConditionType("AutomaticCredentialsRotationPossible"),
 					gardencorev1beta1.ConditionType("HasIgnoredManagedResources"),
 					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
 				))
