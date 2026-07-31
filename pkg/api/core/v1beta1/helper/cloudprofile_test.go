@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -189,7 +188,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				cloudProfileSpec.Kubernetes.Versions[0].Lifecycle = append(
 					cloudProfileSpec.Kubernetes.Versions[0].Lifecycle,
 					gardencorev1beta1.LifecycleStage{
-						StartTime: ptr.To(metav1.NewTime(now.Add(t))),
+						StartTime: new(metav1.NewTime(now.Add(t))),
 					},
 				)
 			}
@@ -200,7 +199,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				cloudProfileSpec.MachineImages[0].Versions[0].Lifecycle = append(
 					cloudProfileSpec.MachineImages[0].Versions[0].Lifecycle,
 					gardencorev1beta1.LifecycleStage{
-						StartTime: ptr.To(metav1.NewTime(now.Add(t))),
+						StartTime: new(metav1.NewTime(now.Add(t))),
 					},
 				)
 			}
@@ -208,14 +207,14 @@ var _ = Describe("CloudProfile Helper", func() {
 
 		It("should prefer lifecycle over expiration ", func() {
 			addK8sLifecycles(2*time.Hour, 5*time.Hour)
-			cloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))
+			cloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = new(metav1.NewTime(now.Add(1 * time.Hour)))
 			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 2*time.Hour, 100*time.Millisecond),
 			)
 		})
 
 		It("should use expiration if now lifecycle is set", func() {
-			cloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.NewTime(now.Add(1 * time.Hour)))
+			cloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = new(metav1.NewTime(now.Add(1 * time.Hour)))
 			Expect(DurationUntilNextVersionTransition(&cloudProfileSpec, now)).To(
 				BeNumerically("~", 1*time.Hour, 100*time.Millisecond),
 			)

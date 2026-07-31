@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -242,12 +241,12 @@ var _ = Describe("Reconciler", func() {
 				{
 					Version:        "1.28.2",
 					ExpirationDate: past,
-					Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+					Classification: new(gardencorev1beta1.ClassificationSupported),
 				},
 				{
 					Version:        "1.30.2",
 					ExpirationDate: future,
-					Classification: ptr.To(gardencorev1beta1.ClassificationSupported),
+					Classification: new(gardencorev1beta1.ClassificationSupported),
 				},
 			}
 
