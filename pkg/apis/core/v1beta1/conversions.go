@@ -124,14 +124,6 @@ func Convert_v1beta1_InternalSecret_To_core_InternalSecret(in *InternalSecret, o
 	return nil
 }
 
-func Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
-	return autoConvert_v1beta1_ProjectSpec_To_core_ProjectSpec(in, out, s)
-}
-
-func Convert_core_ProjectSpec_To_v1beta1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
-	return autoConvert_core_ProjectSpec_To_v1beta1_ProjectSpec(in, out, s)
-}
-
 func Convert_v1beta1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
 	if err := autoConvert_v1beta1_ProjectMember_To_core_ProjectMember(in, out, s); err != nil {
 		return err
