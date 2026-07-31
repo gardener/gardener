@@ -6165,7 +6165,7 @@ boolean
 </td>
 <td>
 <em>(Optional)</em>
-<p>ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that<br />already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` and is only<br />effective for Kubernetes versions >= 1.35. May be one of \{"NeverVerify", "NeverVerifyPreloadedImages",<br />"NeverVerifyAllowlistedImages", "AlwaysVerify"\}.</p>
+<p>ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that<br />already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` field and is only<br />effective for Kubernetes versions >= 1.35. May be one of \{"NeverVerify", "NeverVerifyPreloadedImages",<br />"NeverVerifyAllowlistedImages", "AlwaysVerify"\}. Defaults to "NeverVerifyPreloadedImages" (the kubelet default).</p>
 </td>
 </tr>
 <tr>
@@ -6177,7 +6177,7 @@ string array
 </td>
 <td>
 <em>(Optional)</em>
-<p>PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential<br />re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a<br />full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It<br />corresponds to the kubelet's `preloadedImagesVerificationAllowlist` and is only effective for Kubernetes versions<br />>= 1.35.</p>
+<p>PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential<br />re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a<br />full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It<br />corresponds to the kubelet's `preloadedImagesVerificationAllowlist` field and is only effective for Kubernetes versions<br />>= 1.35.</p>
 </td>
 </tr>
 

@@ -1121,14 +1121,14 @@ type KubeletConfig struct {
 	// as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
 	SingleProcessOOMKill *bool
 	// ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that
-	// already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` and is only
+	// already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` field and is only
 	// effective for Kubernetes versions >= 1.35. May be one of {"NeverVerify", "NeverVerifyPreloadedImages",
-	// "NeverVerifyAllowlistedImages", "AlwaysVerify"}.
+	// "NeverVerifyAllowlistedImages", "AlwaysVerify"}. Defaults to "NeverVerifyPreloadedImages" (the kubelet default).
 	ImagePullCredentialsVerificationPolicy *ImagePullCredentialsVerificationPolicy
 	// PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential
 	// re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a
 	// full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It
-	// corresponds to the kubelet's `preloadedImagesVerificationAllowlist` and is only effective for Kubernetes versions
+	// corresponds to the kubelet's `preloadedImagesVerificationAllowlist` field and is only effective for Kubernetes versions
 	// >= 1.35.
 	PreloadedImagesVerificationAllowlist []string
 }
@@ -1222,7 +1222,7 @@ const (
 	// allowlist of images from credential re-verification.
 	NeverVerifyAllowlistedImages ImagePullCredentialsVerificationPolicy = "NeverVerifyAllowlistedImages"
 	// AlwaysVerify requires credential verification for accessing any image already present on the node, regardless
-	// of its origin. This is the kubelet default.
+	// of its origin.
 	AlwaysVerify ImagePullCredentialsVerificationPolicy = "AlwaysVerify"
 )
 
