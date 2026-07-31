@@ -26,8 +26,9 @@ const (
 
 	metricsPort = 2723
 
-	// ManagedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
-	ManagedResourceNameRuntime = "gardener-metrics-collector-runtime"
+	internalMetricsPort = 8888
+
+	managedResourceNameRuntime = "gardener-metrics-collector-runtime"
 
 	managedResourceNameVirtual = "gardener-metrics-collector-virtual"
 
@@ -83,6 +84,7 @@ func (g *gardenerMetricsCollector) Deploy(ctx context.Context) error {
 		g.serviceAccount(),
 		g.openTelemetryCollector(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
 		g.serviceMonitor(),
+		g.internalMetricsServiceMonitor(),
 	)
 	if err != nil {
 		return err

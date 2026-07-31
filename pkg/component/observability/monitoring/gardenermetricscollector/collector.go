@@ -85,6 +85,25 @@ func (g *gardenerMetricsCollector) openTelemetryCollector(genericTokenKubeconfig
 					},
 				},
 				Service: otelv1beta1.Service{
+					Telemetry: &otelv1beta1.AnyConfig{
+						Object: map[string]any{
+							"metrics": map[string]any{
+								"level": "basic",
+								"readers": []any{
+									map[string]any{
+										"pull": map[string]any{
+											"exporter": map[string]any{
+												"prometheus": map[string]any{
+													"host": "[::]",
+													"port": internalMetricsPort,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 					Pipelines: map[string]*otelv1beta1.Pipeline{
 						"metrics": {
 							Receivers: []string{"gardener"},
@@ -99,10 +118,7 @@ func (g *gardenerMetricsCollector) openTelemetryCollector(genericTokenKubeconfig
 	metav1.SetMetaDataLabel(&obj.ObjectMeta, gardenerutils.NetworkPolicyLabel(operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, kubeapiserverconstants.Port), v1beta1constants.LabelNetworkPolicyAllowed)
 	metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed)
 
-	// Annotations set on the OpenTelemetryCollector resource are propagated by the OpenTelemetry Operator to the
-	// resources it creates - in particular to the Service that the garden Prometheus scrapes. This is currently the
-	// only way to make the operator-created Service selectable as a garden scrape target.
-	metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyGardenScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, metricsPort))
+	metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix+v1beta1constants.LabelNetworkPolicyGardenScrapeTargets+resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix, fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, metricsPort, internalMetricsPort))
 
 	return obj
 }
