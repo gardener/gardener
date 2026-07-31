@@ -231,7 +231,11 @@ var _ = Describe("GardenerMetricsCollector", func() {
 				Labels:    map[string]string{"prometheus": "garden"},
 			},
 			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: labels},
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app": "gardener",
+					"operator.opentelemetry.io/collector-service-type": "base",
+					"role": "gardener-metrics",
+				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
 					RelabelConfigs: []monitoringv1.RelabelConfig{{
