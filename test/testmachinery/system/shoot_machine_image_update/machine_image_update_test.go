@@ -40,7 +40,7 @@ import (
 
 var newWorkerPoolMachineImageVersion = flag.String("machine-image-version", "", "the version to use for .spec.provider.workers[].machine.image.version")
 
-const UpdateMachineImageVersionTimeout = 45 * time.Minute
+const UpdateMachineImageVersionTimeout = 1 * time.Hour
 
 func init() {
 	framework.RegisterShootFrameworkFlags()
