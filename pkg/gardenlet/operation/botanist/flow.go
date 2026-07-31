@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -112,7 +113,7 @@ func (b *Botanist) ReconcileCustomResourceDefinitionsTaskGroup() flow.TaskGroup 
 		})
 	}
 
-	return flow.NewTaskGroup(TaskGroupReconcileCustomResourceDefinitions, tasks...)
+	return flow.NewTaskGroup(TaskGroupReconcileCustomResourceDefinitions, tasks...).SkipIf(!b.Shoot.IsSelfHosted())
 }
 
 // TaskGroupReconcileClusterResource is a flow.TaskID for a logical flow.TaskGroup.
@@ -125,7 +126,7 @@ func (b *Botanist) ReconcileClusterResourceTaskGroup() flow.TaskGroup {
 		Fn: func(ctx context.Context) error {
 			return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, nil)
 		},
-	}).WithDependencies(TaskGroupReconcileCustomResourceDefinitions)
+	}).WithDependencies(TaskGroupReconcileCustomResourceDefinitions).SkipIf(!b.Shoot.IsSelfHosted())
 }
 
 // TaskGroupInitializeSecretsManagement is a flow.TaskID for a logical flow.TaskGroup.
