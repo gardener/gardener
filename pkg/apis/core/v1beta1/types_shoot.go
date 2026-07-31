@@ -2183,9 +2183,8 @@ const (
 	// in the Shoot's control plane namespace in the seed have been annotated with resources.gardener.cloud/ignore=true,
 	// meaning their reconciliation has been disabled. Operators should be aware of such resources as they may diverge from the desired state.
 	ShootHasIgnoredManagedResources ConditionType = "HasIgnoredManagedResources"
-	// ShootAutomaticCredentialsRotationPossible is a constant for a condition type indicating whether automatic
-	// credentials rotation can run. For example, an AESGCM-encrypted etcd cannot rotate its encryption key when the
-	// maintenance window is entirely within a hibernation window.
+	// ShootAutomaticCredentialsRotationPossible is a constant for a condition type indicating whether an automatic
+	// ETCD encryption key rotation can run during the next maintenance window.
 	ShootAutomaticCredentialsRotationPossible ConditionType = "AutomaticCredentialsRotationPossible"
 	// ShootReadyForMigration is a constant for a condition type indicating whether the Shoot can be migrated.
 	ShootReadyForMigration ConditionType = "ReadyForMigration"

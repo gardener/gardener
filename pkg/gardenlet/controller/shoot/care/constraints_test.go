@@ -709,13 +709,6 @@ var _ = Describe("Constraints", func() {
 							CreationTimestamp: metav1.NewTime(clock.Now().Add(-48 * time.Hour)),
 						},
 						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
-										Provider: gardencorev1beta1.EncryptionProvider{Type: new(gardencorev1beta1.EncryptionProviderTypeAESGCM)},
-									},
-								},
-							},
 							Maintenance: &gardencorev1beta1.Maintenance{
 								AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
 									Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
@@ -738,20 +731,13 @@ var _ = Describe("Constraints", func() {
 						}, clock)
 				})
 
-				It("should remove the constraint when shoot does not use AESGCM encryption", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Provider.Type = new(gardencorev1beta1.EncryptionProviderTypeSecretbox)
+				It("should remove the constraint when shoot has no hibernation schedule", func() {
 					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
 						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 					))
 				})
 
-				It("should remove the constraint when shoot uses AESGCM but has no hibernation schedule", func() {
-					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
-					))
-				})
-
-				It("should keep the constraint when AESGCM shoot maintenance window is within the hibernation window", func() {
+				It("should keep the constraint when the maintenance window is within the hibernation window", func() {
 					shoot.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 						Begin: "010000+0000",
 						End:   "020000+0000",
@@ -769,7 +755,7 @@ var _ = Describe("Constraints", func() {
 					))
 				})
 
-				It("should remove the constraint when AESGCM shoot maintenance window is outside the hibernation window", func() {
+				It("should remove the constraint when the maintenance window is outside the hibernation window", func() {
 					shoot.Spec.Maintenance = &gardencorev1beta1.Maintenance{
 						TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 							Begin: "100000+0000",

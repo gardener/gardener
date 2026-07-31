@@ -524,12 +524,6 @@ func wasRemediatedByGardener(annotations map[string]string) bool {
 func (c *Constraint) checkIfAutomaticCredentialsRotationPossible() (gardencorev1beta1.ConditionStatus, string, string) {
 	shoot := c.shoot.GetInfo()
 
-	if v1beta1helper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer) != gardencorev1beta1.EncryptionProviderTypeAESGCM {
-		return gardencorev1beta1.ConditionTrue,
-			"AutomaticCredentialsRotationNotRequired",
-			"Shoot does not use AESGCM encryption for etcd."
-	}
-
 	if !v1beta1helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot) {
 		return gardencorev1beta1.ConditionTrue,
 			"AutomaticCredentialsRotationNotRequired",
@@ -546,7 +540,7 @@ func (c *Constraint) checkIfAutomaticCredentialsRotationPossible() (gardencorev1
 	if IsShootHibernatedDuringNextMaintenanceWindow(shoot, c.clock.Now()) {
 		return gardencorev1beta1.ConditionFalse,
 			"MaintenanceWindowDuringHibernation",
-			"The shoot uses AESGCM encryption for etcd and its ETCD encryption key rotation is overdue, " +
+			"The ETCD encryption key rotation is overdue, " +
 				"but the next maintenance window falls within a hibernation interval. " +
 				"The ETCD encryption key auto-rotation cannot be triggered automatically. " +
 				"Please adjust the maintenance window or the hibernation schedule so that maintenance can run " +

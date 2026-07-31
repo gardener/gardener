@@ -276,7 +276,7 @@ The encryption key has no expiration date.
 **Unless automatic credentials rotation is enabled, it is the responsibility of the end-user to regularly rotate those credentials.**
 Refer to [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for instructions on enabling automatic rotation for etcd encryption key.
 
-Automatic ETCD encryption key rotation requires a running ETCD and `kube-apiserver`, so it is skipped while the Shoot is hibernated. For Shoots using the `aesgcm` encryption provider, if an overdue automatic rotation cannot run during the next maintenance window because of the hibernation schedule, Gardener reports the `AutomaticCredentialsRotationPossible` constraint in the Shoot status. Adjust the maintenance window or hibernation schedule so that maintenance runs while the Shoot is awake.
+Automatic ETCD encryption key rotation requires a running ETCD and `kube-apiserver`, so it is skipped while the Shoot is hibernated. If an overdue automatic rotation cannot run during the next maintenance window because of the hibernation schedule, Gardener reports the `AutomaticCredentialsRotationPossible` constraint in the Shoot status. Adjust the maintenance window or hibernation schedule so that maintenance runs while the Shoot is awake.
 
 The rotation happens in three stages:
 

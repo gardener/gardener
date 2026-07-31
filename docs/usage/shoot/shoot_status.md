@@ -133,7 +133,7 @@ See [Machine Preservation](shoot_machine_preservation.md) for more details.
 
 **`AutomaticCredentialsRotationPossible`**:
 
-This optional constraint indicates whether an overdue automatic ETCD encryption key rotation can run during the next maintenance window. It is relevant only to Shoots that use the `aesgcm` encryption provider and have automatic ETCD encryption key rotation enabled.
+This optional constraint indicates whether an overdue automatic ETCD encryption key rotation can run during the next maintenance window.
 The constraint is omitted when automatic rotation is not required or can run. It is added with status `False` when the next maintenance window is affected by hibernation, because ETCD encryption key rotation requires a running ETCD and `kube-apiserver`.
 If it is present, adjust the maintenance window or hibernation schedule so that maintenance runs while the Shoot is awake. See [ETCD Encryption Key](../shoot-operations/shoot_credentials_rotation.md#etcd-encryption-key) for details.
 
