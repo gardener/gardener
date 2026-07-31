@@ -85,6 +85,18 @@ After executing `make kind-up IPFAMILY=ipv6`, execute the following command to s
 ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default') -s fd00:10::/64 -j MASQUERADE
 ```
 
+## Configure feature gates (optional)
+
+You can optionally configure [feature gates](./feature_gates.md) on different components of your local Gardener deployment. The feature gates can be set by editing respective resource manifests before [setting up Gardener](#setting-up-gardener). They can also be configured dynamically on the running deployment by editing respective resources on the appropriate clusters. The files and the resources to edit for configuring feature gates on respective Gardener components are detailed in the table below.
+
+| Gardener components | Resource manifests | Respective resources for dynamic configuration |
+| --- | --- | --- |
+| `gardener-operator` | [`charts/gardener/operator/values.yaml`](../../charts/gardener/operator/values.yaml) | N/A |
+| `gardenlet` | [`dev-setup/gardenlet/base/gardenlet.yaml`](../../dev-setup/gardenlet/base/gardenlet.yaml) |  `gardenlet` resource on the virtual garden cluster |
+| `gardener-apiserver` and `gardener-controller-manager` | [`dev-setup/garden/base/garden.yaml`](../../dev-setup/garden/base/garden.yaml) | `garden` resource on the runtime cluster |
+
+> To configure `gardener-operator` feature gates in the running local setup, run `make gardener-up` or `make gardener-dev` after updating the `featureGates` configuration in [`charts/gardener/operator/values.yaml`](../../charts/gardener/operator/values.yaml). This will restart the `gardener-operator` with the updated configuration.
+
 ## Setting Up Gardener
 
 ```bash
