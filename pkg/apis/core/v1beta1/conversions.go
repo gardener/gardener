@@ -125,79 +125,11 @@ func Convert_v1beta1_InternalSecret_To_core_InternalSecret(in *InternalSecret, o
 }
 
 func Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
-	if err := autoConvert_v1beta1_ProjectSpec_To_core_ProjectSpec(in, out, s); err != nil {
-		return err
-	}
-
-	if owner := out.Owner; owner != nil {
-	outer:
-		for i, member := range out.Members {
-			if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
-				// add owner role to the current project's owner if not present
-				for _, role := range member.Roles {
-					if role == core.ProjectMemberOwner {
-						continue outer
-					}
-				}
-
-				out.Members[i].Roles = append(out.Members[i].Roles, core.ProjectMemberOwner)
-			} else {
-				// delete owner role from all other members
-				out.Members[i].Roles = removeRoleFromRoles(member.Roles, ProjectMemberOwner)
-			}
-		}
-	}
-
-	return nil
+	return autoConvert_v1beta1_ProjectSpec_To_core_ProjectSpec(in, out, s)
 }
 
 func Convert_core_ProjectSpec_To_v1beta1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
-	if err := autoConvert_core_ProjectSpec_To_v1beta1_ProjectSpec(in, out, s); err != nil {
-		return err
-	}
-
-	if owner := out.Owner; owner != nil {
-	outer:
-		for i, member := range out.Members {
-			if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
-				// add owner role to the current project's owner if not present
-				if member.Role == core.ProjectMemberOwner {
-					// remove it from owners list if present
-					out.Members[i].Roles = removeRoleFromRoles(member.Roles, ProjectMemberOwner)
-					continue outer
-				}
-				for _, role := range member.Roles {
-					if role == ProjectMemberOwner {
-						continue outer
-					}
-				}
-
-				if out.Members[i].Role == "" {
-					out.Members[i].Role = core.ProjectMemberOwner
-				} else {
-					out.Members[i].Roles = append(out.Members[i].Roles, core.ProjectMemberOwner)
-				}
-			} else {
-				// delete owner role from all other members
-				out.Members[i].Roles = removeRoleFromRoles(member.Roles, ProjectMemberOwner)
-
-				if member.Role == ProjectMemberOwner {
-					if len(out.Members[i].Roles) == 0 {
-						out.Members[i].Role = ""
-					} else {
-						out.Members[i].Role = out.Members[i].Roles[0]
-						if len(out.Members[i].Roles) > 1 {
-							out.Members[i].Roles = out.Members[i].Roles[1:]
-						} else {
-							out.Members[i].Roles = nil
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return nil
+	return autoConvert_core_ProjectSpec_To_v1beta1_ProjectSpec(in, out, s)
 }
 
 func Convert_v1beta1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
