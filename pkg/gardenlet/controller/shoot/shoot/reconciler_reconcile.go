@@ -417,17 +417,10 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			SkipIf:       !flowCtx.isRestoringHAControlPlane || flowCtx.skipReadiness,
 			Dependencies: flow.NewTaskIDs(scaleEtcdAfterRestore),
 		})
-		deployGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Deploying gardener-resource-manager",
-			Fn:           flow.TaskFn(b.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
-		})
-		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
-			Name:         "Waiting until gardener-resource-manager reports readiness",
-			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
+		waitUntilGardenerResourceManagerReady = g.AddGroup(
+			b.ReconcileGardenerResourceManagerTaskGroup(true, true, flowCtx.skipReadiness).
+				WithDependencies(waitUntilKubeAPIServerIsReady),
+		)
 		_ = g.Add(flow.Task{
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -633,7 +626,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 				return b.DeployClusterIdentity(ctx)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Populating static manifests from seed to shoot",
@@ -654,7 +647,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			Fn:     flow.TaskFn(b.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, deployGardenerResourceManager, deployKubeScheduler, deployVPNSeedServer, waitUntilShootNamespacesReady),
+				waitUntilGardenerResourceManagerReady, waitUntilGardenerResourceManagerReady, deployKubeScheduler, deployVPNSeedServer, waitUntilShootNamespacesReady),
 		})
 		waitUntilVPNShootReady = g.Add(flow.Task{
 			Name: "Waiting until vpn-shoot system component is ready",
@@ -671,7 +664,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				deployGardenerResourceManager, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
+				waitUntilGardenerResourceManagerReady, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
 		})
 		reconcileSystemComponents = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness).WithDependencies(
 			waitUntilControlPlaneReady,
@@ -721,7 +714,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanis
 			Name:         "Deploying managed resources for the gardener-node-agent",
 			Fn:           flow.TaskFn(b.DeployManagedResourceForGardenerNodeAgent).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 
 		syncPointAllSystemComponentsDeployed = flow.NewTaskIDs(
@@ -965,7 +958,7 @@ func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *b
 		_                                = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
 		_                                = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
 		_                                = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
-		reconcileGardenerResourceManager = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden))
+		reconcileGardenerResourceManager = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden, flowCtx.skipReadiness))
 		_                                = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		_                                = g.AddGroup(b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness))
 		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
