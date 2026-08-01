@@ -94,9 +94,10 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 			zones                   []string
 		)
 
-		if b.Shoot.IsSelfHosted() {
+		if b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane() {
 			zones = v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers).Zones
 		} else if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
+			!b.Shoot.IsSelfHosted() &&
 			(!failureToleranceTypeExisting || existingFailureToleranceType != newFailureToleranceType) {
 			zones, err = calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones, allShootZones(b.Shoot.GetInfo().Spec.Provider.Workers), v1beta1helper.SeedSettingZoneSelectionMode(b.Seed.GetInfo().Spec.Settings))
 			if err != nil {

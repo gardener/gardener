@@ -115,6 +115,8 @@ var _ = Describe("Namespaces", func() {
 		)
 
 		BeforeEach(func() {
+			botanist.Shoot.ControlPlaneNamespace = metav1.NamespaceSystem
+			obj.Name = metav1.NamespaceSystem
 			defaultSeedInfo = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{
@@ -145,7 +147,7 @@ var _ = Describe("Namespaces", func() {
 		})
 
 		defaultExpectations := func(failureToleranceType gardencorev1beta1.FailureToleranceType, numberOfZones int) {
-			ExpectWithOffset(1, botanist.SeedNamespaceObject.Name).To(Equal(namespace))
+			ExpectWithOffset(1, botanist.SeedNamespaceObject.Name).To(Equal(metav1.NamespaceSystem))
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(And(
 				HaveKeyWithValue("shoot.gardener.cloud/uid", string(uid)),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/failure-tolerance-type", string(failureToleranceType)),
@@ -341,7 +343,7 @@ var _ = Describe("Namespaces", func() {
 						pvc := &corev1.PersistentVolumeClaim{
 							ObjectMeta: metav1.ObjectMeta{
 								GenerateName: "pvc-",
-								Namespace:    namespace,
+								Namespace:    metav1.NamespaceSystem,
 							},
 							Spec: corev1.PersistentVolumeClaimSpec{
 								VolumeName: pv.Name,
@@ -387,7 +389,7 @@ var _ = Describe("Namespaces", func() {
 				It("should use zone information from namespace and find existing ones via persistent volumes", func() {
 					Expect(seedClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: namespace,
+							Name: metav1.NamespaceSystem,
 							Annotations: map[string]string{
 								"high-availability-config.resources.gardener.cloud/zones": "a",
 							},
@@ -432,7 +434,7 @@ var _ = Describe("Namespaces", func() {
 				It("should not amend zone information if failure tolerance is unchanged", func() {
 					Expect(seedClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: namespace,
+							Name: metav1.NamespaceSystem,
 							Annotations: map[string]string{
 								"high-availability-config.resources.gardener.cloud/zones": "1,2,a,b",
 								"high-availability-config.resources.gardener.cloud/type":  "zone",
@@ -463,7 +465,7 @@ var _ = Describe("Namespaces", func() {
 					pvc := &corev1.PersistentVolumeClaim{
 						ObjectMeta: metav1.ObjectMeta{
 							GenerateName: "pvc-",
-							Namespace:    namespace,
+							Namespace:    metav1.NamespaceSystem,
 						},
 						Spec: corev1.PersistentVolumeClaimSpec{},
 					}
@@ -600,7 +602,7 @@ var _ = Describe("Namespaces", func() {
 
 			Expect(seedClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
+					Name: metav1.NamespaceSystem,
 					Annotations: map[string]string{
 						"shoot.gardener.cloud/uid": string(uid),
 					},
@@ -631,7 +633,7 @@ var _ = Describe("Namespaces", func() {
 		It("should not overwrite other annotations or labels", func() {
 			Expect(seedClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        namespace,
+					Name:        metav1.NamespaceSystem,
 					Annotations: map[string]string{"foo": "bar"},
 					Labels:      map[string]string{"bar": "foo"},
 				},

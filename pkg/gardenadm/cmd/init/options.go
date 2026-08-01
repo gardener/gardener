@@ -59,13 +59,6 @@ func (o *Options) validateZone() error {
 		return fmt.Errorf("failed loading resources for zone validation: %w", err)
 	}
 
-	if v1beta1helper.HasManagedInfrastructure(resources.Shoot) {
-		if o.Zone != "" {
-			return fmt.Errorf("zone can't be configured for shoot with managed infrastructure")
-		}
-		return nil
-	}
-
 	if resources.Shoot == nil {
 		return fmt.Errorf("zone validation failed shoot resource is missing in the manifests")
 	}

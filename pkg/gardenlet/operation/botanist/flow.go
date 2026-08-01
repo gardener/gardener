@@ -269,6 +269,7 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup() flow.TaskGroup {
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupDeployCloudProviderSecret,
 			TaskGroupReconcileGardenerResourceManager,
+			TaskGroupReconcileInfrastructure,
 		)
 
 		deployControlPlane = g.Add(flow.Task{

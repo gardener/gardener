@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -183,7 +184,7 @@ func (b *Botanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Conte
 	return b.SeedClientSet.Client().Update(ctx, secret)
 }
 
-// DeployOperatingSystemConfigWithStaticPods deploys the OperatingSystemConfig containing the files for the control
+// DeployOperatingSystemConfigWithStaticPods deploys and waits for the OperatingSystemConfig containing the files for the control
 // plane components running as static pods.
 func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd bool) (*operatingsystemconfig.Data, string, error) {
 	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd)
@@ -213,8 +214,16 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 
 	patch := client.MergeFrom(osc.DeepCopy())
 	osc.Spec.Files = append(osc.Spec.Files, files...)
+	metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+	metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
 	if err := b.SeedClientSet.Client().Patch(ctx, osc, patch); err != nil {
 		return nil, "", fmt.Errorf("failed patching OperatingSystemConfig with additional files for static control plane pods: %w", err)
+	}
+
+	if !useBootstrapEtcd {
+		if err := b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx); err != nil {
+			return nil, "", fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
+		}
 	}
 
 	return &oscData.Original, controlPlaneWorkerPool.Name, nil

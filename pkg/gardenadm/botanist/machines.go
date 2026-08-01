@@ -11,6 +11,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,6 +35,19 @@ func (b *GardenadmBotanist) GetMachineByIndex(index int) (*machinev1alpha1.Machi
 		return nil, fmt.Errorf("only %d machines found, but wanted machine with index %d", len(b.controlPlaneMachines), index)
 	}
 	return &b.controlPlaneMachines[index], nil
+}
+
+// ZoneForMachine returns the availability zone for the given machine by looking up its MachineClass.
+// Returns an empty string if the MachineClass has no NodeTemplate or zone set.
+func (b *GardenadmBotanist) ZoneForMachine(ctx context.Context, machine *machinev1alpha1.Machine) (string, error) {
+	machineClass := &machinev1alpha1.MachineClass{ObjectMeta: metav1.ObjectMeta{Name: machine.Spec.Class.Name, Namespace: machine.Namespace}}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(machineClass), machineClass); err != nil {
+		return "", fmt.Errorf("failed getting machine class %s: %w", client.ObjectKeyFromObject(machineClass), err)
+	}
+	if machineClass.NodeTemplate == nil {
+		return "", nil
+	}
+	return machineClass.NodeTemplate.Zone, nil
 }
 
 // addressTypePreference when picking a node/machine address. Higher value means higher priority.

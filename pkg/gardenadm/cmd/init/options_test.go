@@ -120,20 +120,13 @@ spec:`)
 
 		When("zone validation with managed infrastructure", func() {
 			BeforeEach(func() {
-				createShootManifest("test-credentials", nil, true)
+				createShootManifest("test-credentials", []string{"us-east-1a"}, true)
 			})
 
-			It("should reject zone when provided for managed infrastructure", func() {
+			It("should allow zone when provided for managed infrastructure", func() {
 				options.Zone = "us-east-1a"
 
-				Expect(options.Validate()).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastructure")))
-			})
-
-			It("should allow empty zone for managed infrastructure", func() {
-				options.Zone = ""
-
 				Expect(options.Validate()).To(Succeed())
-				Expect(options.Zone).To(BeEmpty())
 			})
 		})
 
