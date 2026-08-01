@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -48,7 +47,7 @@ type shootStrategy struct {
 }
 
 type dnsProviderSecretNameWarningSuppressions struct {
-	lock  sync.Mutex
+	// No mutex here: LRUExpireCache guards every operation with its own lock.
 	cache *utilcache.LRUExpireCache
 }
 
@@ -326,29 +325,22 @@ func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Ob
 }
 
 func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, oldShoot *core.Shoot, ignoredIndexes []int) {
-	s.dnsProviderSecretNameWarningSuppressions.lock.Lock()
-	defer s.dnsProviderSecretNameWarningSuppressions.lock.Unlock()
-
 	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot)
-	s.dnsProviderSecretNameWarningSuppressions.cache.Remove(key)
 	if len(ignoredIndexes) == 0 {
+		s.dnsProviderSecretNameWarningSuppressions.cache.Remove(key)
 		return
 	}
 
+	// Add overwrites an existing entry, so no Remove is needed first and the
+	// pair does not have to be atomic.
 	s.dnsProviderSecretNameWarningSuppressions.cache.Add(key, ignoredIndexes, dnsProviderSecretNameWarningSuppressionTTL)
 }
 
 func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj, oldShoot *core.Shoot) {
-	s.dnsProviderSecretNameWarningSuppressions.lock.Lock()
-	defer s.dnsProviderSecretNameWarningSuppressions.lock.Unlock()
-
 	s.dnsProviderSecretNameWarningSuppressions.cache.Remove(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot))
 }
 
 func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj, oldShoot *core.Shoot) []int {
-	s.dnsProviderSecretNameWarningSuppressions.lock.Lock()
-	defer s.dnsProviderSecretNameWarningSuppressions.lock.Unlock()
-
 	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot)
 	value, ok := s.dnsProviderSecretNameWarningSuppressions.cache.Get(key)
 	if !ok {
