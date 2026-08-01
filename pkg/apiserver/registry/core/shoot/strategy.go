@@ -93,7 +93,7 @@ func (s shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	gardenerutils.SyncCloudProfileFields(nil, newShoot)
 
 	SyncDNSProviderCredentials(newShoot)
-	s.storeIgnoredDNSWarnings(newShoot, nil, ignoredDNSWarningIndexes)
+	s.storeIgnoredDNSWarnings(newShoot, ignoredDNSWarningIndexes)
 }
 
 func (s shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -118,7 +118,7 @@ func (s shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obje
 
 	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
-	s.storeIgnoredDNSWarnings(newShoot, oldShoot, ignoredDNSWarningIndexes)
+	s.storeIgnoredDNSWarnings(newShoot, ignoredDNSWarningIndexes)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -252,7 +252,7 @@ func (s shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
 	allErrs = append(allErrs, validation.ValidateInPlaceUpdateStrategyOnCreation(shoot)...)
 	if len(allErrs) > 0 {
-		s.deleteIgnoredDNSWarningIndexes(shoot, nil)
+		s.deleteIgnoredDNSWarningIndexes(shoot)
 	}
 
 	return allErrs
@@ -301,7 +301,7 @@ func (s shootStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.
 	oldShoot := oldObj.(*core.Shoot)
 	allErrs := validation.ValidateShootUpdate(newShoot, oldShoot)
 	if len(allErrs) > 0 {
-		s.deleteIgnoredDNSWarningIndexes(newShoot, oldShoot)
+		s.deleteIgnoredDNSWarningIndexes(newShoot)
 	}
 
 	return allErrs
@@ -314,18 +314,18 @@ func (shootStrategy) AllowUnconditionalUpdate() bool {
 // WarningsOnCreate returns warnings to the client performing a create.
 func (s shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
 	newShoot := obj.(*core.Shoot)
-	return shoot.GetWarnings(ctx, newShoot, nil, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot, nil))
+	return shoot.GetWarnings(ctx, newShoot, nil, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot))
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
-	return shoot.GetWarnings(ctx, newShoot, oldShoot, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot, oldShoot))
+	return shoot.GetWarnings(ctx, newShoot, oldShoot, s.credentialsRotationInterval, s.loadIgnoredDNSWarningIndexes(newShoot))
 }
 
-func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, oldShoot *core.Shoot, ignoredIndexes []int) {
-	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot)
+func (s shootStrategy) storeIgnoredDNSWarnings(shootObj *core.Shoot, ignoredIndexes []int) {
+	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj)
 	if len(ignoredIndexes) == 0 {
 		s.dnsProviderSecretNameWarningSuppressions.cache.Remove(key)
 		return
@@ -336,12 +336,12 @@ func (s shootStrategy) storeIgnoredDNSWarnings(shootObj, oldShoot *core.Shoot, i
 	s.dnsProviderSecretNameWarningSuppressions.cache.Add(key, ignoredIndexes, dnsProviderSecretNameWarningSuppressionTTL)
 }
 
-func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj, oldShoot *core.Shoot) {
-	s.dnsProviderSecretNameWarningSuppressions.cache.Remove(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot))
+func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj *core.Shoot) {
+	s.dnsProviderSecretNameWarningSuppressions.cache.Remove(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
 }
 
-func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj, oldShoot *core.Shoot) []int {
-	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot)
+func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj *core.Shoot) []int {
+	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj)
 	value, ok := s.dnsProviderSecretNameWarningSuppressions.cache.Get(key)
 	if !ok {
 		return nil
@@ -371,19 +371,12 @@ func getIgnoredDNSWarningIndexes(shootObj *core.Shoot) []int {
 	return indexes
 }
 
-func dnsProviderSecretNameWarningSuppressionKeyFor(shootObj, oldShoot *core.Shoot) dnsProviderSecretNameWarningSuppressionKey {
-	uid := string(shootObj.UID)
-	resourceVersion := shootObj.ResourceVersion
-	if oldShoot != nil {
-		uid = string(oldShoot.UID)
-		resourceVersion = oldShoot.ResourceVersion
-	}
-
+func dnsProviderSecretNameWarningSuppressionKeyFor(shootObj *core.Shoot) dnsProviderSecretNameWarningSuppressionKey {
 	return dnsProviderSecretNameWarningSuppressionKey{
 		namespace:       shootObj.Namespace,
 		name:            shootObj.Name,
-		uid:             uid,
-		resourceVersion: resourceVersion,
+		uid:             string(shootObj.UID),
+		resourceVersion: shootObj.ResourceVersion,
 		generation:      shootObj.Generation,
 	}
 }
