@@ -396,7 +396,7 @@ require (
 	google.golang.org/genai v1.54.0 // indirect
 	google.golang.org/genproto v0.0.0-20260615183401-62b3387ff324 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260615183401-62b3387ff324 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260615183401-62b3387ff324 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260727163830-6c54dddc4772 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect

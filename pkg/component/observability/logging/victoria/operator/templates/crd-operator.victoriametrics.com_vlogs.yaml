@@ -2851,7 +2851,11 @@ spec:
                       if needed
                     type: string
                   tag:
-                    description: Tag contains desired docker image version
+                    description: |-
+                      Tag contains desired docker image version.
+                      It may be a regular tag (e.g. "v1.96.0") or a digest
+                      (e.g. "sha256:<hex>"); a digest is joined to the repository with "@"
+                      instead of ":", allowing images to be pinned by digest.
                     type: string
                 type: object
               imagePullSecrets:

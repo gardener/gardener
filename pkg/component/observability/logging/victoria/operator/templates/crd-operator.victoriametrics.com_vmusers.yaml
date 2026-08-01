@@ -135,6 +135,57 @@ spec:
               jwt:
                 description: JWT defines JWT based auth for a user
                 properties:
+                  defaultVMAccessClaim:
+                    description: |-
+                      DefaultVMAccessClaim defines vm_access claim parameters to use when a JWT
+                      doesn't carry a vm_access claim of its own. Set to an empty object to opt in
+                      a token that only needs to pass matchClaims/oidc verification without vm_access.
+                    properties:
+                      logsAccountID:
+                        description: LogsAccountID defines accountID to use for logs
+                          requests templating
+                        format: int32
+                        type: integer
+                      logsExtraFilters:
+                        description: LogsExtraFilters defines a list of logsql filters
+                          to apply for logs requests templating
+                        items:
+                          type: string
+                        type: array
+                      logsExtraStreamFilters:
+                        description: LogsExtraStreamFilters defines a list of logsql
+                          stream filters to apply for logs requests templating
+                        items:
+                          type: string
+                        type: array
+                      logsProjectID:
+                        description: LogsProjectID defines projectID to use for logs
+                          requests templating
+                        format: int32
+                        type: integer
+                      metricsAccountID:
+                        description: MetricsAccountID defines accountID to use for
+                          metrics requests templating
+                        format: int32
+                        type: integer
+                      metricsExtraFilters:
+                        description: MetricsExtraFilters defines a list of promql
+                          filters to apply for metrics requests templating
+                        items:
+                          type: string
+                        type: array
+                      metricsExtraLabels:
+                        description: MetricsExtraLabels defines a list of extra labels
+                          to apply for metrics requests templating
+                        items:
+                          type: string
+                        type: array
+                      metricsProjectID:
+                        description: MetricsProjectID defines projectID to use for
+                          metrics requests templating
+                        format: int32
+                        type: integer
+                    type: object
                   matchClaims:
                     additionalProperties:
                       type: string
