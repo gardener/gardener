@@ -109,6 +109,7 @@ type SNIValues struct {
 	IstioIngressGateway   IstioIngressGateway
 	IstioTLSTermination   bool
 	WildcardConfiguration *WildcardConfiguration
+	TLSMinVersion         *string
 }
 
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
@@ -360,12 +361,23 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 		gatewayMutateFn := istio.GatewayWithTLSPassthrough(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, allHosts)
 		if values.IstioTLSTermination {
+			minProtocolVersion := tlsVersionToIstioProtocolVersion(values.TLSMinVersion)
 			var serverConfigs []istio.ServerConfig
 			if len(configuration.hosts) > 0 {
-				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.hosts, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix})
+				serverConfigs = append(serverConfigs, istio.ServerConfig{
+					Hosts:              configuration.hosts,
+					PortName:           portNameTLS,
+					TLSSecret:          s.namespace + istioTLSSecretSuffix,
+					MinProtocolVersion: minProtocolVersion,
+				})
 			}
 			if configuration.wildcardConfiguration != nil {
-				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.wildcardConfiguration.Hosts, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
+				serverConfigs = append(serverConfigs, istio.ServerConfig{
+					Hosts:              configuration.wildcardConfiguration.Hosts,
+					PortName:           portNameWildcardTLS,
+					TLSSecret:          s.emptyIstioWildcardTLSSecret().Name,
+					MinProtocolVersion: minProtocolVersion,
+				})
 			}
 			gatewayMutateFn = istio.GatewayWithMutualTLS(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, serverConfigs)
 		}
@@ -651,4 +663,19 @@ func getExportTo(istioGatewayConfigurations []istioGatewayConfiguration) []strin
 	slices.Sort(namespaces)
 
 	return namespaces
+}
+
+func tlsVersionToIstioProtocolVersion(v *string) istioapinetworkingv1beta1.ServerTLSSettings_TLSProtocol {
+	if v == nil {
+		return istioapinetworkingv1beta1.ServerTLSSettings_TLS_AUTO
+	}
+
+	switch *v {
+	case "VersionTLS13":
+		return istioapinetworkingv1beta1.ServerTLSSettings_TLSV1_3
+	case "VersionTLS12":
+		return istioapinetworkingv1beta1.ServerTLSSettings_TLSV1_2
+	default:
+		return istioapinetworkingv1beta1.ServerTLSSettings_TLS_AUTO
+	}
 }

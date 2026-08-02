@@ -50,6 +50,7 @@ var _ = Describe("#SNI", func() {
 		istioNamespace              string
 		istioWildcardNamespace      string
 		istioTLSTermination         bool
+		tlsMinVersion               *string
 		hosts                       []string
 		hostName                    string
 		connectionUpgradeHostName   string
@@ -92,6 +93,7 @@ var _ = Describe("#SNI", func() {
 		istioWildcardLabels = map[string]string{"bar": "foo"}
 		istioWildcardNamespace = "istio-bar"
 		istioTLSTermination = false
+		tlsMinVersion = nil
 		hosts = []string{"foo.bar"}
 		hostName = "kube-apiserver." + namespace + ".svc.cluster.local"
 		connectionUpgradeHostName = "kube-apiserver-connection-upgrade." + namespace + ".svc.cluster.local"
@@ -338,6 +340,7 @@ var _ = Describe("#SNI", func() {
 				},
 				IstioTLSTermination:   istioTLSTermination,
 				WildcardConfiguration: wildcardConfiguration,
+				TLSMinVersion:         tlsMinVersion,
 			}
 			return val
 		})
@@ -515,8 +518,141 @@ var _ = Describe("#SNI", func() {
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
 				expectedGateway.Spec.Servers[0].Tls = &istioapinetworkingv1beta1.ServerTLSSettings{
-					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
-					CredentialName: namespace + "-kube-apiserver-tls",
+					Mode:               istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+					CredentialName:     namespace + "-kube-apiserver-tls",
+					MinProtocolVersion: istioapinetworkingv1beta1.ServerTLSSettings_TLS_AUTO,
+				}
+
+				expectedVirtualService.Spec.Tls = nil
+				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Name: "connection-upgrade",
+						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+							{
+								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Upgrade":    {},
+								},
+							},
+						},
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: connectionUpgradeHostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+					{
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: hostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("should succeed deploying", func() {
+				testFunc()
+			})
+		})
+
+		Context("when IstioTLSTermination feature gate is true and TLSMinVersion is VersionTLS12", func() {
+			BeforeEach(func() {
+				istioTLSTermination = true
+				tlsMinVersion = new("VersionTLS12")
+
+				expectedDestinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+					UseClientProtocol: true,
+				}
+				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
+					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
+						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
+					},
+				}
+				expectedDestinationRule.Spec.TrafficPolicy.OutlierDetection = nil
+				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+					CredentialName: namespace + "-kube-apiserver-istio-mtls",
+					Sni:            "kubernetes.default.svc.cluster.local",
+				}
+
+				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
+				expectedGateway.Spec.Servers[0].Tls = &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:               istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+					CredentialName:     namespace + "-kube-apiserver-tls",
+					MinProtocolVersion: istioapinetworkingv1beta1.ServerTLSSettings_TLSV1_2,
+				}
+
+				expectedVirtualService.Spec.Tls = nil
+				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Name: "connection-upgrade",
+						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+							{
+								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Upgrade":    {},
+								},
+							},
+						},
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: connectionUpgradeHostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+					{
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: hostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("should succeed deploying", func() {
+				testFunc()
+			})
+		})
+
+		Context("when IstioTLSTermination feature gate is true and TLSMinVersion is VersionTLS13", func() {
+			BeforeEach(func() {
+				istioTLSTermination = true
+				tlsMinVersion = new("VersionTLS13")
+
+				expectedDestinationRule.Spec.TrafficPolicy.ConnectionPool.Http = &istioapinetworkingv1beta1.ConnectionPoolSettings_HTTPSettings{
+					UseClientProtocol: true,
+				}
+				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
+					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
+						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
+					},
+				}
+				expectedDestinationRule.Spec.TrafficPolicy.OutlierDetection = nil
+				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+					CredentialName: namespace + "-kube-apiserver-istio-mtls",
+					Sni:            "kubernetes.default.svc.cluster.local",
+				}
+
+				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
+				expectedGateway.Spec.Servers[0].Tls = &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:               istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+					CredentialName:     namespace + "-kube-apiserver-tls",
+					MinProtocolVersion: istioapinetworkingv1beta1.ServerTLSSettings_TLSV1_3,
 				}
 
 				expectedVirtualService.Spec.Tls = nil
