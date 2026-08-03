@@ -87,7 +87,7 @@ var _ = Describe("Secrets", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "global-monitoring-secret",
 					Namespace:   "foo",
-					Labels:      map[string]string{"bar": "baz"},
+					Labels:      map[string]string{"bar": "baz", "last-rotation-initiation-time": "1700000000"},
 					Annotations: map[string]string{"baz": "foo"},
 				},
 				Type:      corev1.SecretTypeOpaque,
@@ -104,6 +104,8 @@ var _ = Describe("Secrets", func() {
 			assertions := func(secret *corev1.Secret) {
 				Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "global-monitoring"))
 				Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/purpose", "global-monitoring-secret-replica"))
+				Expect(secret.Labels).To(HaveKeyWithValue("last-rotation-initiation-time", "1700000000"))
+				Expect(secret.Labels).NotTo(HaveKey("bar"))
 				Expect(secret.Type).To(Equal(globalMonitoringSecret.Type))
 				Expect(secret.Immutable).To(Equal(globalMonitoringSecret.Immutable))
 				for k, v := range globalMonitoringSecret.Data {
