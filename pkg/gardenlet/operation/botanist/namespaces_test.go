@@ -644,6 +644,64 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("foo", "bar"))
 			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("bar", "foo"))
 		})
+
+		When("spec.controlPlane.zones is set", func() {
+			BeforeEach(func() {
+				defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					Zones: []string{"b"},
+				}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+			})
+
+			It("should use the explicit zones instead of seed zones", func() {
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+				Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "b"))
+			})
+
+			It("should union in existing PVC zones with the explicit zones", func() {
+				pv := &corev1.PersistentVolume{
+					ObjectMeta: metav1.ObjectMeta{Name: "pv"},
+					Spec: corev1.PersistentVolumeSpec{
+						NodeAffinity: &corev1.VolumeNodeAffinity{
+							Required: &corev1.NodeSelector{
+								NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+									MatchExpressions: []corev1.NodeSelectorRequirement{{
+										Key:      "topology.kubernetes.io/zone",
+										Operator: corev1.NodeSelectorOpIn,
+										Values:   []string{"b"},
+									}},
+								}},
+							},
+						},
+					},
+				}
+				Expect(seedClient.Create(ctx, pv)).To(Succeed())
+
+				pvc := &corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: metav1.NamespaceSystem},
+					Spec:       corev1.PersistentVolumeClaimSpec{VolumeName: "pv"},
+				}
+				Expect(seedClient.Create(ctx, pvc)).To(Succeed())
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+				Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "b"))
+			})
+
+			It("should use all 3 explicit zones for zone-HA shoots", func() {
+				defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+					HighAvailability: &gardencorev1beta1.HighAvailability{
+						FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone},
+					},
+					Zones: []string{"b", "c", "d"},
+				}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				zonesAnnotation := botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]
+				Expect(strings.Split(zonesAnnotation, ",")).To(ConsistOf("b", "c", "d"))
+			})
+		})
 	})
 
 	Describe("#DeleteSeedNamespace", func() {
