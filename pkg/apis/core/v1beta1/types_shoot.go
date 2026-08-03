@@ -551,6 +551,11 @@ type ControlPlane struct {
 	// control plane of a shoot.
 	// +optional
 	HighAvailability *HighAvailability `json:"highAvailability,omitempty" protobuf:"bytes,1,name=highAvailability"`
+	// Zones is a list of availability zones in which the control plane components should be placed.
+	// Requires the referenced CloudProfile to have spec.controlPlane.allowZonePinning set to true.
+	// This field is immutable once set.
+	// +optional
+	Zones []string `json:"zones,omitempty" protobuf:"bytes,2,rep,name=zones"`
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
