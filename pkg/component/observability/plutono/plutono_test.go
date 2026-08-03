@@ -879,7 +879,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkDeployedResources("plutono-dashboards", 34)
+				checkDeployedResources("plutono-dashboards", 35)
 			})
 
 			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
@@ -890,7 +890,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 39)
+					checkDeployedResources("plutono-dashboards", 40)
 				})
 			})
 
@@ -900,7 +900,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 26)
+					checkDeployedResources("plutono-dashboards", 27)
 				})
 			})
 		})
