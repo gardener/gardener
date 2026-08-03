@@ -332,7 +332,7 @@ func ensureCollectionGone(ctx context.Context, c client.Client, log logr.Logger,
 	if err := meta.EachListItem(list, func(object runtime.Object) error {
 		for _, ignore := range ignoreFns {
 			if ignore(log, object.(client.Object)) {
-				ignoredObjects += 1
+				ignoredObjects++
 				return nil
 			}
 		}
