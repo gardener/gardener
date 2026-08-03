@@ -361,6 +361,7 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateAccessRestrictions()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
+	allErrs = append(allErrs, validationContext.validateControlPlaneZones()...)
 	allErrs = append(allErrs, validationContext.validateAdmissionPlugins(a, v.secretLister)...)
 	allErrs = append(allErrs, validationContext.validateLimits(a)...)
 	allErrs = append(allErrs, validationContext.validateLiveMigrationPrerequisites(a.GetOperation(), v.seedLister, v.configMapLister)...)
@@ -1463,6 +1464,47 @@ func (c *validationContext) validateRegion() field.ErrorList {
 	}
 
 	return field.ErrorList{field.NotSupported(fldPath, region, validValues)}
+}
+
+func (c *validationContext) validateControlPlaneZones() field.ErrorList {
+	fldPath := field.NewPath("spec", "controlPlane", "zones")
+
+	newZones := controlPlaneZones(c.shoot.Spec.ControlPlane)
+	if len(newZones) == 0 {
+		return nil
+	}
+
+	oldZones := controlPlaneZones(c.oldShoot.Spec.ControlPlane)
+
+	if len(oldZones) == 0 {
+		if c.cloudProfileSpec.ControlPlane == nil || !c.cloudProfileSpec.ControlPlane.AllowZonePinning {
+			return field.ErrorList{field.Forbidden(fldPath, "spec.controlPlane.zones can only be set when the CloudProfile has spec.controlPlane.allowZonePinning set to true")}
+		}
+	}
+
+	if slices.Equal(newZones, oldZones) && c.shoot.Spec.Region == c.oldShoot.Spec.Region {
+		return nil
+	}
+
+	if c.seed == nil {
+		return nil
+	}
+
+	var allErrs field.ErrorList
+	seedZones := sets.New(c.seed.Spec.Provider.Zones...)
+	for i, zone := range newZones {
+		if !seedZones.Has(zone) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), zone, fmt.Sprintf("zone is not available in seed %q", c.seed.Name)))
+		}
+	}
+	return allErrs
+}
+
+func controlPlaneZones(controlPlane *core.ControlPlane) []string {
+	if controlPlane == nil {
+		return nil
+	}
+	return controlPlane.Zones
 }
 
 func (c *validationContext) validateAccessRestrictions() field.ErrorList {
