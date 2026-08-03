@@ -61,18 +61,18 @@ func ValidateCloudProfileStatusUpdate(_, _ *core.CloudProfileStatus) field.Error
 }
 
 // ValidateCloudProfileSpecUpdate validates the spec update of a CloudProfile
-func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileSpecUpdate(newSpec, oldSpec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(new.Limits, old.Limits, fldPath.Child("limits"))...)
-	allErrs = append(allErrs, ValidateCloudProfileExpirableVersionsUpdate(new.Kubernetes.Versions, old.Kubernetes.Versions, fldPath.Child("kubernetes").Child("versions"))...)
+	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(newSpec.Limits, oldSpec.Limits, fldPath.Child("limits"))...)
+	allErrs = append(allErrs, ValidateCloudProfileExpirableVersionsUpdate(newSpec.Kubernetes.Versions, oldSpec.Kubernetes.Versions, fldPath.Child("kubernetes").Child("versions"))...)
 
 	oldMachineImageVersions := map[string]core.MachineImage{}
-	for _, version := range old.MachineImages {
+	for _, version := range oldSpec.MachineImages {
 		oldMachineImageVersions[version.Name] = version
 	}
 
-	for i, newMachineImage := range new.MachineImages {
+	for i, newMachineImage := range newSpec.MachineImages {
 		oldMachineImage, ok := oldMachineImageVersions[newMachineImage.Name]
 		if !ok {
 			continue
@@ -96,16 +96,16 @@ func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *fi
 }
 
 // ValidateCloudProfileExpirableVersionsUpdate validates the expirable versions update of a CloudProfile expirable version
-func ValidateCloudProfileExpirableVersionsUpdate(new, old []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileExpirableVersionsUpdate(newVersions, oldVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	oldVersions := map[string]core.ExpirableVersion{}
-	for _, version := range old {
-		oldVersions[version.Version] = version
+	oldVersionsMap := map[string]core.ExpirableVersion{}
+	for _, version := range oldVersions {
+		oldVersionsMap[version.Version] = version
 	}
 
-	for i, newVersion := range new {
-		oldVersion, ok := oldVersions[newVersion.Version]
+	for i, newVersion := range newVersions {
+		oldVersion, ok := oldVersionsMap[newVersion.Version]
 		if !ok {
 			continue
 		}

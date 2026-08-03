@@ -58,8 +58,8 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object for Create events according to the calculated duration", func() {
-			DeferCleanup(test.WithVar(&RandomDurationWithMetaDuration, func(max *metav1.Duration) time.Duration {
-				return max.Duration
+			DeferCleanup(test.WithVar(&RandomDurationWithMetaDuration, func(maxDuration *metav1.Duration) time.Duration {
+				return maxDuration.Duration
 			}))
 
 			hdlr.Create(ctx, event.CreateEvent{Object: shoot}, queue)

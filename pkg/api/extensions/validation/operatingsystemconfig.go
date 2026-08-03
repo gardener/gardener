@@ -41,12 +41,12 @@ func ValidateOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig
 }
 
 // ValidateOperatingSystemConfigUpdate validates a OperatingSystemConfig object before an update.
-func ValidateOperatingSystemConfigUpdate(new, old *extensionsv1alpha1.OperatingSystemConfig) field.ErrorList {
+func ValidateOperatingSystemConfigUpdate(newOperatingSystemConfig, oldOperatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateOperatingSystemConfigSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateOperatingSystemConfig(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newOperatingSystemConfig.ObjectMeta, &oldOperatingSystemConfig.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateOperatingSystemConfigSpecUpdate(&newOperatingSystemConfig.Spec, &oldOperatingSystemConfig.Spec, newOperatingSystemConfig.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateOperatingSystemConfig(newOperatingSystemConfig)...)
 
 	return allErrs
 }
@@ -384,16 +384,16 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 }
 
 // ValidateOperatingSystemConfigSpecUpdate validates the spec of a OperatingSystemConfig object before an update.
-func ValidateOperatingSystemConfigSpecUpdate(new, old *extensionsv1alpha1.OperatingSystemConfigSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateOperatingSystemConfigSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.OperatingSystemConfigSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update operatingsystemconfig spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Purpose, old.Purpose, fldPath.Child("purpose"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Purpose, oldSpec.Purpose, fldPath.Child("purpose"))...)
 
 	return allErrs
 }

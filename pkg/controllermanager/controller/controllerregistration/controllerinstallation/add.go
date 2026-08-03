@@ -196,19 +196,19 @@ func ShootPredicate(kind Kind) predicate.Predicate {
 	}
 }
 
-func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool {
-	if old == nil && new == nil {
+func shootNetworkingTypeHasChanged(oldNetworking, newNetworking *gardencorev1beta1.Networking) bool {
+	if oldNetworking == nil && newNetworking == nil {
 		return false
 	}
-	if old == nil && new != nil {
-		// if new is non-nil then return true if new has a type set
-		return new.Type != nil
+	if oldNetworking == nil && newNetworking != nil {
+		// if newNetworking is non-nil then return true if newNetworking has a type set
+		return newNetworking.Type != nil
 	}
-	if old != nil && new == nil {
-		// if old was non-nil and had a type set, return true
-		return old.Type != nil
+	if oldNetworking != nil && newNetworking == nil {
+		// if oldNetworking was non-nil and had a type set, return true
+		return oldNetworking.Type != nil
 	}
-	return !ptr.Equal(old.Type, new.Type)
+	return !ptr.Equal(oldNetworking.Type, newNetworking.Type)
 }
 
 // ResourceReferenceObjectPredicate returns true for objects in garden namespace labeled with

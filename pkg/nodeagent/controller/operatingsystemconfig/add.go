@@ -283,16 +283,16 @@ func (r *Reconciler) NodeReadyForInPlaceUpdate() predicate.Predicate {
 			return nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			old, ok := e.ObjectOld.(*corev1.Node)
+			oldNode, ok := e.ObjectOld.(*corev1.Node)
 			if !ok {
 				return false
 			}
-			new, ok := e.ObjectNew.(*corev1.Node)
+			newNode, ok := e.ObjectNew.(*corev1.Node)
 			if !ok {
 				return false
 			}
 
-			return !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(old.Status.Conditions) && nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(new.Status.Conditions)
+			return !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(oldNode.Status.Conditions) && nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(newNode.Status.Conditions)
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return false

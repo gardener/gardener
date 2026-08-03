@@ -482,14 +482,14 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList []*gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	var (
 		bestCandidate gardencorev1beta1.Seed
-		min           *int
+		minCount      *int
 		seedUsage     = v1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
-		if numberOfManagedShoots := seedUsage[seed.Name]; min == nil || numberOfManagedShoots < *min {
+		if numberOfManagedShoots := seedUsage[seed.Name]; minCount == nil || numberOfManagedShoots < *minCount {
 			bestCandidate = seed
-			min = &numberOfManagedShoots
+			minCount = &numberOfManagedShoots
 		}
 	}
 

@@ -26,12 +26,12 @@ func ValidateExtension(ext *extensionsv1alpha1.Extension) field.ErrorList {
 }
 
 // ValidateExtensionUpdate validates a Extension object before an update.
-func ValidateExtensionUpdate(new, old *extensionsv1alpha1.Extension) field.ErrorList {
+func ValidateExtensionUpdate(newExtension, oldExtension *extensionsv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateExtensionSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateExtension(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newExtension.ObjectMeta, &oldExtension.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateExtensionSpecUpdate(&newExtension.Spec, &oldExtension.Spec, newExtension.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateExtension(newExtension)...)
 
 	return allErrs
 }
@@ -48,15 +48,15 @@ func ValidateExtensionSpec(spec *extensionsv1alpha1.ExtensionSpec, fldPath *fiel
 }
 
 // ValidateExtensionSpecUpdate validates the spec of a Extension object before an update.
-func ValidateExtensionSpecUpdate(new, old *extensionsv1alpha1.ExtensionSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateExtensionSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.ExtensionSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update extension spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
 
 	return allErrs
 }

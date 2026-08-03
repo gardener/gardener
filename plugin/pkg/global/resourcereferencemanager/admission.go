@@ -1554,11 +1554,11 @@ func isGardenadmUser(userInfo user.Info) bool {
 }
 
 // getRemovedMachineCapabilities returns the removed capabilities and their removed values.
-func getRemovedMachineCapabilities(old, new []core.CapabilityDefinition) []core.CapabilityDefinition {
+func getRemovedMachineCapabilities(oldCapabilities, newCapabilities []core.CapabilityDefinition) []core.CapabilityDefinition {
 	var (
 		removedCapabilities []core.CapabilityDefinition
-		oldCapabilitiesMap  = utils.CreateMapFromSlice(old, func(capability core.CapabilityDefinition) string { return capability.Name })
-		newCapabilitiesMap  = utils.CreateMapFromSlice(new, func(capability core.CapabilityDefinition) string { return capability.Name })
+		oldCapabilitiesMap  = utils.CreateMapFromSlice(oldCapabilities, func(capability core.CapabilityDefinition) string { return capability.Name })
+		newCapabilitiesMap  = utils.CreateMapFromSlice(newCapabilities, func(capability core.CapabilityDefinition) string { return capability.Name })
 	)
 
 	for capabilityName, oldCapability := range oldCapabilitiesMap {

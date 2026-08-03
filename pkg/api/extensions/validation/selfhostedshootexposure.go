@@ -30,12 +30,12 @@ func ValidateSelfHostedShootExposure(exposure *extensionsv1alpha1.SelfHostedShoo
 }
 
 // ValidateSelfHostedShootExposureUpdate validates a SelfHostedShootExposure object before an update.
-func ValidateSelfHostedShootExposureUpdate(new, old *extensionsv1alpha1.SelfHostedShootExposure) field.ErrorList {
+func ValidateSelfHostedShootExposureUpdate(newSelfHostedShootExposure, oldSelfHostedShootExposure *extensionsv1alpha1.SelfHostedShootExposure) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateSelfHostedShootExposureSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateSelfHostedShootExposure(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSelfHostedShootExposure.ObjectMeta, &oldSelfHostedShootExposure.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateSelfHostedShootExposureSpecUpdate(&newSelfHostedShootExposure.Spec, &oldSelfHostedShootExposure.Spec, newSelfHostedShootExposure.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateSelfHostedShootExposure(newSelfHostedShootExposure)...)
 
 	return allErrs
 }
@@ -103,15 +103,15 @@ func ValidateSelfHostedShootExposureSpec(spec *extensionsv1alpha1.SelfHostedShoo
 }
 
 // ValidateSelfHostedShootExposureSpecUpdate validates the spec of an SelfHostedShootExposure object before an update.
-func ValidateSelfHostedShootExposureSpecUpdate(new, old *extensionsv1alpha1.SelfHostedShootExposureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateSelfHostedShootExposureSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.SelfHostedShootExposureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update SelfHostedShootExposure spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
 
 	return allErrs
 }

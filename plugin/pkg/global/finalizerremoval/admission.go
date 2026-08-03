@@ -183,11 +183,11 @@ func shootDeletionSucceeded(shoot *core.Shoot) bool {
 		lastOperation.Progress == 100
 }
 
-func isFinalizerRemoved(old, new metav1.Object, finalizerName string) bool {
+func isFinalizerRemoved(oldObj, newObj metav1.Object, finalizerName string) bool {
 	var (
-		oldFinalizers = sets.New(old.GetFinalizers()...)
-		newFinalizer  = sets.New(new.GetFinalizers()...)
+		oldFinalizers = sets.New(oldObj.GetFinalizers()...)
+		newFinalizers = sets.New(newObj.GetFinalizers()...)
 	)
 
-	return oldFinalizers.Has(finalizerName) && !newFinalizer.Has(finalizerName)
+	return oldFinalizers.Has(finalizerName) && !newFinalizers.Has(finalizerName)
 }

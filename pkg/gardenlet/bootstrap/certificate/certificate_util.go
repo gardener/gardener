@@ -47,11 +47,11 @@ func nextRotationDeadline(certificate tls.Certificate, validityConfig *gardenlet
 // try to rotate certificates at the same time for the rest of the lifetime
 func jitteryDuration(totalDuration float64, minPercentage, maxPercentage *int32) time.Duration {
 	var (
-		min = ptr.Deref(minPercentage, 70)
-		max = ptr.Deref(maxPercentage, 90)
+		minPercentageVal = ptr.Deref(minPercentage, 70)
+		maxPercentageVal = ptr.Deref(maxPercentage, 90)
 
-		minFactor = 1 - float64(min)/100
-		maxFactor = float64(max-min) / 100
+		minFactor = 1 - float64(minPercentageVal)/100
+		maxFactor = float64(maxPercentageVal-minPercentageVal) / 100
 	)
 
 	return wait.Jitter(time.Duration(totalDuration), maxFactor) - time.Duration(totalDuration*minFactor)

@@ -26,12 +26,12 @@ func ValidateControlPlane(cp *extensionsv1alpha1.ControlPlane) field.ErrorList {
 }
 
 // ValidateControlPlaneUpdate validates a ControlPlane object before an update.
-func ValidateControlPlaneUpdate(new, old *extensionsv1alpha1.ControlPlane) field.ErrorList {
+func ValidateControlPlaneUpdate(newControlPlane, oldControlPlane *extensionsv1alpha1.ControlPlane) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateControlPlaneSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateControlPlane(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newControlPlane.ObjectMeta, &oldControlPlane.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateControlPlaneSpecUpdate(&newControlPlane.Spec, &oldControlPlane.Spec, newControlPlane.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateControlPlane(newControlPlane)...)
 
 	return allErrs
 }
@@ -56,16 +56,16 @@ func ValidateControlPlaneSpec(spec *extensionsv1alpha1.ControlPlaneSpec, fldPath
 }
 
 // ValidateControlPlaneSpecUpdate validates the spec of a ControlPlane object before an update.
-func ValidateControlPlaneSpecUpdate(new, old *extensionsv1alpha1.ControlPlaneSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.ControlPlaneSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update control plane spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Region, old.Region, fldPath.Child("region"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 
 	return allErrs
 }

@@ -26,12 +26,12 @@ func ValidateInfrastructure(infra *extensionsv1alpha1.Infrastructure) field.Erro
 }
 
 // ValidateInfrastructureUpdate validates an Infrastructure object before an update.
-func ValidateInfrastructureUpdate(new, old *extensionsv1alpha1.Infrastructure) field.ErrorList {
+func ValidateInfrastructureUpdate(newInfrastructure, oldInfrastructure *extensionsv1alpha1.Infrastructure) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateInfrastructureSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateInfrastructure(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newInfrastructure.ObjectMeta, &oldInfrastructure.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateInfrastructureSpecUpdate(&newInfrastructure.Spec, &oldInfrastructure.Spec, newInfrastructure.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateInfrastructure(newInfrastructure)...)
 
 	return allErrs
 }
@@ -56,16 +56,16 @@ func ValidateInfrastructureSpec(spec *extensionsv1alpha1.InfrastructureSpec, fld
 }
 
 // ValidateInfrastructureSpecUpdate validates the spec of an Infrastructure object before an update.
-func ValidateInfrastructureSpecUpdate(new, old *extensionsv1alpha1.InfrastructureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateInfrastructureSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.InfrastructureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update infrastructure spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Region, old.Region, fldPath.Child("region"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 
 	return allErrs
 }

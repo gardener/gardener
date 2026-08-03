@@ -22,7 +22,7 @@ type ConditionBuilder interface {
 	WithMessage(message string) ConditionBuilder
 	WithCodes(codes ...gardencorev1beta1.ErrorCode) ConditionBuilder
 	WithClock(clock clock.Clock) ConditionBuilder
-	Build() (new gardencorev1beta1.Condition, updated bool)
+	Build() (newCondition gardencorev1beta1.Condition, updated bool)
 }
 
 // defaultConditionBuilder build a Condition.

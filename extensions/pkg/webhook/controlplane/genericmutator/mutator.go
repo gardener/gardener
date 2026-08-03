@@ -37,61 +37,61 @@ import (
 type Ensurer interface {
 	// EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeAPIServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureKubeAPIServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureKubeControllerManagerDeployment ensures that the kube-controller-manager deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureKubeControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeSchedulerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureKubeSchedulerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureMachineControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureMachineControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureMachineControllerManagerVPA ensures that the machine-controller-manager VPA settings conform to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureMachineControllerManagerVPA(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *vpaautoscalingv1.VerticalPodAutoscaler) error
+	EnsureMachineControllerManagerVPA(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newVPA, oldVPA *vpaautoscalingv1.VerticalPodAutoscaler) error
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidcorev1alpha1.Etcd) error
+	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newEtcd, oldEtcd *druidcorev1alpha1.Etcd) error
 	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureVPNSeedServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureVPNSeedServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureVPNSeedServerStatefulSet ensures that the vpn-seed-server deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.StatefulSet) error
+	EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newStatefulSet, oldStatefulSet *appsv1.StatefulSet) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
+	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, newUnitOptions, oldUnitOptions []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeletConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
+	EnsureKubeletConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, newKubeletConfig, oldKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error
 	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
 	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version) bool
 	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
 	EnsureKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error
 	// EnsureKubernetesGeneralConfiguration ensures that the kubernetes general configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *string) error
+	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newData, oldData *string) error
 	// EnsureAdditionalUnits ensures additional systemd units
 	// "old" might be "nil" and must always be checked.
-	EnsureAdditionalUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
+	EnsureAdditionalUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newUnits, oldUnits *[]extensionsv1alpha1.Unit) error
 	// EnsureAdditionalFiles ensures additional systemd files
 	// "old" might be "nil" and must always be checked.
-	EnsureAdditionalFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
+	EnsureAdditionalFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newFiles, oldFiles *[]extensionsv1alpha1.File) error
 	// EnsureAdditionalProvisionUnits ensures additional systemd units for the 'provision' OSC
 	// "old" might be "nil" and must always be checked.
-	EnsureAdditionalProvisionUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
+	EnsureAdditionalProvisionUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newUnits, oldUnits *[]extensionsv1alpha1.Unit) error
 	// EnsureAdditionalProvisionFiles ensures additional systemd files for the 'provision' OSC
 	// "old" might be "nil" and must always be checked.
-	EnsureAdditionalProvisionFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
+	EnsureAdditionalProvisionFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newFiles, oldFiles *[]extensionsv1alpha1.File) error
 	// EnsureCRIConfig ensures the CRI config.
 	// "old" might be "nil" and must always be checked.
-	EnsureCRIConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *extensionsv1alpha1.CRIConfig) error
+	EnsureCRIConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newCRIConfig, oldCRIConfig *extensionsv1alpha1.CRIConfig) error
 	// EnsureGardenerResourceManagerDeployment ensures that the Resource Manager deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 }
 
 // NewMutator creates a new controlplane mutator.
@@ -123,19 +123,19 @@ type mutator struct {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
+func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) error {
 	// If the object does have a deletion timestamp then we don't want to mutate anything.
-	if new.GetDeletionTimestamp() != nil {
+	if newObj.GetDeletionTimestamp() != nil {
 		return nil
 	}
-	gctx := extensionscontextwebhook.NewGardenContext(m.client, new)
+	gctx := extensionscontextwebhook.NewGardenContext(m.client, newObj)
 
-	switch x := new.(type) {
+	switch x := newObj.(type) {
 	case *appsv1.Deployment:
 		var oldDep *appsv1.Deployment
-		if old != nil {
+		if oldObj != nil {
 			var ok bool
-			oldDep, ok = old.(*appsv1.Deployment)
+			oldDep, ok = oldObj.(*appsv1.Deployment)
 			if !ok {
 				return errors.New("could not cast old object to appsv1.Deployment")
 			}
@@ -166,9 +166,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		}
 	case *appsv1.StatefulSet:
 		var oldSet *appsv1.StatefulSet
-		if old != nil {
+		if oldObj != nil {
 			var ok bool
-			oldSet, ok = old.(*appsv1.StatefulSet)
+			oldSet, ok = oldObj.(*appsv1.StatefulSet)
 			if !ok {
 				return errors.New("could not cast old object to appsv1.StatefulSet")
 			}
@@ -181,9 +181,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 
 	case *vpaautoscalingv1.VerticalPodAutoscaler:
 		var oldVPA *vpaautoscalingv1.VerticalPodAutoscaler
-		if old != nil {
+		if oldObj != nil {
 			var ok bool
-			oldVPA, ok = old.(*vpaautoscalingv1.VerticalPodAutoscaler)
+			oldVPA, ok = oldObj.(*vpaautoscalingv1.VerticalPodAutoscaler)
 			if !ok {
 				return errors.New("could not cast old object to vpaautoscalingv1.VerticalPodAutoscaler")
 			}
@@ -198,9 +198,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		switch x.Name {
 		case v1beta1constants.ETCDMain, operatorv1alpha1.VirtualGardenETCDMain, v1beta1constants.ETCDEvents, operatorv1alpha1.VirtualGardenETCDEvents:
 			var oldEtcd *druidcorev1alpha1.Etcd
-			if old != nil {
+			if oldObj != nil {
 				var ok bool
-				oldEtcd, ok = old.(*druidcorev1alpha1.Etcd)
+				oldEtcd, ok = oldObj.(*druidcorev1alpha1.Etcd)
 				if !ok {
 					return errors.New("could not cast old object to druidcorev1alpha1.Etcd")
 				}
@@ -211,9 +211,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		}
 	case *extensionsv1alpha1.OperatingSystemConfig:
 		var oldOSC *extensionsv1alpha1.OperatingSystemConfig
-		if old != nil {
+		if oldObj != nil {
 			var ok bool
-			oldOSC, ok = old.(*extensionsv1alpha1.OperatingSystemConfig)
+			oldOSC, ok = oldObj.(*extensionsv1alpha1.OperatingSystemConfig)
 			if !ok {
 				return errors.New("could not cast old object to extensionsv1alpha1.OperatingSystemConfig")
 			}

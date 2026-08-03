@@ -56,8 +56,8 @@ func ValidateControllerDeployment(controllerDeployment *core.ControllerDeploymen
 }
 
 // ValidateControllerDeploymentUpdate validates a ControllerDeployment object before an update.
-func ValidateControllerDeploymentUpdate(new, _ *core.ControllerDeployment) field.ErrorList {
-	return ValidateControllerDeployment(new)
+func ValidateControllerDeploymentUpdate(newControllerDeployment, _ *core.ControllerDeployment) field.ErrorList {
+	return ValidateControllerDeployment(newControllerDeployment)
 }
 
 // ValidateHelmControllerDeployment validates Helm controller deployment configs.
