@@ -50,9 +50,8 @@ func ValidateFreeFormText(text string, fldPath *field.Path) field.ErrorList {
 	for _, r := range text {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsSpace(r) || strings.ContainsRune(allowedSpecialCharacters, r) {
 			continue
-		} else {
-			invalidCharacters = append(invalidCharacters, r)
 		}
+		invalidCharacters = append(invalidCharacters, r)
 	}
 
 	if len(invalidCharacters) > 0 {
