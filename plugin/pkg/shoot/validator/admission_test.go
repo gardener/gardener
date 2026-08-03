@@ -6305,6 +6305,76 @@ var _ = Describe("validator", func() {
 			})
 		})
 
+		When("spec.controlPlane.zones is set", func() {
+			BeforeEach(func() {
+				cloudProfile.Spec.ControlPlane = &gardencorev1beta1.CloudProfileControlPlane{AllowZonePinning: true}
+				seed.Spec.Provider.Zones = []string{"europe-a", "europe-b", "europe-c"}
+				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"europe-a"}}
+			})
+
+			JustBeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			It("should allow zones when CloudProfile has allowZonePinning and seed contains them", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should forbid zones when CloudProfile has allowZonePinning=false", func() {
+				cloudProfile.Spec.ControlPlane = &gardencorev1beta1.CloudProfileControlPlane{AllowZonePinning: false}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("spec.controlPlane.zones"))
+			})
+
+			It("should forbid zones when CloudProfile has no ControlPlane field", func() {
+				cloudProfile.Spec.ControlPlane = nil
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("spec.controlPlane.zones"))
+			})
+
+			It("should forbid a zone not present in the seed", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"europe-d"}}
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("spec.controlPlane.zones[0]"))
+			})
+
+			It("should allow zones on update when zones and region are unchanged", func() {
+				oldShoot := shoot.DeepCopy()
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow zones on update even when CloudProfile later disables allowZonePinning", func() {
+				cloudProfile.Spec.ControlPlane = &gardencorev1beta1.CloudProfileControlPlane{AllowZonePinning: false}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				oldShoot := shoot.DeepCopy()
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+		})
+
 		Context("limits enforcement", func() {
 			BeforeEach(func() {
 				cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{}
