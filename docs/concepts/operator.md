@@ -556,7 +556,7 @@ The reconciler also computes the following constraint in `.status.constraints` o
 
 | Constraint Type           | Meaning when `status=True`                                                                                            | Meaning when `status=False`                                                                                             |
 |---------------------------|-----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `ManagedResourcesHonored` | No `ManagedResource` in the garden's namespaces carries the `resources.gardener.cloud/ignore=true` annotation. | At least one `ManagedResource` is annotated with `resources.gardener.cloud/ignore=true`, disabling its reconciliation. |
+| `ManagedResourcesHonored` | No `ManagedResource` in the garden's namespaces carries the `resources.gardener.cloud/ignore=true` annotation.  | At least one `ManagedResource` is annotated with `resources.gardener.cloud/ignore=true`, disabling its reconciliation.  |
 
 #### [`Reference` Reconciler](../../pkg/operator/controller/garden/reference)
 
