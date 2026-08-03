@@ -97,14 +97,14 @@ const (
 	// and removes the nginx ingress controller (if existing) from the Garden runtime cluster.
 	// owner: @ScheererJ
 	// alpha: v1.142.0
-	// beta: v1.148.0
+	// beta: v1.149.0
 	DisableNginxIngressInGarden featuregate.Feature = "DisableNginxIngressInGarden"
 
 	// DisableNginxIngressInSeed disables the deployment of the nginx ingress controller in the Seed cluster
 	// and removes the nginx ingress controller (if existing) from the Seed cluster.
 	// owner: @ScheererJ
 	// alpha: v1.142.0
-	// beta: v1.148.0
+	// beta: v1.149.0
 	DisableNginxIngressInSeed featuregate.Feature = "DisableNginxIngressInSeed"
 
 	// DisableNginxIngressInShoot disables the deployment of the nginx ingress controller in the Shoot cluster
