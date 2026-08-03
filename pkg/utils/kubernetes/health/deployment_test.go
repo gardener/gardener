@@ -339,6 +339,23 @@ var _ = Describe("Deployment", func() {
 			Expect(ok).To(BeTrue())
 		})
 
+		It("should consider the deployment as updated even though there are still pods in a terminal phase", func() {
+			p1 := pod.DeepCopy()
+			p1.Status.Phase = corev1.PodFailed
+			Expect(fakeClient.Create(ctx, p1)).To(Succeed())
+
+			p2 := pod.DeepCopy()
+			p2.Status.Phase = corev1.PodSucceeded
+			Expect(fakeClient.Create(ctx, p2)).To(Succeed())
+
+			p3 := pod.DeepCopy()
+			Expect(fakeClient.Create(ctx, p3)).To(Succeed())
+
+			ok, err := health.DeploymentHasExactNumberOfPods(ctx, fakeClient, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
+
 		It("should consider the deployment as updated even though there are still disrupted pods", func() {
 			p1 := pod.DeepCopy()
 			p1.Status.Conditions = []corev1.PodCondition{{Type: "DisruptionTarget", Status: "True", Reason: "TerminationByKubelet"}}

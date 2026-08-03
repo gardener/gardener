@@ -27,6 +27,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -462,7 +463,37 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				pods = []corev1.Pod{*normalPod, *stalePod, *preemptedPod}
+				failedReplicaSetPod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "failed-replicaset-owned",
+						Namespace: "default",
+						OwnerReferences: []metav1.OwnerReference{
+							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: ptr.To(true)},
+						},
+					},
+					Status: corev1.PodStatus{Phase: "Failed"},
+				}
+				succeededReplicaSetPod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "succeeded-replicaset-owned",
+						Namespace: "default",
+						OwnerReferences: []metav1.OwnerReference{
+							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: ptr.To(true)},
+						},
+					},
+					Status: corev1.PodStatus{Phase: "Succeeded"},
+				}
+				failedJobPod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "failed-job-owned",
+						Namespace: "default",
+						OwnerReferences: []metav1.OwnerReference{
+							{APIVersion: "batch/v1", Kind: "Job", Name: "foo", Controller: ptr.To(true)},
+						},
+					},
+					Status: corev1.PodStatus{Phase: "Failed"},
+				}
+				pods = []corev1.Pod{*normalPod, *stalePod, *preemptedPod, *failedReplicaSetPod, *succeededReplicaSetPod, *failedJobPod}
 				// There is no good way with the fake client to test the deletion of the pods stuck in termination
 				// We'd have to use a mock client, but we actually want to avoid its usage.
 			)
@@ -470,12 +501,18 @@ var _ = Describe("Pod Utils", func() {
 			Expect(fakeClient.Create(ctx, normalPod)).To(Succeed())
 			Expect(fakeClient.Create(ctx, stalePod)).To(Succeed())
 			Expect(fakeClient.Create(ctx, preemptedPod)).To(Succeed())
+			Expect(fakeClient.Create(ctx, failedReplicaSetPod)).To(Succeed())
+			Expect(fakeClient.Create(ctx, succeededReplicaSetPod)).To(Succeed())
+			Expect(fakeClient.Create(ctx, failedJobPod)).To(Succeed())
 
 			Expect(DeleteStalePods(ctx, logr.Discard(), fakeClient, pods)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(normalPod), &corev1.Pod{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(stalePod), &corev1.Pod{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(preemptedPod), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(failedReplicaSetPod), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(succeededReplicaSetPod), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(failedJobPod), &corev1.Pod{})).To(Succeed())
 		})
 	})
 
