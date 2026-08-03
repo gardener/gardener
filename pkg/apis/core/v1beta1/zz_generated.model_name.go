@@ -155,6 +155,11 @@ func (in CloudProfile) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in CloudProfileControlPlane) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.CloudProfileControlPlane"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in CloudProfileList) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.CloudProfileList"
 }
