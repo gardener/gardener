@@ -1614,6 +1614,43 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </table>
 
 
+<h3 id="cloudprofilecontrolplane">CloudProfileControlPlane
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#cloudprofilespec">CloudProfileSpec</a>)
+</p>
+
+<p>
+CloudProfileControlPlane holds control-plane-related settings for a CloudProfile.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>allowZonePinning</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<p>AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin<br />their control plane to specific seed zones. Only set to true for providers where<br />zone names are globally consistent across all users of the provider.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="cloudprofilemachinecontrollermanagersettings">CloudProfileMachineControllerManagerSettings
 </h3>
 
@@ -1859,6 +1896,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>MachineCapabilities contains the definition of all possible capabilities in the CloudProfile.<br />Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.<br />The order of values for a given capability is relevant. The most important value is listed first.<br />During maintenance upgrades, the image that matches most capabilities will be selected.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controlPlane</code></br>
+<em>
+<a href="#cloudprofilecontrolplane">CloudProfileControlPlane</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlane holds settings that control what control-plane-related features shoots<br />using this CloudProfile may configure.</p>
 </td>
 </tr>
 
@@ -2542,6 +2591,18 @@ ControlPlane holds information about the general settings for the control plane 
 <td>
 <em>(Optional)</em>
 <p>HighAvailability holds the configuration settings for high availability of the<br />control plane of a shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+string array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones is a list of availability zones in which the control plane components should be placed.<br />Requires the referenced CloudProfile to have spec.controlPlane.allowZonePinning set to true.<br />This field is immutable once set.</p>
 </td>
 </tr>
 

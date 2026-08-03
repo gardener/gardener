@@ -72,6 +72,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.CRI{}.OpenAPIModelName():                                          schema_pkg_apis_core_v1beta1_CRI(ref),
 		v1beta1.CapabilityDefinition{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_CapabilityDefinition(ref),
 		v1beta1.CloudProfile{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_CloudProfile(ref),
+		v1beta1.CloudProfileControlPlane{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_CloudProfileControlPlane(ref),
 		v1beta1.CloudProfileList{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
 		v1beta1.CloudProfileMachineControllerManagerSettings{}.OpenAPIModelName(): schema_pkg_apis_core_v1beta1_CloudProfileMachineControllerManagerSettings(ref),
 		v1beta1.CloudProfileReference{}.OpenAPIModelName():                        schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
@@ -2200,6 +2201,26 @@ func schema_pkg_apis_core_v1beta1_CloudProfile(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_CloudProfileControlPlane(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CloudProfileControlPlane holds control-plane-related settings for a CloudProfile.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"allowZonePinning": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin their control plane to specific seed zones. Only set to true for providers where zone names are globally consistent across all users of the provider.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_CloudProfileList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2443,12 +2464,18 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 							},
 						},
 					},
+					"controlPlane": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ControlPlane holds settings that control what control-plane-related features shoots using this CloudProfile may configure.",
+							Ref:         ref(v1beta1.CloudProfileControlPlane{}.OpenAPIModelName()),
+						},
+					},
 				},
 				Required: []string{"kubernetes", "machineImages", "machineTypes", "regions", "type"},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.Bastion{}.OpenAPIModelName(), v1beta1.CapabilityDefinition{}.OpenAPIModelName(), v1beta1.KubernetesSettings{}.OpenAPIModelName(), v1beta1.Limits{}.OpenAPIModelName(), v1beta1.MachineImage{}.OpenAPIModelName(), v1beta1.MachineType{}.OpenAPIModelName(), v1beta1.Region{}.OpenAPIModelName(), v1beta1.SeedSelector{}.OpenAPIModelName(), v1beta1.VolumeType{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.Bastion{}.OpenAPIModelName(), v1beta1.CapabilityDefinition{}.OpenAPIModelName(), v1beta1.CloudProfileControlPlane{}.OpenAPIModelName(), v1beta1.KubernetesSettings{}.OpenAPIModelName(), v1beta1.Limits{}.OpenAPIModelName(), v1beta1.MachineImage{}.OpenAPIModelName(), v1beta1.MachineType{}.OpenAPIModelName(), v1beta1.Region{}.OpenAPIModelName(), v1beta1.SeedSelector{}.OpenAPIModelName(), v1beta1.VolumeType{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -2840,6 +2867,20 @@ func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "HighAvailability holds the configuration settings for high availability of the control plane of a shoot.",
 							Ref:         ref(v1beta1.HighAvailability{}.OpenAPIModelName()),
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is a list of availability zones in which the control plane components should be placed. Requires the referenced CloudProfile to have spec.controlPlane.allowZonePinning set to true. This field is immutable once set.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},

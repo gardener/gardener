@@ -14,6 +14,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StartupTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ClusterAutoscaler,StatusTaints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Condition,Codes
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControlPlane,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControllerInstallationSpec,ResourceRefs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControllerInstallationStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControllerRegistrationDeployment,DeploymentRefs

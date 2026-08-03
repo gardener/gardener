@@ -92,6 +92,8 @@ func (m *CapabilityValues) Reset() { *m = CapabilityValues{} }
 
 func (m *CloudProfile) Reset() { *m = CloudProfile{} }
 
+func (m *CloudProfileControlPlane) Reset() { *m = CloudProfileControlPlane{} }
+
 func (m *CloudProfileList) Reset() { *m = CloudProfileList{} }
 
 func (m *CloudProfileMachineControllerManagerSettings) Reset() {
@@ -1870,6 +1872,37 @@ func (m *CloudProfile) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *CloudProfileControlPlane) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CloudProfileControlPlane) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CloudProfileControlPlane) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	i--
+	if m.AllowZonePinning {
+		dAtA[i] = 1
+	} else {
+		dAtA[i] = 0
+	}
+	i--
+	dAtA[i] = 0x8
+	return len(dAtA) - i, nil
+}
+
 func (m *CloudProfileList) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2005,6 +2038,18 @@ func (m *CloudProfileSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.ControlPlane != nil {
+		{
+			size, err := m.ControlPlane.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x6a
+	}
 	if len(m.MachineCapabilities) > 0 {
 		for iNdEx := len(m.MachineCapabilities) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -2670,6 +2715,15 @@ func (m *ControlPlane) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Zones) > 0 {
+		for iNdEx := len(m.Zones) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Zones[iNdEx])
+			copy(dAtA[i:], m.Zones[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(m.Zones[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
 	if m.HighAvailability != nil {
 		{
 			size, err := m.HighAvailability.MarshalToSizedBuffer(dAtA[:i])
@@ -14109,6 +14163,16 @@ func (m *CloudProfile) Size() (n int) {
 	return n
 }
 
+func (m *CloudProfileControlPlane) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	n += 2
+	return n
+}
+
 func (m *CloudProfileList) Size() (n int) {
 	if m == nil {
 		return 0
@@ -14211,6 +14275,10 @@ func (m *CloudProfileSpec) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovGenerated(uint64(l))
 		}
+	}
+	if m.ControlPlane != nil {
+		l = m.ControlPlane.Size()
+		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -14415,6 +14483,12 @@ func (m *ControlPlane) Size() (n int) {
 	if m.HighAvailability != nil {
 		l = m.HighAvailability.Size()
 		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if len(m.Zones) > 0 {
+		for _, s := range m.Zones {
+			l = len(s)
+			n += 1 + l + sovGenerated(uint64(l))
+		}
 	}
 	return n
 }
@@ -18847,6 +18921,16 @@ func (this *CloudProfile) String() string {
 	}, "")
 	return s
 }
+func (this *CloudProfileControlPlane) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&CloudProfileControlPlane{`,
+		`AllowZonePinning:` + fmt.Sprintf("%v", this.AllowZonePinning) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *CloudProfileList) String() string {
 	if this == nil {
 		return "nil"
@@ -18926,6 +19010,7 @@ func (this *CloudProfileSpec) String() string {
 		`Bastion:` + strings.Replace(this.Bastion.String(), "Bastion", "Bastion", 1) + `,`,
 		`Limits:` + strings.Replace(this.Limits.String(), "Limits", "Limits", 1) + `,`,
 		`MachineCapabilities:` + repeatedStringForMachineCapabilities + `,`,
+		`ControlPlane:` + strings.Replace(this.ControlPlane.String(), "CloudProfileControlPlane", "CloudProfileControlPlane", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -19026,6 +19111,7 @@ func (this *ControlPlane) String() string {
 	}
 	s := strings.Join([]string{`&ControlPlane{`,
 		`HighAvailability:` + strings.Replace(this.HighAvailability.String(), "HighAvailability", "HighAvailability", 1) + `,`,
+		`Zones:` + fmt.Sprintf("%v", this.Zones) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -25900,6 +25986,76 @@ func (m *CloudProfile) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *CloudProfileControlPlane) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CloudProfileControlPlane: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CloudProfileControlPlane: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AllowZonePinning", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.AllowZonePinning = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *CloudProfileList) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -26655,6 +26811,42 @@ func (m *CloudProfileSpec) Unmarshal(dAtA []byte) error {
 			}
 			m.MachineCapabilities = append(m.MachineCapabilities, CapabilityDefinition{})
 			if err := m.MachineCapabilities[len(m.MachineCapabilities)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ControlPlane", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ControlPlane == nil {
+				m.ControlPlane = &CloudProfileControlPlane{}
+			}
+			if err := m.ControlPlane.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -28204,6 +28396,38 @@ func (m *ControlPlane) Unmarshal(dAtA []byte) error {
 			if err := m.HighAvailability.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Zones", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Zones = append(m.Zones, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
