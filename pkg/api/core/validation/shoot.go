@@ -503,10 +503,13 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 			newKubernetesVersion = *newWorker.Kubernetes.Version
 		}
 
-		// worker Kubernetes versions must not be downgraded; minor version skips are allowed, except for AutoInPlaceUpdate and ManualInPlaceUpdate.
-		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, !helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy), idxPath.Child("kubernetes", "version"))...)
+		// Strict in-place version checks apply only when both old and new strategies are in-place.
+		// During a Rolling → InPlace or InPlace → Rolling transition a rolling replacement handles
+		// the node update, so the in-place restrictions (no minor-version skip, no image downgrade) are not needed.
+		bothInPlace := helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy) && helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy)
+		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, !bothInPlace, idxPath.Child("kubernetes", "version"))...)
 
-		if helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) && (newSpec.CredentialsBindingName != nil || newSpec.SecretBindingName != nil) {
+		if bothInPlace && (newSpec.CredentialsBindingName != nil || newSpec.SecretBindingName != nil) {
 			allErrs = append(allErrs, validateMachineImageVersionInPlaceUpdate(newWorker.Machine.Image, oldWorker.Machine.Image, idxPath.Child("machine", "image", "version"))...)
 		}
 	}
@@ -563,15 +566,11 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 		}
 
 		oldStrategyIsInPlace := helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy)
-		if oldStrategyIsInPlace && !newStrategyIsInPlace {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"))
+		if !oldStrategyIsInPlace && newStrategyIsInPlace && !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), *newWorker.UpdateStrategy, "cannot switch to AutoInPlaceUpdate/ManualInPlaceUpdate when the InPlaceNodeUpdates feature gate is disabled"))
 		}
 
-		if !oldStrategyIsInPlace && newStrategyIsInPlace {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"))
-		}
-
-		if ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) && helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
+		if helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy) && helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
 			if oldWorker.Machine.Type != newWorker.Machine.Type {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), newWorker.Machine.Type, "machine type cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
 			}
@@ -3691,7 +3690,7 @@ func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
 func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Allow the update without validation if the force-update annotation is present.
+	// Allow the ongoing-update restriction checks to be bypassed with the force-update annotation.
 	if kubernetesutils.HasMetaDataAnnotation(newShoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
 		return allErrs
 	}
