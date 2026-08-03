@@ -87,15 +87,13 @@ ip6tables -t nat -A POSTROUTING -o $(ip route | grep '^default') -s fd00:10::/64
 
 ## Configure Feature Gates (Optional)
 
-You can optionally configure [feature gates](./feature_gates.md) on different components of your local Gardener deployment. The feature gates can be set by editing respective resource manifests before [setting up Gardener](#setting-up-gardener). They can also be configured dynamically on the running deployment by editing respective resources on the appropriate clusters. The files and the resources to edit for configuring feature gates on respective Gardener components are detailed in the table below.
+You can optionally configure [feature gates](./feature_gates.md) on different components of your local Gardener deployment. The feature gates can be set by editing respective resource manifests before [setting up Gardener](#setting-up-gardener). They can also be configured dynamically on the running deployment by editing respective resources on the appropriate clusters, or by running either `make gardener-up` or `make gardener-dev` after updating the `featureGates` configurations in respective files. The files and the resources to edit for configuring feature gates on respective Gardener components are detailed in the table below.
 
 | Gardener components | Resource manifests | Respective resources for dynamic configuration |
 | --- | --- | --- |
 | `gardener-operator` | [`charts/gardener/operator/values.yaml`](../../charts/gardener/operator/values.yaml) (`config.featureGates`) | N/A |
 | `gardenlet` | [`dev-setup/gardenlet/base/gardenlet.yaml`](../../dev-setup/gardenlet/base/gardenlet.yaml) |  `gardenlet` resource on the virtual garden cluster |
 | `gardener-apiserver` and `gardener-controller-manager` | [`dev-setup/garden/base/garden.yaml`](../../dev-setup/garden/base/garden.yaml) | `garden` resource on the runtime cluster |
-
-> To configure `gardener-operator` feature gates in the running local setup, run `make gardener-up` or `make gardener-dev` after updating the `featureGates` configuration in [`charts/gardener/operator/values.yaml`](../../charts/gardener/operator/values.yaml). This will restart the `gardener-operator` with the updated configuration.
 
 ## Setting Up Gardener
 
