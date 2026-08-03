@@ -472,6 +472,96 @@ var _ = Describe("ActuatorReconcile", func() {
 				}
 			})
 		})
+
+		When("a worker pool is transitioning from Rolling to InPlace strategy", func() {
+			var (
+				existingRollingDeployment *machinev1alpha1.MachineDeployment
+				inPlaceTemplateLabels     map[string]string
+			)
+
+			BeforeEach(func() {
+				// Desired deployment uses the InPlace strategy and the new InPlace machine class.
+				inPlaceWantedDeployment := buildWantedMachineDeployment("1", machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType, nil)
+				wantedMachineDeployments = extensionsworkercontroller.MachineDeployments{inPlaceWantedDeployment}
+
+				// Template labels of an InPlace MachineDeployment: the name label plus the worker-name
+				// label that getMachineLabels adds for the InPlace strategy. These must be present from
+				// the start so that the later strategy flip does not change the template.
+				inPlaceTemplateLabels = map[string]string{
+					"name":                          inPlaceWantedDeployment.Name,
+					v1beta1constants.LabelWorkerName: worker.Name,
+				}
+
+				existingRollingDeployment = &machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      inPlaceWantedDeployment.Name,
+						Namespace: worker.Namespace,
+						Labels:    map[string]string{"worker.gardener.cloud/pool": "pool1"},
+					},
+					Spec: machinev1alpha1.MachineDeploymentSpec{
+						Replicas: 4,
+						Strategy: machinev1alpha1.MachineDeploymentStrategy{
+							Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
+						},
+						Template: machinev1alpha1.MachineTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{Labels: inPlaceTemplateLabels},
+							Spec: machinev1alpha1.MachineSpec{
+								Class: machinev1alpha1.ClassSpec{Kind: "MachineClass", Name: inPlaceWantedDeployment.ClassName},
+							},
+						},
+					},
+				}
+			})
+
+			It("should keep the Rolling strategy while the InPlace class is still rolling out", func() {
+				// The new InPlace class has not been rolled out to the existing MachineDeployment yet.
+				existingRollingDeployment.Spec.Template.Spec.Class.Name = "old-machine-class"
+				Expect(seedClient.Create(ctx, existingRollingDeployment)).To(Succeed())
+				existingRollingDeployment.Status = machinev1alpha1.MachineDeploymentStatus{Replicas: 4, UpdatedReplicas: 4}
+				Expect(seedClient.Status().Update(ctx, existingRollingDeployment)).To(Succeed())
+				Expect(seedClient.List(ctx, &existingMachineDeployments)).To(Succeed())
+
+				Expect(deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, caUsed)).To(Succeed())
+
+				Expect(seedClient.Get(ctx, testDeploymentObjectKey, &returnedDeployment)).To(Succeed())
+				// Strategy stays Rolling so the initial replacement happens via rolling update...
+				Expect(returnedDeployment.Spec.Strategy.Type).To(Equal(machinev1alpha1.RollingUpdateMachineDeploymentStrategyType))
+				// ...but the template already carries the InPlace worker-name label.
+				Expect(returnedDeployment.Spec.Template.Labels).To(Equal(inPlaceTemplateLabels))
+			})
+
+			It("should keep the Rolling strategy while the InPlace class replacement is in progress", func() {
+				// The InPlace class is already set on the template, but not all replicas have been replaced yet.
+				Expect(seedClient.Create(ctx, existingRollingDeployment)).To(Succeed())
+				existingRollingDeployment.Status = machinev1alpha1.MachineDeploymentStatus{Replicas: 4, UpdatedReplicas: 2}
+				Expect(seedClient.Status().Update(ctx, existingRollingDeployment)).To(Succeed())
+				Expect(seedClient.List(ctx, &existingMachineDeployments)).To(Succeed())
+
+				Expect(deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, caUsed)).To(Succeed())
+
+				Expect(seedClient.Get(ctx, testDeploymentObjectKey, &returnedDeployment)).To(Succeed())
+				// Strategy stays Rolling until every replica carries the new InPlace class...
+				Expect(returnedDeployment.Spec.Strategy.Type).To(Equal(machinev1alpha1.RollingUpdateMachineDeploymentStrategyType))
+				// ...with the InPlace worker-name label already present on the template.
+				Expect(returnedDeployment.Spec.Template.Labels).To(Equal(inPlaceTemplateLabels))
+			})
+
+			It("should flip to InPlace strategy without changing the template once the rollout is complete", func() {
+				// The InPlace class is now deployed and all replicas have been updated.
+				Expect(seedClient.Create(ctx, existingRollingDeployment)).To(Succeed())
+				existingRollingDeployment.Status = machinev1alpha1.MachineDeploymentStatus{Replicas: 4, UpdatedReplicas: 4}
+				Expect(seedClient.Status().Update(ctx, existingRollingDeployment)).To(Succeed())
+				Expect(seedClient.List(ctx, &existingMachineDeployments)).To(Succeed())
+
+				Expect(deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, caUsed)).To(Succeed())
+
+				Expect(seedClient.Get(ctx, testDeploymentObjectKey, &returnedDeployment)).To(Succeed())
+				// Strategy flips to InPlace now that the rollout is done...
+				Expect(returnedDeployment.Spec.Strategy.Type).To(Equal(machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType))
+				// ...and the template labels are unchanged, so MCM does not start a second rollout.
+				Expect(returnedDeployment.Spec.Template.Labels).To(Equal(inPlaceTemplateLabels))
+			})
+		})
 	})
 
 	Describe("#updateWorkerStatusInPlaceUpdateWorkerPoolHash", func() {
