@@ -28,8 +28,6 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	if b.ShootUsesIstioTLSTermination() {
 		deployer = append(deployer, mutualTLSService)
 		deployer = append(deployer, upgradeService)
-	} else {
-		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
 	return component.OpWait(deployer...)
 }
@@ -80,6 +78,16 @@ func (b *Botanist) ShootUsesIstioTLSTermination() bool {
 	return features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo())
 }
 
+// CleanupKubeAPIServerLoadBalancingServices destroys the MutualTLS and ConnectionUpgrade services.
+func (b *Botanist) CleanupKubeAPIServerLoadBalancingServices(ctx context.Context) error {
+	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
+	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false)
+	return component.OpWait(
+		component.OpDestroy(mutualTLSService),
+		component.OpDestroy(upgradeService),
+	).Deploy(ctx)
+}
+
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroyWithoutWait(kubeapiserverexposure.NewSNI(
@@ -119,7 +127,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 
 // DeployKubeAPIServerSNI deploys the kube-apiserver SNI resources.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
+	return component.OpWait(b.Shoot.Components.ControlPlane.KubeAPIServerSNI).Deploy(ctx)
 }
 
 func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {

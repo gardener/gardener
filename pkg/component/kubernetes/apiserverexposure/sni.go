@@ -415,7 +415,23 @@ func (s *sni) Destroy(ctx context.Context) error {
 	)
 }
 
-func (s *sni) Wait(_ context.Context) error        { return nil }
+const timeoutForManagedResource = 2 * time.Minute
+
+func (s *sni) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutForManagedResource)
+	defer cancel()
+
+	if s.valuesFunc().IstioTLSTermination {
+		if err := managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, managedResourceName); err != nil {
+			return err
+		}
+		if err := managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, managedResourceNameIstioTLSSecrets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }
 
 func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {

@@ -318,10 +318,18 @@ func (r *Reconciler) reconcile(
 			Fn:           c.kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service SNI",
-			Fn:           c.kubeAPIServerSNI.Deploy,
+		deployKubeAPIServerServiceSNI = g.Add(flow.Task{
+			Name:         "Deploying and waiting for Kubernetes API server service SNI",
+			Fn:           component.OpWait(c.kubeAPIServerSNI).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up kube-apiserver TLS services",
+			Fn: func(ctx context.Context) error {
+				return r.cleanupKubeAPIServerTLSServices(ctx, log, garden, c.istio.GetValues().IngressGateway)
+			},
+			SkipIf:       features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNI),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name: "Deploying Kubernetes Controller Manager",
@@ -1579,4 +1587,18 @@ func (r *Reconciler) getAggregatePrometheusHost(ctx context.Context) (string, er
 	}
 
 	return vs.Spec.Hosts[0], nil
+}
+
+func (r *Reconciler) cleanupKubeAPIServerTLSServices(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) error {
+	if len(ingressGatewayValues) != 1 {
+		return fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
+	}
+
+	mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
+	upgradeService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix)
+
+	return component.OpWait(
+		component.OpDestroy(mutualTLSService),
+		component.OpDestroy(upgradeService),
+	).Deploy(ctx)
 }

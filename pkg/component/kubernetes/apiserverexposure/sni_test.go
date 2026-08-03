@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -29,6 +30,8 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -781,12 +784,6 @@ var _ = Describe("#SNI", func() {
 		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResourceTLSSecrets.Namespace, Name: managedResourceTLSSecretName}, &corev1.Secret{})).To(BeNotFoundError())
 	})
 
-	Describe("#Wait", func() {
-		It("should succeed because it's not implemented", func() {
-			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
-		})
-	})
-
 	Describe("#WaitCleanup", func() {
 		It("should succeed because it's not implemented", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
@@ -807,6 +804,191 @@ var _ = Describe("#SNI", func() {
 
 			Expect(ReconcileIstioInternalLoadBalancingConfigMap(ctx, c, namespace, "", []string{}, false)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "istio-internal-load-balancing"}, configMap)).To(BeNotFoundError())
+		})
+	})
+
+	Context("waiting functions", func() {
+		var (
+			fakeOps   *retryfake.Ops
+			resetVars func()
+		)
+
+		BeforeEach(func() {
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			resetVars = test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			)
+		})
+
+		AfterEach(func() {
+			resetVars()
+		})
+
+		Describe("#Wait", func() {
+			Context("when IstioTLSTermination is disabled", func() {
+				BeforeEach(func() {
+					istioTLSTermination = false
+				})
+
+				It("should succeed immediately", func() {
+					Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
+				})
+			})
+
+			Context("when IstioTLSTermination is enabled", func() {
+				BeforeEach(func() {
+					istioTLSTermination = true
+				})
+
+				It("should fail because reading the ManagedResource fails", func() {
+					Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+				})
+
+				It("should fail because the SNI ManagedResource doesn't become healthy", func() {
+					fakeOps.MaxAttempts = 2
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceSNI.Name,
+							Namespace:  expectedManagedResourceSNI.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionFalse,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionFalse,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceTLSSecrets.Name,
+							Namespace:  expectedManagedResourceTLSSecrets.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+				})
+
+				It("should fail because the Istio TLS Secrets ManagedResource doesn't become healthy", func() {
+					fakeOps.MaxAttempts = 2
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceSNI.Name,
+							Namespace:  expectedManagedResourceSNI.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceTLSSecrets.Name,
+							Namespace:  expectedManagedResourceTLSSecrets.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionFalse,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionFalse,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+				})
+
+				It("should successfully wait for the managed resource to become healthy", func() {
+					fakeOps.MaxAttempts = 2
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceSNI.Name,
+							Namespace:  expectedManagedResourceSNI.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       expectedManagedResourceTLSSecrets.Name,
+							Namespace:  expectedManagedResourceTLSSecrets.Namespace,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					})).To(Succeed())
+
+					Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
+				})
+			})
 		})
 	})
 

@@ -414,10 +414,16 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
+		deployKubeAPIServerServiceSNISettings = g.Add(flow.Task{
+			Name:         "Deploying and waiting for Kubernetes API server service SNI settings in the Seed cluster",
 			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up stale Kubernetes API server services in the Seed cluster",
+			Fn:           flow.TaskFn(b.CleanupKubeAPIServerLoadBalancingServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.ShootUsesIstioTLSTermination(),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNISettings),
 		})
 		scaleEtcdAfterRestore = g.Add(flow.Task{
 			Name:         "Scaling main and events etcd after kube-apiserver is ready",

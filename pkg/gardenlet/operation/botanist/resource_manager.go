@@ -108,7 +108,7 @@ func (b *Botanist) DefaultRuntimeGardenerResourceManager() (resourcemanager.Inte
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SystemComponentTolerations:           gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 		PodKubeAPIServerLoadBalancingWebhook: resourcemanager.PodKubeAPIServerLoadBalancingWebhook{
-			Enabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			Enabled: true,
 			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
 				{
 					NamespaceSelector: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},

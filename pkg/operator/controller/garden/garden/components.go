@@ -120,7 +120,7 @@ type components struct {
 	etcdMain                             etcd.Interface
 	etcdEvents                           etcd.Interface
 	kubeAPIServerService                 component.DeployWaiter
-	kubeAPIServerSNI                     component.Deployer
+	kubeAPIServerSNI                     component.DeployWaiter
 	kubeAPIServer                        kubeapiserver.Interface
 	kubeControllerManager                kubecontrollermanager.Interface
 	virtualGardenGardenerResourceManager resourcemanager.Interface
@@ -408,7 +408,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		SecretNameServerCA:                        operatorv1alpha1.SecretNameCARuntime,
 		Zones:                                     garden.Spec.RuntimeCluster.Provider.Zones,
 		PodKubeAPIServerLoadBalancingWebhook: resourcemanager.PodKubeAPIServerLoadBalancingWebhook{
-			Enabled: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			Enabled: true,
 			Configs: []resourcemanager.PodKubeAPIServerLoadBalancingWebhookConfig{
 				{
 					NamespaceSelector: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot},
@@ -608,8 +608,6 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 		deployer = append(deployer, mutualTLSService)
 		deployer = append(deployer, upgradeService)
-	} else {
-		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
 
 	return component.OpWait(deployer...), nil
@@ -938,7 +936,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 	)
 }
 
-func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
 	var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
 
 	if len(ingressGatewayValues) != 1 {
