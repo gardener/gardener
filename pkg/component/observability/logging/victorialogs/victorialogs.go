@@ -185,10 +185,10 @@ func (v *victoriaLogs) vlSingle() *victoriametricsv1.VLSingle {
 					},
 				},
 			},
-			// This annotation tells the VictoriaMetrics operator not to attempt PVC resizing itself
+			// This annotation tells the VictoriaMetrics operator not to attempt resizing the PVC itself,
 			// if the CR's storage field is mutated. PVC resizing is instead owned by the dedicated
-			// pvc-autoscaler component. If pvc-autoscaler gets disabled and you want to resize the PVC
-			// via the operator again, you'd have to remove this annotation and modify the storage field.
+			// pvc-autoscaler component. If pvc-autoscaler gets disabled, the PVC will not be resized
+			// to the storage size specified in the VLSingle CR as long as this annotation is still present.
 			StorageMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 				Annotations: map[string]string{
 					"operator.victoriametrics.com/pvc-allow-volume-expansion": "false",
@@ -282,7 +282,7 @@ func (v *victoriaLogs) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscal
 					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
 						UtilizationThresholdPercent: new(70),
 						StepPercent:                 new(10),
-						MinStepAbsolute:             new(resource.MustParse("1Gi")),
+						MinStepAbsolute:             new(resource.MustParse("2Gi")),
 					},
 				},
 			},
