@@ -27,12 +27,12 @@ func ValidateControllerInstallation(controllerInstallation *core.ControllerInsta
 }
 
 // ValidateControllerInstallationUpdate validates a ControllerInstallation object before an update.
-func ValidateControllerInstallationUpdate(new, old *core.ControllerInstallation) field.ErrorList {
+func ValidateControllerInstallationUpdate(newControllerInstallation, oldControllerInstallation *core.ControllerInstallation) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateControllerInstallationSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateControllerInstallation(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newControllerInstallation.ObjectMeta, &oldControllerInstallation.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateControllerInstallationSpecUpdate(&newControllerInstallation.Spec, &oldControllerInstallation.Spec, newControllerInstallation.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateControllerInstallation(newControllerInstallation)...)
 
 	return allErrs
 }
@@ -69,25 +69,25 @@ func ValidateControllerInstallationSpec(spec *core.ControllerInstallationSpec, f
 }
 
 // ValidateControllerInstallationSpecUpdate validates the spec of a ControllerInstallation object before an update.
-func ValidateControllerInstallationSpecUpdate(new, old *core.ControllerInstallationSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateControllerInstallationSpecUpdate(newSpec, oldSpec *core.ControllerInstallationSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update controller installation spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RegistrationRef.Name, old.RegistrationRef.Name, fldPath.Child("registrationRef", "name"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.RegistrationRef.Name, oldSpec.RegistrationRef.Name, fldPath.Child("registrationRef", "name"))...)
 
-	if old.SeedRef != nil && new.SeedRef != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.SeedRef.Name, old.SeedRef.Name, fldPath.Child("seedRef", "name"))...)
+	if oldSpec.SeedRef != nil && newSpec.SeedRef != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SeedRef.Name, oldSpec.SeedRef.Name, fldPath.Child("seedRef", "name"))...)
 	}
 
-	if old.ShootRef == nil || new.ShootRef == nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ShootRef, old.ShootRef, fldPath.Child("shootRef"))...)
-	} else if new.ShootRef != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ShootRef.Name, old.ShootRef.Name, fldPath.Child("shootRef", "name"))...)
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ShootRef.Namespace, old.ShootRef.Namespace, fldPath.Child("shootRef", "namespace"))...)
+	if oldSpec.ShootRef == nil || newSpec.ShootRef == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootRef, oldSpec.ShootRef, fldPath.Child("shootRef"))...)
+	} else if newSpec.ShootRef != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootRef.Name, oldSpec.ShootRef.Name, fldPath.Child("shootRef", "name"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootRef.Namespace, oldSpec.ShootRef.Namespace, fldPath.Child("shootRef", "namespace"))...)
 	}
 
 	return allErrs

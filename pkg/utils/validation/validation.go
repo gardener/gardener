@@ -13,24 +13,24 @@ import (
 )
 
 // ShouldEnforceImmutability compares the given slices and returns if a immutability should be enforced.
-// It mainly checks if the order of the same elements in `new` and `old` is the same, i.e. only an addition
-// of elements to `new` is allowed.
-func ShouldEnforceImmutability(new, old []string) bool {
-	sizeDelta := len(new) - len(old)
+// It mainly checks if the order of the same elements in `newValues` and `oldValues` is the same, i.e. only an addition
+// of elements to `newValues` is allowed.
+func ShouldEnforceImmutability(newValues, oldValues []string) bool {
+	sizeDelta := len(newValues) - len(oldValues)
 	if sizeDelta > 0 {
-		newA := new[:len(new)-sizeDelta]
-		if equal(newA, old) {
+		newA := newValues[:len(newValues)-sizeDelta]
+		if equal(newA, oldValues) {
 			return false
 		}
 
-		return ShouldEnforceImmutability(newA, old)
+		return ShouldEnforceImmutability(newA, oldValues)
 	}
 	return sizeDelta < 0 || sizeDelta == 0
 }
 
-func equal(new, old []string) bool {
-	for i := range new {
-		if new[i] != old[i] {
+func equal(newValues, oldValues []string) bool {
+	for i := range newValues {
+		if newValues[i] != oldValues[i] {
 			return false
 		}
 	}

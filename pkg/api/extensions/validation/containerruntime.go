@@ -26,12 +26,12 @@ func ValidateContainerRuntime(cr *extensionsv1alpha1.ContainerRuntime) field.Err
 }
 
 // ValidateContainerRuntimeUpdate validates a ContainerRuntime object before an update.
-func ValidateContainerRuntimeUpdate(new, old *extensionsv1alpha1.ContainerRuntime) field.ErrorList {
+func ValidateContainerRuntimeUpdate(newContainerRuntime, oldContainerRuntime *extensionsv1alpha1.ContainerRuntime) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateContainerRuntimeSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateContainerRuntime(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newContainerRuntime.ObjectMeta, &oldContainerRuntime.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateContainerRuntimeSpecUpdate(&newContainerRuntime.Spec, &oldContainerRuntime.Spec, newContainerRuntime.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateContainerRuntime(newContainerRuntime)...)
 
 	return allErrs
 }
@@ -56,16 +56,16 @@ func ValidateContainerRuntimeSpec(spec *extensionsv1alpha1.ContainerRuntimeSpec,
 }
 
 // ValidateContainerRuntimeSpecUpdate validates the spec of a ContainerRuntime object before an update.
-func ValidateContainerRuntimeSpecUpdate(new, old *extensionsv1alpha1.ContainerRuntimeSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateContainerRuntimeSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.ContainerRuntimeSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update container runtime spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.WorkerPool.Name, old.WorkerPool.Name, fldPath.Child("workerPool", "name"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.WorkerPool.Name, oldSpec.WorkerPool.Name, fldPath.Child("workerPool", "name"))...)
 
 	return allErrs
 }

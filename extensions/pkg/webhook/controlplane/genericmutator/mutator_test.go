@@ -136,8 +136,8 @@ var _ = Describe("Mutator", func() {
 			newObj = nil
 		})
 
-		DescribeTable("Should ignore", func(new, old client.Object) {
-			err := mutator.Mutate(context.Background(), new, old)
+		DescribeTable("Should ignore", func(newObj, oldObj client.Object) {
+			err := mutator.Mutate(context.Background(), newObj, oldObj)
 			Expect(err).To(Not(HaveOccurred()))
 		},
 			Entry(

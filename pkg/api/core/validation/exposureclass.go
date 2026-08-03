@@ -43,10 +43,10 @@ func ValidateExposureClass(exposureClass *core.ExposureClass) field.ErrorList {
 }
 
 // ValidateExposureClassUpdate validates a ExposureClass object before an update.
-func ValidateExposureClassUpdate(new, old *core.ExposureClass) field.ErrorList {
+func ValidateExposureClassUpdate(newExposureClass, oldExposureClass *core.ExposureClass) field.ErrorList {
 	var allErrs = field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(old.Handler, new.Handler, field.NewPath("handler"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(old.Scheduling, new.Scheduling, field.NewPath("scheduling"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldExposureClass.Handler, newExposureClass.Handler, field.NewPath("handler"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldExposureClass.Scheduling, newExposureClass.Scheduling, field.NewPath("scheduling"))...)
 	return allErrs
 }

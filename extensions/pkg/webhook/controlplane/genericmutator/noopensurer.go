@@ -69,8 +69,8 @@ func (e *NoopEnsurer) EnsureVPNSeedServerStatefulSet(_ context.Context, _ extens
 }
 
 // EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-func (e *NoopEnsurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, new, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
-	return new, nil
+func (e *NoopEnsurer) EnsureKubeletServiceUnitOptions(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, newUnitOptions, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
+	return newUnitOptions, nil
 }
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.

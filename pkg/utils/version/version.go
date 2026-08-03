@@ -121,15 +121,15 @@ func (r *VersionRange) SupportedVersionRange() string {
 }
 
 // CheckIfMinorVersionUpdate checks if the new version is a minor version update to the old version.
-func CheckIfMinorVersionUpdate(old, new string) (bool, error) {
-	oldVersion, err := semver.NewVersion(Normalize(old))
+func CheckIfMinorVersionUpdate(oldVersion, newVersion string) (bool, error) {
+	oldSemVer, err := semver.NewVersion(Normalize(oldVersion))
 	if err != nil {
-		return false, fmt.Errorf("failed to parse old version %s: %w", old, err)
+		return false, fmt.Errorf("failed to parse old version %s: %w", oldVersion, err)
 	}
-	newVersion, err := semver.NewVersion(Normalize(new))
+	newSemVer, err := semver.NewVersion(Normalize(newVersion))
 	if err != nil {
-		return false, fmt.Errorf("failed to parse new version %s: %w", new, err)
+		return false, fmt.Errorf("failed to parse new version %s: %w", newVersion, err)
 	}
 
-	return oldVersion.Minor() != newVersion.Minor(), nil
+	return oldSemVer.Minor() != newSemVer.Minor(), nil
 }
