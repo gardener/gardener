@@ -414,6 +414,8 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		allErrs = append(allErrs, validateDNS1123Label(*spec.SchedulerName, fldPath.Child("schedulerName"))...)
 	}
 
+	allErrs = append(allErrs, validateControlPlaneZones(spec.ControlPlane, fldPath.Child("controlPlane"))...)
+
 	return allErrs
 }
 
@@ -428,6 +430,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, newSpec.CloudProfileName, newSpec.Kubernetes.Version, fldPath)...)
+	allErrs = append(allErrs, validateControlPlaneZonesUpdate(newSpec.ControlPlane, oldSpec.ControlPlane, fldPath.Child("controlPlane"))...)
 
 	if oldSpec.CredentialsBindingName != nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) == 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "the field cannot be unset"))
@@ -3724,6 +3727,50 @@ func ValidateShootHAConfigUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot, field.NewPath("spec.controlPlane"))...)
 	return allErrs
+}
+
+func validateControlPlaneZones(controlPlane *core.ControlPlane, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if controlPlane == nil || len(controlPlane.Zones) == 0 {
+		return allErrs
+	}
+
+	usedZones := sets.New[string]()
+	for i, zone := range controlPlane.Zones {
+		if usedZones.Has(zone) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("zones").Index(i), zone))
+		}
+		usedZones.Insert(zone)
+	}
+
+	if controlPlane.HighAvailability != nil &&
+		controlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone &&
+		len(controlPlane.Zones) < 3 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("zones"), controlPlane.Zones, "at least 3 zones must be specified when failure tolerance type is 'zone'"))
+	}
+
+	return allErrs
+}
+
+func validateControlPlaneZonesUpdate(newControlPlane, oldControlPlane *core.ControlPlane, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	oldZones := controlPlaneZones(oldControlPlane)
+	newZones := controlPlaneZones(newControlPlane)
+
+	if !slices.Equal(oldZones, newZones) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("zones"), "field is immutable"))
+	}
+
+	return allErrs
+}
+
+func controlPlaneZones(controlPlane *core.ControlPlane) []string {
+	if controlPlane == nil {
+		return nil
+	}
+	return controlPlane.Zones
 }
 
 func validateSelfHostedShootControlPlane(spec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
