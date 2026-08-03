@@ -66,7 +66,7 @@ type logBackend struct {
 	waitForReady  func(ctx context.Context, f *framework.ShootFramework) error
 }
 
-var _ = Describe("Shoot PVC аutoscaling for logging testing", func() {
+var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 	shootFramework := framework.NewShootFramework(nil)
 
 	var test = func(backend logBackend, fillFunc func(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace string, pvcSize resource.Quantity) error) {
@@ -90,7 +90,9 @@ var _ = Describe("Shoot PVC аutoscaling for logging testing", func() {
 			shootFramework.Logger.Info("Initial PVC size", "backend", backend.name, "pvc", pvcName, "size", initialPVCSize.String())
 
 			By(fmt.Sprintf("Fill %s PVC to %d%% utilization to trigger pvc-autoscaler", backend.name, pvcFillUtilizationPercent))
-			framework.ExpectNoError(fillFunc(ctx, shootFramework, backend, shootNamespace, initialPVCSize))
+			Eventually(func() error {
+				return fillFunc(ctx, shootFramework, backend, shootNamespace, initialPVCSize)
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
 
 			By(fmt.Sprintf("Wait for pvc-autoscaler to grow the %s PVC", backend.name))
 			waitUntilPVCGrows(ctx, seedClient, shootNamespace, backend.pvcLabels, initialPVCSize)
@@ -99,19 +101,20 @@ var _ = Describe("Shoot PVC аutoscaling for logging testing", func() {
 			waitUntilFilesystemExpands(ctx, shootFramework, backend, shootNamespace, initialPVCSize)
 
 			By("Clean up fill files")
-			_, _, err = framework.PodExecByLabel(ctx, shootFramework.SeedClient, shootNamespace, labels.SelectorFromSet(backend.podLabels), backend.containerName,
-				"sh", "-c", fmt.Sprintf("rm -rf %s/fill-capacity", backend.dataDir),
-			)
-			Expect(err).NotTo(HaveOccurred())
-		},
-			pvcAutoscalerTestTimeout,
-			framework.WithCAfterTest(func(ctx context.Context) {
+			Eventually(func() error {
+				_, _, err = framework.PodExecByLabel(ctx, shootFramework.SeedClient, shootNamespace, labels.SelectorFromSet(backend.podLabels), backend.containerName,
+					"sh", "-c", fmt.Sprintf("rm -rf %s/fill-capacity", backend.dataDir),
+				)
+				return err
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+		}, pvcAutoscalerTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+			Eventually(func() error {
 				_, _, err := framework.PodExecByLabel(ctx, shootFramework.SeedClient, shootFramework.ShootSeedNamespace(), labels.SelectorFromSet(backend.podLabels), backend.containerName,
 					"sh", "-c", fmt.Sprintf("rm -rf %s/fill-capacity", backend.dataDir),
 				)
-				Expect(err).NotTo(HaveOccurred())
-			}, pvcAutoscalerCleanupTimeout),
-		)
+				return err
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+		}, pvcAutoscalerCleanupTimeout))
 	}
 
 	framework.CBeforeEach(func(ctx context.Context) {
@@ -123,14 +126,7 @@ var _ = Describe("Shoot PVC аutoscaling for logging testing", func() {
 		checkRequiredResources(ctx, shootFramework.SeedClient)
 
 		By("Verify pvc-autoscaler is running in the seed garden namespace")
-		framework.ExpectNoError(
-			shootFramework.WaitUntilDeploymentIsReady(
-				ctx,
-				v1beta1constants.DeploymentNamePVCAutoscaler,
-				v1beta1constants.GardenNamespace,
-				shootFramework.SeedClient,
-			),
-		)
+		framework.ExpectNoError(shootFramework.WaitUntilDeploymentIsReady(ctx, v1beta1constants.DeploymentNamePVCAutoscaler, v1beta1constants.GardenNamespace, shootFramework.SeedClient))
 	}, pvcAutoscalerInitializationTimeout)
 
 	// TODO(plkokanov): Remove the Vali backend test once the `RemoveVali` featuregate has been promoted to GA.
@@ -145,6 +141,7 @@ func fillCapacity(ctx context.Context, f *framework.ShootFramework, backend logB
 		"mkdir -p %s/fill-capacity && dd if=/dev/zero of=%s/fill-capacity/fill bs=1M count=%d",
 		backend.dataDir, backend.dataDir, fillMiB,
 	)
+
 	_, _, err := framework.PodExecByLabel(ctx, f.SeedClient, shootNamespace,
 		labels.SelectorFromSet(backend.podLabels), backend.containerName,
 		"sh", "-c", script,
@@ -216,7 +213,7 @@ func getSizeOfFirstPVC(ctx context.Context, c client.Client, namespace string, m
 }
 
 func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace string, initialPVCSize resource.Quantity) {
-	Eventually(ctx, func(g Gomega) {
+	Eventually(func(g Gomega) {
 		stdout, _, err := framework.PodExecByLabel(ctx, f.SeedClient, shootNamespace, labels.SelectorFromSet(backend.podLabels), backend.containerName,
 			"df", "-B1", backend.dataDir,
 		)
@@ -239,13 +236,13 @@ func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework
 		initialBytes := initialPVCSize.Value()
 		f.Logger.Info("Filesystem size observed in pod", "backend", backend.name, "fsBytes", fsBytes, "initialBytes", initialBytes)
 		g.Expect(fsBytes).To(BeNumerically(">", initialBytes), "filesystem not yet expanded (observed: %d B, initial: %d B)", fsBytes, initialBytes)
-	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).Should(Succeed())
+	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).WithContext(ctx).Should(Succeed())
 }
 
 func waitUntilPVCGrows(ctx context.Context, c client.Client, namespace string, matchLabels map[string]string, initialSize resource.Quantity) {
-	Eventually(ctx, func(g Gomega) {
+	Eventually(func(g Gomega) {
 		currentSize, _, err := getSizeOfFirstPVC(ctx, c, namespace, matchLabels)
 		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(currentSize.Cmp(initialSize)).To(BeNumerically(">", 0), "PVC has not grown yet (current: %s, initial: %s)", currentSize.String(), initialSize.String())
-	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).Should(Succeed())
+		g.Expect(currentSize.Value()).To(BeNumerically(">", initialSize.Value()), "PVC has not grown yet (current: %s, initial: %s)", currentSize.String(), initialSize.String())
+	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).WithContext(ctx).Should(Succeed())
 }
