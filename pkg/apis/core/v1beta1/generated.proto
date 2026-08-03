@@ -3279,15 +3279,15 @@ message SeedStatus {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 8;
 
+  // LastOperation holds information about the last operation on the Seed.
+  // +optional
+  optional LastOperation lastOperation = 9;
+
   // Constraints represents conditions of a Seed's current state that constraint some operations on it.
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
   repeated Condition constraints = 10;
-
-  // LastOperation holds information about the last operation on the Seed.
-  // +optional
-  optional LastOperation lastOperation = 9;
 }
 
 // SeedTaint describes a taint on a seed.
