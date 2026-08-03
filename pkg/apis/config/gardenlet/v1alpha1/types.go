@@ -566,7 +566,7 @@ type Logging struct {
 type ServerConfiguration struct {
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	// +optional
-	HealthProbes *HealthProbesServer `json:"healthProbes,omitempty"`
+	HealthProbes *HealthProbes `json:"healthProbes,omitempty"`
 	// Metrics is the configuration for serving the metrics endpoint.
 	// +optional
 	Metrics *Server `json:"metrics,omitempty"`
@@ -580,15 +580,15 @@ type Server struct {
 	Port int `json:"port"`
 }
 
-// HealthProbesServer contains information for the health probes server configuration.
-type HealthProbesServer struct {
+// HealthProbes contains information for the health probes server configuration.
+type HealthProbes struct {
 	// Enable controls whether the Kubernetes liveness and readiness probes are added to the gardenlet deployment.
 	// It doesn't actually enable or disable the endpoints themself.
 	// Defaults to true. Can be set to false to prevent the probes from restarting the process while a debugger is attached.
 	// +optional
 	Enable *bool `json:"enable,omitempty"`
 	// Server config containing BindAddress and Port
-	Server Server
+	Server Server `json:"server"`
 }
 
 // SNI contains an optional configuration for the SNI settings used

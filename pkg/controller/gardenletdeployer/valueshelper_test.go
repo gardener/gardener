@@ -77,7 +77,7 @@ var _ = Describe("ValuesHelper", func() {
 				},
 			},
 			Server: gardenletconfigv1alpha1.ServerConfiguration{
-				HealthProbes: &gardenletconfigv1alpha1.HealthProbesServer{
+				HealthProbes: &gardenletconfigv1alpha1.HealthProbes{
 					Server: gardenletconfigv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        2728,
@@ -178,7 +178,7 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 				Server: gardenletconfigv1alpha1.ServerConfiguration{
-					HealthProbes: &gardenletconfigv1alpha1.HealthProbesServer{
+					HealthProbes: &gardenletconfigv1alpha1.HealthProbes{
 						Server: gardenletconfigv1alpha1.Server{
 							BindAddress: "0.0.0.0",
 							Port:        2728,
@@ -237,8 +237,10 @@ var _ = Describe("ValuesHelper", func() {
 					},
 					"server": map[string]any{
 						"healthProbes": map[string]any{
-							"bindAddress": "0.0.0.0",
-							"port":        float64(2728),
+							"server": map[string]any{
+								"bindAddress": "0.0.0.0",
+								"port":        float64(2728),
+							},
 						},
 						"metrics": map[string]any{
 							"bindAddress": "0.0.0.0",

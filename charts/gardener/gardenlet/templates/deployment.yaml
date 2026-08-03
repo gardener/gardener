@@ -116,14 +116,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
+            port: {{ required ".Values.config.server.healthProbes.server.port is required" .Values.config.server.healthProbes.server.port }}
             scheme: HTTP
           initialDelaySeconds: 15
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /readyz
-            port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
+            port: {{ required ".Values.config.server.healthProbes.server.port is required" .Values.config.server.healthProbes.server.port }}
             scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5
