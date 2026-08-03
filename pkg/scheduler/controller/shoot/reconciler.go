@@ -294,10 +294,22 @@ func filterSeedsForZoneSelection(seedList []gardencorev1beta1.Seed, shoot *garde
 		return seedList, nil
 	}
 
-	var (
-		shootZones    = allShootZones(shoot.Spec.Provider.Workers)
-		matchingSeeds []gardencorev1beta1.Seed
-	)
+	shootZones, explicit := controlPlaneZoneHints(shoot)
+
+	if explicit {
+		var eligibleSeeds []gardencorev1beta1.Seed
+		for _, seed := range seedList {
+			if sets.New(seed.Spec.Provider.Zones...).HasAll(shootZones...) {
+				eligibleSeeds = append(eligibleSeeds, seed)
+			}
+		}
+		if len(eligibleSeeds) == 0 {
+			return nil, fmt.Errorf("none of the %d seeds contains all requested control plane zones %v", len(seedList), shootZones)
+		}
+		return eligibleSeeds, nil
+	}
+
+	var matchingSeeds []gardencorev1beta1.Seed
 
 	// First pass: exclude `Enforce` seeds that have no zone overlap with the shoot's worker pools.
 	for _, seed := range seedList {
@@ -334,6 +346,15 @@ func filterSeedsForZoneSelection(seedList []gardencorev1beta1.Seed, shoot *garde
 	}
 
 	return matchingSeeds, nil
+}
+
+// controlPlaneZoneHints returns the shoot's explicit control plane zones when set,
+// otherwise falls back to worker-pool zones.
+func controlPlaneZoneHints(shoot *gardencorev1beta1.Shoot) (zones []string, explicit bool) {
+	if shoot.Spec.ControlPlane != nil && len(shoot.Spec.ControlPlane.Zones) > 0 {
+		return shoot.Spec.ControlPlane.Zones, true
+	}
+	return allShootZones(shoot.Spec.Provider.Workers), false
 }
 
 func allShootZones(workerPools []gardencorev1beta1.Worker) []string {
