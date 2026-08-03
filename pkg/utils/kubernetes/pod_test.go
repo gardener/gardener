@@ -27,7 +27,6 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -468,7 +467,7 @@ var _ = Describe("Pod Utils", func() {
 						Name:      "failed-replicaset-owned",
 						Namespace: "default",
 						OwnerReferences: []metav1.OwnerReference{
-							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: ptr.To(true)},
+							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: new(true)},
 						},
 					},
 					Status: corev1.PodStatus{Phase: "Failed"},
@@ -478,7 +477,7 @@ var _ = Describe("Pod Utils", func() {
 						Name:      "succeeded-replicaset-owned",
 						Namespace: "default",
 						OwnerReferences: []metav1.OwnerReference{
-							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: ptr.To(true)},
+							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: new(true)},
 						},
 					},
 					Status: corev1.PodStatus{Phase: "Succeeded"},
@@ -488,7 +487,7 @@ var _ = Describe("Pod Utils", func() {
 						Name:      "failed-job-owned",
 						Namespace: "default",
 						OwnerReferences: []metav1.OwnerReference{
-							{APIVersion: "batch/v1", Kind: "Job", Name: "foo", Controller: ptr.To(true)},
+							{APIVersion: "batch/v1", Kind: "Job", Name: "foo", Controller: new(true)},
 						},
 					},
 					Status: corev1.PodStatus{Phase: "Failed"},
