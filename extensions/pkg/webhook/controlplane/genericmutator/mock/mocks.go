@@ -49,157 +49,157 @@ func (m *MockEnsurer) EXPECT() *MockEnsurerMockRecorder {
 }
 
 // EnsureAdditionalFiles mocks base method.
-func (m *MockEnsurer) EnsureAdditionalFiles(ctx context.Context, gctx context0.GardenContext, new, old *[]v1alpha10.File) error {
+func (m *MockEnsurer) EnsureAdditionalFiles(ctx context.Context, gctx context0.GardenContext, newFiles, oldFiles *[]v1alpha10.File) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureAdditionalFiles", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureAdditionalFiles", ctx, gctx, newFiles, oldFiles)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureAdditionalFiles indicates an expected call of EnsureAdditionalFiles.
-func (mr *MockEnsurerMockRecorder) EnsureAdditionalFiles(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureAdditionalFiles(ctx, gctx, newFiles, oldFiles any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalFiles", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalFiles), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalFiles", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalFiles), ctx, gctx, newFiles, oldFiles)
 }
 
 // EnsureAdditionalProvisionFiles mocks base method.
-func (m *MockEnsurer) EnsureAdditionalProvisionFiles(ctx context.Context, gctx context0.GardenContext, new, old *[]v1alpha10.File) error {
+func (m *MockEnsurer) EnsureAdditionalProvisionFiles(ctx context.Context, gctx context0.GardenContext, newFiles, oldFiles *[]v1alpha10.File) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureAdditionalProvisionFiles", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureAdditionalProvisionFiles", ctx, gctx, newFiles, oldFiles)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureAdditionalProvisionFiles indicates an expected call of EnsureAdditionalProvisionFiles.
-func (mr *MockEnsurerMockRecorder) EnsureAdditionalProvisionFiles(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureAdditionalProvisionFiles(ctx, gctx, newFiles, oldFiles any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalProvisionFiles", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalProvisionFiles), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalProvisionFiles", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalProvisionFiles), ctx, gctx, newFiles, oldFiles)
 }
 
 // EnsureAdditionalProvisionUnits mocks base method.
-func (m *MockEnsurer) EnsureAdditionalProvisionUnits(ctx context.Context, gctx context0.GardenContext, new, old *[]v1alpha10.Unit) error {
+func (m *MockEnsurer) EnsureAdditionalProvisionUnits(ctx context.Context, gctx context0.GardenContext, newUnits, oldUnits *[]v1alpha10.Unit) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureAdditionalProvisionUnits", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureAdditionalProvisionUnits", ctx, gctx, newUnits, oldUnits)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureAdditionalProvisionUnits indicates an expected call of EnsureAdditionalProvisionUnits.
-func (mr *MockEnsurerMockRecorder) EnsureAdditionalProvisionUnits(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureAdditionalProvisionUnits(ctx, gctx, newUnits, oldUnits any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalProvisionUnits", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalProvisionUnits), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalProvisionUnits", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalProvisionUnits), ctx, gctx, newUnits, oldUnits)
 }
 
 // EnsureAdditionalUnits mocks base method.
-func (m *MockEnsurer) EnsureAdditionalUnits(ctx context.Context, gctx context0.GardenContext, new, old *[]v1alpha10.Unit) error {
+func (m *MockEnsurer) EnsureAdditionalUnits(ctx context.Context, gctx context0.GardenContext, newUnits, oldUnits *[]v1alpha10.Unit) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureAdditionalUnits", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureAdditionalUnits", ctx, gctx, newUnits, oldUnits)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureAdditionalUnits indicates an expected call of EnsureAdditionalUnits.
-func (mr *MockEnsurerMockRecorder) EnsureAdditionalUnits(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureAdditionalUnits(ctx, gctx, newUnits, oldUnits any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalUnits", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalUnits), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalUnits", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalUnits), ctx, gctx, newUnits, oldUnits)
 }
 
 // EnsureCRIConfig mocks base method.
-func (m *MockEnsurer) EnsureCRIConfig(ctx context.Context, gctx context0.GardenContext, new, old *v1alpha10.CRIConfig) error {
+func (m *MockEnsurer) EnsureCRIConfig(ctx context.Context, gctx context0.GardenContext, newCRIConfig, oldCRIConfig *v1alpha10.CRIConfig) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureCRIConfig", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureCRIConfig", ctx, gctx, newCRIConfig, oldCRIConfig)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureCRIConfig indicates an expected call of EnsureCRIConfig.
-func (mr *MockEnsurerMockRecorder) EnsureCRIConfig(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureCRIConfig(ctx, gctx, newCRIConfig, oldCRIConfig any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureCRIConfig", reflect.TypeOf((*MockEnsurer)(nil).EnsureCRIConfig), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureCRIConfig", reflect.TypeOf((*MockEnsurer)(nil).EnsureCRIConfig), ctx, gctx, newCRIConfig, oldCRIConfig)
 }
 
 // EnsureClusterAutoscalerDeployment mocks base method.
-func (m *MockEnsurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureClusterAutoscalerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureClusterAutoscalerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureClusterAutoscalerDeployment indicates an expected call of EnsureClusterAutoscalerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureClusterAutoscalerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureClusterAutoscalerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureClusterAutoscalerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureClusterAutoscalerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureClusterAutoscalerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureClusterAutoscalerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureETCD mocks base method.
-func (m *MockEnsurer) EnsureETCD(ctx context.Context, gctx context0.GardenContext, new, old *v1alpha1.Etcd) error {
+func (m *MockEnsurer) EnsureETCD(ctx context.Context, gctx context0.GardenContext, newEtcd, oldEtcd *v1alpha1.Etcd) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureETCD", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureETCD", ctx, gctx, newEtcd, oldEtcd)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureETCD indicates an expected call of EnsureETCD.
-func (mr *MockEnsurerMockRecorder) EnsureETCD(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureETCD(ctx, gctx, newEtcd, oldEtcd any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureETCD", reflect.TypeOf((*MockEnsurer)(nil).EnsureETCD), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureETCD", reflect.TypeOf((*MockEnsurer)(nil).EnsureETCD), ctx, gctx, newEtcd, oldEtcd)
 }
 
 // EnsureGardenerResourceManagerDeployment mocks base method.
-func (m *MockEnsurer) EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureGardenerResourceManagerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureGardenerResourceManagerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureGardenerResourceManagerDeployment indicates an expected call of EnsureGardenerResourceManagerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureGardenerResourceManagerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureGardenerResourceManagerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureGardenerResourceManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureGardenerResourceManagerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureGardenerResourceManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureGardenerResourceManagerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureKubeAPIServerDeployment mocks base method.
-func (m *MockEnsurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeAPIServerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureKubeAPIServerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubeAPIServerDeployment indicates an expected call of EnsureKubeAPIServerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureKubeAPIServerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeAPIServerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeAPIServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeAPIServerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeAPIServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeAPIServerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureKubeControllerManagerDeployment mocks base method.
-func (m *MockEnsurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureKubeControllerManagerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeControllerManagerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureKubeControllerManagerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubeControllerManagerDeployment indicates an expected call of EnsureKubeControllerManagerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureKubeControllerManagerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeControllerManagerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeControllerManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeControllerManagerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeControllerManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeControllerManagerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureKubeSchedulerDeployment mocks base method.
-func (m *MockEnsurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeSchedulerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureKubeSchedulerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubeSchedulerDeployment indicates an expected call of EnsureKubeSchedulerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureKubeSchedulerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeSchedulerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeSchedulerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeSchedulerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeSchedulerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeSchedulerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureKubeletCloudProviderConfig mocks base method.
@@ -217,102 +217,102 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeletCloudProviderConfig(ctx, gctx, k
 }
 
 // EnsureKubeletConfiguration mocks base method.
-func (m *MockEnsurer) EnsureKubeletConfiguration(ctx context.Context, gctx context0.GardenContext, kubeletVersion *semver.Version, new, old *v1beta1.KubeletConfiguration) error {
+func (m *MockEnsurer) EnsureKubeletConfiguration(ctx context.Context, gctx context0.GardenContext, kubeletVersion *semver.Version, newKubeletConfig, oldKubeletConfig *v1beta1.KubeletConfiguration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeletConfiguration", ctx, gctx, kubeletVersion, new, old)
+	ret := m.ctrl.Call(m, "EnsureKubeletConfiguration", ctx, gctx, kubeletVersion, newKubeletConfig, oldKubeletConfig)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubeletConfiguration indicates an expected call of EnsureKubeletConfiguration.
-func (mr *MockEnsurerMockRecorder) EnsureKubeletConfiguration(ctx, gctx, kubeletVersion, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeletConfiguration(ctx, gctx, kubeletVersion, newKubeletConfig, oldKubeletConfig any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletConfiguration), ctx, gctx, kubeletVersion, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletConfiguration), ctx, gctx, kubeletVersion, newKubeletConfig, oldKubeletConfig)
 }
 
 // EnsureKubeletServiceUnitOptions mocks base method.
-func (m *MockEnsurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx context0.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error) {
+func (m *MockEnsurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx context0.GardenContext, kubeletVersion *semver.Version, newUnitOptions, oldUnitOptions []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeletServiceUnitOptions", ctx, gctx, kubeletVersion, new, old)
+	ret := m.ctrl.Call(m, "EnsureKubeletServiceUnitOptions", ctx, gctx, kubeletVersion, newUnitOptions, oldUnitOptions)
 	ret0, _ := ret[0].([]*unit.UnitOption)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureKubeletServiceUnitOptions indicates an expected call of EnsureKubeletServiceUnitOptions.
-func (mr *MockEnsurerMockRecorder) EnsureKubeletServiceUnitOptions(ctx, gctx, kubeletVersion, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeletServiceUnitOptions(ctx, gctx, kubeletVersion, newUnitOptions, oldUnitOptions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletServiceUnitOptions", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletServiceUnitOptions), ctx, gctx, kubeletVersion, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletServiceUnitOptions", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletServiceUnitOptions), ctx, gctx, kubeletVersion, newUnitOptions, oldUnitOptions)
 }
 
 // EnsureKubernetesGeneralConfiguration mocks base method.
-func (m *MockEnsurer) EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx context0.GardenContext, new, old *string) error {
+func (m *MockEnsurer) EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx context0.GardenContext, newData, oldData *string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubernetesGeneralConfiguration", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureKubernetesGeneralConfiguration", ctx, gctx, newData, oldData)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubernetesGeneralConfiguration indicates an expected call of EnsureKubernetesGeneralConfiguration.
-func (mr *MockEnsurerMockRecorder) EnsureKubernetesGeneralConfiguration(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubernetesGeneralConfiguration(ctx, gctx, newData, oldData any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubernetesGeneralConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubernetesGeneralConfiguration), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubernetesGeneralConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubernetesGeneralConfiguration), ctx, gctx, newData, oldData)
 }
 
 // EnsureMachineControllerManagerDeployment mocks base method.
-func (m *MockEnsurer) EnsureMachineControllerManagerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureMachineControllerManagerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureMachineControllerManagerDeployment indicates an expected call of EnsureMachineControllerManagerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureMachineControllerManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureMachineControllerManagerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureMachineControllerManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureMachineControllerManagerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureMachineControllerManagerVPA mocks base method.
-func (m *MockEnsurer) EnsureMachineControllerManagerVPA(ctx context.Context, gctx context0.GardenContext, new, old *v10.VerticalPodAutoscaler) error {
+func (m *MockEnsurer) EnsureMachineControllerManagerVPA(ctx context.Context, gctx context0.GardenContext, newVPA, oldVPA *v10.VerticalPodAutoscaler) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerVPA", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerVPA", ctx, gctx, newVPA, oldVPA)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureMachineControllerManagerVPA indicates an expected call of EnsureMachineControllerManagerVPA.
-func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerVPA(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerVPA(ctx, gctx, newVPA, oldVPA any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureMachineControllerManagerVPA", reflect.TypeOf((*MockEnsurer)(nil).EnsureMachineControllerManagerVPA), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureMachineControllerManagerVPA", reflect.TypeOf((*MockEnsurer)(nil).EnsureMachineControllerManagerVPA), ctx, gctx, newVPA, oldVPA)
 }
 
 // EnsureVPNSeedServerDeployment mocks base method.
-func (m *MockEnsurer) EnsureVPNSeedServerDeployment(ctx context.Context, gctx context0.GardenContext, new, old *v1.Deployment) error {
+func (m *MockEnsurer) EnsureVPNSeedServerDeployment(ctx context.Context, gctx context0.GardenContext, newDeployment, oldDeployment *v1.Deployment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureVPNSeedServerDeployment", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureVPNSeedServerDeployment", ctx, gctx, newDeployment, oldDeployment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureVPNSeedServerDeployment indicates an expected call of EnsureVPNSeedServerDeployment.
-func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerDeployment(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerDeployment(ctx, gctx, newDeployment, oldDeployment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerDeployment), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerDeployment), ctx, gctx, newDeployment, oldDeployment)
 }
 
 // EnsureVPNSeedServerStatefulSet mocks base method.
-func (m *MockEnsurer) EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx context0.GardenContext, new, old *v1.StatefulSet) error {
+func (m *MockEnsurer) EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx context0.GardenContext, newStatefulSet, oldStatefulSet *v1.StatefulSet) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureVPNSeedServerStatefulSet", ctx, gctx, new, old)
+	ret := m.ctrl.Call(m, "EnsureVPNSeedServerStatefulSet", ctx, gctx, newStatefulSet, oldStatefulSet)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureVPNSeedServerStatefulSet indicates an expected call of EnsureVPNSeedServerStatefulSet.
-func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerStatefulSet(ctx, gctx, new, old any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerStatefulSet(ctx, gctx, newStatefulSet, oldStatefulSet any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerStatefulSet", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerStatefulSet), ctx, gctx, new, old)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerStatefulSet", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerStatefulSet), ctx, gctx, newStatefulSet, oldStatefulSet)
 }
 
 // ShouldProvisionKubeletCloudProviderConfig mocks base method.
