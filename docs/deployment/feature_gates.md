@@ -6,7 +6,7 @@ This page contains an overview of the various feature gates an administrator can
 
 Feature gates are a set of key=value pairs that describe Gardener features. You can turn these features on or off using the component configuration file for a specific component.
 
-Each Gardener component lets you enable or disable a set of feature gates that are relevant to that component. For example, this is the configuration of the [gardenlet](../../example/20-componentconfig-gardenlet.yaml) component.
+Each Gardener component lets you enable or disable a set of feature gates that are relevant to that component. For example, this is the configuration of the [gardenlet](../../example/20-componentconfig-gardenlet.yaml) component. [Configure feature gates](./getting_started_locally.md#configure-feature-gates-optional) provides instructions on configuring feature gates for different Gardener components using the local Gardener setup as an example.
 
 The following tables are a summary of the feature gates that you can set on different Gardener components.
 
