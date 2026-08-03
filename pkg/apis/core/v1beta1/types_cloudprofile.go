@@ -97,6 +97,18 @@ type CloudProfileSpec struct {
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
 	// +optional
 	MachineCapabilities []CapabilityDefinition `json:"machineCapabilities,omitempty" protobuf:"bytes,12,rep,name=machineCapabilities"`
+	// ControlPlane holds settings that control what control-plane-related features shoots
+	// using this CloudProfile may configure.
+	// +optional
+	ControlPlane *CloudProfileControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,13,opt,name=controlPlane"`
+}
+
+// CloudProfileControlPlane holds control-plane-related settings for a CloudProfile.
+type CloudProfileControlPlane struct {
+	// AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin
+	// their control plane to specific seed zones. Only set to true for providers where
+	// zone names are globally consistent across all users of the provider.
+	AllowZonePinning bool `json:"allowZonePinning,omitempty" protobuf:"varint,1,opt,name=allowZonePinning"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile

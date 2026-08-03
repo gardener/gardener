@@ -440,6 +440,10 @@ type ControlPlane struct {
 	// HighAvailability holds the configuration settings for high availability of the
 	// control plane of a shoot.
 	HighAvailability *HighAvailability
+	// Zones is a list of availability zones in which the control plane components should be placed.
+	// Requires the referenced CloudProfile to have spec.controlPlane.allowZonePinning set to true.
+	// This field is immutable once set.
+	Zones []string
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
