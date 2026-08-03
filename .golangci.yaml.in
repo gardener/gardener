@@ -259,13 +259,10 @@ linters:
     misspell:
       mode: restricted # only check comments
     revive:
+      enable-default-rules: true
       rules:
-        - name: context-as-argument
         - name: duplicated-imports
         - name: early-return
-        - name: exported
-        - name: unreachable-code
-        - name: unused-parameter
     custom:
       logcheck:
         path: <<LOGCHECK_PLUGIN_PATH>>/logcheck.so
