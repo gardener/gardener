@@ -303,7 +303,7 @@ func (v *victoriaLogs) getPrometheusLabel() string {
 // the --autoscaler-name flag of the pvc-autoscaler instance running in the cluster where VictoriaLogs is deployed. The
 // empty string denotes the default (unnamed) instance running in seeds.
 func (v *victoriaLogs) getAutoscalerName() string {
-	if v.values.ClusterType == component.ClusterTypeSeed && v.values.IsGardenCluster {
+	if v.values.IsGardenCluster {
 		return garden.Label
 	}
 	return ""
