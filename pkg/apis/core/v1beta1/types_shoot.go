@@ -1479,6 +1479,19 @@ type KubeletConfig struct {
 	// as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.
 	// +optional
 	SingleProcessOOMKill *bool `json:"singleProcessOOMKill,omitempty" protobuf:"varint,30,opt,name=singleProcessOOMKill"`
+	// ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that
+	// already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` field and is only
+	// effective for Kubernetes versions >= 1.35. May be one of {"NeverVerify", "NeverVerifyPreloadedImages",
+	// "NeverVerifyAllowlistedImages", "AlwaysVerify"}. Defaults to "NeverVerifyPreloadedImages" (the kubelet default).
+	// +optional
+	ImagePullCredentialsVerificationPolicy *ImagePullCredentialsVerificationPolicy `json:"imagePullCredentialsVerificationPolicy,omitempty" protobuf:"bytes,31,opt,name=imagePullCredentialsVerificationPolicy,casttype=ImagePullCredentialsVerificationPolicy"`
+	// PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential
+	// re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a
+	// full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It
+	// corresponds to the kubelet's `preloadedImagesVerificationAllowlist` field and is only effective for Kubernetes versions
+	// >= 1.35.
+	// +optional
+	PreloadedImagesVerificationAllowlist []string `json:"preloadedImagesVerificationAllowlist,omitempty" protobuf:"bytes,32,rep,name=preloadedImagesVerificationAllowlist"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1574,6 +1587,25 @@ type MemorySwapConfiguration struct {
 	// +optional
 	SwapBehavior *SwapBehavior `json:"swapBehavior,omitempty" protobuf:"bytes,1,opt,name=swapBehavior"`
 }
+
+// ImagePullCredentialsVerificationPolicy is an enum for the policy that determines how credentials must be verified
+// before a pod is allowed to use an image that is already present on the node.
+type ImagePullCredentialsVerificationPolicy string
+
+const (
+	// NeverVerify never requires credential verification for images that already exist on the node, regardless of
+	// the origin of the image.
+	NeverVerify ImagePullCredentialsVerificationPolicy = "NeverVerify"
+	// NeverVerifyPreloadedImages does not require credential verification for images that were pulled to the node
+	// outside of the kubelet (e.g. preloaded into the image cache during node creation).
+	NeverVerifyPreloadedImages ImagePullCredentialsVerificationPolicy = "NeverVerifyPreloadedImages"
+	// NeverVerifyAllowlistedImages behaves like NeverVerifyPreloadedImages but additionally exempts an explicit
+	// allowlist of images from credential re-verification.
+	NeverVerifyAllowlistedImages ImagePullCredentialsVerificationPolicy = "NeverVerifyAllowlistedImages"
+	// AlwaysVerify requires credential verification for accessing any image already present on the node, regardless
+	// of its origin.
+	AlwaysVerify ImagePullCredentialsVerificationPolicy = "AlwaysVerify"
+)
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {

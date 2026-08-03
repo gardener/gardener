@@ -5066,6 +5066,21 @@ IPFamily is a type for specifying an IP protocol version to use in Gardener clus
 </p>
 
 
+<h3 id="imagepullcredentialsverificationpolicy">ImagePullCredentialsVerificationPolicy
+</h3>
+<p><em>Underlying type: string</em></p>
+
+
+<p>
+(<em>Appears on:</em><a href="#kubeletconfig">KubeletConfig</a>)
+</p>
+
+<p>
+ImagePullCredentialsVerificationPolicy is an enum for the policy that determines how credentials must be verified
+before a pod is allowed to use an image that is already present on the node.
+</p>
+
+
 <h3 id="inplaceupdates">InPlaceUpdates
 </h3>
 
@@ -6139,6 +6154,30 @@ boolean
 <td>
 <em>(Optional)</em>
 <p>SingleProcessOOMKill, if true, will prevent the `memory.oom.group` flag from being set for container<br />cgroups in cgroups v2. This causes processes in the container to be OOM killed individually instead of<br />as a group. It means that if true, the behavior aligns with the behavior of cgroups v1.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imagePullCredentialsVerificationPolicy</code></br>
+<em>
+<a href="#imagepullcredentialsverificationpolicy">ImagePullCredentialsVerificationPolicy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImagePullCredentialsVerificationPolicy determines how credentials should be verified when pulling images that<br />already exist on the node. It corresponds to the kubelet's `imagePullCredentialsVerificationPolicy` field and is only<br />effective for Kubernetes versions >= 1.35. May be one of \{"NeverVerify", "NeverVerifyPreloadedImages",<br />"NeverVerifyAllowlistedImages", "AlwaysVerify"\}. Defaults to "NeverVerifyPreloadedImages" (the kubelet default).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>preloadedImagesVerificationAllowlist</code></br>
+<em>
+string array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PreloadedImagesVerificationAllowlist specifies a list of images that are exempted from credential<br />re-verification for the "NeverVerifyAllowlistedImages" ImagePullCredentialsVerificationPolicy. The list accepts a<br />full path segment wildcard suffix "/*". Only image specs without an image tag or digest must be used. It<br />corresponds to the kubelet's `preloadedImagesVerificationAllowlist` field and is only effective for Kubernetes versions<br />>= 1.35.</p>
 </td>
 </tr>
 

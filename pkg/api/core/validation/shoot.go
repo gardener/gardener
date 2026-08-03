@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	imageref "github.com/distribution/reference"
 	"github.com/go-test/deep"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +64,12 @@ var (
 	availableNginxIngressExternalTrafficPolicies = sets.New(
 		string(corev1.ServiceExternalTrafficPolicyCluster),
 		string(corev1.ServiceExternalTrafficPolicyLocal),
+	)
+	availableImagePullCredentialsVerificationPolicies = sets.New(
+		core.NeverVerify,
+		core.NeverVerifyPreloadedImages,
+		core.NeverVerifyAllowlistedImages,
+		core.AlwaysVerify,
 	)
 	availableShootOperations = sets.New(
 		v1beta1constants.ShootOperationMaintain,
@@ -2583,7 +2590,115 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, kubernetesVersion s
 		}
 	}
 
+	if v := kubeletConfig.ImagePullCredentialsVerificationPolicy; v != nil {
+		path := fldPath.Child("imagePullCredentialsVerificationPolicy")
+
+		if versionutils.ConstraintK8sLess135.CheckVersion(kubernetesVersion) {
+			allErrs = append(allErrs, field.Forbidden(path, "imagePullCredentialsVerificationPolicy is only available for Kubernetes versions >= 1.35"))
+		}
+
+		// imagePullCredentialsVerificationPolicy relies on the KubeletEnsureSecretPulledImages feature gate. The kubelet
+		// fails to start if the policy is configured while the feature gate is explicitly disabled.
+		if enabled, ok := kubeletConfig.FeatureGates["KubeletEnsureSecretPulledImages"]; ok && !enabled {
+			allErrs = append(allErrs, field.Forbidden(path, "imagePullCredentialsVerificationPolicy may not be set when the KubeletEnsureSecretPulledImages feature gate is disabled"))
+		}
+
+		if !availableImagePullCredentialsVerificationPolicies.Has(*v) {
+			allErrs = append(allErrs, field.NotSupported(path, *v, sets.List(availableImagePullCredentialsVerificationPolicies)))
+		}
+	}
+
+	if allowlist := kubeletConfig.PreloadedImagesVerificationAllowlist; allowlist != nil {
+		path := fldPath.Child("preloadedImagesVerificationAllowlist")
+
+		if policy := kubeletConfig.ImagePullCredentialsVerificationPolicy; policy == nil || *policy != core.NeverVerifyAllowlistedImages {
+			allErrs = append(allErrs, field.Forbidden(path, "preloadedImagesVerificationAllowlist may only be set when imagePullCredentialsVerificationPolicy is set to NeverVerifyAllowlistedImages"))
+		} else {
+			for i, pattern := range allowlist {
+				if err := validatePreloadedImagesVerificationAllowlistPattern(pattern); err != nil {
+					allErrs = append(allErrs, field.Invalid(path.Index(i), pattern, err.Error()))
+				}
+			}
+		}
+	}
+
 	return allErrs
+}
+
+// validatePreloadedImagesVerificationAllowlistPattern validates a single entry of the
+// preloadedImagesVerificationAllowlist field. It mirrors the kubelet's validation
+// (https://github.com/kubernetes/kubernetes/blob/v1.35.0/pkg/kubelet/images/pullmanager/image_pull_policies.go):
+// an entry must not have leading/trailing spaces, may only use a `/*` suffix as wildcard, must not be empty, and -
+// unless it is a wildcard - must be an image reference without a tag or digest.
+func validatePreloadedImagesVerificationAllowlistPattern(pattern string) error {
+	if pattern != strings.TrimSpace(pattern) {
+		return fmt.Errorf("leading/trailing spaces are not allowed")
+	}
+
+	trimmedPattern := pattern
+	isWildcard := strings.HasSuffix(pattern, "/*")
+	if isWildcard {
+		trimmedPattern = strings.TrimSuffix(trimmedPattern, "*")
+	}
+
+	if len(trimmedPattern) == 0 {
+		return fmt.Errorf("the supplied pattern is too short")
+	}
+
+	if strings.ContainsRune(trimmedPattern, '*') {
+		return fmt.Errorf("not a valid wildcard pattern, only patterns ending with '/*' are allowed")
+	}
+
+	if isWildcard {
+		if len(trimmedPattern) == 1 {
+			return fmt.Errorf("at least registry hostname is required")
+		}
+		return nil
+	}
+
+	image, err := trimImageTagDigest(trimmedPattern)
+	if err != nil {
+		return fmt.Errorf("failed to parse as an image name: %w", err)
+	}
+	if trimmedPattern != image {
+		return fmt.Errorf("neither tag nor digest is accepted in an image reference")
+	}
+
+	return nil
+}
+
+// trimImageTagDigest trims the digest and tag from an image name. It mirrors the kubelet's implementation.
+func trimImageTagDigest(image string) (string, error) {
+	imageParsed, err := imageref.Parse(image)
+	if err != nil {
+		return "", err
+	}
+
+	var tag, digest string
+	if tagged, ok := imageParsed.(imageref.Tagged); ok {
+		tag = tagged.Tag()
+	}
+	if digested, ok := imageParsed.(imageref.Digested); ok {
+		digest = digested.Digest().String()
+	}
+
+	if len(digest) > 0 {
+		var foundDigest bool
+		image, foundDigest = strings.CutSuffix(image, "@"+digest)
+		if !foundDigest {
+			return "", fmt.Errorf("digest was not specified last, this does not appear to be a valid image spec: %q", image)
+		}
+	}
+
+	if len(tag) > 0 {
+		var tagFound bool
+		image, tagFound = strings.CutSuffix(image, ":"+tag)
+		if !tagFound {
+			return "", fmt.Errorf("tag %q was not specified last (or before the digest), this does not appear to be a valid image spec: %q", tag, image)
+		}
+	}
+
+	return image, nil
 }
 
 func validateKubeletConfigEviction(eviction *core.KubeletConfigEviction, fldPath *field.Path) field.ErrorList {

@@ -119,6 +119,14 @@ func Config(clusterDNSAddresses []string, clusterDomain string, taints []corev1.
 		config.MemorySwap = *params.MemorySwap
 	}
 
+	if params.ImagePullCredentialsVerificationPolicy != nil {
+		config.ImagePullCredentialsVerificationPolicy = *params.ImagePullCredentialsVerificationPolicy
+	}
+
+	if params.PreloadedImagesVerificationAllowlist != nil {
+		config.PreloadedImagesVerificationAllowlist = params.PreloadedImagesVerificationAllowlist
+	}
+
 	if params.WithStaticPodPath {
 		config.StaticPodPath = FilePathKubernetesManifests
 	}

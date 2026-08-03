@@ -22,36 +22,38 @@ func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(_ *gardencorev1beta1.KubeletCon
 
 // ConfigurableKubeletConfigParameters is the set of configurable kubelet config parameters.
 type ConfigurableKubeletConfigParameters struct {
-	ContainerLogMaxSize              *string
-	ContainerLogMaxFiles             *int32
-	CpuCFSQuota                      *bool
-	CpuManagerPolicy                 *string
-	EvictionHard                     map[string]string
-	EvictionMinimumReclaim           map[string]string
-	EvictionSoft                     map[string]string
-	EvictionSoftGracePeriod          map[string]string
-	EvictionPressureTransitionPeriod *metav1.Duration
-	EvictionMaxPodGracePeriod        *int32
-	FailSwapOn                       *bool
-	FeatureGates                     map[string]bool
-	ImageMinimumGCAge                *metav1.Duration
-	ImageMaximumGCAge                *metav1.Duration
-	ImageGCHighThresholdPercent      *int32
-	ImageGCLowThresholdPercent       *int32
-	SeccompDefault                   *bool
-	SerializeImagePulls              *bool
-	StreamingConnectionIdleTimeout   *metav1.Duration
-	RegistryPullQPS                  *int32
-	RegistryBurst                    *int32
-	KubeReserved                     map[string]string
-	MaxPods                          *int32
-	MemorySwap                       *kubeletconfigv1beta1.MemorySwapConfiguration
-	PodPidsLimit                     *int64
-	ProtectKernelDefaults            *bool
-	SystemReserved                   map[string]string
-	WithStaticPodPath                bool
-	MaxParallelImagePulls            *int32
-	SingleProcessOOMKill             *bool
+	ContainerLogMaxSize                    *string
+	ContainerLogMaxFiles                   *int32
+	CpuCFSQuota                            *bool
+	CpuManagerPolicy                       *string
+	EvictionHard                           map[string]string
+	EvictionMinimumReclaim                 map[string]string
+	EvictionSoft                           map[string]string
+	EvictionSoftGracePeriod                map[string]string
+	EvictionPressureTransitionPeriod       *metav1.Duration
+	EvictionMaxPodGracePeriod              *int32
+	FailSwapOn                             *bool
+	FeatureGates                           map[string]bool
+	ImageMinimumGCAge                      *metav1.Duration
+	ImageMaximumGCAge                      *metav1.Duration
+	ImageGCHighThresholdPercent            *int32
+	ImageGCLowThresholdPercent             *int32
+	SeccompDefault                         *bool
+	SerializeImagePulls                    *bool
+	StreamingConnectionIdleTimeout         *metav1.Duration
+	RegistryPullQPS                        *int32
+	RegistryBurst                          *int32
+	KubeReserved                           map[string]string
+	MaxPods                                *int32
+	MemorySwap                             *kubeletconfigv1beta1.MemorySwapConfiguration
+	PodPidsLimit                           *int64
+	ProtectKernelDefaults                  *bool
+	SystemReserved                         map[string]string
+	WithStaticPodPath                      bool
+	MaxParallelImagePulls                  *int32
+	SingleProcessOOMKill                   *bool
+	ImagePullCredentialsVerificationPolicy *kubeletconfigv1beta1.ImagePullCredentialsVerificationPolicy
+	PreloadedImagesVerificationAllowlist   []string
 }
 
 const (
@@ -90,6 +92,10 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.SerializeImagePulls = kubeletConfig.SerializeImagePulls
 		out.MaxParallelImagePulls = kubeletConfig.MaxParallelImagePulls
 		out.SingleProcessOOMKill = kubeletConfig.SingleProcessOOMKill
+		if val := kubeletConfig.ImagePullCredentialsVerificationPolicy; val != nil {
+			out.ImagePullCredentialsVerificationPolicy = new(kubeletconfigv1beta1.ImagePullCredentialsVerificationPolicy(*val))
+		}
+		out.PreloadedImagesVerificationAllowlist = kubeletConfig.PreloadedImagesVerificationAllowlist
 		out.RegistryPullQPS = kubeletConfig.RegistryPullQPS
 		out.RegistryBurst = kubeletConfig.RegistryBurst
 		out.FeatureGates = kubeletConfig.FeatureGates

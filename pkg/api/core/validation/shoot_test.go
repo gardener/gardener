@@ -9942,6 +9942,122 @@ var _ = Describe("Shoot Validation Tests", func() {
 			),
 		)
 
+		DescribeTable("ImagePullCredentialsVerificationPolicy",
+			func(policy *string, featureGates map[string]bool, version string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					KubernetesConfig: core.KubernetesConfig{
+						FeatureGates: featureGates,
+					},
+				}
+				if policy != nil {
+					kubeletConfig.ImagePullCredentialsVerificationPolicy = (*core.ImagePullCredentialsVerificationPolicy)(policy)
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow empty policy", nil, nil, "1.35", BeEmpty()),
+			Entry("should allow NeverVerify on 1.35", new("NeverVerify"), nil, "1.35", BeEmpty()),
+			Entry("should allow NeverVerifyPreloadedImages on 1.35", new("NeverVerifyPreloadedImages"), nil, "1.35", BeEmpty()),
+			Entry("should allow NeverVerifyAllowlistedImages on 1.35", new("NeverVerifyAllowlistedImages"), nil, "1.35", BeEmpty()),
+			Entry("should allow AlwaysVerify on 1.35", new("AlwaysVerify"), nil, "1.35", BeEmpty()),
+			Entry("should allow the policy when the feature gate is explicitly enabled", new("NeverVerify"), map[string]bool{"KubeletEnsureSecretPulledImages": true}, "1.35", BeEmpty()),
+			Entry("should forbid the field on Kubernetes < 1.35", new("NeverVerify"), nil, "1.34", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("imagePullCredentialsVerificationPolicy"),
+					"Detail": Equal("imagePullCredentialsVerificationPolicy is only available for Kubernetes versions >= 1.35"),
+				}))),
+			),
+			Entry("should forbid the policy when the KubeletEnsureSecretPulledImages feature gate is disabled", new("NeverVerify"), map[string]bool{"KubeletEnsureSecretPulledImages": false}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("imagePullCredentialsVerificationPolicy"),
+					"Detail": Equal("imagePullCredentialsVerificationPolicy may not be set when the KubeletEnsureSecretPulledImages feature gate is disabled"),
+				}))),
+			),
+			Entry("should forbid an unsupported value", new("MagicVerify"), nil, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("imagePullCredentialsVerificationPolicy"),
+				}))),
+			),
+		)
+
+		DescribeTable("PreloadedImagesVerificationAllowlist",
+			func(policy *string, allowlist []string, version string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					PreloadedImagesVerificationAllowlist: allowlist,
+				}
+				if policy != nil {
+					kubeletConfig.ImagePullCredentialsVerificationPolicy = (*core.ImagePullCredentialsVerificationPolicy)(policy)
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow an empty allowlist", new("NeverVerifyAllowlistedImages"), nil, "1.35", BeEmpty()),
+			Entry("should allow the allowlist with NeverVerifyAllowlistedImages on 1.35", new("NeverVerifyAllowlistedImages"), []string{"registry.example.com/foo", "registry.example.com/bar/*"}, "1.35", BeEmpty()),
+			Entry("should forbid the policy (and hence the allowlist) on Kubernetes < 1.35", new("NeverVerifyAllowlistedImages"), []string{"registry.example.com/foo"}, "1.34", ContainElement(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("imagePullCredentialsVerificationPolicy"),
+					"Detail": Equal("imagePullCredentialsVerificationPolicy is only available for Kubernetes versions >= 1.35"),
+				}))),
+			),
+			Entry("should forbid the allowlist when policy is not NeverVerifyAllowlistedImages", new("NeverVerifyPreloadedImages"), []string{"registry.example.com/foo"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("preloadedImagesVerificationAllowlist"),
+					"Detail": Equal("preloadedImagesVerificationAllowlist may only be set when imagePullCredentialsVerificationPolicy is set to NeverVerifyAllowlistedImages"),
+				}))),
+			),
+			Entry("should forbid the allowlist when policy is not set", nil, []string{"registry.example.com/foo"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("preloadedImagesVerificationAllowlist"),
+					"Detail": Equal("preloadedImagesVerificationAllowlist may only be set when imagePullCredentialsVerificationPolicy is set to NeverVerifyAllowlistedImages"),
+				}))),
+			),
+			Entry("should forbid an entry with leading/trailing spaces", new("NeverVerifyAllowlistedImages"), []string{" registry.example.com/foo"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("preloadedImagesVerificationAllowlist[0]"),
+					"Detail": Equal("leading/trailing spaces are not allowed"),
+				}))),
+			),
+			Entry("should forbid an empty entry", new("NeverVerifyAllowlistedImages"), []string{""}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("preloadedImagesVerificationAllowlist[0]"),
+					"Detail": Equal("the supplied pattern is too short"),
+				}))),
+			),
+			Entry("should forbid a non-suffix wildcard", new("NeverVerifyAllowlistedImages"), []string{"registry.example.com/*/foo"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("preloadedImagesVerificationAllowlist[0]"),
+					"Detail": Equal("not a valid wildcard pattern, only patterns ending with '/*' are allowed"),
+				}))),
+			),
+			Entry("should forbid a wildcard without a registry hostname", new("NeverVerifyAllowlistedImages"), []string{"/*"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("preloadedImagesVerificationAllowlist[0]"),
+					"Detail": Equal("at least registry hostname is required"),
+				}))),
+			),
+			Entry("should forbid an entry with a tag", new("NeverVerifyAllowlistedImages"), []string{"registry.example.com/foo:latest"}, "1.35", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("preloadedImagesVerificationAllowlist[0]"),
+					"Detail": Equal("neither tag nor digest is accepted in an image reference"),
+				}))),
+			),
+		)
+
 		DescribeTable("EvictionHard & EvictionSoft",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

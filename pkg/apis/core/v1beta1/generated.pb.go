@@ -5710,6 +5710,26 @@ func (m *KubeletConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.PreloadedImagesVerificationAllowlist) > 0 {
+		for iNdEx := len(m.PreloadedImagesVerificationAllowlist) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PreloadedImagesVerificationAllowlist[iNdEx])
+			copy(dAtA[i:], m.PreloadedImagesVerificationAllowlist[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(m.PreloadedImagesVerificationAllowlist[iNdEx])))
+			i--
+			dAtA[i] = 0x2
+			i--
+			dAtA[i] = 0x82
+		}
+	}
+	if m.ImagePullCredentialsVerificationPolicy != nil {
+		i -= len(*m.ImagePullCredentialsVerificationPolicy)
+		copy(dAtA[i:], *m.ImagePullCredentialsVerificationPolicy)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.ImagePullCredentialsVerificationPolicy)))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xfa
+	}
 	if m.SingleProcessOOMKill != nil {
 		i--
 		if *m.SingleProcessOOMKill {
@@ -15631,6 +15651,16 @@ func (m *KubeletConfig) Size() (n int) {
 	if m.SingleProcessOOMKill != nil {
 		n += 3
 	}
+	if m.ImagePullCredentialsVerificationPolicy != nil {
+		l = len(*m.ImagePullCredentialsVerificationPolicy)
+		n += 2 + l + sovGenerated(uint64(l))
+	}
+	if len(m.PreloadedImagesVerificationAllowlist) > 0 {
+		for _, s := range m.PreloadedImagesVerificationAllowlist {
+			l = len(s)
+			n += 2 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -19838,6 +19868,8 @@ func (this *KubeletConfig) String() string {
 		`ImageMinimumGCAge:` + strings.Replace(fmt.Sprintf("%v", this.ImageMinimumGCAge), "Duration", "v11.Duration", 1) + `,`,
 		`ImageMaximumGCAge:` + strings.Replace(fmt.Sprintf("%v", this.ImageMaximumGCAge), "Duration", "v11.Duration", 1) + `,`,
 		`SingleProcessOOMKill:` + valueToStringGenerated(this.SingleProcessOOMKill) + `,`,
+		`ImagePullCredentialsVerificationPolicy:` + valueToStringGenerated(this.ImagePullCredentialsVerificationPolicy) + `,`,
+		`PreloadedImagesVerificationAllowlist:` + fmt.Sprintf("%v", this.PreloadedImagesVerificationAllowlist) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -37701,6 +37733,71 @@ func (m *KubeletConfig) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.SingleProcessOOMKill = &b
+		case 31:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ImagePullCredentialsVerificationPolicy", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := ImagePullCredentialsVerificationPolicy(dAtA[iNdEx:postIndex])
+			m.ImagePullCredentialsVerificationPolicy = &s
+			iNdEx = postIndex
+		case 32:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PreloadedImagesVerificationAllowlist", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PreloadedImagesVerificationAllowlist = append(m.PreloadedImagesVerificationAllowlist, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

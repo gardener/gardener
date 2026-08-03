@@ -96,6 +96,10 @@ spec:
     #     seccompDefault: true
     #     serializeImagePulls: false
     #     maxParallelImagePulls: 5
+    #     imagePullCredentialsVerificationPolicy: NeverVerifyPreloadedImages # only supported for Kubernetes >= 1.35
+    #     preloadedImagesVerificationAllowlist: # only supported for Kubernetes >= 1.35, requires imagePullCredentialsVerificationPolicy=NeverVerifyAllowlistedImages
+    #     - registry.example.com/my-image
+    #     - registry.example.com/my-project/*
     #     streamingConnectionIdleTimeout: 5m
     #     registryPullQPS: 5
     #     registryBurst: 10
@@ -280,6 +284,10 @@ spec:
   #   seccompDefault: true
   #   serializeImagePulls: false
   #   maxParallelImagePulls: 3
+  #   imagePullCredentialsVerificationPolicy: NeverVerifyPreloadedImages # only supported for Kubernetes >= 1.35
+  #   preloadedImagesVerificationAllowlist: # only supported for Kubernetes >= 1.35, requires imagePullCredentialsVerificationPolicy=NeverVerifyAllowlistedImages
+  #   - registry.example.com/my-image
+  #   - registry.example.com/my-project/*
   #   streamingConnectionIdleTimeout: 5m
   #   registryPullQPS: 5
   #   registryBurst: 10
