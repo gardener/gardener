@@ -7,5 +7,6 @@
 package assets
 
 import (
+	// Import to register the types for CRD generation.
 	_ "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 )
