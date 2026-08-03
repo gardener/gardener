@@ -587,10 +587,8 @@ type HealthProbesServer struct {
 	// Defaults to true. Can be set to false to prevent the probes from restarting the process while a debugger is attached.
 	// +optional
 	Enable *bool `json:"enable,omitempty"`
-	// BindAddress is the IP address on which to listen for the specified port.
-	BindAddress string `json:"bindAddress"`
-	// Port is the port on which to serve unsecured, unauthenticated access.
-	Port int `json:"port"`
+	// Server config containing BindAddress and Port
+	Server Server
 }
 
 // SNI contains an optional configuration for the SNI settings used
