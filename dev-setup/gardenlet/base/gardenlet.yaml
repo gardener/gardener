@@ -97,3 +97,5 @@ spec:
             visible: true
           verticalPodAutoscaler:
             enabled: false
+          persistentVolumeClaimAutoscaler:
+            enabled: true
