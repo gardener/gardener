@@ -25,7 +25,7 @@ require (
 	github.com/gardener/gardener/pkg/apis v0.0.0
 	github.com/gardener/machine-controller-manager v0.62.1
 	github.com/gardener/pvc-autoscaler v0.3.0
-	github.com/gardener/terminal-controller-manager v0.37.0
+	github.com/gardener/terminal-controller-manager v0.38.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.1.1
@@ -103,7 +103,7 @@ exclude github.com/gardener/cert-management v0.23.0
 exclude github.com/gardener/gardener/pkg/apis v1.143.0
 
 // TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
-exclude github.com/gardener/gardener/pkg/apis v1.144.2
+exclude github.com/gardener/gardener/pkg/apis v1.147.1
 
 tool github.com/joelanford/go-apidiff
 
