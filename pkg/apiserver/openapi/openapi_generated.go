@@ -9403,6 +9403,12 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
 						},
 					},
+					"lastOperation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastOperation holds information about the last operation on the Seed.",
+							Ref:         ref(v1beta1.LastOperation{}.OpenAPIModelName()),
+						},
+					},
 					"constraints": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
@@ -9420,12 +9426,6 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 									},
 								},
 							},
-						},
-					},
-					"lastOperation": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastOperation holds information about the last operation on the Seed.",
-							Ref:         ref(v1beta1.LastOperation{}.OpenAPIModelName()),
 						},
 					},
 				},

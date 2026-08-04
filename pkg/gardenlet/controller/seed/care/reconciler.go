@@ -23,6 +23,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
@@ -62,22 +63,29 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	seedConditions := NewSeedConditions(r.Clock, seed.Status)
 	seedConstraints := NewSeedConstraints(r.Clock, seed.Status)
 
-	// Trigger health check
-	updatedConditions, updatedConstraints := NewHealthCheck(
-		seed,
-		r.SeedClient,
-		r.Clock,
-		r.Namespace,
-		checker.NewHealthChecker(
-			log,
-			r.SeedClient,
-			r.Clock,
-			checker.WithConditionThresholds(r.conditionThresholdsToProgressingMapping())),
-	).Check(
-		ctx,
-		seedConditions,
-		seedConstraints,
-	)
+	var updatedConditions, updatedConstraints []gardencorev1beta1.Condition
+	_ = flow.Parallel(
+		// Trigger health check
+		func(ctx context.Context) error {
+			updatedConditions = NewHealthCheck(
+				seed,
+				r.SeedClient,
+				r.Clock,
+				r.Namespace,
+				checker.NewHealthChecker(
+					log,
+					r.SeedClient,
+					r.Clock,
+					checker.WithConditionThresholds(r.conditionThresholdsToProgressingMapping())),
+			).Check(ctx, seedConditions)
+			return nil
+		},
+		// Trigger constraint check
+		func(ctx context.Context) error {
+			updatedConstraints = NewConstraintCheck(r.SeedClient, r.Clock, r.Namespace).Check(ctx, seedConstraints)
+			return nil
+		},
+	)(ctx)
 
 	conditionsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(seedConditions.ConvertToSlice(), updatedConditions)
 	constraintsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(seedConstraints.ConvertToSlice(), updatedConstraints)

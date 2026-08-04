@@ -22,5 +22,21 @@ var defaultNewHealthCheck NewHealthCheckFunc = NewHealth
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
-	Check(ctx context.Context, conditions SeedConditions, constraints SeedConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition)
+	Check(ctx context.Context, conditions SeedConditions) []gardencorev1beta1.Condition
 }
+
+// ConstraintCheck is an interface used to perform constraint checks.
+type ConstraintCheck interface {
+	Check(ctx context.Context, constraints SeedConstraints) []gardencorev1beta1.Condition
+}
+
+// NewConstraintCheckFunc is a function used to create a new instance for performing constraint checks.
+type NewConstraintCheckFunc func(client.Client, clock.Clock, *string) ConstraintCheck
+
+// defaultNewConstraintCheck is the default function to create a new instance for performing constraint checks.
+var defaultNewConstraintCheck NewConstraintCheckFunc = func(seedClient client.Client, clock clock.Clock, namespace *string) ConstraintCheck {
+	return NewConstraint(seedClient, clock, namespace)
+}
+
+// NewConstraintCheck is used to create a new Constraint check instance.
+var NewConstraintCheck = defaultNewConstraintCheck

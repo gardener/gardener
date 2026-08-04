@@ -253,8 +253,8 @@ var _ = Describe("Seed Care Control", func() {
 
 type resultingConditionFunc func(conditions SeedConditions) []gardencorev1beta1.Condition
 
-func (c resultingConditionFunc) Check(_ context.Context, conditions SeedConditions, _ SeedConstraints) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
-	return c(conditions), nil
+func (c resultingConditionFunc) Check(_ context.Context, conditions SeedConditions) []gardencorev1beta1.Condition {
+	return c(conditions)
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {

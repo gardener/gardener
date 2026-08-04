@@ -53,18 +53,17 @@ func NewHealth(
 func (h *health) Check(
 	ctx context.Context,
 	conditions SeedConditions,
-	constraints SeedConstraints,
-) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
+) []gardencorev1beta1.Condition {
 	managedResources, err := h.listManagedResources(ctx)
 	if err != nil {
 		conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, nil, err)
-		return conditions.ConvertToSlice(), constraints.ConvertToSlice()
+		return conditions.ConvertToSlice()
 	}
 
 	prometheuses, err := h.listPrometheuses(ctx)
 	if err != nil {
 		conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, nil, err)
-		return conditions.ConvertToSlice(), constraints.ConvertToSlice()
+		return conditions.ConvertToSlice()
 	}
 
 	var checkedConditions []gardencorev1beta1.Condition
@@ -73,10 +72,7 @@ func (h *health) Check(
 		checkedConditions = append(checkedConditions, v1beta1helper.NewConditionOrError(h.clock, conditions.emergencyStopShootReconciliations, newEmergencyStopShootReconciliations, nil))
 	}
 
-	status, reason, message := kuberneteshealth.CheckManagedResourcesHonored(managedResources)
-	constraints.managedResourcesHonored = v1beta1helper.UpdatedConditionWithClock(h.clock, constraints.managedResourcesHonored, status, reason, message)
-
-	return checkedConditions, constraints.ConvertToSlice()
+	return checkedConditions
 }
 
 func (h *health) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.ManagedResource, error) {
@@ -191,4 +187,60 @@ func NewSeedConstraints(clock clock.Clock, status gardencorev1beta1.SeedStatus) 
 	return SeedConstraints{
 		managedResourcesHonored: v1beta1helper.GetOrInitConditionWithClock(clock, status.Constraints, gardencorev1beta1.SeedManagedResourcesHonored),
 	}
+}
+
+// constraint contains information needed to execute constraint checks for a seed.
+type constraint struct {
+	seedClient client.Client
+	clock      clock.Clock
+	namespace  *string
+}
+
+// NewConstraint returns a new constraint instance.
+func NewConstraint(seedClient client.Client, clock clock.Clock, namespace *string) ConstraintCheck {
+	return &constraint{
+		seedClient: seedClient,
+		clock:      clock,
+		namespace:  namespace,
+	}
+}
+
+// Check executes all constraint checks for the seed.
+func (c *constraint) Check(ctx context.Context, constraints SeedConstraints) []gardencorev1beta1.Condition {
+	managedResources, err := c.listManagedResources(ctx)
+	if err != nil {
+		constraints.managedResourcesHonored = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.managedResourcesHonored,
+			fmt.Errorf("could not list ManagedResources to check for ignored resources: %w", err))
+		return filterOptionalSeedConstraints(constraints)
+	}
+
+	status, reason, message := kuberneteshealth.CheckManagedResourcesHonored(managedResources)
+	constraints.managedResourcesHonored = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.managedResourcesHonored, status, reason, message)
+
+	return filterOptionalSeedConstraints(constraints)
+}
+
+func (c *constraint) listManagedResources(ctx context.Context) ([]resourcesv1alpha1.ManagedResource, error) {
+	managedResourceListGarden := &resourcesv1alpha1.ManagedResourceList{}
+	if err := c.seedClient.List(ctx, managedResourceListGarden, client.InNamespace(ptr.Deref(c.namespace, v1beta1constants.GardenNamespace))); err != nil {
+		return nil, fmt.Errorf("failed listing ManagedResources in namespace %s: %w", ptr.Deref(c.namespace, v1beta1constants.GardenNamespace), err)
+	}
+
+	managedResourceListIstioSystem := &resourcesv1alpha1.ManagedResourceList{}
+	if err := c.seedClient.List(ctx, managedResourceListIstioSystem, client.InNamespace(ptr.Deref(c.namespace, v1beta1constants.IstioSystemNamespace))); err != nil {
+		return nil, fmt.Errorf("failed listing ManagedResources in namespace %s: %w", ptr.Deref(c.namespace, v1beta1constants.IstioSystemNamespace), err)
+	}
+
+	return append(managedResourceListGarden.Items, managedResourceListIstioSystem.Items...), nil
+}
+
+// filterOptionalSeedConstraints omits constraints that are True — they add no signal for operators.
+func filterOptionalSeedConstraints(constraints SeedConstraints) []gardencorev1beta1.Condition {
+	var out []gardencorev1beta1.Condition
+	for _, c := range constraints.ConvertToSlice() {
+		if c.Status != gardencorev1beta1.ConditionTrue {
+			out = append(out, c)
+		}
+	}
+	return out
 }

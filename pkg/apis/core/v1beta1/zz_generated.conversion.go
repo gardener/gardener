@@ -7067,8 +7067,8 @@ func autoConvert_v1beta1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *core
 	out.Capacity = *(*v1.ResourceList)(unsafe.Pointer(&in.Capacity))
 	out.Allocatable = *(*v1.ResourceList)(unsafe.Pointer(&in.Allocatable))
 	out.ClientCertificateExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ClientCertificateExpirationTimestamp))
-	out.Constraints = *(*[]core.Condition)(unsafe.Pointer(&in.Constraints))
 	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.Constraints = *(*[]core.Condition)(unsafe.Pointer(&in.Constraints))
 	return nil
 }
 

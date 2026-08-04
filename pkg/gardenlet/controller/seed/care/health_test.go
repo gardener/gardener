@@ -42,7 +42,6 @@ var _ = Describe("Seed health", func() {
 		seed *gardencorev1beta1.Seed
 
 		seedSystemComponentsHealthyCondition gardencorev1beta1.Condition
-		seedConstraints                      SeedConstraints
 	)
 
 	BeforeEach(func() {
@@ -78,7 +77,6 @@ var _ = Describe("Seed health", func() {
 			Type:               gardencorev1beta1.SeedSystemComponentsHealthy,
 			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 		}
-		seedConstraints = NewSeedConstraints(fakeClock, gardencorev1beta1.SeedStatus{})
 	})
 
 	Describe("#Check", func() {
@@ -95,7 +93,7 @@ var _ = Describe("Seed health", func() {
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
 
-				updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+				updatedConditions := healthCheck.Check(ctx, conditions)
 				expectHealthySystemComponents(updatedConditions)
 			})
 		})
@@ -137,7 +135,7 @@ var _ = Describe("Seed health", func() {
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
 
-				updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+				updatedConditions := healthCheck.Check(ctx, conditions)
 
 				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(
@@ -155,7 +153,7 @@ var _ = Describe("Seed health", func() {
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
 
-				updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+				updatedConditions := healthCheck.Check(ctx, conditions)
 
 				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(
@@ -173,7 +171,7 @@ var _ = Describe("Seed health", func() {
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
 
-				updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+				updatedConditions := healthCheck.Check(ctx, conditions)
 				expectHealthySystemComponents(updatedConditions)
 			})
 
@@ -187,7 +185,7 @@ var _ = Describe("Seed health", func() {
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
 
-				updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+				updatedConditions := healthCheck.Check(ctx, conditions)
 				expectHealthySystemComponents(updatedConditions)
 			})
 
@@ -207,7 +205,7 @@ var _ = Describe("Seed health", func() {
 						Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 					})
 
-					updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+					updatedConditions := healthCheck.Check(ctx, conditions)
 
 					Expect(updatedConditions).ToNot(BeEmpty())
 					Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(
@@ -221,7 +219,7 @@ var _ = Describe("Seed health", func() {
 					Expect(prometheus).ToNot(BeNil())
 					prometheus.Labels = map[string]string{"health-check-by": "foo"}
 					Expect(c.Update(ctx, prometheus)).To(Succeed())
-					updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+					updatedConditions := healthCheck.Check(ctx, conditions)
 					expectHealthySystemComponents(updatedConditions)
 				})
 			})
@@ -236,7 +234,7 @@ var _ = Describe("Seed health", func() {
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
 
-						updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message))
@@ -256,7 +254,7 @@ var _ = Describe("Seed health", func() {
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
 
-						updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message))
@@ -276,7 +274,7 @@ var _ = Describe("Seed health", func() {
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
 
-						updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message))
@@ -296,7 +294,7 @@ var _ = Describe("Seed health", func() {
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
 
-						updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, reason, message))
@@ -316,7 +314,7 @@ var _ = Describe("Seed health", func() {
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
 
-						updatedConditions, _ := healthCheck.Check(ctx, conditions, seedConstraints)
+						updatedConditions := healthCheck.Check(ctx, conditions)
 
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions[0]).To(beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedSystemComponentsHealthy, gardencorev1beta1.ConditionFalse, reason, message))
@@ -456,20 +454,13 @@ var _ = Describe("Seed health", func() {
 		})
 
 		Context("ManagedResourcesHonored constraint check", func() {
-			It("should set ManagedResourcesHonored to True if no ManagedResources are ignored", func() {
+			It("should not include ManagedResourcesHonored constraint when no ManagedResources are ignored", func() {
 				Expect(c.Create(ctx, healthyManagedResource("foo"))).To(Succeed())
 
-				healthCheck := NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(log, c, fakeClock))
-				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
-					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
-				})
 				constraints := NewSeedConstraints(fakeClock, gardencorev1beta1.SeedStatus{})
+				updatedConstraints := NewConstraint(c, fakeClock, nil).Check(ctx, constraints)
 
-				_, updatedConstraints := healthCheck.Check(ctx, conditions, constraints)
-
-				Expect(updatedConstraints).To(ContainElements(
-					beConditionOfTypeWithStatusReasonAndMessage(gardencorev1beta1.SeedManagedResourcesHonored, gardencorev1beta1.ConditionTrue, "AllManagedResourcesActive", "No ManagedResources are annotated to be ignored."),
-				))
+				Expect(updatedConstraints).NotTo(ContainCondition(OfType(gardencorev1beta1.SeedManagedResourcesHonored)))
 			})
 
 			It("should set ManagedResourcesHonored to False if a ManagedResource is ignored", func() {
@@ -477,13 +468,8 @@ var _ = Describe("Seed health", func() {
 				mr.Annotations = map[string]string{"resources.gardener.cloud/ignore": "true"}
 				Expect(c.Create(ctx, mr)).To(Succeed())
 
-				healthCheck := NewHealth(seed, c, fakeClock, nil, checker.NewHealthChecker(log, c, fakeClock))
-				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
-					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
-				})
 				constraints := NewSeedConstraints(fakeClock, gardencorev1beta1.SeedStatus{})
-
-				_, updatedConstraints := healthCheck.Check(ctx, conditions, constraints)
+				updatedConstraints := NewConstraint(c, fakeClock, nil).Check(ctx, constraints)
 
 				Expect(updatedConstraints).To(ContainElements(
 					And(OfType(gardencorev1beta1.SeedManagedResourcesHonored), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ManagedResourcesIgnored"), WithMessageSubstrings("foo")),
