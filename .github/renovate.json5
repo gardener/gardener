@@ -156,7 +156,8 @@
         '/.*gardener/machine-controller-manager$/',
         '/.*gardener/terminal-controller-manager$/',
         '/.*gardener/pvc-autoscaler$/',
-        '/.*open-telemetry/opentelemetry-operator$/',
+        '/.*open-telemetry/opentelemetry-operator/apis$/',
+        '/.*VictoriaMetrics/operator/api$/',
         '/sigs\\.k8s\\.io/controller-tools/',
       ],
     },
@@ -208,8 +209,19 @@
       ],
       matchPackageNames: [
         '/.*open-telemetry/opentelemetry-operator$/',
-        '/github\\.com/open-telemetry/opentelemetry-operator$/',
         '/github\\.com/open-telemetry/opentelemetry-operator/apis$/',
+      ],
+    },
+    {
+      // Group victoria-operator updates in one PR.
+      groupName: 'victoria-operator',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/.*VictoriaMetrics/operator$/',
+        '/github\\.com/VictoriaMetrics/operator/api$/',
       ],
     },
     {
@@ -533,6 +545,7 @@
         '!/fluent/.+/',
         '!/perses/.+/',
         '!/open-telemetry/.+/',
+        '!/VictoriaMetrics/.+/',
       ],
     },
     {
