@@ -3738,9 +3738,14 @@ func validateControlPlaneZones(controlPlane *core.ControlPlane, fldPath *field.P
 	}
 
 	if controlPlane.HighAvailability != nil &&
-		controlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone &&
-		len(controlPlane.Zones) < 3 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("zones"), controlPlane.Zones, "at least 3 zones must be specified when failure tolerance type is 'zone'"))
+		controlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone {
+		if len(usedZones) != 3 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("zones"), controlPlane.Zones, "exactly 3 unique zones must be specified when failure tolerance type is 'zone'"))
+		}
+	} else {
+		if len(usedZones) != 1 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("zones"), controlPlane.Zones, "exactly 1 zone must be specified when failure tolerance type is not 'zone'"))
+		}
 	}
 
 	return allErrs
@@ -3752,10 +3757,27 @@ func validateControlPlaneZonesUpdate(newControlPlane, oldControlPlane *core.Cont
 	oldZones := controlPlaneZones(oldControlPlane)
 	newZones := controlPlaneZones(newControlPlane)
 
-	if !slices.Equal(oldZones, newZones) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("zones"), "field is immutable"))
+	if slices.Equal(oldZones, newZones) {
+		return allErrs
 	}
 
+	// Allow expanding zones from 1 to 3 when upgrading from non-'zone' to 'zone' failure tolerance.
+	oldIsZoneHA := oldControlPlane != nil && oldControlPlane.HighAvailability != nil &&
+		oldControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
+	newIsZoneHA := newControlPlane != nil && newControlPlane.HighAvailability != nil &&
+		newControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
+	if !oldIsZoneHA && newIsZoneHA && len(oldZones) > 0 {
+		newZonesSet := sets.New(newZones...)
+		for _, zone := range oldZones {
+			if !newZonesSet.Has(zone) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("zones"), "existing zones cannot be removed when expanding for zone failure tolerance upgrade"))
+				return allErrs
+			}
+		}
+		return allErrs
+	}
+
+	allErrs = append(allErrs, field.Forbidden(fldPath.Child("zones"), "field is immutable"))
 	return allErrs
 }
 
