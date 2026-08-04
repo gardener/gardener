@@ -5,7 +5,7 @@
 package shared
 
 import (
-	_ "crypto/sha256"
+	_ "crypto/sha256" // for SHA-256 hash registration
 	"fmt"
 
 	"github.com/distribution/reference"
