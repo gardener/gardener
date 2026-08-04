@@ -95,15 +95,17 @@ function validate_requirements() {
   # Determine mode and validate mode-specific options
   local has_seed=false
   local has_shoot=false
-  [[ -n "$SEED_KUBECONFIG" || -n "$SEED_NAME" ]] && has_seed=true
-  [[ -n "$SHOOT_KUBECONFIG" || -n "$SHOOT_NAMESPACE" || -n "$SHOOT_NAME" ]] && has_shoot=true
+  if [[ -n "$SEED_KUBECONFIG" || -n "$SEED_NAME" ]]; then
+    has_seed=true
+  fi
+  if [[ -n "$SHOOT_KUBECONFIG" || -n "$SHOOT_NAMESPACE" || -n "$SHOOT_NAME" ]]; then
+    has_shoot=true
+  fi
 
   if [[ "$has_seed" == "true" && "$has_shoot" == "true" ]]; then
     log_error "--seed-* and --shoot-* options are mutually exclusive."
     exit 1
-  fi
-
-  if [[ "$has_seed" == "false" && "$has_shoot" == "false" ]]; then
+  elif [[ "$has_seed" == "false" && "$has_shoot" == "false" ]]; then
     log_error "Either --seed-kubeconfig/--seed-name or --shoot-kubeconfig/--shoot-namespace/--shoot-name must be provided."
     exit 1
   fi
@@ -127,7 +129,7 @@ function validate_requirements() {
     fi
 
     GARDENLET_NAMESPACE="garden"
-    BOOTSTRAP_KUBECONFIG_SECRET_NAME="gardenlet-bootstrap-kubeconfig"
+    BOOTSTRAP_KUBECONFIG_SECRET_NAME="gardenlet-kubeconfig-bootstrap"
     TARGET_KUBECONFIG="$SEED_KUBECONFIG"
   else
     MODE="shoot"
@@ -187,7 +189,7 @@ function create_bootstrap_token() {
   local token_name="bootstrap-token-${BOOTSTRAP_TOKEN_ID}"
   local description
   if [[ "$MODE" == "seed" ]]; then
-    description="Bootstrap token for gardenlet rebootstrap of seed ${SEED_NAME}"
+    description="Used for reconnecting the gardenlet for seed ${SEED_NAME} to Gardener"
   else
     description="Used for connecting the self-hosted Shoot ${SHOOT_NAMESPACE}/${SHOOT_NAME}"
   fi
