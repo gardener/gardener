@@ -22,6 +22,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
@@ -38,6 +39,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/graph"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
@@ -359,21 +361,38 @@ func (a *authorizer) authorizeServiceAccount(requestAuthorizer *authwebhook.Requ
 }
 
 func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
-	// Allow gardenlet to delete bootstrap tokens for its own shoot or for ManagedSeeds referencing its shoot.
-	if attrs.GetVerb() == "delete" && attrs.GetNamespace() == metav1.NamespaceSystem && strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix) {
-		shootMeta, found, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, a.client, attrs.GetName())
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return auth.DecisionNoOpinion, "", err
-			}
-		} else if found {
-			if shootMeta.Namespace == requestAuthorizer.ToNamespace && shootMeta.Name == requestAuthorizer.ToName {
+	if attrs.GetNamespace() == metav1.NamespaceSystem && strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix) {
+		switch attrs.GetVerb() {
+		case "get", "list", "watch":
+			// Allow gardenlet to get/list/watch the bootstrap token secret whose name is deterministically derived from
+			// its shoot identity. This is needed for the renew-kubeconfig flow which calls
+			// ComputeGardenletKubeconfigWithBootstrapToken to look up the token. The list/watch verbs are issued by the
+			// SingleObjectCache which primes a watch via a namespaced list with a metadata.name field selector.
+			expectedSecretName := bootstraptokenutil.BootstrapTokenSecretName(bootstraptoken.TokenID(metav1.ObjectMeta{
+				Namespace: requestAuthorizer.ToNamespace,
+				Name:      requestAuthorizer.ToName,
+			}))
+			if attrs.GetName() == expectedSecretName {
 				return auth.DecisionAllow, "", nil
 			}
-			return auth.DecisionNoOpinion, fmt.Sprintf("shoot meta in bootstrap token secret %s does not match with identity of requestor %s/%s", shootMeta, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
+			return auth.DecisionNoOpinion, fmt.Sprintf("bootstrap token secret name %s does not match expected name %s for shoot %s/%s", attrs.GetName(), expectedSecretName, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
+
+		case "delete":
+			// Allow gardenlet to delete bootstrap tokens for its own shoot or for ManagedSeeds referencing its shoot.
+			shootMeta, found, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, a.client, attrs.GetName())
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					return auth.DecisionNoOpinion, "", err
+				}
+			} else if found {
+				if shootMeta.Namespace == requestAuthorizer.ToNamespace && shootMeta.Name == requestAuthorizer.ToName {
+					return auth.DecisionAllow, "", nil
+				}
+				return auth.DecisionNoOpinion, fmt.Sprintf("shoot meta in bootstrap token secret %s does not match with identity of requestor %s/%s", shootMeta, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
+			}
+			// No shoot meta found — fall through to graph-based authorization which handles ManagedSeed bootstrap
+			// tokens via the Secret → ManagedSeed → Shoot edges.
 		}
-		// No shoot meta found — fall through to graph-based authorization which handles ManagedSeed bootstrap
-		// tokens via the Secret → ManagedSeed → Shoot edges.
 	}
 
 	return requestAuthorizer.Check(graph.VertexTypeSecret, attrs,

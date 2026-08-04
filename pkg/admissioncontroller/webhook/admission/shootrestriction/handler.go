@@ -186,7 +186,8 @@ func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.Name
 		}
 
 		kind, namespace, name := gardenletbootstraputil.MetadataFromDescription(string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]))
-		if kind == gardenletbootstraputil.KindManagedSeed {
+		switch kind {
+		case gardenletbootstraputil.KindManagedSeed:
 			managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
 			if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -196,6 +197,10 @@ func (h *Handler) admitSecret(ctx context.Context, gardenletShootInfo types.Name
 			}
 
 			return h.admit(gardenletShootInfo, types.NamespacedName{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace})
+
+		case gardenletbootstraputil.KindGardenlet:
+			// The Gardenlet resource name carries the `self-hosted-shoot-` prefix; strip it to recover the shoot name.
+			return h.admit(gardenletShootInfo, types.NamespacedName{Name: strings.TrimPrefix(name, gardenletutils.ResourcePrefixSelfHostedShoot), Namespace: namespace})
 		}
 	}
 

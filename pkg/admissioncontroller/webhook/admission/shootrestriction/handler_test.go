@@ -706,6 +706,51 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 							}))
 						})
 					})
+
+					Context("Gardenlet bootstrap token secret", func() {
+						BeforeEach(func() {
+							request.Name = "bootstrap-token-abcdef"
+							request.Namespace = metav1.NamespaceSystem
+						})
+
+						It("should allow because the Gardenlet belongs to gardenlet's shoot", func() {
+							secret := &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: "bootstrap-token-abcdef", Namespace: metav1.NamespaceSystem},
+								Type:       corev1.SecretTypeBootstrapToken,
+								Data: map[string][]byte{
+									"description": []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource " + shootNamespace + "/self-hosted-shoot-" + shootName + "."),
+								},
+							}
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should forbid because the Gardenlet does not belong to gardenlet's shoot", func() {
+							secret := &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: "bootstrap-token-abcdef", Namespace: "other-namespace"},
+								Type:       corev1.SecretTypeBootstrapToken,
+								Data: map[string][]byte{
+									"description": []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource other-namespace/self-hosted-shoot-other-shoot."),
+								},
+							}
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("object does not belong to shoot %s/%s", shootNamespace, shootName),
+									},
+								},
+							}))
+						})
+					})
 				})
 			})
 

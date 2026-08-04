@@ -689,6 +689,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes
             - pkg/features
+            - pkg/gardenlet/bootstrap/util
             - pkg/healthz
             - pkg/logger
             - pkg/operator/client

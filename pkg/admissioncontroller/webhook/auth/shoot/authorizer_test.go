@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -34,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	graphutils "github.com/gardener/gardener/pkg/utils/graph"
 	mockgraph "github.com/gardener/gardener/pkg/utils/graph/mock"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 	fakeauthorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer/fake"
 )
@@ -2019,6 +2021,48 @@ var _ = Describe("Shoot", func() {
 						ResourceRequest: true,
 						Verb:            "get",
 					}
+				})
+
+				When("get/list/watch of bootstrap token secret is requested", func() {
+					var expectedSecretName string
+
+					BeforeEach(func() {
+						expectedSecretName = bootstraptokenutil.BootstrapTokenSecretName(bootstraptoken.TokenID(metav1.ObjectMeta{
+							Namespace: shootNamespace,
+							Name:      shootName,
+						}))
+						attrs.Namespace = metav1.NamespaceSystem
+						attrs.Name = expectedSecretName
+					})
+
+					DescribeTable("should allow for the deterministically derived secret name",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+						Entry("get", "get"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
+
+					DescribeTable("should not have an opinion for a different bootstrap token secret name",
+						func(verb string) {
+							attrs.Verb = verb
+							attrs.Name = "bootstrap-token-abcdef"
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("does not match expected name"))
+						},
+						Entry("get", "get"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
 				})
 
 				When("deletion of bootstrap token secret is requested", func() {
