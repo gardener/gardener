@@ -29,11 +29,6 @@ func (b *Botanist) DefaultEtcdDruid() (component.DeployWaiter, error) {
 		}
 	}
 
-	// See https://github.com/gardener/gardener/pull/14352
-	// TODO(rfranzke): Remove this from here once `gardenadm` and the shoot gardenlet construct the Operation object in
-	//  the same way.
-	b.Config.ETCDConfig.FeatureGates = map[string]bool{"UpgradeEtcdVersion": true}
-
 	return sharedcomponent.NewEtcdDruid(
 		b.SeedClientSet.Client(),
 		v1beta1constants.GardenNamespace,

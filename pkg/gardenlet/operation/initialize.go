@@ -85,6 +85,12 @@ func Initialize(
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		// See https://github.com/gardener/gardener/pull/14352
+		if config.ETCDConfig.FeatureGates == nil {
+			config.ETCDConfig.FeatureGates = make(map[string]bool)
+		}
+		config.ETCDConfig.FeatureGates["UpgradeEtcdVersion"] = true
 	}
 
 	gardenObj, err := garden.
