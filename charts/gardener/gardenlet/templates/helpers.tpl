@@ -314,12 +314,10 @@ logLevel: {{ .Values.config.logLevel }}
 logFormat: {{ .Values.config.logFormat }}
 server:
   healthProbes:
-    enable: {{ .Values.config.server.healthProbes.enable }}
-    server:
-      {{- if .Values.config.server.healthProbes.server.bindAddress }}
-      bindAddress: {{ .Values.config.server.healthProbes.server.bindAddress }}
-      {{- end }}
-      port: {{ required ".Values.config.server.healthProbes.server.port is required" .Values.config.server.healthProbes.server.port }}
+    {{- if .Values.config.server.healthProbes.bindAddress }}
+    bindAddress: {{ .Values.config.server.healthProbes.bindAddress }}
+    {{- end }}
+    port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
   {{- if .Values.config.server.metrics }}
   metrics:
     {{- if .Values.config.server.metrics.bindAddress }}

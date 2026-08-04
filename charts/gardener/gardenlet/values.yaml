@@ -155,8 +155,7 @@ config:
     healthProbes:
       # health probes should be disabled for debugging purposes only
       enable: true
-      server:
-        port: 2728
+      port: 2728
     metrics:
       port: 2729
   debugging:

@@ -113,8 +113,7 @@ logLevel: info
 logFormat: text
 server:
   healthProbes:
-    server:
-      port: 2728
+    port: 2728
   metrics:
     port: 2729
 debugging:
