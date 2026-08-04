@@ -89,7 +89,7 @@ spec:
                     - message: name is required when type is secret or configmap
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.name)
                     - message: namespace is required when type is secret or configmap
-                      rule: self.type != 'secret' && self.type != 'configmap' || has(self.namespace)
+                      rule: self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)
                   kubernetesAuth:
                     description: kubernetesAuth enables Kubernetes native authentication
                       for the Perses client
@@ -168,7 +168,7 @@ spec:
                     - message: name is required when type is secret or configmap
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.name)
                     - message: namespace is required when type is secret or configmap
-                      rule: self.type != 'secret' && self.type != 'configmap' || has(self.namespace)
+                      rule: self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)
                   tls:
                     description: tls provides TLS/SSL configuration for secure connections
                       to Perses
@@ -219,7 +219,7 @@ spec:
                             || has(self.name)
                         - message: namespace is required when type is secret or configmap
                           rule: self.type != 'secret' && self.type != 'configmap'
-                            || has(self.namespace)
+                            || has(self.__namespace__)
                       enable:
                         description: enable determines whether TLS is enabled for
                           connections to Perses
@@ -275,7 +275,7 @@ spec:
                             || has(self.name)
                         - message: namespace is required when type is secret or configmap
                           rule: self.type != 'secret' && self.type != 'configmap'
-                            || has(self.namespace)
+                            || has(self.__namespace__)
                     type: object
                 type: object
               config:
@@ -305,11 +305,12 @@ spec:
                         properties:
                           registry:
                             description: 'Registry is optional. If not provided, it
-                              means the default registry: "perses.dev".'
+                              means the default registry is: "perses.dev".'
                             type: string
                           version:
-                            description: Version is optional. If not provided, it
-                              means the latest version available in the Perses instance.
+                            description: |-
+                              Version is optional. If not provided, it means the latest version available in the Perses instance.
+                              Version needs to follow the semantic versioning format (e.g., "1.0.0" or "v1.0.0")
                             type: string
                         type: object
                       spec:
