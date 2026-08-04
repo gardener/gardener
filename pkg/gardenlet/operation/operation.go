@@ -19,6 +19,7 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -304,6 +305,10 @@ func (b *Builder) Build(
 		return nil, err
 	}
 	operation.Logger = logger
+
+	if caBundle := imagevector.ContainersCABundle(); caBundle != nil && caBundle.Inline != nil {
+		operation.RegistryCABundle = caBundle.Inline
+	}
 
 	return operation, nil
 }
