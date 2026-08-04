@@ -619,8 +619,8 @@ var _ = Describe("Defaults", func() {
 		It("should default the HTTP server configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Server.HealthProbes.Server.BindAddress).To(BeEmpty())
-			Expect(obj.Server.HealthProbes.Server.Port).To(Equal(2728))
+			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
+			Expect(obj.Server.HealthProbes.Port).To(Equal(2728))
 			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
 			Expect(obj.Server.Metrics.Port).To(Equal(2729))
 		})
@@ -628,10 +628,8 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the HTTP server configuration", func() {
 			obj.Server = ServerConfiguration{
 				HealthProbes: &HealthProbesServer{
-					Server: Server{
-						BindAddress: "127.0.0.0",
-						Port:        1010,
-					},
+					BindAddress: "127.0.0.0",
+					Port:        1010,
 				},
 				Metrics: &Server{
 					BindAddress: "127.0.0.1",
@@ -640,8 +638,8 @@ var _ = Describe("Defaults", func() {
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Server.HealthProbes.Server.BindAddress).To(Equal("127.0.0.0"))
-			Expect(obj.Server.HealthProbes.Server.Port).To(Equal(1010))
+			Expect(obj.Server.HealthProbes.BindAddress).To(Equal("127.0.0.0"))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(1010))
 			Expect(obj.Server.Metrics.BindAddress).To(Equal("127.0.0.1"))
 			Expect(obj.Server.Metrics.Port).To(Equal(1011))
 		})

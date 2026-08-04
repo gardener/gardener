@@ -835,9 +835,7 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		Server: gardenletconfigv1alpha1.ServerConfiguration{
 			HealthProbes: &gardenletconfigv1alpha1.HealthProbesServer{
-				Server: gardenletconfigv1alpha1.Server{
-					Port: 2728,
-				},
+				Port: 2728,
 			},
 			Metrics: &gardenletconfigv1alpha1.Server{
 				Port: 2729,
