@@ -386,7 +386,7 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
 			},
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 		deployExtensionResourcesAfterWorker = g.Add(flow.Task{
@@ -445,7 +445,7 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 
 				return nil
 			},
-			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || skipReadiness,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 	)
