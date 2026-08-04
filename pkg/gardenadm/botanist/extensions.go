@@ -65,7 +65,7 @@ func ComputeExtensions(resources gardenadm.Resources, runsControlPlane, managedI
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
 					RegistrationRef: corev1.ObjectReference{Name: controllerRegistration.Name},
 					DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment.Name},
-					SeedRef:         &corev1.ObjectReference{Name: resources.Shoot.Name},
+					ShootRef:        &corev1.ObjectReference{Name: resources.Shoot.Name, Namespace: resources.Shoot.Namespace},
 				},
 			}
 		)

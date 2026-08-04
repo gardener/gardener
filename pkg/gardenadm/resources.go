@@ -50,7 +50,6 @@ func init() {
 type Resources struct {
 	CloudProfile            *gardencorev1beta1.CloudProfile
 	Project                 *gardencorev1beta1.Project
-	Seed                    *gardencorev1beta1.Seed
 	Shoot                   *gardencorev1beta1.Shoot
 	ShootState              *gardencorev1beta1.ShootState
 	ControllerRegistrations []*gardencorev1beta1.ControllerRegistration
@@ -66,7 +65,7 @@ type Resources struct {
 // It returns among others a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during
 // reading or decoding. It ignores hidden files and directories (starting with a dot).
 func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
-	resources := Resources{Seed: &gardencorev1beta1.Seed{}}
+	resources := Resources{}
 
 	if err := VisitManifestFiles(fsys, func(path string, file fs.File) error {
 		reader := yaml.NewYAMLReader(bufio.NewReader(file))

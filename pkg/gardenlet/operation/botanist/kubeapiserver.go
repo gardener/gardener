@@ -40,7 +40,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		}
 	)
 
-	if !b.Shoot.IsWorkerless && !b.Shoot.RunsControlPlane() {
+	if !b.Shoot.IsWorkerless && !b.Shoot.IsSelfHosted() {
 		vpnConfig.Enabled = true
 		vpnConfig.HighAvailabilityEnabled = b.Shoot.VPNHighAvailabilityEnabled
 		vpnConfig.HighAvailabilityNumberOfSeedServers = b.Shoot.VPNHighAvailabilityNumberOfSeedServers

@@ -14,7 +14,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -28,7 +27,6 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenadm"
@@ -138,8 +136,6 @@ func NewGardenadmBotanist(
 		return nil, fmt.Errorf("failed initializing shoot resource: %w", err)
 	}
 
-	initializeSeedResource(resources, runsControlPlane)
-
 	gardenClient := newFakeGardenClient()
 	if err := initializeFakeGardenResources(ctx, gardenClient, resources, extensions); err != nil {
 		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
@@ -217,11 +213,6 @@ func newBotanist(
 		log.Info("Initializing gardenadm botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
-	var seed *gardencorev1beta1.Seed
-	if !runsControlPlane {
-		seed = resources.Seed
-	}
-
 	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
 	gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(gardenletConfig)
 
@@ -233,11 +224,11 @@ func newBotanist(
 		nil, // gardenadm has no ShootClientMap
 		gardenletConfig,
 		&gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion},
-		resources.Shoot.Name, // matches `Seed.Status.ClusterIdentity` written by `initializeSeedResource`
+		resources.Shoot.Name,
 		resources.Shoot,
 		resources.Project,
 		resources.CloudProfile,
-		seed,
+		nil, // no `Seed` in gardenadm
 		nil, // no `ExposureClass` in gardenadm
 	)
 	if err != nil {
@@ -252,10 +243,6 @@ func newBotanist(
 		o.Shoot.ControlPlaneNamespace = resources.Shoot.Status.TechnicalID
 	}
 
-	if caBundle := imagevector.ContainersCABundle(); caBundle != nil && caBundle.Inline != nil {
-		o.RegistryCABundle = caBundle.Inline
-	}
-
 	return botanistpkg.New(ctx, o)
 }
 
@@ -265,7 +252,7 @@ func initializeFakeGardenResources(
 	resources gardenadm.Resources,
 	extensions []Extension,
 ) error {
-	objects := []client.Object{resources.Seed.DeepCopy(), resources.Shoot.DeepCopy()}
+	objects := []client.Object{resources.Shoot.DeepCopy()}
 
 	for _, extension := range extensions {
 		objects = append(
@@ -373,22 +360,6 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 	}
 
 	return nil
-}
-
-func initializeSeedResource(resources gardenadm.Resources, runsControlPlane bool) {
-	seed := resources.Seed
-	seed.Name = resources.Shoot.Name
-	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: new(resources.Shoot.Name)}
-
-	if runsControlPlane {
-		// When running the control plane (`gardenadm init`), mark the seed as a self-hosted shoot cluster.
-		// Otherwise (`gardenadm bootstrap`), the bootstrap cluster should behave like a standard seed cluster.
-		// If the seed is marked as a self-hosted shoot cluster, extensions are configured differently, e.g., they merge the
-		// shoot webhooks into the seed webhooks.
-		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster, "true")
-	}
-
-	kubernetes.GardenScheme.Default(seed)
 }
 
 func shootUID(fs afero.Afero) (types.UID, error) {
