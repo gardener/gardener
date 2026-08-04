@@ -38,6 +38,10 @@ var _ = Describe("Logrotate", func() {
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=30
 [Install]
 WantedBy=multi-user.target`),
 					FilePaths: []string{pathConfig},
