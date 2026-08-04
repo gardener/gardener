@@ -8147,18 +8147,37 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("spec.controlPlane.zones", func() {
-			It("should allow setting valid, unique zones", func() {
-				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a", "b"}}
+			It("should allow setting a single zone without HA", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a"}}
 
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should forbid more than 1 zone without zone failure tolerance", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a", "b"}}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.controlPlane.zones"),
+				}))))
+			})
+
+			It("should forbid more than 1 zone with 'node' failure tolerance", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{
+					HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}},
+					Zones:            []string{"a", "b"},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.controlPlane.zones"),
+				}))))
 			})
 
 			It("should forbid duplicate zones", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a", "a"}}
 
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.controlPlane.zones[1]"),
 				}))))
@@ -8170,9 +8189,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Zones:            []string{"a", "b"},
 				}
 
-				errorList := ValidateShoot(shoot)
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.controlPlane.zones"),
+				}))))
+			})
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			It("should forbid more than 3 zones when failure tolerance type is 'zone'", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{
+					HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}},
+					Zones:            []string{"a", "b", "c", "d"},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.controlPlane.zones"),
 				}))))
@@ -8230,6 +8259,48 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot := prepareShootForUpdate(shoot)
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should allow expanding zones from 1 to 3 when upgrading to zone failure tolerance", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a"}}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ControlPlane = &core.ControlPlane{
+					HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}},
+					Zones:            []string{"a", "b", "c"},
+				}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should forbid removing existing zones when expanding for zone failure tolerance upgrade", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a"}}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ControlPlane = &core.ControlPlane{
+					HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}},
+					Zones:            []string{"b", "c", "d"},
+				}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.controlPlane.zones"),
+				}))))
+			})
+
+			It("should forbid changing zones when already at zone failure tolerance", func() {
+				shoot.Spec.ControlPlane = &core.ControlPlane{
+					HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}},
+					Zones:            []string{"a", "b", "c"},
+				}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ControlPlane = &core.ControlPlane{
+					HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}},
+					Zones:            []string{"a", "b", "d"},
+				}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.controlPlane.zones"),
+				}))))
 			})
 		})
 	})
