@@ -19,7 +19,7 @@ require (
 	github.com/elliotchance/orderedmap/v3 v3.1.1
 	github.com/fatih/color v1.19.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
-	github.com/gardener/cert-management/pkg/apis v0.26.1
+	github.com/gardener/cert-management/pkg/apis v0.27.0
 	github.com/gardener/dependency-watchdog v1.8.0
 	github.com/gardener/etcd-druid/api v0.37.1
 	github.com/gardener/gardener/pkg/apis v0.0.0
