@@ -100,7 +100,7 @@ func dropInactiveVersions(cloudProfile *core.CloudProfile) {
 	var validKubernetesVersions []core.ExpirableVersion
 
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
-		if !gardencorehelper.CurrentLifecycleClassification(version).IsActive() {
+		if !gardencorehelper.VersionIsActive(version) {
 			continue
 		}
 		validKubernetesVersions = append(validKubernetesVersions, version)
@@ -112,7 +112,7 @@ func dropInactiveVersions(cloudProfile *core.CloudProfile) {
 		var validMachineImageVersions []core.MachineImageVersion
 
 		for _, version := range machineImage.Versions {
-			if gardencorehelper.CurrentLifecycleClassification(version.ExpirableVersion) == core.ClassificationExpired {
+			if gardencorehelper.VersionIsExpired(version.ExpirableVersion) {
 				continue
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)

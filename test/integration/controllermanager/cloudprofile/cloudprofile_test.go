@@ -5,6 +5,8 @@
 package cloudprofile_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,6 +28,7 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 		var CapabilityDefinition []gardencorev1beta1.CapabilityDefinition
 		if isCapabilitiesCloudProfile {
 			CapabilityDefinition = []gardencorev1beta1.CapabilityDefinition{
@@ -126,28 +129,6 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 		}
 	})
 
-	Context("no shoot referencing the CloudProfile", func() {
-		BeforeEach(func() {
-			shoot = nil
-		})
-
-		It("should add the finalizer and release it on deletion", func() {
-			By("Ensure finalizer got added")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)).To(Succeed())
-				g.Expect(cloudProfile.Finalizers).To(ConsistOf("gardener"))
-			}).Should(Succeed())
-
-			By("Delete CloudProfile")
-			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
-
-			By("Ensure CloudProfile is released")
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)
-			}).Should(BeNotFoundError())
-		})
-	})
-
 	Context("shoots referencing the CloudProfile", func() {
 		JustBeforeEach(func() {
 			By("Ensure finalizer got added")
@@ -175,6 +156,197 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)
 			}).Should(BeNotFoundError())
+		})
+	})
+
+	Context("no shoot referencing the CloudProfile", func() {
+		BeforeEach(func() {
+			shoot = nil
+		})
+
+		It("should add the finalizer and release it on deletion", func() {
+			By("Ensure finalizer got added")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)).To(Succeed())
+				g.Expect(cloudProfile.Finalizers).To(ConsistOf("gardener"))
+			}).Should(Succeed())
+
+			By("Delete CloudProfile")
+			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
+
+			By("Ensure CloudProfile is released")
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)
+			}).Should(BeNotFoundError())
+		})
+
+		It("should patch the status versions from the CloudProfile spec", func() {
+			By("Ensure status versions got patched")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)).To(Succeed())
+
+				g.Expect(cloudProfile.Status.Kubernetes).To(Equal(&gardencorev1beta1.KubernetesStatus{
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{
+							Version:        "1.2.3",
+							Classification: gardencorev1beta1.ClassificationSupported,
+						},
+					},
+				}))
+
+				g.Expect(cloudProfile.Status.MachineImages).To(Equal([]gardencorev1beta1.MachineImageStatus{
+					{
+						Name: "some-image",
+						Versions: []gardencorev1beta1.ExpirableVersionStatus{
+							{
+								Version:        "4.5.6",
+								Classification: gardencorev1beta1.ClassificationSupported,
+							},
+						},
+					},
+				}))
+			}).Should(Succeed())
+		})
+
+		It("should patch the status versions after the CloudProfile spec changed with old classification", func() {
+			By("Update CloudProfile spec")
+			Eventually(func() error {
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile); err != nil {
+					return err
+				}
+
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.2.4",
+						Classification: new(gardencorev1beta1.ClassificationDeprecated),
+					},
+				}
+				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "some-other-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+									Version:        "5.6.7",
+									Classification: new(gardencorev1beta1.ClassificationPreview),
+								},
+							},
+						},
+					},
+				}
+
+				return testClient.Update(ctx, cloudProfile)
+			}).Should(Succeed())
+
+			By("Ensure status versions got patched")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)).To(Succeed())
+
+				g.Expect(cloudProfile.Status.Kubernetes).To(Equal(&gardencorev1beta1.KubernetesStatus{
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{
+							Version:        "1.2.4",
+							Classification: gardencorev1beta1.ClassificationDeprecated,
+						},
+					},
+				}))
+
+				g.Expect(cloudProfile.Status.MachineImages).To(Equal([]gardencorev1beta1.MachineImageStatus{
+					{
+						Name: "some-other-image",
+						Versions: []gardencorev1beta1.ExpirableVersionStatus{
+							{
+								Version:        "5.6.7",
+								Classification: gardencorev1beta1.ClassificationPreview,
+							},
+						},
+					},
+				}))
+			}).Should(Succeed())
+		})
+
+		It("should patch the status versions after the CloudProfile spec changed with new classification", func() {
+			var (
+				now    = fakeClock.Now()
+				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
+				past   = &metav1.Time{Time: now.Add(-24 * time.Hour)}
+			)
+
+			By("Update CloudProfile spec")
+			Eventually(func() error {
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile); err != nil {
+					return err
+				}
+
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.2.4",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{
+								Classification: gardencorev1beta1.ClassificationPreview,
+								StartTime:      past,
+							},
+							{
+								Classification: gardencorev1beta1.ClassificationSupported,
+								StartTime:      future,
+							},
+						},
+					},
+				}
+				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "some-other-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+									Version: "5.6.7",
+									Lifecycle: []gardencorev1beta1.LifecycleStage{
+										{
+											Classification: gardencorev1beta1.ClassificationPreview,
+										},
+										{
+											Classification: gardencorev1beta1.ClassificationSupported,
+											StartTime:      past,
+										},
+										{
+											Classification: gardencorev1beta1.ClassificationDeprecated,
+											StartTime:      future,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				return testClient.Update(ctx, cloudProfile)
+			}).Should(Succeed())
+
+			By("Ensure status versions got patched")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile)).To(Succeed())
+
+				g.Expect(cloudProfile.Status.Kubernetes).To(Equal(&gardencorev1beta1.KubernetesStatus{
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{
+							Version:        "1.2.4",
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+					},
+				}))
+
+				g.Expect(cloudProfile.Status.MachineImages).To(Equal([]gardencorev1beta1.MachineImageStatus{
+					{
+						Name: "some-other-image",
+						Versions: []gardencorev1beta1.ExpirableVersionStatus{
+							{
+								Version:        "5.6.7",
+								Classification: gardencorev1beta1.ClassificationSupported,
+							},
+						},
+					},
+				}))
+			}).Should(Succeed())
 		})
 	})
 },
