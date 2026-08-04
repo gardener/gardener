@@ -52,7 +52,6 @@ import (
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
-	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
@@ -104,7 +103,6 @@ var _ = Describe("Garden controller tests", func() {
 			&kubecontrollermanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&kubecontrollermanager.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&kubecontrollermanager.Until, untilInTest,
-			&nginxingress.TimeoutWaitForManagedResource, 2*time.Second,
 			&resourcemanager.SkipWebhookDeployment, true,
 			&resourcemanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
@@ -582,7 +580,6 @@ spec:
 			"garden-system",
 			"vpa",
 			"etcd-druid",
-			"nginx-ingress",
 			"fluent-operator",
 			"fluent-bit",
 			"fluent-operator-custom-resources-garden",

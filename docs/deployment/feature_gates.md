@@ -34,8 +34,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | PrometheusHealthChecks         | `false` | `Alpha` | `1.135` |         |
 | RemoveVali                     | `false` | `Alpha` | `1.140` |         |
 | VersionClassificationLifecycle | `false` | `Alpha` | `1.137` |         |
-| DisableNginxIngressInGarden    | `false` | `Alpha` | `1.142` |         |
-| DisableNginxIngressInSeed      | `false` | `Alpha` | `1.142` |         |
+| DisableNginxIngressInGarden    | `false` | `Alpha` | `1.142` | `1.148` |
+| DisableNginxIngressInGarden    | `true`  | `Beta`  | `1.149` |         |
+| DisableNginxIngressInSeed      | `false` | `Alpha` | `1.142` | `1.148` |
+| DisableNginxIngressInSeed      | `true`  | `Beta`  | `1.149` |         |
 | DisableNginxIngressInShoot     | `false` | `Alpha` | `1.142` |         |
 | LiveControlPlaneMigration      | `false` | `Alpha` | `1.142` |         |
 | BackupEntryForGarden           | `false` | `Alpha` | `1.142` | `1.146` |

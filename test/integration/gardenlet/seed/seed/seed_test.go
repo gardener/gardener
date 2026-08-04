@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
-	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	victoriaoperator "github.com/gardener/gardener/pkg/component/observability/logging/victoria/operator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
@@ -407,7 +406,6 @@ var _ = Describe("Seed controller tests", func() {
 				test.WithVars(
 					&dnsrecord.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
 					&extension.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
-					&nginxingress.WaitUntilHealthy, waitUntilHealthyInTest,
 					&resourcemanager.Until, untilInTest,
 					&resourcemanager.TimeoutWaitForDeployment, 50*time.Millisecond,
 					&seedcontroller.WaitUntilLoadBalancerIsReady, waitUntilLoadBalancerIsReadyInTest,
@@ -758,7 +756,6 @@ var _ = Describe("Seed controller tests", func() {
 					expectedManagedResources = append(expectedManagedResources,
 						"vpa",
 						"etcd-druid",
-						"nginx-ingress",
 						"plutono",
 						"vali",
 						"fluent-bit",
@@ -776,7 +773,6 @@ var _ = Describe("Seed controller tests", func() {
 					}
 				} else {
 					expectedManagedResources = append(expectedManagedResources,
-						"nginx-ingress-seed",
 						"plutono-seed-config-only",
 					)
 				}
@@ -1120,7 +1116,6 @@ var _ = Describe("Seed controller tests", func() {
 						"referenced-resources-" + seedName,
 						// Components not skipped for self-hosted shoots (only for garden):
 						"vpa",
-						"nginx-ingress",
 						"plutono",
 						"vali",
 						"fluent-bit",
@@ -1182,10 +1177,6 @@ var _ = Describe("Seed controller tests", func() {
 })
 
 func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
-	return nil
-}
-
-func waitUntilHealthyInTest(_ context.Context, _ client.Reader, _, _ string) error {
 	return nil
 }
 
