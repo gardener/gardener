@@ -43,6 +43,9 @@ spec:
             # See also https://github.com/envoyproxy/envoy/security/advisories/GHSA-jhv4-f7mr-xx76
             "overload.premature_reset_total_stream_count": "100"
             "overload.premature_reset_min_stream_lifetime_seconds": "1"
+          proxyStatsMatcher:
+            inclusionRegexps:
+              - ".*goaway.*"
     spec:
       serviceAccountName: istio-ingressgateway-service-account
       securityContext:
