@@ -54,7 +54,7 @@ const (
 	kubeRBACProxyName = "rbac-proxy"
 
 	tlsMountPath       = "/tls"
-	tlsCertificateName = "tls-certificate"
+	tlsCertificateName = "tlsCertificateVolumeName"
 
 	metricsPort                    = 8888
 	timeoutWaitForManagedResources = 2 * time.Minute
@@ -150,7 +150,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			shootObjects = append(shootObjects, o.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName))
 		}
 		var err error
-		ingressTLSSecret, err = o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{ // we want to update the outer secret
+		ingressTLSSecret, err = o.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "logging-tls",
 			CommonName:                  o.values.IngressHost,
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
@@ -721,7 +721,7 @@ func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.Access
 func (o *otelCollector) getIstioResources(tlsSecret *corev1.Secret, caBundle *corev1.Secret) ([]client.Object, error) {
 	name := "logging"
 
-	// Istio expects the server cert in the istio ingress gateway namespace to terminate inbound TLS from clients.
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%s", o.namespace, name, tlsSecret.Name),
