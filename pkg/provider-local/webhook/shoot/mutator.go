@@ -32,8 +32,8 @@ func NewMutator() extensionswebhook.Mutator {
 	}
 }
 
-func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
-	acc, err := meta.Accessor(new)
+func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
+	acc, err := meta.Accessor(newObj)
 	if err != nil {
 		return fmt.Errorf("could not create accessor during webhook: %w", err)
 	}
@@ -43,7 +43,7 @@ func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
 		return nil
 	}
 
-	switch x := new.(type) {
+	switch x := newObj.(type) {
 	case *corev1.ConfigMap:
 		switch {
 		case strings.HasPrefix(x.Name, kubeproxy.ConfigNamePrefix):

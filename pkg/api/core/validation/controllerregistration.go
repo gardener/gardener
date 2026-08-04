@@ -189,39 +189,39 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 }
 
 // ValidateControllerRegistrationUpdate validates a ControllerRegistration object before an update.
-func ValidateControllerRegistrationUpdate(new, old *core.ControllerRegistration) field.ErrorList {
+func ValidateControllerRegistrationUpdate(newControllerRegistration, oldControllerRegistration *core.ControllerRegistration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateControllerRegistrationSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateControllerRegistration(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newControllerRegistration.ObjectMeta, &oldControllerRegistration.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateControllerRegistrationSpecUpdate(&newControllerRegistration.Spec, &oldControllerRegistration.Spec, newControllerRegistration.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateControllerRegistration(newControllerRegistration)...)
 
 	return allErrs
 }
 
 // ValidateControllerRegistrationSpecUpdate validates a ControllerRegistration spec before an update.
-func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrationSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateControllerRegistrationSpecUpdate(newSpec, oldSpec *core.ControllerRegistrationSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update controller registration spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, ValidateControllerResourcesUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
+	allErrs = append(allErrs, ValidateControllerResourcesUpdate(newSpec.Resources, oldSpec.Resources, fldPath.Child("resources"))...)
 
 	return allErrs
 }
 
 // ValidateControllerResourcesUpdate validates the update of ControllerResource objects.
-func ValidateControllerResourcesUpdate(new, old []core.ControllerResource, fldPath *field.Path) field.ErrorList {
+func ValidateControllerResourcesUpdate(newResources, oldResources []core.ControllerResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	kindTypeToPrimary := make(map[string]*bool, len(old))
-	for _, resource := range old {
+	kindTypeToPrimary := make(map[string]*bool, len(oldResources))
+	for _, resource := range oldResources {
 		kindTypeToPrimary[gardenerutils.ExtensionsID(resource.Kind, resource.Type)] = resource.Primary
 	}
-	for i, resource := range new {
+	for i, resource := range newResources {
 		if primary, ok := kindTypeToPrimary[gardenerutils.ExtensionsID(resource.Kind, resource.Type)]; ok {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(resource.Primary, primary, fldPath.Index(i).Child("primary"))...)
 		}

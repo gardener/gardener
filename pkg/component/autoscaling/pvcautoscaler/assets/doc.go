@@ -7,5 +7,5 @@
 package assets
 
 import (
-	_ "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
+	_ "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1" // required for generating CRDs
 )

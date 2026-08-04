@@ -20,7 +20,7 @@ import (
 
 // Ensurer ensures that the cloudprovider secret conforms to the provider requirements.
 type Ensurer interface {
-	EnsureCloudProviderSecret(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *corev1.Secret) error
+	EnsureCloudProviderSecret(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newSecret, oldSecret *corev1.Secret) error
 }
 
 // NewMutator creates a new cloudprovider mutator.
@@ -39,12 +39,12 @@ type mutator struct {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
-	if new.GetDeletionTimestamp() != nil {
+func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) error {
+	if newObj.GetDeletionTimestamp() != nil {
 		return nil
 	}
 
-	newSecret, ok := new.(*corev1.Secret)
+	newSecret, ok := newObj.(*corev1.Secret)
 	if !ok {
 		return fmt.Errorf("could not mutate: object is not of type %q", "Secret")
 	}
@@ -53,14 +53,14 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 	}
 
 	var oldSecret *corev1.Secret
-	if old != nil {
-		oldSecret, ok = old.(*corev1.Secret)
+	if oldObj != nil {
+		oldSecret, ok = oldObj.(*corev1.Secret)
 		if !ok {
 			return fmt.Errorf("could not mutate: old object could not be casted to type %q", "Secret")
 		}
 	}
 
-	etcx := extensionscontextwebhook.NewGardenContext(m.client, new)
+	etcx := extensionscontextwebhook.NewGardenContext(m.client, newObj)
 	webhook.LogMutation(m.logger, newSecret.Kind, newSecret.Namespace, newSecret.Name)
 	return m.ensurer.EnsureCloudProviderSecret(ctx, etcx, newSecret, oldSecret)
 }

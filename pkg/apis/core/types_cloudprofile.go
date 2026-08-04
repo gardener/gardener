@@ -333,8 +333,8 @@ var order = map[VersionClassification]int{
 }
 
 // Compare compares two VersionClassification objects to determine their order.
-func (c1 VersionClassification) Compare(c2 VersionClassification) int {
-	return order[c1] - order[c2]
+func (v VersionClassification) Compare(other VersionClassification) int {
+	return order[v] - order[other]
 }
 
 const (

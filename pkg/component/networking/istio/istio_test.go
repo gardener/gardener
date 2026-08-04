@@ -129,17 +129,17 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioIngressAutoscaler = func(min *int, max *int) string {
+		istioIngressAutoscaler = func(minCount *int, maxCount *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_autoscaler.yaml")
-			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(min, 2)))
-			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(max, 9)))
+			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(minCount, 2)))
+			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(maxCount, 9)))
 			return str
 		}
 
-		istioIngressAutoscalerTLSTerminationHPA = func(min *int, max *int) string {
+		istioIngressAutoscalerTLSTerminationHPA = func(minCount *int, maxCount *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_autoscaler_tls_termination_hpa.yaml")
-			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(min, 2)))
-			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(max, 9)))
+			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(minCount, 2)))
+			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(maxCount, 9)))
 			return str
 		}
 

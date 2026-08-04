@@ -514,25 +514,25 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.
 	return workers
 }
 
-func lifetimeVerificationNeeded(new, old core.Shoot) bool {
-	oldLifetime, ok := old.Annotations[v1beta1constants.ShootExpirationTimestamp]
+func lifetimeVerificationNeeded(newShoot, oldShoot core.Shoot) bool {
+	oldLifetime, ok := oldShoot.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	if !ok {
-		oldLifetime = old.CreationTimestamp.String()
+		oldLifetime = oldShoot.CreationTimestamp.String()
 	}
-	newLifetime := new.Annotations[v1beta1constants.ShootExpirationTimestamp]
+	newLifetime := newShoot.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	return oldLifetime != newLifetime
 }
 
-func quotaVerificationNeeded(new, old core.Shoot) bool {
-	if !helper.NginxIngressEnabled(old.Spec.Addons) && helper.NginxIngressEnabled(new.Spec.Addons) {
+func quotaVerificationNeeded(newShoot, oldShoot core.Shoot) bool {
+	if !helper.NginxIngressEnabled(oldShoot.Spec.Addons) && helper.NginxIngressEnabled(newShoot.Spec.Addons) {
 		return true
 	}
 
 	// Check for diffs on workers
-	for _, worker := range new.Spec.Provider.Workers {
+	for _, worker := range newShoot.Spec.Provider.Workers {
 		oldHasWorker := false
 
-		for _, oldWorker := range old.Spec.Provider.Workers {
+		for _, oldWorker := range oldShoot.Spec.Provider.Workers {
 			if worker.Name == oldWorker.Name {
 				oldHasWorker = true
 

@@ -368,8 +368,8 @@ func (d *dnsRecord) isTimestampInvalidOrAfterLastUpdateTime() bool {
 	return false
 }
 
-func (d *dnsRecord) recordTypeChanged(old, new extensionsv1alpha1.DNSRecordType) bool {
-	return old != new
+func (d *dnsRecord) recordTypeChanged(oldType, newType extensionsv1alpha1.DNSRecordType) bool {
+	return oldType != newType
 }
 
 func newDNSRecord(values *Values) *extensionsv1alpha1.DNSRecord {

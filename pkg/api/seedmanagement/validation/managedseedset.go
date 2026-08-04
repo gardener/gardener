@@ -299,14 +299,14 @@ func validatePendingReplica(pendingReplica *seedmanagement.PendingReplica, name 
 	return allErrs
 }
 
-func isDecremented(new, old *int32) bool {
-	if new == nil && old != nil {
+func isDecremented(newCount, oldCount *int32) bool {
+	if newCount == nil && oldCount != nil {
 		return true
 	}
-	if new == nil || old == nil {
+	if newCount == nil || oldCount == nil {
 		return false
 	}
-	return *new < *old
+	return *newCount < *oldCount
 }
 
 // parentNameAndOrdinalRegex is a regular expression that extracts the parent name and ordinal from a replica name.

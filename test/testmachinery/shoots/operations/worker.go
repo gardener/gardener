@@ -49,30 +49,30 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 			ginkgo.Skip("no workers defined")
 		}
 		var (
-			min = shoot.Spec.Provider.Workers[0].Minimum + 1
-			max = shoot.Spec.Provider.Workers[0].Maximum
+			minWorkers = shoot.Spec.Provider.Workers[0].Minimum + 1
+			maxWorkers = shoot.Spec.Provider.Workers[0].Maximum
 		)
-		if shoot.Spec.Provider.Workers[0].Maximum < min {
-			max = min
+		if shoot.Spec.Provider.Workers[0].Maximum < minWorkers {
+			maxWorkers = minWorkers
 		}
 
-		ginkgo.By(fmt.Sprintf("updating shoot worker to min of %d machines", min))
+		ginkgo.By(fmt.Sprintf("updating shoot worker to min of %d machines", minWorkers))
 		err := f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Spec.Provider.Workers[0].Minimum = min
-			shoot.Spec.Provider.Workers[0].Maximum = max
+			shoot.Spec.Provider.Workers[0].Minimum = minWorkers
+			shoot.Spec.Provider.Workers[0].Maximum = maxWorkers
 			return nil
 		})
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Scale down worker")
 
-		min = shoot.Spec.Provider.Workers[0].Minimum - 1
-		max = shoot.Spec.Provider.Workers[0].Maximum - 1
+		minWorkers = shoot.Spec.Provider.Workers[0].Minimum - 1
+		maxWorkers = shoot.Spec.Provider.Workers[0].Maximum - 1
 
-		ginkgo.By(fmt.Sprintf("updating shoot worker to min of %d machines", min))
+		ginkgo.By(fmt.Sprintf("updating shoot worker to min of %d machines", minWorkers))
 		err = f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Spec.Provider.Workers[0].Minimum = min
-			shoot.Spec.Provider.Workers[0].Maximum = max
+			shoot.Spec.Provider.Workers[0].Minimum = minWorkers
+			shoot.Spec.Provider.Workers[0].Maximum = maxWorkers
 			return nil
 		})
 		framework.ExpectNoError(err)

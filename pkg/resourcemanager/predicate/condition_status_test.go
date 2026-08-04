@@ -103,13 +103,13 @@ var _ = Describe("#ConditionStatusChanged", func() {
 	})
 
 	DescribeTable("DefaultConditionChange",
-		func(old, new *gardencorev1beta1.Condition, matcher types.GomegaMatcher) {
+		func(oldCondition, newCondition *gardencorev1beta1.Condition, matcher types.GomegaMatcher) {
 			managedResourceNew := managedResource.DeepCopy()
-			if old != nil {
-				managedResource.Status.Conditions = []gardencorev1beta1.Condition{*old}
+			if oldCondition != nil {
+				managedResource.Status.Conditions = []gardencorev1beta1.Condition{*oldCondition}
 			}
-			if new != nil {
-				managedResourceNew.Status.Conditions = []gardencorev1beta1.Condition{*new}
+			if newCondition != nil {
+				managedResourceNew.Status.Conditions = []gardencorev1beta1.Condition{*newCondition}
 			}
 			updateEvent.ObjectOld = managedResource
 			updateEvent.ObjectNew = managedResourceNew
@@ -139,13 +139,13 @@ var _ = Describe("#ConditionStatusChanged", func() {
 	)
 
 	DescribeTable("ConditionChangedToUnhealthy",
-		func(old, new *gardencorev1beta1.Condition, matcher types.GomegaMatcher) {
+		func(oldCondition, newCondition *gardencorev1beta1.Condition, matcher types.GomegaMatcher) {
 			managedResourceNew := managedResource.DeepCopy()
-			if old != nil {
-				managedResource.Status.Conditions = []gardencorev1beta1.Condition{*old}
+			if oldCondition != nil {
+				managedResource.Status.Conditions = []gardencorev1beta1.Condition{*oldCondition}
 			}
-			if new != nil {
-				managedResourceNew.Status.Conditions = []gardencorev1beta1.Condition{*new}
+			if newCondition != nil {
+				managedResourceNew.Status.Conditions = []gardencorev1beta1.Condition{*newCondition}
 			}
 			updateEvent.ObjectNew = managedResourceNew
 

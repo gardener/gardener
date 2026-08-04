@@ -7,5 +7,5 @@
 package templates
 
 import (
-	_ "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	_ "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2" // required for generating CRDs
 )
