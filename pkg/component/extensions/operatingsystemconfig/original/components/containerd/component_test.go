@@ -38,6 +38,10 @@ var _ = Describe("Component", func() {
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=30
 [Install]
 WantedBy=multi-user.target`),
 				FilePaths: []string{"/etc/systemd/containerd.conf"},
