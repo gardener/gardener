@@ -7,6 +7,8 @@ package secretsrotation
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +16,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -38,7 +42,6 @@ func RenewGardenSecretsInAllSeeds(ctx context.Context, log logr.Logger, c client
 			return fmt.Errorf("error annotating seed %s: already annotated with \"%s: %s\"", seed.Name, v1beta1constants.GardenerOperation, seed.Annotations[v1beta1constants.GardenerOperation])
 		}
 
-		seed := seed
 		tasks = append(tasks, func(ctx context.Context) error {
 			log := log.WithValues("seed", seed.Name)
 
@@ -67,6 +70,70 @@ func CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx context.Context, c clien
 	for _, seed := range seedList.Items {
 		if seed.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
 			return fmt.Errorf("renewing %q secrets for seed %q is not yet completed", secretType, seed.Name)
+		}
+	}
+
+	return nil
+}
+
+// RenewKubeconfigInAllShootGardenlets annotates all Gardenlet objects for self-hosted shoots to trigger renewal of
+// their garden cluster kubeconfig.
+func RenewKubeconfigInAllShootGardenlets(ctx context.Context, log logr.Logger, c client.Client) error {
+	gardenletList := &metav1.PartialObjectMetadataList{}
+	gardenletList.SetGroupVersionKind(seedmanagementv1alpha1.SchemeGroupVersion.WithKind("GardenletList"))
+	if err := c.List(ctx, gardenletList, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		return err
+	}
+
+	gardenletList.Items = slices.DeleteFunc(gardenletList.Items, func(objectMeta metav1.PartialObjectMetadata) bool {
+		return !strings.HasPrefix(objectMeta.Name, gardenletutils.ResourcePrefixSelfHostedShoot)
+	})
+
+	log.Info("Gardenlets requiring renewal of their kubeconfig", "number", len(gardenletList.Items))
+
+	var tasks []flow.TaskFn
+	for _, gardenlet := range gardenletList.Items {
+		if gardenlet.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+			continue
+		}
+
+		if gardenlet.Annotations[v1beta1constants.GardenerOperation] != "" {
+			return fmt.Errorf("error annotating gardenlet %s: already annotated with \"%s: %s\"", client.ObjectKeyFromObject(&gardenlet), v1beta1constants.GardenerOperation, gardenlet.Annotations[v1beta1constants.GardenerOperation])
+		}
+
+		tasks = append(tasks, func(ctx context.Context) error {
+			log := log.WithValues("gardenlet", client.ObjectKeyFromObject(&gardenlet))
+
+			gardenlet.SetGroupVersionKind(seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"))
+			patch := client.MergeFrom(gardenlet.DeepCopy())
+			kubernetesutils.SetMetaDataAnnotation(&gardenlet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
+			if err := c.Patch(ctx, &gardenlet, patch); err != nil {
+				return fmt.Errorf("error annotating Gardenlet %s: %w", client.ObjectKeyFromObject(&gardenlet), err)
+			}
+			log.Info("Successfully annotated gardenlet to renew its kubeconfig")
+			return nil
+		})
+	}
+
+	return flow.ParallelN(5, tasks...)(ctx)
+}
+
+// CheckIfKubeconfigRenewalCompletedInAllShootGardenlets checks if renewal of the garden cluster kubeconfig is
+// completed for all Gardenlet objects for self-hosted shoots.
+func CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx context.Context, c client.Client) error {
+	gardenletList := &metav1.PartialObjectMetadataList{}
+	gardenletList.SetGroupVersionKind(seedmanagementv1alpha1.SchemeGroupVersion.WithKind("GardenletList"))
+	if err := c.List(ctx, gardenletList, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		return err
+	}
+
+	gardenletList.Items = slices.DeleteFunc(gardenletList.Items, func(objectMeta metav1.PartialObjectMetadata) bool {
+		return !strings.HasPrefix(objectMeta.Name, gardenletutils.ResourcePrefixSelfHostedShoot)
+	})
+
+	for _, gardenlet := range gardenletList.Items {
+		if gardenlet.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+			return fmt.Errorf("renewing kubeconfig for Gardenlet %s is not yet completed", client.ObjectKeyFromObject(&gardenlet))
 		}
 	}
 
