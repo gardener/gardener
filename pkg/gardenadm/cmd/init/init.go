@@ -207,7 +207,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn: func(ctx context.Context) error {
-				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd)
+				return b.DeployStaticControlPlaneDeployments(ctx, opts.UseBootstrapEtcd, b.BackupDataPath)
 			},
 			Dependencies: flow.NewTaskIDs(reconcileControlPlane, waitUntilEtcdsReady),
 		})
@@ -338,6 +338,8 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 	if opts.Zone != "" {
 		b.Zone = new(opts.Zone)
 	}
+
+	b.BackupDataPath = opts.BackupDataPath
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
 	if err != nil {

@@ -36,6 +36,12 @@ type Options struct {
 	// If it has exactly one zone configured, that zone is automatically applied and the flag is optional.
 	// If it has no zones configured, this flag must not be set.
 	Zone string
+	// BackupDataPath is the local path on the node where the etcd backup data is stored.
+	// When set, the bootstrap etcd will be initialized from this path using the Local storage provider.
+	// The path is expected to have the structure: <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2.
+	//
+	// TODO(Kostov6): Support specifying the backup root path after backup resource manifests are imported.
+	BackupDataPath string
 }
 
 // ParseArgs parses the arguments to the options.
@@ -89,4 +95,6 @@ func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.UseHostNetwork, "use-host-network", false, "If set, gardener-resource-manager and extensions continue to run in host network instead of getting redeployed into the pod network after bootstrapping. This can be useful for testing purposes to save time.")
 	fs.StringVarP(&o.Zone, "zone", "z", "", "Availability zone for the new node. Required if the control plane worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.")
 	fs.BoolVar(&o.Force, "force", false, "If set, the init command will be executed even if the control plane is already initialized.")
+	// TODO(Kostov6): Support specifying the backup root path after backup resource manifests are imported.
+	fs.StringVar(&o.BackupDataPath, "backup-data-path", "", "Local path on the node where the etcd backup data is stored. Expected structure: <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2")
 }

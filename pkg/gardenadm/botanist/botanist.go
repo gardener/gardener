@@ -62,6 +62,10 @@ type GardenadmBotanist struct {
 	// topology.kubernetes.io/zone label on the node resource.
 	Zone *string
 
+	// BackupDataPath is the local path on the node where the etcd backup data is stored.
+	// When set, the bootstrap etcd will be initialized from this path using the Local storage provider.
+	BackupDataPath string
+
 	operatingSystemConfigSecret *corev1.Secret
 
 	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
