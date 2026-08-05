@@ -68,39 +68,25 @@ type resourceSetup struct {
 }
 
 func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
-	var setups []resourceSetup
+	setups := []resourceSetup{
+		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
+		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
+		{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
+		{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
+		{&gardencorev1.ControllerDeployment{}, g.setupControllerDeploymentWatch},
+		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
+		{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
+		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
+		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
+		{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
+		{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
+		{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},
+	}
 
-	if g.forSelfHostedShoots {
+	if !g.forSelfHostedShoots {
 		setups = append(setups,
-			resourceSetup{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
-			resourceSetup{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
-			resourceSetup{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
-			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
-			resourceSetup{&gardencorev1.ControllerDeployment{}, g.setupControllerDeploymentWatch},
-			resourceSetup{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
-			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
-			resourceSetup{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
-			resourceSetup{&gardencorev1beta1.Project{}, g.setupProjectWatch},
-			resourceSetup{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
-			resourceSetup{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
-			resourceSetup{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},
-		)
-	} else {
-		setups = append(setups,
-			resourceSetup{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
-			resourceSetup{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
-			resourceSetup{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
-			resourceSetup{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
-			resourceSetup{&gardencorev1.ControllerDeployment{}, g.setupControllerDeploymentWatch},
-			resourceSetup{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
-			resourceSetup{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
-			resourceSetup{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
-			resourceSetup{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 			resourceSetup{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
 			resourceSetup{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
-			resourceSetup{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
-			resourceSetup{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
-			resourceSetup{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},
 		)
 	}
 

@@ -134,7 +134,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 	clusterIPv4 := net.ParseIP(clusterIPs[0]).To4()
 
 	if clusterIPv4 != nil {
-		if b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv6 {
+		if b.Shoot.PreferIPv6() {
 			// "64:ff9b:1::" is a well known prefix for address translation for use
 			// in local networks.
 			b.APIServerClusterIP = "64:ff9b:1::" + clusterIPs[0]

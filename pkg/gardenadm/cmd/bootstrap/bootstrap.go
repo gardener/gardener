@@ -110,7 +110,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
 		})
 		_ = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
+			b.ReconcileGardenerResourceManagerTaskGroup(true, true, false).
 				WithDependencies(deployPriorityClassCritical),
 		)
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
@@ -121,12 +121,12 @@ func run(ctx context.Context, opts *Options) error {
 			reconcileExtensionControllers,
 		)
 		reconcileInfrastructure = g.AddGroup(
-			b.ReconcileInfrastructureTaskGroup().
+			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(syncPointBootstrapped).
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource]),
 		)
 		_ = g.AddGroup(
-			b.ReconcileOperatingSystemConfigTaskGroup().
+			b.ReconcileOperatingSystemConfigTaskGroup(false).
 				WithDependencies(syncPointBootstrapped),
 		)
 		_ = g.AddGroup(
@@ -134,7 +134,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(syncPointBootstrapped),
 		)
 		reconcileWorker = g.AddGroup(
-			b.ReconcileWorkerTaskGroup().
+			b.ReconcileWorkerTaskGroup(false).
 				WithDependencies(syncPointBootstrapped, botanist.TaskGroupReconcileOperatingSystemConfig).
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource]),
 		)

@@ -917,8 +917,7 @@ build:
           envTemplate:
             template: '{{.GARDENER_VERSION}}'
         - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
+          inputDigest: {}
 deploy:
   helm:
     releases:
@@ -1399,8 +1398,7 @@ build:
           envTemplate:
             template: '{{.GARDENER_VERSION}}'
         - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
+          inputDigest: {}
 manifests:
   kustomize:
     paths:
