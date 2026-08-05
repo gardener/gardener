@@ -761,6 +761,12 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
 				waitUntilGardenerResourceManagerReady, deployGardenerResourceManager, deployKubeScheduler, deployVPNSeedServer, waitUntilShootNamespacesReady),
 		})
+		waitUntilVPNShootReady = g.Add(flow.Task{
+			Name:         "Waiting until vpn-shoot system component is ready",
+			Fn:           b.Shoot.Components.SystemComponents.VPNShoot.Wait,
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployVPNShoot),
+		})
 		deployNodeProblemDetector = g.Add(flow.Task{
 			Name: "Deploying node-problem-detector system component",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -845,7 +851,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			deployNodeExporter,
 			deployNodeLocalDNS,
 			deployMetricsServer,
-			deployVPNShoot,
+			waitUntilVPNShootReady,
 			deployNodeProblemDetector,
 			deployKubeProxy,
 			deployBlackboxExporter,
