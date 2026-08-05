@@ -762,8 +762,10 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 				waitUntilGardenerResourceManagerReady, deployGardenerResourceManager, deployKubeScheduler, deployVPNSeedServer, waitUntilShootNamespacesReady),
 		})
 		waitUntilVPNShootReady = g.Add(flow.Task{
-			Name:         "Waiting until vpn-shoot system component is ready",
-			Fn:           b.Shoot.Components.SystemComponents.VPNShoot.Wait,
+			Name: "Waiting until vpn-shoot system component is ready",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.SystemComponents.VPNShoot.Wait(ctx)
+			}),
 			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployVPNShoot),
 		})
