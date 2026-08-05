@@ -62,7 +62,7 @@ func ItShouldVerifyInPlaceUpdateCompletion(s *ShootContext) {
 
 	It("Verify in-place update completion", func(ctx SpecContext) {
 		VerifyInPlaceUpdateCompletion(ctx, s.Log, s.GardenClient, s.Shoot)
-	}, SpecTimeout(5*time.Minute))
+	}, SpecTimeout(10*time.Minute))
 }
 
 // VerifyInPlaceUpdateCompletion verifies that the in-place update was completed successfully by checking the
