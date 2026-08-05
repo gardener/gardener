@@ -158,36 +158,12 @@ var _ = Describe("VictoriaOperator", func() {
 									"--leader-elect",
 									"--health-probe-bind-address=:8081",
 									"--metrics-bind-address=:8080",
-									"--controller.disableReconcileFor=VLAgent,VLCluster,VLogs,VMAgent,VMAlert,VMAlertmanager,VMAlertmanagerConfig,VMAnomaly,VMAuth,VMCluster,VMNodeScrape,VMPodScrape,VMProbe,VMRule,VMScrapeConfig,VMServiceScrape,VMSingle,VMStaticScrape,VMUser,VTSingle,VTCluster",
+									"--controller.disableReconcileFor=VLAgent,VLCluster,VLogs,VMAgent,VMAlert,VMAlertmanager,VMAlertmanagerConfig,VMAnomaly,VMAuth,VMCluster,VMNodeScrape,VMPodScrape,VMProbe,VMRule,VMScrapeConfig,VMServiceScrape,VMSingle,VMStaticScrape,VMUser,VTSingle,VTCluster,PodMonitor,ServiceMonitor,PrometheusRule,Probe,AlertmanagerConfig,ScrapeConfig",
 								},
 								Env: []corev1.EnvVar{
 									{
 										Name:  "WATCH_NAMESPACE",
 										Value: "",
-									},
-									{
-										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_PODMONITOR",
-										Value: "false",
-									},
-									{
-										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_SERVICESCRAPE",
-										Value: "false",
-									},
-									{
-										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_PROMETHEUSRULE",
-										Value: "false",
-									},
-									{
-										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_PROBE",
-										Value: "false",
-									},
-									{
-										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_ALERTMANAGERCONFIG",
-										Value: "false",
-									},
-									{
-										Name:  "VM_ENABLEDPROMETHEUSCONVERTER_SCRAPECONFIG",
-										Value: "false",
 									},
 									{
 										Name:  "VM_DISABLESELFSERVICESCRAPECREATION",
