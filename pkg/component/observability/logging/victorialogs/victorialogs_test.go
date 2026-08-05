@@ -130,6 +130,11 @@ var _ = Describe("VictoriaLogs", func() {
 						},
 					},
 				},
+				StorageMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
+					Annotations: map[string]string{
+						"operator.victoriametrics.com/pvc-allow-volume-expansion": "false",
+					},
+				},
 				ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
 					EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 						Name: "logging-vl",
@@ -554,7 +559,7 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 					ScaleUp: &pvcautoscalerv1alpha1.ScalingRules{
 						UtilizationThresholdPercent: new(70),
 						StepPercent:                 new(10),
-						MinStepAbsolute:             new(resource.MustParse("1Gi")),
+						MinStepAbsolute:             new(resource.MustParse("2Gi")),
 					},
 				},
 			},
