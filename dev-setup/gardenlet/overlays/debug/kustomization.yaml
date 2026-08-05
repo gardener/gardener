@@ -11,10 +11,8 @@ patches:
         value:
           leaderElect: false
       - op: add
-        path: /spec/config/server
-        value:
-          healthProbes:
-            enable: false
+        path: /spec/deployment/enableHealthProbes
+        value: false
     target:
       group: seedmanagement.gardener.cloud
       kind: Gardenlet

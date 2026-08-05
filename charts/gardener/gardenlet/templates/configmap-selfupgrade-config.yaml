@@ -63,6 +63,9 @@ data:
         tolerations:
         {{- .Values.tolerations | toYaml | nindent 8 }}
         {{- end }}
+        {{- if hasKey .Values "enableHealthProbes" }}
+        enableHealthProbes: {{ .Values.enableHealthProbes }}
+        {{- end }}
       config:
 {{- $config := include "gardenlet.config" . | fromYaml }}
 {{- if $config.seedConfig }}

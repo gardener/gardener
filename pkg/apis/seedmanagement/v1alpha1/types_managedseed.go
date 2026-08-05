@@ -132,6 +132,10 @@ type GardenletDeployment struct {
 	// Tolerations are the tolerations to be applied to gardenlet pods.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty" protobuf:"bytes,11,rep,name=tolerations"`
+	// EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet
+	// deployment. Defaults to true.
+	// +optional
+	EnableHealthProbes *bool `json:"enableHealthProbes,omitempty" protobuf:"varint,12,rep,name=enableHealthProbes"`
 }
 
 // Image specifies container image parameters.

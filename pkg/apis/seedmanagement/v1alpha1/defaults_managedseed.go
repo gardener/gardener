@@ -36,6 +36,11 @@ func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 	if obj.Image == nil {
 		obj.Image = &Image{}
 	}
+
+	// Enable health probes by default
+	if obj.EnableHealthProbes == nil {
+		obj.EnableHealthProbes = new(true)
+	}
 }
 
 // SetDefaults_Image sets default values for Image objects.

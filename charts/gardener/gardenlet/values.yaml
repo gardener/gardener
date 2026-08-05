@@ -3,6 +3,7 @@ revisionHistoryLimit: 2
 isolateClusterResources: false
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
+enableHealthProbes: true
 image:
 # ref: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet:latest
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
