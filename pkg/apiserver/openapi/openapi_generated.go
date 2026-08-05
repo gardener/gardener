@@ -6653,7 +6653,7 @@ func schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"begin": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. \"220000+0100\". If not present, a random value will be computed.",
+							Description: "Begin is the beginning of the time window in the format HHMMSS±ZONE, e.g. \"220000+0100\" or \"220000-0500\". If not present, a random value will be computed.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -6661,7 +6661,7 @@ func schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref common.ReferenceCall
 					},
 					"end": {
 						SchemaProps: spec.SchemaProps{
-							Description: "End is the end of the time window in the format HHMMSS+ZONE, e.g. \"220000+0100\". If not present, the value will be computed based on the \"Begin\" value.",
+							Description: "End is the end of the time window in the format HHMMSS±ZONE, e.g. \"220000+0100\" or \"220000-0500\". If not present, the value will be computed based on the \"Begin\" value.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

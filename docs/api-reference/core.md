@@ -8169,7 +8169,7 @@ string
 </em>
 </td>
 <td>
-<p>Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".<br />If not present, a random value will be computed.</p>
+<p>Begin is the beginning of the time window in the format HHMMSS±ZONE, e.g. "220000+0100" or "220000-0500".<br />If not present, a random value will be computed.</p>
 </td>
 </tr>
 <tr>
@@ -8180,7 +8180,7 @@ string
 </em>
 </td>
 <td>
-<p>End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".<br />If not present, the value will be computed based on the "Begin" value.</p>
+<p>End is the end of the time window in the format HHMMSS±ZONE, e.g. "220000+0100" or "220000-0500".<br />If not present, the value will be computed based on the "Begin" value.</p>
 </td>
 </tr>
 
