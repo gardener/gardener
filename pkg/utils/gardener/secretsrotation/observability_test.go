@@ -46,15 +46,19 @@ var _ = Describe("Observability", func() {
 			}
 		})
 
-		createGlobalMonitoringSecret := func(seedName string, timestamp int) {
+		createGlobalMonitoringSecretWithRawTimestamp := func(seedName, timestamp string) {
 			Expect(gardenClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Name:      "observability-ingress",
 				Namespace: gardenerutils.ComputeGardenNamespace(seedName),
 				Labels: map[string]string{
 					v1beta1constants.GardenRole:                       v1beta1constants.GardenRoleGlobalMonitoring,
-					secretsmanager.LabelKeyLastRotationInitiationTime: strconv.Itoa(timestamp),
+					secretsmanager.LabelKeyLastRotationInitiationTime: timestamp,
 				},
 			}})).To(Succeed())
+		}
+
+		createGlobalMonitoringSecret := func(seedName string, timestamp int) {
+			createGlobalMonitoringSecretWithRawTimestamp(seedName, strconv.Itoa(timestamp))
 		}
 
 		createGlobalMonitoringSecretWithoutTimestamp := func(seedName string) {
@@ -95,28 +99,14 @@ var _ = Describe("Observability", func() {
 
 		It("should fail when a secret carries an empty rotation initiation time label", func() {
 			createGlobalMonitoringSecret("seed1", lastRotationInitiationTimestamp)
-			Expect(gardenClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      "observability-ingress",
-				Namespace: gardenerutils.ComputeGardenNamespace("seed2"),
-				Labels: map[string]string{
-					v1beta1constants.GardenRole:                       v1beta1constants.GardenRoleGlobalMonitoring,
-					secretsmanager.LabelKeyLastRotationInitiationTime: "",
-				},
-			}})).To(Succeed())
+			createGlobalMonitoringSecretWithRawTimestamp("seed2", "")
 
 			Expect(CheckIfGlobalObservabilitySecretPropagatedToAllSeeds(ctx, gardenClient, lastRotationInitiationTimestamp)).To(MatchError(ContainSubstring("does not yet carry a last rotation initiation time")))
 		})
 
 		It("should fail when a secret carries a non-numeric rotation initiation time label", func() {
 			createGlobalMonitoringSecret("seed1", lastRotationInitiationTimestamp)
-			Expect(gardenClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      "observability-ingress",
-				Namespace: gardenerutils.ComputeGardenNamespace("seed2"),
-				Labels: map[string]string{
-					v1beta1constants.GardenRole:                       v1beta1constants.GardenRoleGlobalMonitoring,
-					secretsmanager.LabelKeyLastRotationInitiationTime: "not-a-number",
-				},
-			}})).To(Succeed())
+			createGlobalMonitoringSecretWithRawTimestamp("seed2", "not-a-number")
 
 			Expect(CheckIfGlobalObservabilitySecretPropagatedToAllSeeds(ctx, gardenClient, lastRotationInitiationTimestamp)).To(MatchError(ContainSubstring("error parsing last rotation initiation time")))
 		})
