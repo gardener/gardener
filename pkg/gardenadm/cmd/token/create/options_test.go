@@ -44,6 +44,13 @@ var _ = Describe("Options", func() {
 			Expect(options.Validate()).To(Succeed())
 		})
 
+		It("should pass for valid options with reset command", func() {
+			options.Token.Combined = "abcdef.abcdef1234567890"
+			options.Validity = time.Hour
+			options.PrintResetCommand = true
+			Expect(options.Validate()).To(Succeed())
+		})
+
 		It("should fail because token does not match the expected format", func() {
 			options.Token.Combined = "invalid-format"
 			Expect(options.Validate()).To(MatchError(ContainSubstring("does not match the expected format")))

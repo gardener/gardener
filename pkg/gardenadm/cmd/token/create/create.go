@@ -79,7 +79,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set: %w", err)
 	}
 
-	if opts.PrintJoinCommand {
+	if opts.PrintJoinCommand || opts.PrintResetCommand {
 		if err := validateIsShootCluster(ctx, clientSet.Client()); err != nil {
 			return fmt.Errorf("failed validating that the cluster is a Shoot: %w", err)
 		}
@@ -109,6 +109,9 @@ func run(ctx context.Context, opts *Options) error {
 	case opts.PrintConnectCommand:
 		fmt.Fprint(opts.Out, printConnectCommand(clientSet, secret))
 
+	case opts.PrintResetCommand:
+		fmt.Fprint(opts.Out, printResetCommand(clientSet, secret))
+
 	default:
 		fmt.Fprintln(opts.Out, bootstraptoken.FromSecretData(secret.Data))
 	}
@@ -127,6 +130,15 @@ func printJoinCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *core
 
 func printConnectCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
 	return fmt.Sprintf(`gardenadm connect --bootstrap-token %s --ca-certificate "%s" %s
+`,
+		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
+		utils.EncodeBase64(clientSet.RESTConfig().CAData),
+		clientSet.RESTConfig().Host,
+	)
+}
+
+func printResetCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
+	return fmt.Sprintf(`gardenadm reset --token %s --ca-certificate "%s" %s
 `,
 		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
