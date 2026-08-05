@@ -112,13 +112,13 @@ func (b *Botanist) WaitUntilKubeRootCAConfigMapsUpdated(ctx context.Context) err
 
 	for _, configMap := range configMapList.Items {
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			if err := limiter.Wait(ctx); err != nil {
-				return fmt.Errorf("error while waiting for limiter: %w", err)
-			}
-
 			if caBundleInConfigMap, ok := configMap.Data[secretsutils.DataKeyCertificateCA]; !ok || !bytes.Equal([]byte(caBundleInConfigMap), caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]) {
 				notReady.Add(1)
 				return nil
+			}
+
+			if err := limiter.Wait(ctx); err != nil {
+				return fmt.Errorf("error while waiting for limiter: %w", err)
 			}
 
 			patch := client.MergeFrom(configMap.DeepCopy())
