@@ -6,5 +6,5 @@
 package crds
 
 import (
-	_ "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1" // required for generating CRDs
+	_ "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1" // Import to register the types for CRD generation.
 )
