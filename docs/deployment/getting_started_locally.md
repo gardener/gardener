@@ -135,7 +135,7 @@ make cloud-provider-local-debug
 for the local cloud provider extension.
 
 The latter two make targets use Skaffold debugging features, which inject a [Delve](https://github.com/go-delve/delve) entrypoint into the image.
-The `make seed-debug` does not change the entrypoint, so you must manually attach `dlv` after the pod is deployed.
+The `make seed-debug` target does not change the entrypoint, so you must manually attach `dlv` after the pod is deployed.
 You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) provided in the `hack` directory:
 
 ```bash
@@ -143,7 +143,7 @@ You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) pro
 ```
 
 To step through the code with a debugger, attach your IDE to the port forwarded to localhost on your host machine.
-The default port forwarded by the `attach-debugger-gardenlet.sh` script is `2345` (can be controlled via the `-p` option). For the gardener-operator and the local cloud provider extensions, the default port is `56268`. If you debug multiple pods at the same time (e.g. by running `make operator-debug` first, followed by `make cloud-provider-local-debug` in a second terminal), the port of the second pod will be forwarded to `56269`. This is done automatically be skaffold, which will write the port to your console.
+The default port forwarded by the `attach-debugger-gardenlet.sh` script is `2345` (can be controlled via the `-p` option). For the gardener-operator and the local cloud provider extensions, the default port is `56268`. If you debug multiple pods at the same time (e.g. by running `make operator-debug` first, followed by `make cloud-provider-local-debug` in a second terminal), the port of the second pod will be forwarded to `56269`. This is done automatically by skaffold, which will write the port to your console.
 See the [Skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) for details on how to set up your IDE, or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
 
