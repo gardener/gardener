@@ -248,6 +248,23 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
+		Context("UpgradeEtcdVersion feature gate not specified", func() {
+			BeforeEach(func() {
+				botanist.Config.ETCDConfig.FeatureGates = nil
+				validator.expectedMemberNamePrefix = Equal("")
+			})
+
+			It("should not set MemberNamePrefix when FeatureGates is nil", func() {
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		It("should return an error because the maintenance time window cannot be parsed", func() {
 			botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "foobar",
