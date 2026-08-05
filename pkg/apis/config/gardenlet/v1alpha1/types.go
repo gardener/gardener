@@ -566,7 +566,7 @@ type Logging struct {
 type ServerConfiguration struct {
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	// +optional
-	HealthProbes *HealthProbesServer `json:"healthProbes,omitempty"`
+	HealthProbes *Server `json:"healthProbes,omitempty"`
 	// Metrics is the configuration for serving the metrics endpoint.
 	// +optional
 	Metrics *Server `json:"metrics,omitempty"`
@@ -574,19 +574,6 @@ type ServerConfiguration struct {
 
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
-	// BindAddress is the IP address on which to listen for the specified port.
-	BindAddress string `json:"bindAddress"`
-	// Port is the port on which to serve unsecured, unauthenticated access.
-	Port int `json:"port"`
-}
-
-// HealthProbesServer contains information for the health probes server configuration.
-type HealthProbesServer struct {
-	// Enable controls whether the Kubernetes liveness and readiness probes are added to the gardenlet deployment.
-	// It doesn't actually enable or disable the endpoints themself.
-	// Defaults to true. Can be set to false to prevent the probes from restarting the process while a debugger is attached.
-	// +optional
-	Enable *bool `json:"enable,omitempty"`
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.

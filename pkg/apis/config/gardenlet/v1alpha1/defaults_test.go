@@ -627,7 +627,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the HTTP server configuration", func() {
 			obj.Server = ServerConfiguration{
-				HealthProbes: &HealthProbesServer{
+				HealthProbes: &Server{
 					BindAddress: "127.0.0.0",
 					Port:        1010,
 				},
