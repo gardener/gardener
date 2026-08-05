@@ -36,61 +36,61 @@ import (
 // are mutated accordingly.
 type Ensurer interface {
 	// EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureKubeAPIServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureKubeControllerManagerDeployment ensures that the kube-controller-manager deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureKubeControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureKubeSchedulerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureMachineControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureMachineControllerManagerVPA ensures that the machine-controller-manager VPA settings conform to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldVPA" might be "nil" and must always be checked.
 	EnsureMachineControllerManagerVPA(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newVPA, oldVPA *vpaautoscalingv1.VerticalPodAutoscaler) error
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldEtcd" might be "nil" and must always be checked.
 	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newEtcd, oldEtcd *druidcorev1alpha1.Etcd) error
 	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureVPNSeedServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 	// EnsureVPNSeedServerStatefulSet ensures that the vpn-seed-server deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldStatefulSet" might be "nil" and must always be checked.
 	EnsureVPNSeedServerStatefulSet(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newStatefulSet, oldStatefulSet *appsv1.StatefulSet) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
 	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, newUnitOptions, oldUnitOptions []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldKubeletConfig" might be "nil" and must always be checked.
 	EnsureKubeletConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, newKubeletConfig, oldKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error
 	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
 	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version) bool
 	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
 	EnsureKubeletCloudProviderConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error
 	// EnsureKubernetesGeneralConfiguration ensures that the kubernetes general configuration conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldData" might be "nil" and must always be checked.
 	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newData, oldData *string) error
 	// EnsureAdditionalUnits ensures additional systemd units
-	// "old" might be "nil" and must always be checked.
+	// "oldUnits" might be "nil" and must always be checked.
 	EnsureAdditionalUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newUnits, oldUnits *[]extensionsv1alpha1.Unit) error
 	// EnsureAdditionalFiles ensures additional systemd files
-	// "old" might be "nil" and must always be checked.
+	// "oldFiles" might be "nil" and must always be checked.
 	EnsureAdditionalFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newFiles, oldFiles *[]extensionsv1alpha1.File) error
 	// EnsureAdditionalProvisionUnits ensures additional systemd units for the 'provision' OSC
-	// "old" might be "nil" and must always be checked.
+	// "oldUnits" might be "nil" and must always be checked.
 	EnsureAdditionalProvisionUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newUnits, oldUnits *[]extensionsv1alpha1.Unit) error
 	// EnsureAdditionalProvisionFiles ensures additional systemd files for the 'provision' OSC
-	// "old" might be "nil" and must always be checked.
+	// "oldFiles" might be "nil" and must always be checked.
 	EnsureAdditionalProvisionFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newFiles, oldFiles *[]extensionsv1alpha1.File) error
 	// EnsureCRIConfig ensures the CRI config.
-	// "old" might be "nil" and must always be checked.
+	// "oldCRIConfig" might be "nil" and must always be checked.
 	EnsureCRIConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newCRIConfig, oldCRIConfig *extensionsv1alpha1.CRIConfig) error
 	// EnsureGardenerResourceManagerDeployment ensures that the Resource Manager deployment conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
+	// "oldDeployment" might be "nil" and must always be checked.
 	EnsureGardenerResourceManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newDeployment, oldDeployment *appsv1.Deployment) error
 }
 

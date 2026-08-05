@@ -7,5 +7,6 @@
 package assets
 
 import (
-	_ "github.com/gardener/terminal-controller-manager/api/v1alpha1" // required for generating CRDs
+	// Import to register the types for CRD generation.
+	_ "github.com/gardener/terminal-controller-manager/api/v1alpha1"
 )

@@ -625,10 +625,10 @@ var _ = Describe("Project Validation Tests", func() {
 		})
 
 		DescribeTable("namespace immutability",
-			func(oldVal, newVal *string, matcher gomegatypes.GomegaMatcher) {
-				project.Spec.Namespace = oldVal
+			func(oldNamespace, newNamespace *string, matcher gomegatypes.GomegaMatcher) {
+				project.Spec.Namespace = oldNamespace
 				newProject := prepareProjectForUpdate(project)
-				newProject.Spec.Namespace = newVal
+				newProject.Spec.Namespace = newNamespace
 
 				errList := ValidateProjectUpdate(newProject, project)
 
