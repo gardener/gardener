@@ -3768,6 +3768,11 @@ func validateControlPlaneZonesUpdate(newControlPlane, oldControlPlane *core.Cont
 		return allErrs
 	}
 
+	// Allow clearing zones (e.g., to remove a pin before upgrading to zone HA when allowZonePinning was revoked).
+	if len(newZones) == 0 {
+		return allErrs
+	}
+
 	// Allow expanding zones from 1 to 3 when upgrading from non-'zone' to 'zone' failure tolerance.
 	oldIsZoneHA := oldControlPlane != nil && oldControlPlane.HighAvailability != nil &&
 		oldControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
