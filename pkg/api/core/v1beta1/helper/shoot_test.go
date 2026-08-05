@@ -409,6 +409,74 @@ var _ = Describe("Helper", func() {
 			}, true),
 	)
 
+	Describe("rotation period passed", func() {
+		creationTimestamp := metav1.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+		rotationPeriod := 2 * time.Hour
+
+		DescribeTable("#SSHKeypairRotationPassedRotationPeriod",
+			func(credentials *gardencorev1beta1.ShootCredentials, now time.Time, expectedResult bool) {
+				shoot := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{CreationTimestamp: creationTimestamp},
+					Status:     gardencorev1beta1.ShootStatus{Credentials: credentials},
+				}
+				Expect(SSHKeypairRotationPassedRotationPeriod(shoot, now, metav1.Duration{Duration: rotationPeriod})).To(Equal(expectedResult))
+			},
+
+			Entry("should return false when the shoot age is less than rotation period", nil,
+				creationTimestamp.Add(time.Hour), false),
+			Entry("should use shoot creation time when rotation status is absent", nil,
+				creationTimestamp.Add(3*time.Hour), true),
+			Entry("should return false when the rotation period has not passed since the last completion time",
+				&gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{LastCompletionTime: new(metav1.NewTime(creationTimestamp.Add(2 * time.Hour)))}}},
+				creationTimestamp.Add(3*time.Hour), false),
+			Entry("should return true when the rotation period has passed since the last completion time",
+				&gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{LastCompletionTime: new(metav1.NewTime(creationTimestamp.Add(2 * time.Hour)))}}},
+				creationTimestamp.Add(5*time.Hour), true),
+		)
+
+		DescribeTable("#ObservabilityRotationPassedRotationPeriod",
+			func(credentials *gardencorev1beta1.ShootCredentials, now time.Time, expectedResult bool) {
+				shoot := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{CreationTimestamp: creationTimestamp},
+					Status:     gardencorev1beta1.ShootStatus{Credentials: credentials},
+				}
+				Expect(ObservabilityRotationPassedRotationPeriod(shoot, now, metav1.Duration{Duration: rotationPeriod})).To(Equal(expectedResult))
+			},
+
+			Entry("should return false when the shoot age is less than rotation period", nil,
+				creationTimestamp.Add(time.Hour), false),
+			Entry("should use shoot creation time when rotation status is absent", nil,
+				creationTimestamp.Add(3*time.Hour), true),
+			Entry("should return false when the rotation period has not passed since the last completion time",
+				&gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastCompletionTime: new(metav1.NewTime(creationTimestamp.Add(2 * time.Hour)))}}},
+				creationTimestamp.Add(3*time.Hour), false),
+			Entry("should return true when the rotation period has passed since the last completion time",
+				&gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastCompletionTime: new(metav1.NewTime(creationTimestamp.Add(2 * time.Hour)))}}},
+				creationTimestamp.Add(5*time.Hour), true),
+		)
+
+		DescribeTable("#ETCDEncryptionKeyRotationPassedRotationPeriod",
+			func(credentials *gardencorev1beta1.ShootCredentials, now time.Time, expectedResult bool) {
+				shoot := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{CreationTimestamp: creationTimestamp},
+					Status:     gardencorev1beta1.ShootStatus{Credentials: credentials},
+				}
+				Expect(ETCDEncryptionKeyRotationPassedRotationPeriod(shoot, now, metav1.Duration{Duration: rotationPeriod})).To(Equal(expectedResult))
+			},
+
+			Entry("should return false when the shoot age is less than rotation period", nil,
+				creationTimestamp.Add(time.Hour), false),
+			Entry("should use shoot creation time when rotation status is absent", nil,
+				creationTimestamp.Add(3*time.Hour), true),
+			Entry("should return false when the rotation period has not passed since the last completion time",
+				&gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{LastCompletionTime: new(metav1.NewTime(creationTimestamp.Add(2 * time.Hour)))}}},
+				creationTimestamp.Add(3*time.Hour), false),
+			Entry("should return true when the rotation period has passed since the last completion time",
+				&gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{LastCompletionTime: new(metav1.NewTime(creationTimestamp.Add(2 * time.Hour)))}}},
+				creationTimestamp.Add(5*time.Hour), true),
+		)
+	})
+
 	Describe("#IsMultiZonalShootControlPlane", func() {
 		var shoot *gardencorev1beta1.Shoot
 

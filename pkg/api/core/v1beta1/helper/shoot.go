@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -711,6 +712,45 @@ func IsETCDEncryptionKeyAutoRotationEnabled(shoot *gardencorev1beta1.Shoot) bool
 		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod != nil &&
 		shoot.Spec.Maintenance.AutoRotation.Credentials.ETCDEncryptionKey.RotationPeriod.Duration != 0
+}
+
+// SSHKeypairRotationPassedRotationPeriod returns true if the SSH keypair rotation period has passed.
+// If the credentials have never been rotated, the shoot's creation timestamp is used as the reference point.
+func SSHKeypairRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
+	latestRotationCompletionTime := shoot.CreationTimestamp.Time
+	if shoot.Status.Credentials != nil &&
+		shoot.Status.Credentials.Rotation != nil &&
+		shoot.Status.Credentials.Rotation.SSHKeypair != nil &&
+		shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime != nil {
+		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime.Time
+	}
+	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
+}
+
+// ObservabilityRotationPassedRotationPeriod returns true if the observability passwords rotation period has passed.
+// If the credentials have never been rotated, the shoot's creation timestamp is used as the reference point.
+func ObservabilityRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
+	latestRotationCompletionTime := shoot.CreationTimestamp.Time
+	if shoot.Status.Credentials != nil &&
+		shoot.Status.Credentials.Rotation != nil &&
+		shoot.Status.Credentials.Rotation.Observability != nil &&
+		shoot.Status.Credentials.Rotation.Observability.LastCompletionTime != nil {
+		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.Observability.LastCompletionTime.Time
+	}
+	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
+}
+
+// ETCDEncryptionKeyRotationPassedRotationPeriod returns true if the ETCD encryption key rotation period has passed.
+// If the credentials have never been rotated, the shoot's creation timestamp is used as the reference point.
+func ETCDEncryptionKeyRotationPassedRotationPeriod(shoot *gardencorev1beta1.Shoot, now time.Time, period metav1.Duration) bool {
+	latestRotationCompletionTime := shoot.CreationTimestamp.Time
+	if shoot.Status.Credentials != nil &&
+		shoot.Status.Credentials.Rotation != nil &&
+		shoot.Status.Credentials.Rotation.ETCDEncryptionKey != nil &&
+		shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTime != nil {
+		latestRotationCompletionTime = shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastCompletionTime.Time
+	}
+	return latestRotationCompletionTime.Before(now.Add(-period.Duration))
 }
 
 // GetEncryptionProviderType returns the encryption provider type.

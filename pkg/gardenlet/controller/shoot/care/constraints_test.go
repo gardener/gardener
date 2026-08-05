@@ -11,7 +11,6 @@ import (
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -75,8 +74,8 @@ func (w *webhookTestCase) build() (
 			APIGroups:   []string{w.gvr.Group},
 			Resources:   []string{w.gvr.Resource},
 			APIVersions: []string{w.gvr.Version},
-		}},
-	}
+		},
+	}}
 
 	opType := admissionregistrationv1.OperationAll
 	if w.operationType != nil {
@@ -113,15 +112,18 @@ var _ = Describe("Constraints", func() {
 			kubeSystemNamespaceProblematic = []TableEntry{
 				Entry("namespaceSelector matching no-cleanup", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}},
+						MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					},
 				}),
 				Entry("namespaceSelector matching purpose", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+						MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"},
+					},
 				}),
 				Entry("namespaceSelector matching name label", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
+						MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"},
+					},
 				}),
 				Entry("namespaceSelector matching all gardener labels", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
@@ -129,14 +131,16 @@ var _ = Describe("Constraints", func() {
 							"shoot.gardener.cloud/no-cleanup": "true",
 							"gardener.cloud/purpose":          "kube-system",
 							"kubernetes.io/metadata.name":     "kube-system",
-						}},
+						},
+					},
 				}),
 			}
 
 			kubeSystemNamespaceNotProblematic = []TableEntry{
 				Entry("not matching namespaceSelector", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"foo": "bar"}},
+						MatchLabels: map[string]string{"foo": "bar"},
+					},
 				}),
 				Entry("namespaceSelector excluding name label", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
@@ -160,7 +164,8 @@ var _ = Describe("Constraints", func() {
 						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic, objectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app.kubernetes.io/name": "test",
-							}}}),
+							},
+						}}),
 						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}))
 				}
 
@@ -204,30 +209,35 @@ var _ = Describe("Constraints", func() {
 				commonTests(gvr, append(kubeSystemNamespaceProblematic,
 					Entry("objectSelector matching no-cleanup", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}},
+							MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						},
 					}),
 					Entry("objectSelector matching origin", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"origin": "gardener"}},
+							MatchLabels: map[string]string{"origin": "gardener"},
+						},
 					}),
 					Entry("objectSelector matching all gardener labels", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"shoot.gardener.cloud/no-cleanup": "true",
 								"origin":                          "gardener",
-							}},
+							},
+						},
 					}),
 					Entry("objectSelector and namespaceSelector matching all gardener labels", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"shoot.gardener.cloud/no-cleanup": "true",
 								"origin":                          "gardener",
-							}},
+							},
+						},
 						namespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"shoot.gardener.cloud/no-cleanup": "true",
 								"gardener.cloud/purpose":          "kube-system",
-							}},
+							},
+						},
 					}),
 				), append(kubeSystemNamespaceNotProblematic,
 					Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
@@ -235,22 +245,27 @@ var _ = Describe("Constraints", func() {
 							MatchLabels: map[string]string{
 								"origin":                          "gardener",
 								"shoot.gardener.cloud/no-cleanup": "true",
-							}},
+							},
+						},
 						namespaceSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"foo": "bar"}},
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
 					}),
 					Entry("not matching objectSelector", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"foo": "bar"}},
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
 					}),
 					Entry("matching namespaceSelector, not matching objectSelector", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"foo": "bar"}},
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
 						namespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"shoot.gardener.cloud/no-cleanup": "true",
 								"gardener.cloud/purpose":          "kube-system",
-							}},
+							},
+						},
 					}),
 				))
 			}
@@ -260,11 +275,13 @@ var _ = Describe("Constraints", func() {
 					problematic = []TableEntry{
 						Entry("namespaceSelector matching purpose", webhookTestCase{
 							namespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"},
+							},
 						}),
 						Entry("objectSelector matching purpose", webhookTestCase{
 							objectSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"},
+							},
 						}),
 					}
 					notProblematic = []TableEntry{
@@ -277,7 +294,8 @@ var _ = Describe("Constraints", func() {
 						}),
 						Entry("not matching namespaceSelector", webhookTestCase{
 							namespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"foo": "bar"}},
+								MatchLabels: map[string]string{"foo": "bar"},
+							},
 						}),
 						Entry("objectSelector not matching purpose", webhookTestCase{
 							objectSelector: &metav1.LabelSelector{
@@ -288,19 +306,24 @@ var _ = Describe("Constraints", func() {
 						}),
 						Entry("not matching objectSelector", webhookTestCase{
 							objectSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"foo": "bar"}},
+								MatchLabels: map[string]string{"foo": "bar"},
+							},
 						}),
 						Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
 							objectSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"},
+							},
 							namespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"foo": "bar"}},
+								MatchLabels: map[string]string{"foo": "bar"},
+							},
 						}),
 						Entry("matching namespaceSelector, not matching objectSelector", webhookTestCase{
 							objectSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"foo": "bar"}},
+								MatchLabels: map[string]string{"foo": "bar"},
+							},
 							namespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"},
+							},
 						}),
 					}
 				)
@@ -476,7 +499,7 @@ var _ = Describe("Constraints", func() {
 			shoot.SetInfo(&gardencorev1beta1.Shoot{})
 
 			constraint = NewConstraint(
-				logr.Discard(),
+				GinkgoLogr,
 				shoot,
 				seedClient,
 				func() (kubernetes.Interface, bool, error) {
@@ -495,6 +518,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
+							{Type: gardencorev1beta1.ShootAutomaticCredentialsRotationPossible},
 							{Type: gardencorev1beta1.ShootHasIgnoredManagedResources},
 							{Type: gardencorev1beta1.ShootPreservedFailedMachinesAbsent},
 						},
@@ -583,7 +607,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -602,7 +626,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -625,7 +649,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -660,7 +684,7 @@ var _ = Describe("Constraints", func() {
 					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
-						logr.Discard(),
+						GinkgoLogr,
 						shootPkg,
 						seedClient,
 						func() (kubernetes.Interface, bool, error) {
@@ -675,6 +699,121 @@ var _ = Describe("Constraints", func() {
 						WithReason("WorkerPoolsWithManualInPlaceUpdateStrategyPending"),
 						WithMessage("Some worker pools in your Shoot with update strategy ManualInPlaceUpdate are pending update: worker1"),
 					))
+				})
+			})
+
+			Context("#AutomaticCredentialsRotationPossible", func() {
+				BeforeEach(func() {
+					shoot = &gardencorev1beta1.Shoot{
+						ObjectMeta: metav1.ObjectMeta{
+							CreationTimestamp: metav1.NewTime(clock.Now().Add(-48 * time.Hour)),
+						},
+						Spec: gardencorev1beta1.ShootSpec{
+							Maintenance: &gardencorev1beta1.Maintenance{
+								AutoRotation: &gardencorev1beta1.MaintenanceAutoRotation{
+									Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+										ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+											RotationPeriod: &metav1.Duration{Duration: 24 * time.Hour},
+										},
+									},
+								},
+							},
+						},
+					}
+				})
+
+				JustBeforeEach(func() {
+					shootPkg := &shootpkg.Shoot{ControlPlaneNamespace: controlPlaneNamespace}
+					shootPkg.SetInfo(shoot)
+					constraint = NewConstraint(GinkgoLogr, shootPkg, seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						}, clock)
+				})
+
+				It("should remove the constraint when shoot has no hibernation schedule", func() {
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
+					))
+				})
+
+				It("should keep the constraint when the maintenance window is within the hibernation window", func() {
+					shoot.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
+						Begin: "010000+0000",
+						End:   "020000+0000",
+					}
+					shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+						Schedules: []gardencorev1beta1.HibernationSchedule{
+							{Start: new("0 0 * * *"), End: new("0 8 * * *")},
+						},
+					}
+
+					Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
+						WithStatus(gardencorev1beta1.ConditionProgressing),
+						WithReason("MaintenanceWindowDuringHibernation"),
+					))
+				})
+
+				It("should remove the constraint when the maintenance window is outside the hibernation window", func() {
+					shoot.Spec.Maintenance = &gardencorev1beta1.Maintenance{
+						TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
+							Begin: "100000+0000",
+							End:   "110000+0000",
+						},
+					}
+					shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+						Schedules: []gardencorev1beta1.HibernationSchedule{
+							{Start: new("0 0 * * *"), End: new("0 8 * * *")},
+						},
+					}
+
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
+					))
+				})
+
+				Context("when shoot is hibernated", func() {
+					JustBeforeEach(func() {
+						shootPkg := &shootpkg.Shoot{
+							ControlPlaneNamespace: controlPlaneNamespace,
+							HibernationEnabled:    true,
+						}
+						shoot.Status.IsHibernated = true
+						shootPkg.SetInfo(shoot)
+						constraint = NewConstraint(GinkgoLogr, shootPkg, seedClient,
+							func() (kubernetes.Interface, bool, error) {
+								return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+							}, clock)
+						constraints = NewShootConstraints(testclock.NewFakeClock(time.Time{}), shootPkg.GetInfo())
+					})
+
+					It("should remove the constraint when there is no problematic schedule", func() {
+						shoot.Status.Constraints = []gardencorev1beta1.Condition{
+							{Type: gardencorev1beta1.ShootAutomaticCredentialsRotationPossible, Status: gardencorev1beta1.ConditionTrue},
+						}
+
+						Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+							OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
+						))
+					})
+
+					It("should preserve the constraint when the configuration is problematic", func() {
+						shoot.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
+							Begin: "010000+0000",
+							End:   "020000+0000",
+						}
+						shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+							Schedules: []gardencorev1beta1.HibernationSchedule{
+								{Start: new("0 0 * * *"), End: new("0 8 * * *")},
+							},
+						}
+
+						Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+							OfType(gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
+							WithReason("MaintenanceWindowDuringHibernation"),
+						))
+					})
 				})
 			})
 
@@ -735,7 +874,7 @@ var _ = Describe("Constraints", func() {
 						shootPkg.SetInfo(shoot)
 
 						hibernatedConstraint = NewConstraint(
-							logr.Discard(),
+							GinkgoLogr,
 							shootPkg,
 							seedClient,
 							func() (kubernetes.Interface, bool, error) {
@@ -793,7 +932,7 @@ var _ = Describe("Constraints", func() {
 							},
 						})
 						constraint = NewConstraint(
-							logr.Discard(),
+							GinkgoLogr,
 							shootPkg,
 							seedClient,
 							func() (kubernetes.Interface, bool, error) {
@@ -923,6 +1062,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -945,6 +1085,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -959,6 +1100,7 @@ var _ = Describe("Constraints", func() {
 					OfType("CACertificateValiditiesAcceptable"),
 					OfType("CRDsWithProblematicConversionWebhooks"),
 					OfType("ManualInPlaceWorkersUpdated"),
+					OfType("AutomaticCredentialsRotationPossible"),
 					OfType("HasIgnoredManagedResources"),
 					OfType("PreservedFailedMachinesAbsent"),
 				))
@@ -975,6 +1117,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("CACertificateValiditiesAcceptable"),
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
 					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
+					gardencorev1beta1.ConditionType("AutomaticCredentialsRotationPossible"),
 					gardencorev1beta1.ConditionType("HasIgnoredManagedResources"),
 					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
 				))

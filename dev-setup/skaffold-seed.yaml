@@ -292,6 +292,7 @@ build:
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/shootstate
             - pkg/utils/gardener/tokenrequest
+            - pkg/utils/hibernation
             - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes

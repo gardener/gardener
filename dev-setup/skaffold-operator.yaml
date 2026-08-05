@@ -700,6 +700,7 @@ build:
             - pkg/utils/flow
             - pkg/utils/gardener
             - pkg/utils/gardener/gardenlet
+            - pkg/utils/hibernation
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
