@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 var (
@@ -67,6 +68,10 @@ func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, globa
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, globalMonitoringSecretReplica, func() error {
 		metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
 		metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, v1beta1constants.GardenerPurpose, LabelPurposeGlobalMonitoringSecret)
+
+		if rotationInitiationTime, ok := globalMonitoringSecret.Labels[secretsmanager.LabelKeyLastRotationInitiationTime]; ok {
+			metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, secretsmanager.LabelKeyLastRotationInitiationTime, rotationInitiationTime)
+		}
 
 		globalMonitoringSecretReplica.Type = globalMonitoringSecret.Type
 		globalMonitoringSecretReplica.Data = globalMonitoringSecret.Data
