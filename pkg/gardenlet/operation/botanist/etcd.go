@@ -43,7 +43,10 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 	// Prefix etcd member names with the seed name so that members can be distinguished across
 	// control plane migrations between seeds. Self-hosted shoots have no Seed object.
-	if !b.Shoot.IsSelfHosted() {
+	// spec.memberNamePrefix requires etcd-druid v0.37+, only available when UpgradeEtcdVersion is enabled.
+	// TODO: Remove this once UpgradeEtcdVersion is enabled by default and the feature gate is removed.
+	if !b.Shoot.IsSelfHosted() &&
+		b.Config != nil && b.Config.ETCDConfig != nil && b.Config.ETCDConfig.FeatureGates["UpgradeEtcdVersion"] {
 		values.MemberNamePrefix = b.Seed.GetInfo().Name
 	}
 
