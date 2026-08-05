@@ -164,7 +164,4 @@ func (g *graph) handleGardenletCreateOrUpdateForShoots(gardenlet *seedmanagement
 	)
 
 	g.addEdge(gardenletVertex, shootVertex)
-
-	// TODO(rfranzke): Check if we need to support the 'allowBootstrap' logic for self-hosted shoots as well (see
-	//  handling for seeds).
 }

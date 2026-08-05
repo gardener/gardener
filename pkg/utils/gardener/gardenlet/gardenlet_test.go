@@ -385,5 +385,24 @@ var _ = Describe("Gardenlet", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeFalse())
 		})
+
+		It("should successfully extract shoot meta from a Gardenlet bootstrap token (deployer format)", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      bootstrapTokenSecretName,
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"description": []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource " + expectedShootNamespace + "/self-hosted-shoot-" + expectedShootName + "."),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, found, err := ShootMetaFromBootstrapToken(ctx, fakeClient, bootstrapTokenSecretName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(found).To(BeTrue())
+			Expect(result).To(Equal(expectedNamespacedName))
+		})
 	})
 })

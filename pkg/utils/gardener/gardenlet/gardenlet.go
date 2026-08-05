@@ -22,6 +22,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
@@ -101,19 +102,26 @@ func ShootMetaFromBootstrapToken(ctx context.Context, reader client.Reader, boot
 
 func extractShootMetaFromBootstrapToken(bootstrapTokenSecret *corev1.Secret) (types.NamespacedName, bool, error) {
 	description := string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey])
-	if !strings.HasPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix) {
-		return types.NamespacedName{}, false, nil
+
+	if strings.HasPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix) {
+		parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix))
+		if len(parts) == 0 {
+			return types.NamespacedName{}, false, fmt.Errorf("could not extract shoot meta from bootstrap token description: %s", description)
+		}
+
+		split := strings.Split(parts[0], "/")
+		if len(split) != 2 {
+			return types.NamespacedName{}, false, fmt.Errorf("could not extract shoot namespace and name from bootstrap token description: %s", description)
+		}
+
+		return types.NamespacedName{Namespace: split[0], Name: split[1]}, true, nil
 	}
 
-	parts := strings.Fields(strings.TrimPrefix(description, bootstraptoken.SelfHostedShootBootstrapTokenSecretDescriptionPrefix))
-	if len(parts) == 0 {
-		return types.NamespacedName{}, false, fmt.Errorf("could not extract shoot meta from bootstrap token description: %s", description)
+	// Bootstrap tokens for self-hosted shoot Gardenlets created via the deployer use the standard gardenlet
+	// description format. Extract the shoot namespace and name by stripping the `self-hosted-shoot-` prefix.
+	if kind, namespace, name := gardenletbootstraputil.MetadataFromDescription(description); kind == gardenletbootstraputil.KindGardenlet {
+		return types.NamespacedName{Namespace: namespace, Name: strings.TrimPrefix(name, ResourcePrefixSelfHostedShoot)}, true, nil
 	}
 
-	split := strings.Split(parts[0], "/")
-	if len(split) != 2 {
-		return types.NamespacedName{}, false, fmt.Errorf("could not extract shoot namespace and name from bootstrap token description: %s", description)
-	}
-
-	return types.NamespacedName{Namespace: split[0], Name: split[1]}, true, nil
+	return types.NamespacedName{}, false, nil
 }

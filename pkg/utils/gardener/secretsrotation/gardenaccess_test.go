@@ -15,6 +15,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 )
@@ -149,6 +150,123 @@ var _ = Describe("RenewGardenAccess", func() {
 			Expect(createSeeds()).To(Succeed())
 
 			Expect(RenewGardenSecretsInAllSeeds(ctx, logger.WithValues(secretType, gardenAccess), gardenClient, renewGardenAccessSecrets)).To(MatchError(ContainSubstring("error annotating seed seed1: already annotated with \"gardener.cloud/operation: reconcile\"")))
+		})
+	})
+
+	Context("#RenewKubeconfigInAllShootGardenlets", func() {
+		var gardenlets []seedmanagementv1alpha1.Gardenlet
+
+		BeforeEach(func() {
+			gardenlets = []seedmanagementv1alpha1.Gardenlet{
+				{ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-g1", Namespace: "garden"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-g2", Namespace: "garden"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-g3", Namespace: "garden"}},
+			}
+		})
+
+		createGardenlets := func() error {
+			for _, gardenlet := range gardenlets {
+				if err := gardenClient.Create(ctx, &gardenlet); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		It("should succeed and annotate all self-hosted-shoot gardenlets", func() {
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(RenewKubeconfigInAllShootGardenlets(ctx, logger.WithValues(secretType, gardenletKubeconfig), gardenClient)).To(Succeed())
+
+			gardenletList := seedmanagementv1alpha1.GardenletList{}
+			Expect(gardenClient.List(ctx, &gardenletList)).To(Succeed())
+			for _, gardenlet := range gardenletList.Items {
+				Expect(gardenlet.Annotations["gardener.cloud/operation"]).To(Equal(renewKubeconfig))
+			}
+		})
+
+		It("should succeed if some gardenlets are already annotated with `renew-kubeconfig`", func() {
+			gardenlets[0].SetAnnotations(map[string]string{"gardener.cloud/operation": renewKubeconfig})
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(RenewKubeconfigInAllShootGardenlets(ctx, logger.WithValues(secretType, gardenletKubeconfig), gardenClient)).To(Succeed())
+
+			gardenletList := seedmanagementv1alpha1.GardenletList{}
+			Expect(gardenClient.List(ctx, &gardenletList)).To(Succeed())
+			for _, gardenlet := range gardenletList.Items {
+				Expect(gardenlet.Annotations["gardener.cloud/operation"]).To(Equal(renewKubeconfig))
+			}
+		})
+
+		It("should fail if some gardenlets have a different `gardener.cloud/operation` annotation", func() {
+			gardenlets[0].SetAnnotations(map[string]string{"gardener.cloud/operation": "reconcile"})
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(RenewKubeconfigInAllShootGardenlets(ctx, logger.WithValues(secretType, gardenletKubeconfig), gardenClient)).To(MatchError(ContainSubstring("error annotating gardenlet garden/self-hosted-shoot-g1: already annotated with \"gardener.cloud/operation: reconcile\"")))
+		})
+
+		It("should skip gardenlets not related to self-hosted shoots", func() {
+			nonSelfHosted := seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: "managed-seed-gardenlet", Namespace: "garden"}}
+			Expect(gardenClient.Create(ctx, &nonSelfHosted)).To(Succeed())
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(RenewKubeconfigInAllShootGardenlets(ctx, logger.WithValues(secretType, gardenletKubeconfig), gardenClient)).To(Succeed())
+
+			updated := &seedmanagementv1alpha1.Gardenlet{}
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(&nonSelfHosted), updated)).To(Succeed())
+			Expect(updated.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+		})
+	})
+
+	Context("#CheckIfKubeconfigRenewalCompletedInAllShootGardenlets", func() {
+		var gardenlets []seedmanagementv1alpha1.Gardenlet
+
+		BeforeEach(func() {
+			gardenlets = []seedmanagementv1alpha1.Gardenlet{
+				{ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-g1", Namespace: "garden"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "self-hosted-shoot-g2", Namespace: "garden"}},
+			}
+		})
+
+		createGardenlets := func() error {
+			for _, gardenlet := range gardenlets {
+				if err := gardenClient.Create(ctx, &gardenlet); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		It("should succeed if no gardenlet is annotated anymore", func() {
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx, gardenClient)).To(Succeed())
+		})
+
+		It("should succeed if some gardenlets have a different `gardener.cloud/operation` annotation", func() {
+			gardenlets[0].SetAnnotations(map[string]string{"gardener.cloud/operation": "reconcile"})
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx, gardenClient)).To(Succeed())
+		})
+
+		It("should fail if some gardenlets are still annotated with `renew-kubeconfig`", func() {
+			gardenlets[1].SetAnnotations(map[string]string{"gardener.cloud/operation": renewKubeconfig})
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx, gardenClient)).To(MatchError(ContainSubstring("renewing kubeconfig for Gardenlet garden/self-hosted-shoot-g2 is not yet completed")))
+		})
+
+		It("should succeed if only non-self-hosted-shoot gardenlets are still annotated with `renew-kubeconfig`", func() {
+			nonSelfHosted := seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{
+				Name:        "managed-seed-gardenlet",
+				Namespace:   "garden",
+				Annotations: map[string]string{"gardener.cloud/operation": renewKubeconfig},
+			}}
+			Expect(gardenClient.Create(ctx, &nonSelfHosted)).To(Succeed())
+			Expect(createGardenlets()).To(Succeed())
+
+			Expect(CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx, gardenClient)).To(Succeed())
 		})
 	})
 })

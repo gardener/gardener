@@ -508,7 +508,7 @@ func (r *Reconciler) reconcile(
 		// gardenlets will succeed to execute the requested operation.
 		// Therefore the 30s timeout is not sufficient in some cases and longer timeout is needed.
 		renewGardenAccessSecretsInAllSeeds = g.Add(flow.Task{
-			Name: "Annotate seeds to trigger renewal of their garden access secrets",
+			Name: "Annotate Seed resources to trigger renewal of their garden access secrets",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenAccess), virtualClusterClient, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
 			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
@@ -524,7 +524,7 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(renewGardenAccessSecretsInAllSeeds),
 		})
 		renewWorkloadIdentityTokensInAllSeeds = g.Add(flow.Task{
-			Name: "Annotate seeds to trigger renewal of workload identity tokens",
+			Name: "Annotate Seed resources to trigger renewal of workload identity tokens",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeWorkloadIdentity), virtualClusterClient, v1beta1constants.SeedOperationRenewWorkloadIdentityTokens)
 			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
@@ -539,29 +539,45 @@ func (r *Reconciler) reconcile(
 			SkipIf:       helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(renewWorkloadIdentityTokensInAllSeeds),
 		})
-		renewGardenletKubeconfigInAllSeeds = g.Add(flow.Task{
-			Name: "Annotate seeds to trigger renewal of their gardenlet kubeconfig",
+		renewKubeconfigsOfSeedGardenlets = g.Add(flow.Task{
+			Name: "Annotate Seed resources to trigger renewal of their gardenlet kubeconfig",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenletKubeconfig), virtualClusterClient, v1beta1constants.GardenerOperationRenewKubeconfig)
 			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(checkIfWorkloadIdentityTokensRenewalCompletedInAllSeeds),
 		})
-		checkIfGardenletKubeconfigRenewalCompletedInAllSeeds = g.Add(flow.Task{
-			Name: "Check if all seeds finished the renewal of their gardenlet kubeconfig",
+		checkIfSeedGardenletKubeconfigRenewalsCompleted = g.Add(flow.Task{
+			Name: "Check if all seed gardenlets finished the renewal of their kubeconfig",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, virtualClusterClient, v1beta1constants.GardenerOperationRenewKubeconfig, secretsTypeGardenletKubeconfig)
 			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(renewGardenletKubeconfigInAllSeeds),
+			Dependencies: flow.NewTaskIDs(renewKubeconfigsOfSeedGardenlets),
+		})
+		renewKubeconfigsOfShootGardenlets = g.Add(flow.Task{
+			Name: "Annotate Gardenlet resources of self-hosted shoots to trigger renewal of their kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.RenewKubeconfigInAllShootGardenlets(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenletKubeconfig), virtualClusterClient)
+			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Annotate seeds to trigger reconciliation after observability credentials rotation",
+			Name: "Check if all shoot gardenlets finished the renewal of their kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx, virtualClusterClient)
+			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			Dependencies: flow.NewTaskIDs(renewKubeconfigsOfShootGardenlets),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Annotate Seed resources to trigger reconciliation after observability credentials rotation",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log, virtualClusterClient, v1beta1constants.GardenerOperationReconcile)
 			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			SkipIf:       !helper.IsObservabilityRotationInitiationTimeAfterLastCompletionTime(garden.Status.Credentials),
-			Dependencies: flow.NewTaskIDs(generateAndReplicateGlobalObservabilityIngressPassword, checkIfGardenletKubeconfigRenewalCompletedInAllSeeds),
+			Dependencies: flow.NewTaskIDs(generateAndReplicateGlobalObservabilityIngressPassword, checkIfSeedGardenletKubeconfigRenewalsCompleted),
 		})
 
 		rewriteResourcesAddLabel = g.Add(flow.Task{

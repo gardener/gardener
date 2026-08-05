@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -920,8 +921,11 @@ func createBootstrapKubeconfig(
 				return "", fmt.Errorf("unknown bootstrap kind for object of type %T", obj)
 			}
 
+			// For self-hosted shoot Gardenlet resources the object name carries the `self-hosted-shoot-` prefix,
+			// but the authorizer computes the expected token name from the shoot name (without prefix).
+			// Strip the prefix so both sides derive the same deterministic token ID.
 			var (
-				tokenID          = bootstraptoken.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
+				tokenID          = bootstraptoken.TokenID(metav1.ObjectMeta{Name: strings.TrimPrefix(obj.GetName(), gardenletutils.ResourcePrefixSelfHostedShoot), Namespace: obj.GetNamespace()})
 				tokenDescription = gardenletbootstraputil.Description(kind, obj.GetNamespace(), obj.GetName())
 				tokenValidity    = 24 * time.Hour
 			)
