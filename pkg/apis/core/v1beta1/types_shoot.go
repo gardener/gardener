@@ -1675,12 +1675,12 @@ type MaintenanceTimeWindow struct {
 	// Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
 	// If not present, a random value will be computed.
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=`([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9][+-](0[0-9]|1[0-4])00`
+	// +kubebuilder:validation:Pattern=`([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]([+](0[0-9]|1[0-4])|[-](0[0-9]|1[0-2]))00`
 	Begin string `json:"begin" protobuf:"bytes,1,opt,name=begin"`
 	// End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
 	// If not present, the value will be computed based on the "Begin" value.
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=`([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9][+-](0[0-9]|1[0-4])00`
+	// +kubebuilder:validation:Pattern=`([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]([+](0[0-9]|1[0-4])|[-](0[0-9]|1[0-2]))00`
 	End string `json:"end" protobuf:"bytes,2,opt,name=end"`
 }
 
