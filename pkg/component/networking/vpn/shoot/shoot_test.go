@@ -1165,6 +1165,10 @@ var _ = Describe("VPNShoot", func() {
 								Type:   resourcesv1alpha1.ResourcesHealthy,
 								Status: gardencorev1beta1.ConditionTrue,
 							},
+							{
+								Type:   resourcesv1alpha1.ResourcesProgressing,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
 						},
 					},
 				})).To(Succeed())
