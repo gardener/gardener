@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -174,6 +175,8 @@ func (r *Reconciler) reconcile(
 		// This is validated by a webhook, so we can read from either apiserver config.
 		encryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
 		encryptionProvider      = helper.GetEncryptionProviderTypeInStatus(garden.Status)
+
+		globalObservabilitySecretLastRotationInitiationTimestamp int64
 
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
@@ -475,6 +478,15 @@ func (r *Reconciler) reconcile(
 					return fmt.Errorf("failed to generate global observability ingress secret: %w", err)
 				}
 
+				// accept missing and empty last-rotation-initiation-time label values for human-generated or
+				// brand new generated secrets, but fail for any other content that cannot be parsed as an integer.
+				if lastRotationInitiationTime := secret.Labels[secretsmanager.LabelKeyLastRotationInitiationTime]; lastRotationInitiationTime != "" {
+					globalObservabilitySecretLastRotationInitiationTimestamp, err = strconv.ParseInt(lastRotationInitiationTime, 10, 64)
+					if err != nil {
+						return fmt.Errorf("error parsing last rotation initiation time of global observability secret in namespace %q: %w", r.GardenNamespace, err)
+					}
+				}
+
 				_, err = gardenerutils.ReplicateGlobalMonitoringSecret(ctx, virtualClusterClient, secret, r.GardenNamespace, func(name string) string {
 					return strings.TrimPrefix(name, "global-")
 				})
@@ -547,13 +559,21 @@ func (r *Reconciler) reconcile(
 			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(renewGardenletKubeconfigInAllSeeds),
 		})
+		waitUntilGlobalObservabilitySecretPropagatedToAllSeeds = g.Add(flow.Task{
+			Name: "Wait until global observability secret is propagated to all seed namespaces",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.CheckIfGlobalObservabilitySecretPropagatedToAllSeeds(ctx, virtualClusterClient, globalObservabilitySecretLastRotationInitiationTimestamp)
+			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			SkipIf:       !helper.IsObservabilityRotationInitiationTimeAfterLastCompletionTime(garden.Status.Credentials),
+			Dependencies: flow.NewTaskIDs(generateAndReplicateGlobalObservabilityIngressPassword),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Annotate seeds to trigger reconciliation after observability credentials rotation",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log, virtualClusterClient, v1beta1constants.GardenerOperationReconcile)
 			}).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			SkipIf:       !helper.IsObservabilityRotationInitiationTimeAfterLastCompletionTime(garden.Status.Credentials),
-			Dependencies: flow.NewTaskIDs(generateAndReplicateGlobalObservabilityIngressPassword, checkIfGardenletKubeconfigRenewalCompletedInAllSeeds),
+			Dependencies: flow.NewTaskIDs(waitUntilGlobalObservabilitySecretPropagatedToAllSeeds, checkIfGardenletKubeconfigRenewalCompletedInAllSeeds),
 		})
 
 		rewriteResourcesAddLabel = g.Add(flow.Task{
