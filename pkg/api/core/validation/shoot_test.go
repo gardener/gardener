@@ -8201,17 +8201,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid clearing zones once set", func() {
+			It("should allow clearing zones once set", func() {
 				shoot.Spec.ControlPlane = &core.ControlPlane{Zones: []string{"a"}}
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.ControlPlane = &core.ControlPlane{}
 
-				errorList := ValidateShootUpdate(newShoot, shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.controlPlane.zones"),
-				}))))
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
 			It("should forbid setting zones on update when not set at creation", func() {
