@@ -59,34 +59,26 @@ func (projectStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 }
 
 func (projectStrategy) Canonicalize(obj runtime.Object) {
-	project := obj.(*core.Project)
-	if project.Spec.Owner == nil {
+	var (
+		project = obj.(*core.Project)
+		owner   = project.Spec.Owner
+	)
+
+	if owner == nil {
 		return
 	}
-	owner := project.Spec.Owner
+
 	for i, member := range project.Spec.Members {
 		if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
-			if !hasRole(member.Roles, core.ProjectMemberOwner) {
+			if !slices.Contains(member.Roles, core.ProjectMemberOwner) {
 				project.Spec.Members[i].Roles = append(project.Spec.Members[i].Roles, core.ProjectMemberOwner)
 			}
 		} else {
-			project.Spec.Members[i].Roles = removeRole(member.Roles, core.ProjectMemberOwner)
+			project.Spec.Members[i].Roles = slices.DeleteFunc(member.Roles, func(e string) bool {
+				return e == core.ProjectMemberOwner
+			})
 		}
 	}
-}
-
-func hasRole(roles []string, role string) bool {
-	return slices.Contains(roles, role)
-}
-
-func removeRole(roles []string, role string) []string {
-	var out []string
-	for _, r := range roles {
-		if r != role {
-			out = append(out, r)
-		}
-	}
-	return out
 }
 
 func (projectStrategy) AllowCreateOnUpdate() bool {

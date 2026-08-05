@@ -96,7 +96,13 @@ var _ = Describe("Canonicalize", func() {
 			},
 		}
 		Strategy.Canonicalize(project)
-		Expect(project.Spec.Members[0].Roles).To(ConsistOf(core.ProjectMemberOwner))
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+				},
+			},
+		}))
 	})
 
 	It("should do nothing if owner is not (yet) a member", func() {
@@ -106,7 +112,11 @@ var _ = Describe("Canonicalize", func() {
 			},
 		}
 		Strategy.Canonicalize(project)
-		Expect(project.Spec.Members).To(BeEmpty())
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+			},
+		}))
 	})
 
 	It("should add the owner role to the owner member when not present", func() {
@@ -121,10 +131,15 @@ var _ = Describe("Canonicalize", func() {
 			},
 		}
 		Strategy.Canonicalize(project)
-		Expect(project.Spec.Members).To(Equal([]core.ProjectMember{
-			{Subject: member1},
-			{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-			{Subject: member2},
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
 		}))
 	})
 
@@ -140,10 +155,15 @@ var _ = Describe("Canonicalize", func() {
 			},
 		}
 		Strategy.Canonicalize(project)
-		Expect(project.Spec.Members).To(Equal([]core.ProjectMember{
-			{Subject: member1},
-			{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-			{Subject: member2},
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
 		}))
 	})
 
@@ -160,11 +180,16 @@ var _ = Describe("Canonicalize", func() {
 			},
 		}
 		Strategy.Canonicalize(project)
-		Expect(project.Spec.Members).To(Equal([]core.ProjectMember{
-			{Subject: member1, Roles: nil},
-			{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-			{Subject: member2, Roles: nil},
-			{Subject: member3, Roles: []string{extensionRole}},
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{}},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2, Roles: []string{}},
+					{Subject: member3, Roles: []string{extensionRole}},
+				},
+			},
 		}))
 	})
 
@@ -180,10 +205,15 @@ var _ = Describe("Canonicalize", func() {
 			},
 		}
 		Strategy.Canonicalize(project)
-		Expect(project.Spec.Members).To(Equal([]core.ProjectMember{
-			{Subject: member1, Roles: []string{extensionRole}},
-			{Subject: owner, Roles: []string{extensionRole, core.ProjectMemberOwner}},
-			{Subject: member2},
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{extensionRole}},
+					{Subject: owner, Roles: []string{extensionRole, core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
 		}))
 	})
 })
