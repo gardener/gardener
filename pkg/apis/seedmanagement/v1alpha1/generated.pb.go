@@ -202,6 +202,16 @@ func (m *GardenletDeployment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.EnableHealthProbes != nil {
+		i--
+		if *m.EnableHealthProbes {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x60
+	}
 	if len(m.Tolerations) > 0 {
 		for iNdEx := len(m.Tolerations) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -1376,6 +1386,9 @@ func (m *GardenletDeployment) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	if m.EnableHealthProbes != nil {
+		n += 2
+	}
 	return n
 }
 
@@ -1796,6 +1809,7 @@ func (this *GardenletDeployment) String() string {
 		`AdditionalVolumeMounts:` + repeatedStringForAdditionalVolumeMounts + `,`,
 		`Env:` + repeatedStringForEnv + `,`,
 		`Tolerations:` + repeatedStringForTolerations + `,`,
+		`EnableHealthProbes:` + valueToStringGenerated(this.EnableHealthProbes) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -2952,6 +2966,27 @@ func (m *GardenletDeployment) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 12:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EnableHealthProbes", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.EnableHealthProbes = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

@@ -324,6 +324,18 @@ object (keys:string, values:string)
 <p>Tolerations are the tolerations to be applied to gardenlet pods.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>enableHealthProbes</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet<br />deployment. Defaults to true.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
@@ -518,6 +530,18 @@ object (keys:string, values:string)
 <td>
 <em>(Optional)</em>
 <p>Tolerations are the tolerations to be applied to gardenlet pods.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enableHealthProbes</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet<br />deployment. Defaults to true.</p>
 </td>
 </tr>
 <tr>

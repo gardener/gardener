@@ -145,6 +145,11 @@ func (in *GardenletDeployment) DeepCopyInto(out *GardenletDeployment) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.EnableHealthProbes != nil {
+		in, out := &in.EnableHealthProbes, &out.EnableHealthProbes
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

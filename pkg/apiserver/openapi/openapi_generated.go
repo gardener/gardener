@@ -12238,6 +12238,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 							},
 						},
 					},
+					"enableHealthProbes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet deployment. Defaults to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -12439,6 +12446,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 									},
 								},
 							},
+						},
+					},
+					"enableHealthProbes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet deployment. Defaults to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"helm": {
