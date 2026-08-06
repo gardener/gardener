@@ -218,6 +218,10 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 	var (
 		deployExtensionAfterKAPIMsg = "Deploying extension resources after kube-apiserver"
 		waitExtensionAfterKAPIMsg   = "Waiting until extension resources handled after kube-apiserver are ready"
+
+		rotationPreparingPhases = sets.New(gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPreparingWithoutWorkersRollout)
+		caRotationPreparing     = rotationPreparingPhases.Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials))
+		saKeyRotationPreparing  = rotationPreparingPhases.Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials))
 	)
 	if b.Shoot.HibernationEnabled {
 		deployExtensionAfterKAPIMsg = "Hibernating extension resources before kube-apiserver hibernation"
@@ -606,13 +610,11 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			Fn:           flow.TaskFn(b.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilGardenerResourceManagerReady),
 		})
+
 		waitUntilKubeControllerManagerReady = g.Add(flow.Task{
-			Name: "Waiting until kube-controller-manager reports readiness",
-			Fn:   b.Shoot.Components.ControlPlane.KubeControllerManager.Wait,
-			SkipIf: flowCtx.skipReadiness || !sets.New(
-				gardencorev1beta1.RotationPreparing,
-				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
-			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)),
+			Name:         "Waiting until kube-controller-manager reports readiness",
+			Fn:           b.Shoot.Components.ControlPlane.KubeControllerManager.Wait,
+			SkipIf:       flowCtx.skipReadiness || (!saKeyRotationPreparing && !caRotationPreparing),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
 		createNewServiceAccountSecrets = g.Add(flow.Task{
@@ -620,10 +622,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CreateNewServiceAccountSecrets(ctx, b.Logger, b.ShootClientSet.Client(), b.SecretsManager)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf: !sets.New(
-				gardencorev1beta1.RotationPreparing,
-				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
-			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)),
+			SkipIf:       !saKeyRotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		_ = g.Add(flow.Task{
@@ -632,6 +631,12 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 				return secretsrotation.DeleteOldServiceAccountSecrets(ctx, b.Logger, b.ShootClientSet.Client(), b.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting,
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
+		})
+		waitUntilKubeRootCAConfigMapsUpdated = g.Add(flow.Task{
+			Name:         "Waiting until kube-root-ca.crt ConfigMaps have been updated with new CA bundle",
+			Fn:           flow.TaskFn(b.WaitUntilKubeRootCAConfigMapsUpdated).RetryUntilTimeout(30*time.Second, 5*time.Minute),
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness || !caRotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		deleteBastions = g.Add(flow.Task{
@@ -877,7 +882,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(b.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployMachineControllerManager, deployShootSystemResources),
+			Dependencies: flow.NewTaskIDs(deployMachineControllerManager, deployShootSystemResources, waitUntilKubeRootCAConfigMapsUpdated),
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name: "Waiting until worker resource status is updated with latest machine deployments",

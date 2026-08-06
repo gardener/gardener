@@ -13,6 +13,10 @@ const (
 	// AnnotationKeyEtcdSnapshotted is an annotation indicating that ETCD snapshot was completed
 	AnnotationKeyEtcdSnapshotted = "credentials.gardener.cloud/etcd-snapshotted"
 
+	// LabelKeyCABundleName is a label key used to mark kube-root-ca.crt ConfigMaps that have already been confirmed
+	// to contain a specific CA bundle. The label value is the name of the CA bundle secret.
+	LabelKeyCABundleName = "credentials.gardener.cloud/ca-bundle-name"
+
 	labelKeyRotationKeyName = "credentials.gardener.cloud/key-name"
 	rotationQPS             = 100
 )
