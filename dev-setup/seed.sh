@@ -14,7 +14,7 @@ detect_scenario
 skaffold_profile "$SCENARIO"
 
 COMMAND="${1:-up}"
-VALID_COMMANDS=("up dev debug down")
+VALID_COMMANDS=("up" "dev" "debug" "down")
 
 skaffold_command="run"
 if [[ "$COMMAND" == "dev" ]]; then
@@ -39,7 +39,7 @@ fi
 SYSTEM_ARCH=$(kubectl get nodes -o yaml | yq '.items[0].status.nodeInfo.architecture')
 
 case "$COMMAND" in
-  up)
+  up | dev | debug)
     skaffold run \
       -m garden-config \
       ${BUILD_CONCURRENCY:+--build-concurrency "$BUILD_CONCURRENCY"} \
