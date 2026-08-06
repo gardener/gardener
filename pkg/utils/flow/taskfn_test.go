@@ -212,7 +212,7 @@ var _ = Describe("task functions", func() {
 			Eventually(func(g Gomega) {
 				tasks := 0
 				activeTasks.Range(func(_, _ any) bool {
-					tasks += 1
+					tasks++
 					return true
 				})
 				g.Expect(tasks).To(Equal(0))

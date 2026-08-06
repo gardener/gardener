@@ -840,22 +840,22 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	return allErrs
 }
 
-func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.Path) field.ErrorList {
+func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if old != nil && new == nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new, old, fldPath)...)
+	if oldDNS != nil && newDNS == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newDNS, oldDNS, fldPath)...)
 	}
 
-	if new != nil && old != nil {
-		if old.Domain != nil && new.Domain != old.Domain {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+	if newDNS != nil && oldDNS != nil {
+		if oldDNS.Domain != nil && newDNS.Domain != oldDNS.Domain {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newDNS.Domain, oldDNS.Domain, fldPath.Child("domain"))...)
 		}
 
 		if seedGotAssigned {
 			var (
-				primaryOld = helper.FindPrimaryDNSProvider(old.Providers)
-				primaryNew = helper.FindPrimaryDNSProvider(new.Providers)
+				primaryOld = helper.FindPrimaryDNSProvider(oldDNS.Providers)
+				primaryNew = helper.FindPrimaryDNSProvider(newDNS.Providers)
 			)
 
 			if primaryOld != nil && primaryNew == nil {
@@ -876,18 +876,18 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 }
 
 // ValidateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip minor versions when not allowed
-func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bool, fldPath *field.Path) field.ErrorList {
+func ValidateKubernetesVersionUpdate(newVersion, oldVersion string, skipMinorVersionAllowed bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(new) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath, new, "cannot validate kubernetes version upgrade because it is unset"))
+	if len(newVersion) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, newVersion, "cannot validate kubernetes version upgrade because it is unset"))
 		return allErrs
 	}
 
 	// Forbid Kubernetes version downgrade
-	downgrade, err := versionutils.CompareVersions(new, "<", old)
+	downgrade, err := versionutils.CompareVersions(newVersion, "<", oldVersion)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
+		allErrs = append(allErrs, field.Invalid(fldPath, newVersion, err.Error()))
 	}
 	if downgrade {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version downgrade is not supported"))
@@ -895,15 +895,15 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 
 	if !skipMinorVersionAllowed {
 		// Forbid Kubernetes version upgrade which skips a minor version
-		oldVersion, err := semver.NewVersion(old)
+		oldSemVer, err := semver.NewVersion(oldVersion)
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, old, err.Error()))
+			allErrs = append(allErrs, field.Invalid(fldPath, oldVersion, err.Error()))
 		}
-		nextMinorVersion := oldVersion.IncMinor().IncMinor()
+		nextMinorVersion := oldSemVer.IncMinor().IncMinor()
 
-		skippingMinorVersion, err := versionutils.CompareVersions(new, ">=", nextMinorVersion.String())
+		skippingMinorVersion, err := versionutils.CompareVersions(newVersion, ">=", nextMinorVersion.String())
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
+			allErrs = append(allErrs, field.Invalid(fldPath, newVersion, err.Error()))
 		}
 		if skippingMinorVersion {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
@@ -914,21 +914,21 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 }
 
 // validateMachineImageVersionInPlaceUpdate ensures that the new machine image version is newer than old version in case the strategy is in-place update
-func validateMachineImageVersionInPlaceUpdate(new, old *core.ShootMachineImage, fldPath *field.Path) field.ErrorList {
+func validateMachineImageVersionInPlaceUpdate(newMachineImage, oldMachineImage *core.ShootMachineImage, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                = field.ErrorList{}
 		newVersion, oldVersion string
 	)
 
-	if new != nil {
-		newVersion = new.Version
+	if newMachineImage != nil {
+		newVersion = newMachineImage.Version
 	}
-	if old != nil {
-		oldVersion = old.Version
+	if oldMachineImage != nil {
+		oldVersion = oldMachineImage.Version
 	}
 
 	if len(newVersion) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath, new, "cannot validate machine image version upgrade because it is unset"))
+		allErrs = append(allErrs, field.Invalid(fldPath, newMachineImage, "cannot validate machine image version upgrade because it is unset"))
 		return allErrs
 	}
 
@@ -1738,36 +1738,36 @@ func validatePercentile(percentile float64, fldPath *field.Path) field.ErrorList
 	return allErrs
 }
 
-func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
+func validateHibernationUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	var (
 		allErrs                     = field.ErrorList{}
 		fldPath                     = field.NewPath("spec", "hibernation", "enabled")
-		hibernationEnabledInOld     = old.Spec.Hibernation != nil && ptr.Deref(old.Spec.Hibernation.Enabled, false)
-		hibernationEnabledInNew     = new.Spec.Hibernation != nil && ptr.Deref(new.Spec.Hibernation.Enabled, false)
+		hibernationEnabledInOld     = oldShoot.Spec.Hibernation != nil && ptr.Deref(oldShoot.Spec.Hibernation.Enabled, false)
+		hibernationEnabledInNew     = newShoot.Spec.Hibernation != nil && ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
 		encryptedResourcesInOldSpec = sets.New[schema.GroupResource]()
 		encryptedResourcesInStatus  = sets.New[schema.GroupResource]()
 	)
 
-	if old.Spec.Kubernetes.KubeAPIServer != nil && old.Spec.Kubernetes.KubeAPIServer.EncryptionConfig != nil {
-		for _, r := range old.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources {
+	if oldShoot.Spec.Kubernetes.KubeAPIServer != nil && oldShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig != nil {
+		for _, r := range oldShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources {
 			encryptedResourcesInOldSpec.Insert(schema.ParseGroupResource(r))
 		}
 	}
 
-	if old.Status.Credentials != nil && old.Status.Credentials.EncryptionAtRest != nil {
-		for _, er := range old.Status.Credentials.EncryptionAtRest.Resources {
+	if oldShoot.Status.Credentials != nil && oldShoot.Status.Credentials.EncryptionAtRest != nil {
+		for _, er := range oldShoot.Status.Credentials.EncryptionAtRest.Resources {
 			encryptedResourcesInStatus.Insert(schema.ParseGroupResource(er))
 		}
 	}
 
 	if !hibernationEnabledInOld && hibernationEnabledInNew {
-		if new.Status.Credentials != nil && new.Status.Credentials.Rotation != nil && new.Status.Credentials.Rotation.ETCDEncryptionKey != nil {
-			if etcdEncryptionKeyRotation := new.Status.Credentials.Rotation.ETCDEncryptionKey; etcdEncryptionKeyRotation.Phase == core.RotationPreparing || etcdEncryptionKeyRotation.Phase == core.RotationCompleting {
+		if newShoot.Status.Credentials != nil && newShoot.Status.Credentials.Rotation != nil && newShoot.Status.Credentials.Rotation.ETCDEncryptionKey != nil {
+			if etcdEncryptionKeyRotation := newShoot.Status.Credentials.Rotation.ETCDEncryptionKey; etcdEncryptionKeyRotation.Phase == core.RotationPreparing || etcdEncryptionKeyRotation.Phase == core.RotationCompleting {
 				allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("shoot cannot be hibernated when .status.credentials.rotation.etcdEncryptionKey.phase is %q", string(etcdEncryptionKeyRotation.Phase))))
 			}
 		}
-		if new.Status.Credentials != nil && new.Status.Credentials.Rotation != nil && new.Status.Credentials.Rotation.ServiceAccountKey != nil {
-			if serviceAccountKeyRotation := new.Status.Credentials.Rotation.ServiceAccountKey; sets.New(core.RotationPreparing, core.RotationPreparingWithoutWorkersRollout, core.RotationCompleting).Has(serviceAccountKeyRotation.Phase) {
+		if newShoot.Status.Credentials != nil && newShoot.Status.Credentials.Rotation != nil && newShoot.Status.Credentials.Rotation.ServiceAccountKey != nil {
+			if serviceAccountKeyRotation := newShoot.Status.Credentials.Rotation.ServiceAccountKey; sets.New(core.RotationPreparing, core.RotationPreparingWithoutWorkersRollout, core.RotationCompleting).Has(serviceAccountKeyRotation.Phase) {
 				allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("shoot cannot be hibernated when .status.credentials.rotation.serviceAccountKey.phase is %q", string(serviceAccountKeyRotation.Phase))))
 			}
 		}

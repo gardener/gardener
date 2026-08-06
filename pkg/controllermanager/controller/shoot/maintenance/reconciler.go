@@ -725,7 +725,7 @@ func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1b
 	return version, nil
 }
 
-func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile) (shouldBeUpdated bool, reason string, isExpired bool, error error) {
+func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile) (shouldBeUpdated bool, reason string, isExpired bool, err error) {
 	versionExistsInCloudProfile, version, err := v1beta1helper.KubernetesVersionExistsInCloudProfile(profile, kubernetesVersion)
 	if err != nil {
 		return false, "", false, err

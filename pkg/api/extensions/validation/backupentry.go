@@ -26,12 +26,12 @@ func ValidateBackupEntry(be *extensionsv1alpha1.BackupEntry) field.ErrorList {
 }
 
 // ValidateBackupEntryUpdate validates a BackupEntry object before an update.
-func ValidateBackupEntryUpdate(new, old *extensionsv1alpha1.BackupEntry) field.ErrorList {
+func ValidateBackupEntryUpdate(newBackupEntry, oldBackupEntry *extensionsv1alpha1.BackupEntry) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateBackupEntrySpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateBackupEntry(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBackupEntry.ObjectMeta, &oldBackupEntry.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateBackupEntrySpecUpdate(&newBackupEntry.Spec, &oldBackupEntry.Spec, newBackupEntry.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateBackupEntry(newBackupEntry)...)
 
 	return allErrs
 }
@@ -60,15 +60,15 @@ func ValidateBackupEntrySpec(spec *extensionsv1alpha1.BackupEntrySpec, fldPath *
 }
 
 // ValidateBackupEntrySpecUpdate validates the spec of a BackupEntry object before an update.
-func ValidateBackupEntrySpecUpdate(new, old *extensionsv1alpha1.BackupEntrySpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateBackupEntrySpecUpdate(newSpec, oldSpec *extensionsv1alpha1.BackupEntrySpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update backup entry spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
 
 	return allErrs
 }

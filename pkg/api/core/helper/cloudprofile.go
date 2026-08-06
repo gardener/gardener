@@ -211,14 +211,14 @@ func ToExpirableVersions(versions []core.MachineImageVersion) []core.ExpirableVe
 
 // GetRemovedVersions finds versions that have been removed in the old compared to the new version slice.
 // returns a map associating the version with its index in the old version slice.
-func GetRemovedVersions(old, new []core.ExpirableVersion) map[string]int {
-	return getVersionDiff(old, new)
+func GetRemovedVersions(oldVersions, newVersions []core.ExpirableVersion) map[string]int {
+	return getVersionDiff(oldVersions, newVersions)
 }
 
-// GetAddedVersions finds versions that have been added in the new compared to the new version slice.
+// GetAddedVersions finds versions that have been added in the new compared to the old version slice.
 // returns a map associating the version with its index in the old version slice.
-func GetAddedVersions(old, new []core.ExpirableVersion) map[string]int {
-	return getVersionDiff(new, old)
+func GetAddedVersions(oldVersions, newVersions []core.ExpirableVersion) map[string]int {
+	return getVersionDiff(newVersions, oldVersions)
 }
 
 // getVersionDiff gets versions that are in v1 but not in v2.
@@ -248,7 +248,7 @@ type MachineImageDiff struct {
 }
 
 // GetMachineImageDiff returns the removed and added machine images and versions from the diff of two slices.
-func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
+func GetMachineImageDiff(oldImages, newImages []core.MachineImage) MachineImageDiff {
 	diff := MachineImageDiff{
 		RemovedImages:                 sets.Set[string]{},
 		RemovedVersions:               map[string]sets.Set[string]{},
@@ -257,13 +257,13 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 		AddedVersions:                 map[string]sets.Set[string]{},
 	}
 
-	oldImages := utils.CreateMapFromSlice(old, func(image core.MachineImage) string { return image.Name })
-	newImages := utils.CreateMapFromSlice(new, func(image core.MachineImage) string { return image.Name })
+	oldImageMap := utils.CreateMapFromSlice(oldImages, func(image core.MachineImage) string { return image.Name })
+	newImageMap := utils.CreateMapFromSlice(newImages, func(image core.MachineImage) string { return image.Name })
 
-	for imageName, oldImage := range oldImages {
+	for imageName, oldImage := range oldImageMap {
 		oldImageVersions := utils.CreateMapFromSlice(oldImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
 		oldImageVersionsSet := sets.KeySet(oldImageVersions)
-		newImage, exists := newImages[imageName]
+		newImage, exists := newImageMap[imageName]
 		if !exists {
 			// Completely removed images.
 			diff.RemovedImages.Insert(imageName)
@@ -306,8 +306,8 @@ func GetMachineImageDiff(old, new []core.MachineImage) MachineImageDiff {
 		}
 	}
 
-	for imageName, newImage := range newImages {
-		if _, exists := oldImages[imageName]; !exists {
+	for imageName, newImage := range newImageMap {
+		if _, exists := oldImageMap[imageName]; !exists {
 			// Completely new image.
 			newImageVersions := utils.CreateMapFromSlice(newImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
 			newImageVersionsSet := sets.KeySet(newImageVersions)

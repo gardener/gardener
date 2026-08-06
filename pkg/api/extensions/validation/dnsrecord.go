@@ -30,12 +30,12 @@ func ValidateDNSRecord(dns *extensionsv1alpha1.DNSRecord) field.ErrorList {
 }
 
 // ValidateDNSRecordUpdate validates a DNSRecord object before an update.
-func ValidateDNSRecordUpdate(new, old *extensionsv1alpha1.DNSRecord) field.ErrorList {
+func ValidateDNSRecordUpdate(newDNSRecord, oldDNSRecord *extensionsv1alpha1.DNSRecord) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateDNSRecordSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateDNSRecord(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newDNSRecord.ObjectMeta, &oldDNSRecord.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateDNSRecordSpecUpdate(&newDNSRecord.Spec, &oldDNSRecord.Spec, newDNSRecord.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateDNSRecord(newDNSRecord)...)
 
 	return allErrs
 }
@@ -97,17 +97,17 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 }
 
 // ValidateDNSRecordSpecUpdate validates the spec of a DNSRecord object before an update.
-func ValidateDNSRecordSpecUpdate(new, old *extensionsv1alpha1.DNSRecordSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateDNSRecordSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.DNSRecordSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update dns record spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Name, old.Name, fldPath.Child("name"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RecordType, old.RecordType, fldPath.Child("recordType"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Name, oldSpec.Name, fldPath.Child("name"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.RecordType, oldSpec.RecordType, fldPath.Child("recordType"))...)
 
 	return allErrs
 }

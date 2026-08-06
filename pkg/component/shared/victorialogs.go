@@ -5,7 +5,7 @@
 package shared
 
 import (
-	_ "crypto/sha256"
+	_ "crypto/sha256" // registers SHA-256 with crypto.RegisterHash so github.com/opencontainers/go-digest can parse sha256 digests in SplitImageRef
 	"fmt"
 
 	"github.com/distribution/reference"

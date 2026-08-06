@@ -28,10 +28,10 @@ type ensurer struct {
 // EnsureCloudProviderSecret is implemented on extension side which mutates the cloudprovider secret. contain
 // For testing purpose we are mutating the cloudprovider secret's data to check whether this
 // function is called in webhook.
-func (e *ensurer) EnsureCloudProviderSecret(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *corev1.Secret) error {
-	e.logger.Info("Mutate cloudprovider secret", "namespace", new.Namespace, "name", new.Name)
-	new.Data["clientID"] = []byte(`foo`)
-	new.Data["clientSecret"] = []byte(`bar`)
+func (e *ensurer) EnsureCloudProviderSecret(_ context.Context, _ extensionscontextwebhook.GardenContext, newSecret, _ *corev1.Secret) error {
+	e.logger.Info("Mutate cloudprovider secret", "namespace", newSecret.Namespace, "name", newSecret.Name)
+	newSecret.Data["clientID"] = []byte(`foo`)
+	newSecret.Data["clientSecret"] = []byte(`bar`)
 
 	return nil
 }

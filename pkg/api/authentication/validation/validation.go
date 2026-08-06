@@ -20,8 +20,8 @@ func ValidateKubeconfigRequest(req *authentication.KubeconfigRequest) field.Erro
 	allErrs := field.ErrorList{}
 	specPath := field.NewPath("spec")
 
-	const min = 10 * time.Minute
-	if req.Spec.ExpirationSeconds < int64(min.Seconds()) {
+	const minExpirationDuration = 10 * time.Minute
+	if req.Spec.ExpirationSeconds < int64(minExpirationDuration.Seconds()) {
 		allErrs = append(allErrs, field.Invalid(specPath.Child("expirationSeconds"), req.Spec.ExpirationSeconds, "may not specify a duration less than 10 minutes"))
 	}
 	if req.Spec.ExpirationSeconds > math.MaxUint32 {

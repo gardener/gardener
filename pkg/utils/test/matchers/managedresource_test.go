@@ -157,7 +157,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 					ExpectWithOffset(1, managedResource).To(matcher(configMap, deployment, secret))
 
 					deploymentModified := deployment.DeepCopy()
-					deploymentModified.Spec.MinReadySeconds += 1
+					deploymentModified.Spec.MinReadySeconds++
 					ExpectWithOffset(1, managedResource).NotTo(matcher(deploymentModified))
 				})
 			})

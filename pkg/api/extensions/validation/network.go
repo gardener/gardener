@@ -29,12 +29,12 @@ func ValidateNetwork(network *extensionsv1alpha1.Network) field.ErrorList {
 }
 
 // ValidateNetworkUpdate validates a Network object before an update.
-func ValidateNetworkUpdate(new, old *extensionsv1alpha1.Network) field.ErrorList {
+func ValidateNetworkUpdate(newNetwork, oldNetwork *extensionsv1alpha1.Network) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateNetworkSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateNetwork(new)...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newNetwork.ObjectMeta, &oldNetwork.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateNetworkSpecUpdate(&newNetwork.Spec, &oldNetwork.Spec, newNetwork.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateNetwork(newNetwork)...)
 
 	return allErrs
 }
@@ -82,18 +82,18 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 }
 
 // ValidateNetworkSpecUpdate validates the spec of a Network object before an update.
-func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.NetworkSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		diff := deep.Equal(new, old)
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		diff := deep.Equal(newSpec, oldSpec)
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update network spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, ValidateIPFamiliesUpdate(new.IPFamilies, old.IPFamilies, fldPath.Child("ipFamilies"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.PodCIDR, old.PodCIDR, fldPath.Child("podCIDR"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ServiceCIDR, old.ServiceCIDR, fldPath.Child("serviceCIDR"))...)
+	allErrs = append(allErrs, ValidateIPFamiliesUpdate(newSpec.IPFamilies, oldSpec.IPFamilies, fldPath.Child("ipFamilies"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.PodCIDR, oldSpec.PodCIDR, fldPath.Child("podCIDR"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ServiceCIDR, oldSpec.ServiceCIDR, fldPath.Child("serviceCIDR"))...)
 	return allErrs
 }
 

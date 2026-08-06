@@ -42,10 +42,10 @@ type namespacedCloudProfileValidator struct {
 }
 
 // Validate validates the given NamespacedCloudProfile objects.
-func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, new, _ client.Object) error {
-	cloudProfile, ok := new.(*core.NamespacedCloudProfile)
+func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, newNamespacedCloudProfile, _ client.Object) error {
+	cloudProfile, ok := newNamespacedCloudProfile.(*core.NamespacedCloudProfile)
 	if !ok {
-		return fmt.Errorf("wrong object type %T", new)
+		return fmt.Errorf("wrong object type %T", newNamespacedCloudProfile)
 	}
 
 	if cloudProfile.DeletionTimestamp != nil {

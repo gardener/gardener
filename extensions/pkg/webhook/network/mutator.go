@@ -18,7 +18,7 @@ import (
 )
 
 // MutateFn is a function that validates and if needed mutates the given extensionsv1alpha1.Network.
-type MutateFn func(new, old *extensionsv1alpha1.Network) error
+type MutateFn func(newNetwork, oldNetwork *extensionsv1alpha1.Network) error
 
 // NewMutator creates a new network mutator.
 func NewMutator(mgr manager.Manager, logger logr.Logger, mutateFn MutateFn) webhook.Mutator {
@@ -36,24 +36,24 @@ type mutator struct {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(_ context.Context, new, old client.Object) error {
+func (m *mutator) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 	var (
 		newNetwork, oldNetwork *extensionsv1alpha1.Network
 		ok                     bool
 	)
 
 	// If the object does have a deletion timestamp then we don't want to mutate anything.
-	if new.GetDeletionTimestamp() != nil {
+	if newObj.GetDeletionTimestamp() != nil {
 		return nil
 	}
 
-	newNetwork, ok = new.(*extensionsv1alpha1.Network)
+	newNetwork, ok = newObj.(*extensionsv1alpha1.Network)
 	if !ok {
 		return fmt.Errorf("could not mutate, object is not of type %q", "Network")
 	}
 
-	if old != nil {
-		oldNetwork, ok = old.(*extensionsv1alpha1.Network)
+	if oldObj != nil {
+		oldNetwork, ok = oldObj.(*extensionsv1alpha1.Network)
 		if !ok {
 			return errors.New("could not cast old object to extensionsv1alpha1.Network")
 		}
