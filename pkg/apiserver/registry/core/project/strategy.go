@@ -74,8 +74,8 @@ func (projectStrategy) Canonicalize(obj runtime.Object) {
 				project.Spec.Members[i].Roles = append(project.Spec.Members[i].Roles, core.ProjectMemberOwner)
 			}
 		} else {
-			project.Spec.Members[i].Roles = slices.DeleteFunc(member.Roles, func(e string) bool {
-				return e == core.ProjectMemberOwner
+			project.Spec.Members[i].Roles = slices.DeleteFunc(member.Roles, func(r string) bool {
+				return r == core.ProjectMemberOwner
 			})
 		}
 	}
