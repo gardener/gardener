@@ -23,6 +23,9 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
+// IsUsingLegacyClassifications reports whether the given version still uses the deprecated Classification and
+// ExpirationDate fields instead of Lifecycle. Since these are mutually exclusive, a version with at least one
+// lifecycle stage is never considered legacy.
 func IsUsingLegacyClassifications(version gardencorev1beta1.ExpirableVersion) bool {
 	return len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil)
 }
