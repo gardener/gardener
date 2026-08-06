@@ -354,7 +354,7 @@ func (v *vpnShoot) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, v.client, v.namespace, managedResourceName)
 }
 
 func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
