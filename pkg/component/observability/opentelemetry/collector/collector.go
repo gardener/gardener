@@ -638,6 +638,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			},
 		}
 
+		// TODO(rrhubenov): Remove the rbac-proxy-vali container when the `OpenTelemetryCollector` feature gate is promoted to GA.
 		valiContainer := o.newRBACProxyContainer(kubeRBACProxyName+"-vali", listenScheme(collectorconstants.KubeRBACProxyValiPort), fmt.Sprintf("http://logging:%d/", valiconstants.ValiPort), tlsArgs, resources)
 
 		// The OTLP exporter uses gRPC, which operates over HTTP/2. To support HTTP/2 over cleartext (h2c),
