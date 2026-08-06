@@ -924,57 +924,53 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	Describe("GetShootAuditPolicyConfigMapName", func() {
-		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
-			})
-		}
+	DescribeTable("#GetShootAuditPolicyConfigMapName",
+		func(config *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
+			Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
+		},
 
-		test("KubeAPIServerConfig = nil", nil, "")
-		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, "")
-		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
+		Entry("KubeAPIServerConfig = nil", nil, ""),
+		Entry("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
+		Entry("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
 			AuditConfig: &gardencorev1beta1.AuditConfig{},
-		}, "")
-		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
+		}, ""),
+		Entry("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
 			AuditConfig: &gardencorev1beta1.AuditConfig{
 				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
 			},
-		}, "")
-		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
+		}, ""),
+		Entry("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
 			AuditConfig: &gardencorev1beta1.AuditConfig{
 				AuditPolicy: &gardencorev1beta1.AuditPolicy{
 					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
 				},
 			},
-		}, "foo")
-	})
+		}, "foo"),
+	)
 
-	Describe("GetShootAuditPolicyConfigMapRef", func() {
-		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
-			})
-		}
+	DescribeTable("#GetShootAuditPolicyConfigMapRef",
+		func(config *gardencorev1beta1.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
+			Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
+		},
 
-		test("KubeAPIServerConfig = nil", nil, nil)
-		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, nil)
-		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
+		Entry("KubeAPIServerConfig = nil", nil, nil),
+		Entry("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, nil),
+		Entry("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
 			AuditConfig: &gardencorev1beta1.AuditConfig{},
-		}, nil)
-		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
+		}, nil),
+		Entry("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
 			AuditConfig: &gardencorev1beta1.AuditConfig{
 				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
 			},
-		}, nil)
-		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
+		}, nil),
+		Entry("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
 			AuditConfig: &gardencorev1beta1.AuditConfig{
 				AuditPolicy: &gardencorev1beta1.AuditPolicy{
 					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
 				},
 			},
-		}, &corev1.ObjectReference{Name: "foo"})
-	})
+		}, &corev1.ObjectReference{Name: "foo"}),
+	)
 
 	DescribeTable("#GetShootAuthenticationConfigurationConfigMapName",
 		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
