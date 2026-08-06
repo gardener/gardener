@@ -1307,10 +1307,10 @@ type MaintenanceRotationConfig struct {
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
 type MaintenanceTimeWindow struct {
-	// Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
+	// Begin is the beginning of the time window in the format HHMMSS±ZONE, e.g. "220000+0100" or "220000-0500".
 	// If not present, a random value will be computed.
 	Begin string
-	// End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
+	// End is the end of the time window in the format HHMMSS±ZONE, e.g. "220000+0100" or "220000-0500".
 	// If not present, the value will be computed based on the "Begin" value.
 	End string
 }
