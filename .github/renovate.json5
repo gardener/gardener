@@ -223,6 +223,7 @@
         '/.*VictoriaMetrics/operator$/',
         '/github\\.com/VictoriaMetrics/operator/api$/',
       ],
+      separateMinorPatch: false,
     },
     {
       // Group Prometheus updates in one PR.
