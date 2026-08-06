@@ -304,7 +304,6 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 	}
 
 	v.injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName)
-	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 }
 
 func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {

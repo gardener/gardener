@@ -441,7 +441,6 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 		}
 	}
 
-	kubernetesutils.InjectImagePullSecret(&daemonSet.Spec.Template.Spec)
 	return clientObjects
 }
 

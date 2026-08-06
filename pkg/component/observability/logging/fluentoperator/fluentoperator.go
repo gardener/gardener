@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -303,7 +302,6 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 	)
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
-	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 
 	serializedResources, err := registry.AddAllAndSerialize(
 		serviceAccount,

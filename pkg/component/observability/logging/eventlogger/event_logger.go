@@ -273,7 +273,6 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, gardenerutils.SecretNamePrefixShootAccess+name))
 
-		kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 		return nil
 	})
 	return err

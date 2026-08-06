@@ -385,7 +385,6 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 	}
 
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
-	kubernetesutils.InjectImagePullSecret(&daemonSet.Spec.Template.Spec)
 
 	return registry.AddAllAndSerialize(daemonSet)
 }

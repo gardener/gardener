@@ -742,7 +742,6 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 	}
 	utilruntime.Must(references.InjectAnnotations(deployment))
-	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
 
 	return deployment
 }

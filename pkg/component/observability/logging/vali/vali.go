@@ -833,7 +833,6 @@ wait
 	}
 
 	utilruntime.Must(references.InjectAnnotations(statefulSet))
-	kubernetesutils.InjectImagePullSecret(&statefulSet.Spec.Template.Spec)
 	return statefulSet
 }
 

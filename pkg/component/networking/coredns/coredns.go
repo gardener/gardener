@@ -793,8 +793,6 @@ import custom/*.server
 		managedObjects = append(managedObjects, horizontalPodAutoscaler)
 	}
 
-	kubernetesutils.InjectImagePullSecret(&deployment.Spec.Template.Spec)
-	kubernetesutils.InjectImagePullSecret(&clusterProportionalDNSAutoscalerDeployment.Spec.Template.Spec)
 	return registry.AddAllAndSerialize(managedObjects...)
 }
 
