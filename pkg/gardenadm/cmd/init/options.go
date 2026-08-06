@@ -10,8 +10,6 @@ import (
 
 	"github.com/spf13/pflag"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
@@ -55,32 +53,17 @@ func (o *Options) Validate() error {
 		return err
 	}
 
-	return o.validateZone()
-}
-
-// validateZone validates the zone configuration against the shoot specification.
-func (o *Options) validateZone() error {
 	resources, err := gardenadm.ReadManifests(o.Log, os.DirFS(o.ConfigDir))
 	if err != nil {
 		return fmt.Errorf("failed loading resources for zone validation: %w", err)
 	}
 
-	if resources.Shoot == nil {
-		return fmt.Errorf("zone validation failed shoot resource is missing in the manifests")
-	}
-
-	// init command is only for control plane node, therefore we look for the control plane pool
-	var controlPlanePool *gardencorev1beta1.Worker
-	if controlPlanePool = v1beta1helper.ControlPlaneWorkerPoolForShoot(resources.Shoot.Spec.Provider.Workers); controlPlanePool == nil {
-		return fmt.Errorf("zone validation failed, shoot doesn't have a control plane worker pool configured")
-	}
-
-	effectiveZone, err := cmd.DetermineZone(*controlPlanePool, o.Zone)
+	effectiveZone, err := cmd.ValidateAndDetermineControlPlaneZone(resources.Shoot, o.Zone)
 	if err != nil {
-		return fmt.Errorf("failed determining zone for control plane worker pool %q: %w", controlPlanePool.Name, err)
+		return err
 	}
-
 	o.Zone = effectiveZone
+
 	return nil
 }
 
