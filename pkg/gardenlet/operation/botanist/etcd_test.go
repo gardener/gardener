@@ -87,6 +87,11 @@ var _ = Describe("Etcd", func() {
 			botanist.Shoot = &shootpkg.Shoot{
 				ControlPlaneNamespace: namespace,
 			}
+			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+				ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+					FeatureGates: map[string]bool{"UpgradeEtcdVersion": true},
+				},
+			}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "test-seed"}})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -216,6 +221,40 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should not set MemberNamePrefix for self-hosted shoots", func() {
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("UpgradeEtcdVersion feature gate disabled", func() {
+			BeforeEach(func() {
+				botanist.Config.ETCDConfig.FeatureGates["UpgradeEtcdVersion"] = false
+				validator.expectedMemberNamePrefix = Equal("")
+			})
+
+			It("should not set MemberNamePrefix when UpgradeEtcdVersion is disabled", func() {
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("UpgradeEtcdVersion feature gate not specified", func() {
+			BeforeEach(func() {
+				botanist.Config.ETCDConfig.FeatureGates = nil
+				validator.expectedMemberNamePrefix = Equal("")
+			})
+
+			It("should not set MemberNamePrefix when FeatureGates is nil", func() {
 				oldNewEtcd := NewEtcd
 				defer func() { NewEtcd = oldNewEtcd }()
 				NewEtcd = validator.NewEtcd
