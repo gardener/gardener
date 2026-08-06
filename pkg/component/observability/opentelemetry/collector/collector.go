@@ -15,10 +15,12 @@ import (
 	istioapiannotation "istio.io/api/annotation"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -45,6 +47,7 @@ const (
 	managedResourceNameTarget  = "logging-target"
 	managedResourceName        = "opentelemetry-collector"
 	serviceMonitorName         = "opentelemetry-collector"
+	vpaName                    = "opentelemetry-collector"
 	openTelemetryCollectorName = "gardener-opentelemetry-collector"
 
 	kubeRBACProxyName = "rbac-proxy"
@@ -201,6 +204,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName))
 	seedObjects = append(seedObjects, o.serviceMonitor())
 	seedObjects = append(seedObjects, o.serviceAccount())
+	seedObjects = append(seedObjects, o.vpa())
 
 	seedRegistry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	serializedResources, err := seedRegistry.AddAllAndSerialize(seedObjects...)
@@ -257,6 +261,41 @@ func (o *otelCollector) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, o.client, o.namespace, managedResourceName)
+}
+
+func (o *otelCollector) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      vpaName,
+			Namespace: o.namespace,
+			Labels:    getLabels(),
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: otelv1beta1.GroupVersion.String(),
+				Kind:       "OpenTelemetryCollector",
+				Name:       collectorconstants.OpenTelemetryCollectorResourceName,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: collectorconstants.ContainerName,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("64Mi"),
+						},
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
+					},
+				},
+			},
+		},
+	}
 }
 
 func (o *otelCollector) serviceAccount() *corev1.ServiceAccount {
@@ -358,7 +397,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("10m"),
-						corev1.ResourceMemory: resource.MustParse("50Mi"),
+						corev1.ResourceMemory: resource.MustParse("64Mi"),
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{

@@ -10,6 +10,9 @@ const (
 	// DeploymentName is the name that the OpenTelemetry Operator will for the Collector deployment.
 	// Note: Currently, the OpenTelemetry Operator hardcodes the deployment name to be the same as the resource name with a '-collector' suffix.
 	DeploymentName = OpenTelemetryCollectorResourceName + "-collector"
+	// ContainerName is the name of the main container in the OpenTelemetry Collector deployment.
+	// Note: Currently, the OpenTelemetry Operator hardcodes the container name to 'otc-container'.
+	ContainerName = "otc-container"
 	// ServiceName is the name the OpenTelemetry Operator will use for the Collector service.
 	// Note: Currently, the OpenTelemetry Operator hardcodes the service name to be the same as the resource name with a '-collector' suffix.
 	ServiceName = OpenTelemetryCollectorResourceName + "-collector"

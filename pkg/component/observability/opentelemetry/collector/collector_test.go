@@ -17,11 +17,13 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -77,6 +79,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		volume                  corev1.Volume
 		volumeMount             corev1.VolumeMount
+		vpa                     *vpaautoscalingv1.VerticalPodAutoscaler
 		managedResourceTarget   *resourcesv1alpha1.ManagedResource
 		openTelemetryCollector  *otelv1beta1.OpenTelemetryCollector
 		serviceMonitor          *monitoringv1.ServiceMonitor
@@ -353,7 +356,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
-							corev1.ResourceMemory: resource.MustParse("50Mi"),
+							corev1.ResourceMemory: resource.MustParse("64Mi"),
 						},
 					},
 					ServiceAccount: "opentelemetry-collector",
@@ -525,6 +528,39 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 		}
 
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "opentelemetry-collector",
+				Namespace: namespace,
+				Labels:    getLabels(),
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: otelv1beta1.GroupVersion.String(),
+					Kind:       "OpenTelemetryCollector",
+					Name:       "opentelemetry-collector",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "otc-container",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("64Mi"),
+							},
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
+						},
+					},
+				},
+			},
+		}
+
 		openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
 		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume}
 		openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
@@ -587,6 +623,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				vpa,
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -644,6 +681,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				vpa,
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -733,6 +771,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				vpa,
 				serviceMonitor,
 				serviceAccount,
 			))
@@ -768,6 +807,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				getVirtualService(),
 				getDestinationRule(),
 				getTLSSecret(tlsSecret),
+				vpa,
 				serviceMonitor,
 				serviceAccount,
 			))
