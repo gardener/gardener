@@ -641,7 +641,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	return obj
 }
 
-func (o *otelCollector) injectRBACProxyContainers(obj *otelv1beta1.OpenTelemetryCollector, valiRBACProxyArgs []string, OTLPRBACProxyArgs []string) {
+func (o *otelCollector) injectRBACProxyContainers(obj *otelv1beta1.OpenTelemetryCollector, valiRBACProxyArgs []string, otlpRBACProxyArgs []string) {
 	obj.Spec.AdditionalContainers = []corev1.Container{
 		{
 			// TODO(rrhubenov): Remove the rbac-proxy-vali container when the `OpenTelemetryCollector` feature gate is promoted to GA.
@@ -665,7 +665,7 @@ func (o *otelCollector) injectRBACProxyContainers(obj *otelv1beta1.OpenTelemetry
 		{
 			Name:  kubeRBACProxyName + "-otlp",
 			Image: o.values.KubeRBACProxyImage,
-			Args:  OTLPRBACProxyArgs,
+			Args:  otlpRBACProxyArgs,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("5m"),
