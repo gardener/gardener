@@ -82,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 // delete deletes the NamespacedCloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
-// no Shoots or Seeds, are assigned to the CloudProfile anymore.
+// no Shoots are assigned to the CloudProfile anymore.
 // If this is the case, the controller will remove the finalizers from the NamespacedCloudProfile so that it can be garbage collected.
 func (r *Reconciler) delete(ctx context.Context, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
@@ -270,7 +270,9 @@ func compareLifecycleStages(a, b gardencorev1beta1.LifecycleStage) int {
 }
 
 func mergeClassificationLifecycles(base, override gardencorev1beta1.LifecycleStage) gardencorev1beta1.LifecycleStage {
-	base.StartTime = override.StartTime
+	if override.StartTime != nil {
+		base.StartTime = override.StartTime
+	}
 	return base
 }
 

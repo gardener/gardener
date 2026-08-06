@@ -267,7 +267,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}))
 		})
 
-		It("should merge Kubernetes versions ExpirationDates correctly", func() {
+		It("should use the override ExpirationDate when Kubernetes versions ExpirationDates are defined", func() {
 			firstExpiryDate := metav1.NewTime(time.Now().Add(24 * time.Hour).Truncate(time.Second))
 			cloudProfileExpiryDate := metav1.NewTime(firstExpiryDate.Add(24 * time.Hour))
 			newLaterExpiryDate := metav1.NewTime(firstExpiryDate.Add(48 * time.Hour))
@@ -418,7 +418,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}))
 		})
 
-		It("should adjust supported startTime to deprecated startTime when before", func() {
+		It("should adjust all upcoming stages to the same date if override stage is earlier then the base", func() {
 			now := time.Now().Truncate(time.Second)
 			overriddenDeprecatedDate := &metav1.Time{Time: now}
 			supportedDate := &metav1.Time{Time: now.AddDate(0, 0, 1)}
@@ -504,6 +504,61 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						{Classification: gardencorev1beta1.ClassificationSupported},
 						{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &namespacedCloudProfileDeprecatedDate},
 						{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &namespacedCloudProfileDeprecatedDate},
+					},
+				},
+			}))
+		})
+
+		It("should merge Kubernetes version Lifecycles classification startTimes correctly and use base starttime when overrride starttime nil", func() {
+			cloudProfileDeprecatedDate := metav1.NewTime(newExpiryDate.Add(12 * time.Hour))
+			cloudProfileExpiredDate := metav1.NewTime(newExpiryDate.Add(24 * time.Hour))
+
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationSupported,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationDeprecated,
+							StartTime:      &cloudProfileDeprecatedDate,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationExpired,
+							StartTime:      &cloudProfileExpiredDate,
+						},
+					},
+				},
+			}
+			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationDeprecated,
+						},
+					},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+			Expect(result.RequeueAfter).To(BeNumerically("~", 12*time.Hour, time.Second))
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationSupported},
+						{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &cloudProfileDeprecatedDate},
+						{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &cloudProfileExpiredDate},
 					},
 				},
 			}))

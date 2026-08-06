@@ -1001,7 +1001,7 @@ var _ = Describe("Admission", func() {
 			})
 
 			Context("machine image validation", func() {
-				FIt("should allow an empty list of machine images", func() {
+				It("should allow an empty list of machine images", func() {
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{}
 
 					errorList := ValidateSimulatedNamespacedCloudProfileStatus(parentCloudProfile, namespacedCloudProfile)
