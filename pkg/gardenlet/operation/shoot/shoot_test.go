@@ -15,9 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/gardener"
@@ -448,6 +450,90 @@ var _ = Describe("shoot", func() {
 				Expect(shoot.GetInfo().Spec.DNS).To(Equal(&gardencorev1beta1.DNS{
 					Domain: new("shoot.example.com"),
 				}))
+			})
+		})
+
+		Describe("#UpdateInfo", func() {
+			It("should apply the mutation and carry the server ResourceVersion, but not other server-side fields", func() {
+				shootObj := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "foo",
+						Namespace:       "garden-bar",
+						Generation:      1,
+						ResourceVersion: "1",
+					},
+				}
+				s := &Shoot{}
+				s.SetInfo(shootObj)
+
+				// Simulate a server that bumps ResourceVersion (normal) and Generation (concurrent spec change we didn't make).
+				c := fake.NewClientBuilder().
+					WithScheme(kubernetes.GardenScheme).
+					WithObjects(shootObj).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+							if err := c.Patch(ctx, obj, patch, opts...); err != nil {
+								return err
+							}
+							obj.(*gardencorev1beta1.Shoot).ResourceVersion = "2"
+							obj.(*gardencorev1beta1.Shoot).Generation = 2
+							return nil
+						},
+					}).
+					Build()
+
+				Expect(s.UpdateInfo(context.Background(), c, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+					shoot.Labels = map[string]string{"foo": "bar"}
+					return nil
+				})).To(Succeed())
+
+				info := s.GetInfo()
+				Expect(info.Labels).To(Equal(map[string]string{"foo": "bar"}))
+				// ResourceVersion must be carried back so the next optimistic-lock patch doesn't conflict.
+				Expect(info.ResourceVersion).To(Equal("2"))
+				// Generation bump from a concurrent spec change must not bleed into our in-memory view.
+				Expect(info.Generation).To(Equal(int64(1)))
+			})
+		})
+
+		Describe("#UpdateInfoStatus", func() {
+			It("should apply the mutation and carry the server ResourceVersion, but not other server-side fields", func() {
+				shootObj := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "foo",
+						Namespace:       "garden-bar",
+						Generation:      1,
+						ResourceVersion: "1",
+					},
+				}
+				s := &Shoot{}
+				s.SetInfo(shootObj)
+
+				// Simulate a server that bumps ResourceVersion on status patch (as a real API server would).
+				c := fake.NewClientBuilder().
+					WithScheme(kubernetes.GardenScheme).
+					WithObjects(shootObj).
+					WithStatusSubresource(shootObj).
+					WithInterceptorFuncs(interceptor.Funcs{
+						SubResourcePatch: func(ctx context.Context, c client.Client, _ string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+							if err := c.Status().Patch(ctx, obj, patch, opts...); err != nil {
+								return err
+							}
+							obj.(*gardencorev1beta1.Shoot).ResourceVersion = "2"
+							return nil
+						},
+					}).
+					Build()
+
+				Expect(s.UpdateInfoStatus(context.Background(), c, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+					shoot.Status.ObservedGeneration = 1
+					return nil
+				})).To(Succeed())
+
+				info := s.GetInfo()
+				Expect(info.Status.ObservedGeneration).To(Equal(int64(1)))
+				// ResourceVersion must be carried back so the next optimistic-lock patch doesn't conflict.
+				Expect(info.ResourceVersion).To(Equal("2"))
 			})
 		})
 	})

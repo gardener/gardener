@@ -415,10 +415,13 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 	if err := f(shoot); err != nil {
 		return err
 	}
+	shootWithMutations := shoot.DeepCopy()
 	if err := c.Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
-	s.info.Store(shoot)
+	// Carry the server-assigned ResourceVersion back so subsequent optimistic-lock patches don't conflict.
+	shootWithMutations.ResourceVersion = shoot.ResourceVersion
+	s.info.Store(shootWithMutations)
 	return nil
 }
 
@@ -448,10 +451,13 @@ func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrate
 	if err := f(shoot); err != nil {
 		return err
 	}
+	shootWithMutations := shoot.DeepCopy()
 	if err := c.Status().Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
-	s.info.Store(shoot)
+	// Carry the server-assigned ResourceVersion back so subsequent optimistic-lock patches don't conflict.
+	shootWithMutations.ResourceVersion = shoot.ResourceVersion
+	s.info.Store(shootWithMutations)
 	return nil
 }
 
