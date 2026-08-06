@@ -37,11 +37,11 @@ func init() {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Change Encryption Provider Type and Delete Shoot", Label("encryption-provider-change"), func() {
-		Context("Shoot with workers", Ordered, func() {
+		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
 			var s *ShootContext
 
 			BeforeTestSetup(func() {
-				shoot := DefaultShoot("e2e-encr-chg")
+				shoot := DefaultWorkerlessShoot("e2e-encr-chg")
 				shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
 					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
 						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
