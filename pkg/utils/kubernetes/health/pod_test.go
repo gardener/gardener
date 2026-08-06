@@ -73,4 +73,16 @@ var _ = Describe("Pod", func() {
 		Entry("Not completed", []corev1.PodCondition{{Type: "Ready", Status: "False", Reason: "Failed"}}, BeFalse()),
 		Entry("Completed", []corev1.PodCondition{{Type: "Ready", Status: "False", Reason: "PodCompleted"}}, BeTrue()),
 	)
+
+	DescribeTable("#IsPodTerminal",
+		func(phase corev1.PodPhase, matcher types.GomegaMatcher) {
+			Expect(health.IsPodTerminal(phase)).To(matcher)
+		},
+
+		Entry("Pending", corev1.PodPending, BeFalse()),
+		Entry("Running", corev1.PodRunning, BeFalse()),
+		Entry("Unknown", corev1.PodUnknown, BeFalse()),
+		Entry("Succeeded", corev1.PodSucceeded, BeTrue()),
+		Entry("Failed", corev1.PodFailed, BeTrue()),
+	)
 })
