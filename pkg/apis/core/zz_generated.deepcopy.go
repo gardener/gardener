@@ -2773,6 +2773,11 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(ControlPlaneAutoscaling)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.TLSMinVersion != nil {
+		in, out := &in.TLSMinVersion, &out.TLSMinVersion
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

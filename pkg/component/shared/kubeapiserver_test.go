@@ -1004,6 +1004,26 @@ authorizers:
 			})
 		})
 
+		Describe("TLSMinVersion", func() {
+			It("should not set the tls min version field", func() {
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().TLSMinVersion).To(BeNil())
+			})
+
+			It("should set the field to the configured value", func() {
+				tlsMinVersion := new("VersionTLS13")
+
+				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+					TLSMinVersion: tlsMinVersion,
+				}
+
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().TLSMinVersion).To(Equal(tlsMinVersion))
+			})
+		})
+
 		Describe("FeatureGates", func() {
 			It("should set the field to nil by default", func() {
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, runsAsStaticPod, istioTLSTerminationEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)

@@ -13,9 +13,10 @@ const httpsPort = 443
 
 // ServerConfig is a configuration for a server in an Istio Gateway.
 type ServerConfig struct {
-	Hosts     []string
-	PortName  string
-	TLSSecret string
+	Hosts              []string
+	PortName           string
+	TLSSecret          string
+	MinProtocolVersion istioapinetworkingv1beta1.ServerTLSSettings_TLSProtocol
 }
 
 // GatewayWithTLSPassthrough returns a function setting the given attributes to a gateway object.
@@ -81,8 +82,9 @@ func GatewayWithMutualTLS(gateway *istionetworkingv1beta1.Gateway, labels map[st
 					Protocol: "HTTPS",
 				},
 				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
-					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
-					CredentialName: serverConfig.TLSSecret,
+					Mode:               istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+					CredentialName:     serverConfig.TLSSecret,
+					MinProtocolVersion: serverConfig.MinProtocolVersion,
 				},
 			})
 		}

@@ -3729,6 +3729,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			DescribeTable("should not allow unsupported or invalid TLS min versions",
+				func(version string) {
+					shoot.Spec.Kubernetes.KubeAPIServer.TLSMinVersion = &version
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.tlsMinVersion"),
+					}))))
+				},
+				Entry("VersionTLS10", "VersionTLS10"),
+				Entry("VersionTLS11", "VersionTLS11"),
+				Entry("VersionTLS00", "VersionTLS00"),
+			)
+
+			DescribeTable("should allow all valid TLS min versions",
+				func(version string) {
+					shoot.Spec.Kubernetes.KubeAPIServer.TLSMinVersion = &version
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				},
+				Entry("VersionTLS12", "VersionTLS12"),
+				Entry("VersionTLS13", "VersionTLS13"),
+			)
+
 			It("should not allow to specify a negative defaultNotReadyTolerationSeconds", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = new(int64(-1))
 

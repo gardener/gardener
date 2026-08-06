@@ -249,6 +249,7 @@ spec:
   #     minAllowed:
   #       cpu: "1"
   #       memory: 3Gi
+  #   tlsMinVersion: VersionTLS12 # Minimum TLS version accepted by the kube-apiserver. Supported values: VersionTLS12, VersionTLS13.
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   nodeCIDRMaskSizeIPv6: 80

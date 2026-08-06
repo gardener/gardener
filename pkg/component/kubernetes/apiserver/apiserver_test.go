@@ -3124,6 +3124,7 @@ kind: AuthorizationConfiguration
 						},
 					}
 					eventTTL                            = 2 * time.Hour
+					tlsMinVersion                       = "VersionTLS13"
 					externalHostname                    = "api.foo.bar.com"
 					images                              = Images{KubeAPIServer: "some-kapi-image:latest"}
 					serviceAccountIssuer                = "issuer"
@@ -3144,6 +3145,7 @@ kind: AuthorizationConfiguration
 						},
 						Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
 						EventTTL:         &metav1.Duration{Duration: eventTTL},
+						TLSMinVersion:    &tlsMinVersion,
 						ExternalHostname: externalHostname,
 						Images:           images,
 						IsWorkerless:     true,
@@ -3193,6 +3195,7 @@ kind: AuthorizationConfiguration
 						"--etcd-servers-overrides=/events#https://etcd-events-client:2379",
 						"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
 						"--event-ttl="+eventTTL.String(),
+						"--tls-min-version="+tlsMinVersion,
 						"--external-hostname="+externalHostname,
 						"--livez-grace-period=1m",
 						"--shutdown-delay-duration=15s",

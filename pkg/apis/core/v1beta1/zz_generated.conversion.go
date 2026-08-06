@@ -4525,6 +4525,7 @@ func autoConvert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Kub
 	out.StructuredAuthentication = (*core.StructuredAuthentication)(unsafe.Pointer(in.StructuredAuthentication))
 	out.StructuredAuthorization = (*core.StructuredAuthorization)(unsafe.Pointer(in.StructuredAuthorization))
 	out.Autoscaling = (*core.ControlPlaneAutoscaling)(unsafe.Pointer(in.Autoscaling))
+	out.TLSMinVersion = (*string)(unsafe.Pointer(in.TLSMinVersion))
 	return nil
 }
 
@@ -4563,6 +4564,7 @@ func autoConvert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *cor
 	out.StructuredAuthentication = (*StructuredAuthentication)(unsafe.Pointer(in.StructuredAuthentication))
 	out.StructuredAuthorization = (*StructuredAuthorization)(unsafe.Pointer(in.StructuredAuthorization))
 	out.Autoscaling = (*ControlPlaneAutoscaling)(unsafe.Pointer(in.Autoscaling))
+	out.TLSMinVersion = (*string)(unsafe.Pointer(in.TLSMinVersion))
 	return nil
 }
 

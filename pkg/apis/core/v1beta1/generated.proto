@@ -1553,6 +1553,11 @@ message KubeAPIServerConfig {
   // Autoscaling contains auto-scaling configuration options for the kube-apiserver.
   // +optional
   optional ControlPlaneAutoscaling autoscaling = 19;
+
+  // TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
+  // Supported values: VersionTLS12, VersionTLS13.
+  // +optional
+  optional string tlsMinVersion = 20;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.

@@ -120,6 +120,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				},
 				IstioTLSTermination:   b.ShootUsesIstioTLSTermination(),
 				WildcardConfiguration: wildcardConfiguration,
+				TLSMinVersion:         b.shootKubeAPIServerTLSMinVersion(),
 			}
 		},
 	))
@@ -186,6 +187,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				},
 				IstioTLSTermination:   b.ShootUsesIstioTLSTermination(),
 				WildcardConfiguration: wildcardConfiguration,
+				TLSMinVersion:         b.shootKubeAPIServerTLSMinVersion(),
 			}
 
 			if b.Shoot.ExternalClusterDomain != nil {
@@ -195,6 +197,14 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 			return values
 		},
 	)
+}
+
+func (b *Botanist) shootKubeAPIServerTLSMinVersion() *string {
+	if cfg := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; cfg != nil {
+		return cfg.TLSMinVersion
+	}
+
+	return nil
 }
 
 func mapToReservedKubeApiServerRange(ip net.IP) string {

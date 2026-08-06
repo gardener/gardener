@@ -5572,6 +5572,18 @@ integer
 <p>Autoscaling contains auto-scaling configuration options for the kube-apiserver.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>tlsMinVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.<br />Supported values: VersionTLS12, VersionTLS13.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

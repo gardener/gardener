@@ -5064,6 +5064,13 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
 						},
 					},
+					"tlsMinVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TLSMinVersion is the minimum TLS version accepted by the kube-apiserver. Supported values: VersionTLS12, VersionTLS13.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

@@ -425,6 +425,10 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 		out = append(out, fmt.Sprintf("--event-ttl=%s", k.values.EventTTL.Duration))
 	}
 
+	if k.values.TLSMinVersion != nil {
+		out = append(out, fmt.Sprintf("--tls-min-version=%s", *k.values.TLSMinVersion))
+	}
+
 	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateBundle))

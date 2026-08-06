@@ -784,6 +784,9 @@ type KubeAPIServerConfig struct {
 	StructuredAuthorization *StructuredAuthorization
 	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
 	Autoscaling *ControlPlaneAutoscaling
+	// TLSMinVersion is the minimum TLS version accepted by the kube-apiserver.
+	// Supported values: VersionTLS12, VersionTLS13.
+	TLSMinVersion *string
 }
 
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
