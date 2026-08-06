@@ -195,13 +195,13 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-vali",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--secure-listen-address=[::]:8081",
-				"--upstream=http://logging:3100/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
+				"--v=6",
+				"--secure-listen-address=[::]:8081",
+				"--upstream=http://logging:3100/",
 				"--tls-cert-file=/tls/tls.crt",
 				"--tls-private-key-file=/tls/tls.key",
-				"--v=6",
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
@@ -226,14 +226,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Name:  "rbac-proxy-otlp",
 			Image: kubeRBACProxyImage,
 			Args: []string{
-				"--secure-listen-address=[::]:8080",
-				"--upstream=http://127.0.0.1:4317/",
 				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--logtostderr=true",
+				"--v=6",
+				"--secure-listen-address=[::]:8080",
+				"--upstream=http://127.0.0.1:4317/",
+				"--upstream-force-h2c",
 				"--tls-cert-file=/tls/tls.crt",
 				"--tls-private-key-file=/tls/tls.key",
-				"--upstream-force-h2c",
-				"--v=6",
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{

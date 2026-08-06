@@ -614,60 +614,10 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			},
 		})
 
-		tlsEnabled := ingressTLSSecret != nil
-
-		listenScheme := func(port int32) string {
-			if tlsEnabled {
-				return fmt.Sprintf("--secure-listen-address=[::]:%d", port)
-			}
-			return fmt.Sprintf("--insecure-listen-address=[::]:%d", port)
-		}
-
-		tlsArgs := []string{}
-		if tlsEnabled {
-			tlsArgs = []string{
-				"--tls-cert-file=" + path.Join(tlsMountPath, secrets.DataKeyCertificate),
-				"--tls-private-key-file=" + path.Join(tlsMountPath, secrets.DataKeyPrivateKey),
-			}
-		}
-
-		resources := corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("5m"),
-				corev1.ResourceMemory: resource.MustParse("30Mi"),
-			},
-		}
-
-		// TODO(rrhubenov): Remove the rbac-proxy-vali container when the `OpenTelemetryCollector` feature gate is promoted to GA.
-		valiContainer := o.newRBACProxyContainer(kubeRBACProxyName+"-vali", listenScheme(collectorconstants.KubeRBACProxyValiPort), fmt.Sprintf("http://logging:%d/", valiconstants.ValiPort), tlsArgs, resources)
-
-		// The OTLP exporter uses gRPC, which operates over HTTP/2. To support HTTP/2 over cleartext (h2c),
-		// we must explicitly enable h2c in kube-rbac-proxy. By default, kube-rbac-proxy enforces HTTP/2 over TLS
-		// as per the HTTP/2 specification. However, since kube-rbac-proxy forwards to the otel-collector over an unencrypted channel,
-		// h2c support must be enforced when connecting to the upstream.
-		otlpContainer := o.newRBACProxyContainer(kubeRBACProxyName+"-otlp", listenScheme(collectorconstants.KubeRBACProxyOTLPReceiverPort), fmt.Sprintf("http://127.0.0.1:%d/", collectorconstants.PushPort), append(tlsArgs, "--upstream-force-h2c"), resources)
-		obj.Spec.AdditionalContainers = []corev1.Container{valiContainer, otlpContainer}
-
-		metav1.SetMetaDataLabel(&obj.ObjectMeta, gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port), v1beta1constants.LabelNetworkPolicyAllowed)
-
-		volumes := []corev1.Volume{gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig")}
-		mounts := []corev1.VolumeMount{gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)}
-
-		if tlsEnabled {
-			volumes = append(volumes, corev1.Volume{
-				Name: tlsCertificateName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: ingressTLSSecret.Name,
-					},
-				},
-			})
-			mounts = append(mounts, corev1.VolumeMount{Name: tlsCertificateName, MountPath: tlsMountPath, ReadOnly: true})
-		}
-
-		obj.Spec.Volumes = volumes
-		for i := range obj.Spec.AdditionalContainers {
-			obj.Spec.AdditionalContainers[i].VolumeMounts = mounts
+		if ingressTLSSecret != nil {
+			o.injectSecureRBACProxy(obj, ingressTLSSecret, genericTokenKubeconfigSecretName)
+		} else {
+			o.injectInsecureRBACProxy(obj, genericTokenKubeconfigSecretName)
 		}
 	}
 
@@ -691,28 +641,129 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	return obj
 }
 
-func (o *otelCollector) newRBACProxyContainer(name, listenAddr, upstream string, tlsArgs []string, resources corev1.ResourceRequirements) corev1.Container {
-	args := []string{
-		listenAddr,
-		"--upstream=" + upstream,
-		"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
-		"--logtostderr=true",
-	}
-	args = append(args, tlsArgs...)
-	args = append(args, "--v=6")
-	return corev1.Container{
-		Name:      name,
-		Image:     o.values.KubeRBACProxyImage,
-		Args:      args,
-		Resources: resources,
-		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: new(false),
-			RunAsUser:                new(int64(65532)),
-			RunAsGroup:               new(int64(65534)),
-			RunAsNonRoot:             new(true),
-			ReadOnlyRootFilesystem:   new(true),
+func (o *otelCollector) injectRBACProxyContainers(obj *otelv1beta1.OpenTelemetryCollector, valiRBACProxyArgs []string, OTLPRBACProxyArgs []string) {
+	obj.Spec.AdditionalContainers = []corev1.Container{
+		{
+			// TODO(rrhubenov): Remove the rbac-proxy-vali container when the `OpenTelemetryCollector` feature gate is promoted to GA.
+			Name:  kubeRBACProxyName + "-vali",
+			Image: o.values.KubeRBACProxyImage,
+			Args:  valiRBACProxyArgs,
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("5m"),
+					corev1.ResourceMemory: resource.MustParse("30Mi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: new(false),
+				RunAsUser:                new(int64(65532)),
+				RunAsGroup:               new(int64(65534)),
+				RunAsNonRoot:             new(true),
+				ReadOnlyRootFilesystem:   new(true),
+			},
+		},
+		{
+			Name:  kubeRBACProxyName + "-otlp",
+			Image: o.values.KubeRBACProxyImage,
+			Args:  OTLPRBACProxyArgs,
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("5m"),
+					corev1.ResourceMemory: resource.MustParse("30Mi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: new(false),
+				RunAsUser:                new(int64(65532)),
+				RunAsGroup:               new(int64(65534)),
+				RunAsNonRoot:             new(true),
+				ReadOnlyRootFilesystem:   new(true),
+			},
 		},
 	}
+
+	metav1.SetMetaDataLabel(&obj.ObjectMeta, gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port), v1beta1constants.LabelNetworkPolicyAllowed)
+}
+
+func (o *otelCollector) injectInsecureRBACProxy(obj *otelv1beta1.OpenTelemetryCollector, genericTokenKubeconfigSecretName string) {
+	o.injectRBACProxyContainers(obj, o.insecureValiRBACProxyArgs(), o.insecureOTLPRBACProxyArgs())
+
+	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
+	obj.Spec.Volumes = []corev1.Volume{
+		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
+	}
+	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
+	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
+}
+
+func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryCollector, ingressTLSSecret *corev1.Secret, genericTokenKubeconfigSecretName string) {
+	o.injectRBACProxyContainers(obj, o.secureValiRBACProxyArgs(), o.secureOTLPRBACProxyArgs())
+
+	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
+	tlsVolumeMount := corev1.VolumeMount{Name: tlsCertificateName, MountPath: tlsMountPath, ReadOnly: true}
+	obj.Spec.Volumes = []corev1.Volume{
+		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
+		{
+			Name: tlsCertificateName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: ingressTLSSecret.Name,
+				},
+			},
+		},
+	}
+	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount, tlsVolumeMount}
+	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount, tlsVolumeMount}
+}
+
+func (o *otelCollector) rbacProxyCommonArgs() []string {
+	return []string{
+		"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
+		"--logtostderr=true",
+		"--v=6",
+	}
+}
+
+func (o *otelCollector) insecureValiRBACProxyArgs() []string {
+	return append(o.rbacProxyCommonArgs(),
+		fmt.Sprintf("--insecure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyValiPort),
+		fmt.Sprintf("--upstream=http://logging:%d/", valiconstants.ValiPort),
+	)
+}
+
+func (o *otelCollector) insecureOTLPRBACProxyArgs() []string {
+	return append(o.rbacProxyCommonArgs(),
+		fmt.Sprintf("--insecure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
+		fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
+		// The OTLP exporter uses gRPC, which operates over HTTP/2. To support HTTP/2 over cleartext (h2c),
+		// we must explicitly enable h2c in kube-rbac-proxy. By default, kube-rbac-proxy enforces HTTP/2 over TLS
+		// as per the HTTP/2 specification. However, since kube-rbac-proxy forwards to the otel-collector over an unencrypted channel,
+		// h2c support must be enforced when connecting to the upstream.
+		"--upstream-force-h2c",
+	)
+}
+
+func (o *otelCollector) secureValiRBACProxyArgs() []string {
+	return append(o.rbacProxyCommonArgs(),
+		fmt.Sprintf("--secure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyValiPort),
+		fmt.Sprintf("--upstream=http://logging:%d/", valiconstants.ValiPort),
+		"--tls-cert-file="+path.Join(tlsMountPath, secrets.DataKeyCertificate),
+		"--tls-private-key-file="+path.Join(tlsMountPath, secrets.DataKeyPrivateKey),
+	)
+}
+
+func (o *otelCollector) secureOTLPRBACProxyArgs() []string {
+	return append(o.rbacProxyCommonArgs(),
+		fmt.Sprintf("--secure-listen-address=[::]:%d", collectorconstants.KubeRBACProxyOTLPReceiverPort),
+		fmt.Sprintf("--upstream=http://127.0.0.1:%d/", collectorconstants.PushPort),
+		// The OTLP exporter uses gRPC, which operates over HTTP/2. To support HTTP/2 over cleartext (h2c),
+		// we must explicitly enable h2c in kube-rbac-proxy. By default, kube-rbac-proxy enforces HTTP/2 over TLS
+		// as per the HTTP/2 specification. However, since kube-rbac-proxy forwards to the otel-collector over an unencrypted channel,
+		// h2c support must be enforced when connecting to the upstream.
+		"--upstream-force-h2c",
+		"--tls-cert-file="+path.Join(tlsMountPath, secrets.DataKeyCertificate),
+		"--tls-private-key-file="+path.Join(tlsMountPath, secrets.DataKeyPrivateKey),
+	)
 }
 
 func (o *otelCollector) newLoggingAgentShootAccessSecret() *gardenerutils.AccessSecret {
