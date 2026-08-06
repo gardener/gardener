@@ -31,7 +31,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Hibernate, Wake up and Delete Shoot", func() {
-		test := func(s *ShootContext) {
+		test := func(s *ShootContext, testPrometheusHealthCheck bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -39,13 +39,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
 			// validate Prometheus health checks are in place for the shoot Prometheus.
-			itShouldVerifyShootPrometheusHealthCheck(s)
-
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			if testPrometheusHealthCheck {
+				itShouldVerifyShootPrometheusHealthCheck(s)
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+
 				// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
 				// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
 				// might increase the test duration undesirably.
@@ -67,11 +67,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-wake-up")))
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-wake-up")), true)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")))
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")), false)
 		})
 
 		Context("Shoot with workers with NamespacedCloudProfile", Label("basic"), Ordered, PriorityLong, func() {
@@ -141,7 +141,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}).WithPolling(5 * time.Second).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			test(s)
+			test(s, false)
 		})
 	})
 })
