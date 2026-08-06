@@ -50,6 +50,7 @@ var _ = Describe("Existing", func() {
 		backupBucketGeneratedSecret *corev1.Secret
 		backupBucket                *gardencorev1beta1.BackupBucket
 		backupEntry                 *gardencorev1beta1.BackupEntry
+		shootState                  *gardencorev1beta1.ShootState
 	)
 
 	BeforeEach(func() {
@@ -135,6 +136,12 @@ var _ = Describe("Existing", func() {
 				},
 			},
 		}
+		shootState = &gardencorev1beta1.ShootState{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-shoot",
+				Namespace: resources.Shoot.Namespace,
+			},
+		}
 	})
 
 	Describe("#RunE", func() {
@@ -159,6 +166,7 @@ var _ = Describe("Existing", func() {
 			}
 			Expect(fakeClient.Status().Patch(ctx, backupBucket, patch)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootState)).To(Succeed())
 
 			Expect(command.Flags().Set("name", resources.Shoot.Name)).To(Succeed())
 			Expect(command.Flags().Set("namespace", resources.Shoot.Namespace)).To(Succeed())
@@ -186,6 +194,8 @@ var _ = Describe("Existing", func() {
 				ContainSubstring("Exported Secret/"+backupBucketGeneratedSecret.Name),
 				ContainSubstring("Exported BackupBucket/"+backupBucket.Name),
 				ContainSubstring("Exported BackupEntry/"+backupEntry.Name),
+				ContainSubstring("Exported Shoot/"+resources.Shoot.Name),
+				ContainSubstring("Exported ShootState/"+shootState.Name),
 			))
 
 			for _, path := range []string{
@@ -205,6 +215,8 @@ var _ = Describe("Existing", func() {
 				fmt.Sprintf("secret-%s.yaml", backupBucketGeneratedSecret.Name),
 				fmt.Sprintf("backupbucket-%s.yaml", backupBucket.Name),
 				fmt.Sprintf("backupentry-%s.yaml", backupEntry.Name),
+				fmt.Sprintf("shoot-%s.yaml", resources.Shoot.Name),
+				fmt.Sprintf("shootstate-%s.yaml", shootState.Name),
 			} {
 				exists, err := fs.Exists(path)
 				Expect(err).NotTo(HaveOccurred(), "for path "+path)
