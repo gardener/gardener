@@ -158,6 +158,7 @@
         '/.*gardener/pvc-autoscaler$/',
         '/.*open-telemetry/opentelemetry-operator/apis$/',
         '/.*VictoriaMetrics/operator/api$/',
+        '/.*perses/perses-operator$/',
         '/sigs\\.k8s\\.io/controller-tools/',
       ],
     },
