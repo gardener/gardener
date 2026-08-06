@@ -275,6 +275,7 @@ build:
             - pkg/resourcemanager/webhook/crddeletionprotection
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/webhook/imagepullsecret
             - pkg/resourcemanager/webhook/kubernetesservicehost
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
@@ -435,6 +436,7 @@ build:
             - pkg/resourcemanager/webhook/crddeletionprotection
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/webhook/imagepullsecret
             - pkg/resourcemanager/webhook/kubernetesservicehost
             - pkg/resourcemanager/webhook/nodeagentauthorizer
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing

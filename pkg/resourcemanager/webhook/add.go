@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/imagepullsecret"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
@@ -61,6 +62,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Host:   cfg.Webhooks.KubernetesServiceHost.Host,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", kubernetesservicehost.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.ImagePullSecret.Enabled {
+		if err := (&imagepullsecret.Handler{
+			Logger: mgr.GetLogger().WithName("webhook").WithName(imagepullsecret.HandlerName),
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", imagepullsecret.HandlerName, err)
 		}
 	}
 
