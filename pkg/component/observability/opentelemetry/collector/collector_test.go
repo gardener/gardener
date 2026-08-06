@@ -218,7 +218,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
-				{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
+				{Name: "tlsCertificateVolumeName", MountPath: "/tls", ReadOnly: true},
 			},
 		}
 
@@ -250,7 +250,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				volumeMount,
-				{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
+				{Name: "tlsCertificateVolumeName", MountPath: "/tls", ReadOnly: true},
 			},
 		}
 
@@ -569,7 +569,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
 		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume, {
-			Name: "tls-certificate",
+			Name: "tlsCertificateVolumeName",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: "logging-tls",
