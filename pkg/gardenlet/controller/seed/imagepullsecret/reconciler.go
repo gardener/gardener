@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -132,7 +133,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	for _, namespace := range shootNamespaceNames {
 		ns := namespace
 		managedResourceFns = append(managedResourceFns, func(ctx context.Context) error {
-			return r.updateShootManagedResource(ctx, ns)
+			return r.updateShootManagedResource(ctx, ns, "")
 		})
 	}
 	return reconcile.Result{}, flow.Parallel(managedResourceFns...)(ctx)
@@ -165,7 +166,6 @@ func (r *Reconciler) deleteFromSeedCluster(ctx context.Context, secretName strin
 	var fns []flow.TaskFn
 
 	for _, ns := range extensionNamespaces.Items {
-		ns := ns
 		fns = append(fns, func(ctx context.Context) error {
 			if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: ns.Name},
@@ -177,7 +177,6 @@ func (r *Reconciler) deleteFromSeedCluster(ctx context.Context, secretName strin
 	}
 
 	for _, ns := range shootNamespaces.Items {
-		ns := ns
 		fns = append(fns, func(ctx context.Context) error {
 			if err := client.IgnoreNotFound(r.SeedClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: ns.Name},
@@ -186,7 +185,9 @@ func (r *Reconciler) deleteFromSeedCluster(ctx context.Context, secretName strin
 			}
 			// Rebuild the ManagedResource from the remaining secrets rather than deleting it
 			// entirely, to avoid removing other image pull secrets from the shoot cluster.
-			if err := r.updateShootManagedResource(ctx, ns.Name); err != nil {
+			// Exclude the secret being deleted so a stale cached read of the seed-side copy
+			// (just removed above) cannot re-add it to the ManagedResource.
+			if err := r.updateShootManagedResource(ctx, ns.Name, secretName); err != nil {
 				return fmt.Errorf("failed to update ManagedResource in namespace %q: %w", ns.Name, err)
 			}
 			return nil
@@ -198,12 +199,18 @@ func (r *Reconciler) deleteFromSeedCluster(ctx context.Context, secretName strin
 
 // updateShootManagedResource creates or updates the image-pull-secret ManagedResource in the
 // given shoot CP namespace, causing gardener-resource-manager to apply the secrets to the shoot cluster.
-func (r *Reconciler) updateShootManagedResource(ctx context.Context, namespace string) error {
+// excludeSecretName, if non-empty, is omitted from the ManagedResource even if it still appears in the
+// image vector; this is used on deletion where the seed-side copy has just been removed but a cached read
+// might still observe it.
+func (r *Reconciler) updateShootManagedResource(ctx context.Context, namespace string, excludeSecretName string) error {
 	seen := sets.New[string]()
 	var secretNames []string
 	for _, cred := range imagevector.AllContainerImagePullCredentials() {
-		if cred.Type == "StaticSecret" {
+		if cred.Type == imagevectorutils.PullCredentialsTypeStaticSecret {
 			for _, name := range cred.SecretNames {
+				if name == excludeSecretName {
+					continue
+				}
 				if !seen.Has(name) {
 					seen.Insert(name)
 					secretNames = append(secretNames, name)
@@ -212,14 +219,14 @@ func (r *Reconciler) updateShootManagedResource(ctx context.Context, namespace s
 		}
 	}
 	if len(secretNames) == 0 {
-		return nil
+		return managedresources.DeleteForShoot(ctx, r.SeedClient, namespace, managedResourceNameImagePullSecret)
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 	for _, secretName := range secretNames {
-		ns := &corev1.Secret{}
-		if err := r.SeedClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, ns); err != nil {
+		seedSecret := &corev1.Secret{}
+		if err := r.SeedClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, seedSecret); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -234,8 +241,8 @@ func (r *Reconciler) updateShootManagedResource(ctx context.Context, namespace s
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleImagePullSecret,
 				},
 			},
-			Type: ns.Type,
-			Data: ns.Data,
+			Type: seedSecret.Type,
+			Data: seedSecret.Data,
 		}
 		if err := registry.Add(shootSecret); err != nil {
 			return fmt.Errorf("failed to add secret %q to registry: %w", secretName, err)

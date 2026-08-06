@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -56,12 +55,23 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			MaxConcurrentReconciles: 5,
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
+		// Watch seed-scoped namespaces (seed-<name>, labeled gardener.cloud/role=seed) instead of the
+		// Seed object itself. The seed-<name> namespace is the copy destination and is created
+		// asynchronously by the seed-secrets controller; reacting to its creation avoids a race where a
+		// Seed-create event fires before its namespace exists (which would silently skip the copy).
 		Watches(
-			&gardencorev1beta1.Seed{},
+			&corev1.Namespace{},
 			handler.EnqueueRequestsFromMapFunc(r.MapToAllImagePullSecrets(mgr.GetLogger().WithValues("controller", ControllerName))),
-			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),
+			builder.WithPredicates(r.SeedNamespacePredicate(), predicateutils.ForEventTypes(predicateutils.Create)),
 		).
 		Complete(r)
+}
+
+// SeedNamespacePredicate returns true for namespaces labeled gardener.cloud/role=seed.
+func (r *Reconciler) SeedNamespacePredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetLabels()[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleSeed
+	})
 }
 
 // ImagePullSecretPredicate returns true for secrets in the garden namespace with the

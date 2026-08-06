@@ -35,7 +35,7 @@ func Read(buf []byte) (ImageVector, *CABundle, *PullCredentials, error) {
 	vector := struct {
 		Images          ImageVector      `json:"images" yaml:"images"`
 		CABundle        *CABundle        `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
-		PullCredentials *PullCredentials `json:"imagePullCredential" yaml:"imagePullCredential"`
+		PullCredentials *PullCredentials `json:"pullCredentials,omitempty" yaml:"pullCredentials,omitempty"`
 	}{}
 
 	if err := yaml.Unmarshal(buf, &vector); err != nil {

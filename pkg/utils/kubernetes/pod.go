@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -291,9 +292,15 @@ func InjectImagePullSecret(podSpec *corev1.PodSpec) {
 
 	for _, container := range allContainers {
 		cred := imagevector.ContainerImagePullCredentialForImage(container.Image)
-		if cred != nil && cred.Type == "StaticSecret" {
+		if cred != nil && cred.Type == imagevectorutils.PullCredentialsTypeStaticSecret {
 			secretNames.Insert(cred.SecretNames...)
 		}
+	}
+
+	// Exclude image pull secrets that are already referenced so repeated invocations (or multiple
+	// injecting webhooks) do not create duplicate entries.
+	for _, ref := range podSpec.ImagePullSecrets {
+		secretNames.Delete(ref.Name)
 	}
 
 	for _, name := range sets.List(secretNames) {

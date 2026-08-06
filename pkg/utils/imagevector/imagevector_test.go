@@ -353,12 +353,12 @@ images:
 				Expect(resultVector).To(Equal(ImageVector{image1Src1, image2Src1}))
 			})
 
-			It("should override the ImageVector and return imagePullCredential from override file", func() {
+			It("should override the ImageVector and return pullCredentials from override file", func() {
 				var (
 					vector       = ImageVector{image1Src3, image2Src1}
 					overrideJSON = `
 {
-	"imagePullCredential": {
+	"pullCredentials": {
 		"type": "StaticSecret",
 		"secretNames": ["my-image-pull-secret"]
 	},
@@ -379,10 +379,10 @@ images:
 				defer cleanup()
 				defer test.WithEnvVar(OverrideEnv, file.Name())()
 
-				mergedVector, _, imagePullCredential, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
+				mergedVector, _, pullCredentials, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
-				Expect(imagePullCredential).To(PointTo(Equal(PullCredentials{
+				Expect(pullCredentials).To(PointTo(Equal(PullCredentials{
 					Type:        PullCredentialsTypeStaticSecret,
 					SecretNames: []string{"my-image-pull-secret"},
 				})))
