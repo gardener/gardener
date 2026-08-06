@@ -172,12 +172,18 @@ var _ = Describe("VictoriaLogs", func() {
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", namespace, shoot.Label),
 			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"app.kubernetes.io/name":      "vlsingle",
-					"app.kubernetes.io/instance":  victorialogsconstants.VLSingleResourceName,
-					"app.kubernetes.io/component": "monitoring",
-					"managed-by":                  "vm-operator",
-				}},
+				Selector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app.kubernetes.io/name":      "vlsingle",
+						"app.kubernetes.io/instance":  victorialogsconstants.VLSingleResourceName,
+						"app.kubernetes.io/component": "monitoring",
+						"managed-by":                  "vm-operator",
+					},
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      "operator.victoriametrics.com/additional-service",
+						Operator: metav1.LabelSelectorOpDoesNotExist,
+					}},
+				},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "http",
 					RelabelConfigs: []monitoringv1.RelabelConfig{
