@@ -454,7 +454,7 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#UpdateInfo", func() {
-			It("should apply the mutation and carry the server ResourceVersion, but not other server-side fields", func() {
+			It("should apply the mutation, carry .resourceVersion and .status from server, but not other server-side fields", func() {
 				shootObj := &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "foo",
@@ -466,7 +466,8 @@ var _ = Describe("shoot", func() {
 				s := &Shoot{}
 				s.SetInfo(shootObj)
 
-				// Simulate a server that bumps ResourceVersion (normal) and Generation (concurrent spec change we didn't make).
+				// Simulate a server that bumps ResourceVersion (normal), Generation (concurrent spec change we didn't
+				// make), and writes a .status field concurrently.
 				c := fake.NewClientBuilder().
 					WithScheme(kubernetes.GardenScheme).
 					WithObjects(shootObj).
@@ -477,27 +478,30 @@ var _ = Describe("shoot", func() {
 							}
 							obj.(*gardencorev1beta1.Shoot).ResourceVersion = "2"
 							obj.(*gardencorev1beta1.Shoot).Generation = 2
+							obj.(*gardencorev1beta1.Shoot).Status.ObservedGeneration = 42
 							return nil
 						},
 					}).
 					Build()
 
-				Expect(s.UpdateInfo(context.Background(), c, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+				Expect(s.UpdateInfo(context.Background(), c, false, func(shoot *gardencorev1beta1.Shoot) error {
 					shoot.Labels = map[string]string{"foo": "bar"}
 					return nil
 				})).To(Succeed())
 
 				info := s.GetInfo()
 				Expect(info.Labels).To(Equal(map[string]string{"foo": "bar"}))
-				// ResourceVersion must be carried back so the next optimistic-lock patch doesn't conflict.
+				// .resourceVersion must be carried back so the next patch doesn't conflict.
 				Expect(info.ResourceVersion).To(Equal("2"))
 				// Generation bump from a concurrent spec change must not bleed into our in-memory view.
 				Expect(info.Generation).To(Equal(int64(1)))
+				// .status must be synced from the server so that subsequent UpdateInfoStatus calls compute correct diffs.
+				Expect(info.Status.ObservedGeneration).To(Equal(int64(42)))
 			})
 		})
 
 		Describe("#UpdateInfoStatus", func() {
-			It("should apply the mutation and carry the server ResourceVersion, but not other server-side fields", func() {
+			It("should apply the mutation, carry .resourceVersion and full .status from server", func() {
 				shootObj := &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "foo",
@@ -509,7 +513,8 @@ var _ = Describe("shoot", func() {
 				s := &Shoot{}
 				s.SetInfo(shootObj)
 
-				// Simulate a server that bumps ResourceVersion on status patch (as a real API server would).
+				// Simulate a server that bumps ResourceVersion and writes an additional .status field
+				// (e.g. a concurrent status reconciler), beyond what f sets.
 				c := fake.NewClientBuilder().
 					WithScheme(kubernetes.GardenScheme).
 					WithObjects(shootObj).
@@ -520,6 +525,7 @@ var _ = Describe("shoot", func() {
 								return err
 							}
 							obj.(*gardencorev1beta1.Shoot).ResourceVersion = "2"
+							obj.(*gardencorev1beta1.Shoot).Status.TechnicalID = "concurrent-write"
 							return nil
 						},
 					}).
@@ -532,8 +538,10 @@ var _ = Describe("shoot", func() {
 
 				info := s.GetInfo()
 				Expect(info.Status.ObservedGeneration).To(Equal(int64(1)))
-				// ResourceVersion must be carried back so the next optimistic-lock patch doesn't conflict.
+				// .resourceVersion must be carried back so the next patch doesn't conflict.
 				Expect(info.ResourceVersion).To(Equal("2"))
+				// .status from a concurrent server write must be reflected so subsequent diffs are correct.
+				Expect(info.Status.TechnicalID).To(Equal("concurrent-write"))
 			})
 		})
 	})

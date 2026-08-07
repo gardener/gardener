@@ -395,7 +395,10 @@ func (s *Shoot) SetShootState(shootState *gardencorev1beta1.ShootState) {
 // using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
-func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge, mergeWithOptimisticLock bool, f func(*gardencorev1beta1.Shoot) error) error {
+// The stored object preserves .metadata and .spec as mutated by f, but adopts .status and .metadata.resourceVersion
+// from the server response. This keeps the in-memory generation stable across reconciliation while letting
+// subsequent status patches compute correct diffs against the current server state.
+func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
@@ -403,14 +406,8 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(shoot.DeepCopy())
-		if mergeWithOptimisticLock {
-			patch = client.StrategicMergeFrom(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
-		}
 	} else {
 		patch = client.MergeFrom(shoot.DeepCopy())
-		if mergeWithOptimisticLock {
-			patch = client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
-		}
 	}
 	if err := f(shoot); err != nil {
 		return err
@@ -419,8 +416,12 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 	if err := c.Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
-	// Carry the server-assigned ResourceVersion back so subsequent optimistic-lock patches don't conflict.
+	// Carry .resourceVersion and .status from the server response: .resourceVersion keeps subsequent patches
+	// conflict-free; .status reflects any concurrent status writes so that the next UpdateInfoStatus call
+	// computes a correct diff. .metadata (except .resourceVersion) and .spec are kept from shootWithMutations
+	// so that a concurrent generation bump by another actor does not bleed into our in-memory view.
 	shootWithMutations.ResourceVersion = shoot.ResourceVersion
+	shootWithMutations.Status = shoot.Status
 	s.info.Store(shootWithMutations)
 	return nil
 }
@@ -431,6 +432,8 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 // using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
+// The stored object preserves .metadata and .spec from the pre-patch state, but adopts .status and .metadata.resourceVersion
+// from the server response. This ensures subsequent status patches compute correct diffs against the current server state.
 func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge, mergeWithOptimisticLock bool, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
@@ -455,8 +458,12 @@ func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrate
 	if err := c.Status().Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
-	// Carry the server-assigned ResourceVersion back so subsequent optimistic-lock patches don't conflict.
+	// Carry .resourceVersion and .status from the server response: .resourceVersion keeps subsequent patches
+	// conflict-free; .status reflects the full server state so the next UpdateInfoStatus call computes a
+	// correct diff even if a concurrent status writer (e.g. the status reconciler) wrote in between.
+	// .metadata (except .resourceVersion) and .spec are kept from shootWithMutations.
 	shootWithMutations.ResourceVersion = shoot.ResourceVersion
+	shootWithMutations.Status = shoot.Status
 	s.info.Store(shootWithMutations)
 	return nil
 }
