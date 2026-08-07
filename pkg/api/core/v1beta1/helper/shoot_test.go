@@ -1859,21 +1859,40 @@ var _ = Describe("Helper", func() {
 		Entry("with ManualInPlaceUpdate  update strategy", new(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
-	DescribeTable("#IsShootIstioTLSTerminationEnabled",
-		func(shootAnnotations map[string]string, expected bool) {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: shootAnnotations,
-				},
-			}
-			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(Equal(expected))
-		},
+	Describe("#IsShootIstioTLSTerminationEnabled", func() {
+		var shoot *gardencorev1beta1.Shoot
 
-		Entry("shoot has Istio TLS termination if it has no annotations", nil, true),
-		Entry("shoot has no Istio TLS termination if is disabled by annotation", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "true"}, false),
-		Entry("shoot has no Istio TLS termination if is not disabled by annotation", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, true),
-		Entry("shoot has no Istio TLS termination if it is annotated with a bogus value", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}, true),
-	)
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		It("should return true when shoot has no annotations", func() {
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(BeTrue())
+		})
+
+		It("should return false when annotation is set to true", func() {
+			shoot.Annotations = map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "true"}
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(BeFalse())
+		})
+
+		It("should return true when annotation is set to false", func() {
+			shoot.Annotations = map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(BeTrue())
+		})
+
+		It("should return true when annotation is set to a bogus value", func() {
+			shoot.Annotations = map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(BeTrue())
+		})
+
+		It("should return false for self-hosted shoot regardless of annotation", func() {
+			shoot.Annotations = map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
+			}
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(BeFalse())
+		})
+	})
 
 	Describe("#GetBackupConfigForShoot", func() {
 		var (

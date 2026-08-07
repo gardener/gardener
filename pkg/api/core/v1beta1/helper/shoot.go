@@ -749,6 +749,10 @@ func IsUpdateStrategyManualInPlace(updateStrategy *gardencorev1beta1.MachineUpda
 
 // IsShootIstioTLSTerminationEnabled returns true if the Istio TLS termination for the shoot kube-apiserver is enabled.
 func IsShootIstioTLSTerminationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	if IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		return false
+	}
+
 	value, ok := shoot.Annotations[v1beta1constants.ShootDisableIstioTLSTermination]
 	if !ok {
 		return true

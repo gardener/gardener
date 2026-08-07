@@ -637,7 +637,7 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 			TaskGroupReconcileGardenerResourceManager,
 			TaskGroupReconcileControlPlane,
 			TaskGroupReconcileETCDs,
-		)
+		).SkipIf(!b.Shoot.IsSelfHosted())
 
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
