@@ -38,7 +38,6 @@ STARTINGBRANCH=$(git symbolic-ref --short HEAD)
 declare -r STARTINGBRANCH
 declare -r REBASEMAGIC="${REPO_ROOT}/.git/rebase-apply"
 DRY_RUN=${DRY_RUN:-""}
-REGENERATE_DOCS=${REGENERATE_DOCS:-""}
 UPSTREAM_REMOTE=${UPSTREAM_REMOTE:-upstream}
 FORK_REMOTE=${FORK_REMOTE:-origin}
 MAIN_REPO_ORG=${MAIN_REPO_ORG:-$(git remote get-url "$UPSTREAM_REMOTE" | awk '{gsub(/http[s]:\/\/|git@/,"")}1' | awk -F'[@:./]' 'NR==1{print $3}')}
@@ -69,13 +68,10 @@ if [[ "$#" -lt 2 ]]; then
   echo "  This is useful for creating patches to a release branch without making a PR."
   echo "  When DRY_RUN is set the script will leave you in a branch containing the commits you cherry-picked."
   echo
-  echo "  Set the REGENERATE_DOCS environment var to regenerate documentation for the target branch after picking the specified commits."
-  echo "  This is useful when picking commits containing changes to API documentation."
-  echo
   echo "  Set UPSTREAM_REMOTE (default: upstream) and FORK_REMOTE (default: origin)"
   echo "  to override the default remote names to what you have locally."
   echo
-  echo "  For merge process info, see https://git.k8s.io/community/contributors/devel/sig-release/cherry-picks.md"
+  echo "  For merge process info, see https://github.com/gardener/gardener/blob/master/docs/development/process.md#cherry-picks"
   exit 2
 fi
 
@@ -230,17 +226,6 @@ gitamcleanup=false
 if [[ -z "$(git log "${BRANCH}..HEAD" --oneline)" ]]; then
   echo "!!! No new commits after cherry-pick — patch is already applied to ${BRANCH}. Nothing to do."
   exit 0
-fi
-
-# Re-generate docs (if needed)
-if [[ -n "${REGENERATE_DOCS}" ]]; then
-  echo
-  echo "Regenerating docs..."
-  if ! hack/generate-docs.sh; then
-    echo
-    echo "hack/generate-docs.sh FAILED to complete."
-    exit 1
-  fi
 fi
 
 if [[ -n "${DRY_RUN}" ]]; then
