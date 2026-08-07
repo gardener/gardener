@@ -200,7 +200,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, serialReconciliationLease.release(ctx)
 	}
 
-	if serialReconciliation(secret) {
+	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
+	}
+
+	// Determine if this is a gardenlet-orchestrated in-place update before acquiring the serial lease,
+	// so the lease can be skipped when gardenlet is coordinating.
+	gardenletOrchestratedInPlaceUpdate, err := r.isGardenletOrchestratedInPlaceUpdate(log, osc, secret, oscChecksum, osVersion)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Serial reconciliation lease serializes CP pool node reconciliations. Skip it entirely for
+	// gardenlet-orchestrated in-place updates: gardenlet's maxUnavailable gate is the coordinator,
+	// so acquiring the lease here would only block other CP nodes unnecessarily.
+	if serialReconciliation(secret) && !gardenletOrchestratedInPlaceUpdate {
 		log.Info("OperatingSystemConfig reconciliation is serial")
 
 		if err := serialReconciliationLease.reload(ctx); err != nil {
@@ -227,11 +242,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Applying containerd configuration")
 	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
-	}
-
-	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
 
 	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles, r.HostName)
@@ -273,11 +283,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
 			if node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] != machinev1alpha1.LabelValueNodeUpdateFailed {
+				// GNA must signal the gardenlet to initiate drain because only GNA knows whether the
+				// node has already applied the current OSC (it tracks the last-applied checksum locally).
+				// If reconciliation fails and GNA restarts, it re-detects the mismatch and re-signals —
+				// making the flow self-healing. The gardenlet cannot autonomously determine this because
+				// once it deploys the OSC secret, subsequent reconciliations see no diff from its perspective.
+				if gardenletOrchestratedInPlaceUpdate {
+					if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" {
+						log.Info("Requesting drain from gardenlet", "node", node.Name)
+						patch := client.MergeFrom(node.DeepCopy())
+						metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain, "true")
+						if err := r.Client.Patch(ctx, node, patch); err != nil {
+							return reconcile.Result{}, fmt.Errorf("failed to set needs-drain annotation on node %s: %w", node.Name, err)
+						}
+					}
+					log.Info("Waiting for gardenlet to drain node and set ReadyForUpdate condition before performing in-place update")
+					return reconcile.Result{}, nil
+				}
+
 				log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
 				return reconcile.Result{}, nil
 			}
 
 			log.Info("Node has label update-result with failed value, will continue retrying the update")
+		} else if kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful) {
+			// ReadyForUpdate condition is stale from the just-completed update; gardenlet is cleaning up
+			// (will change condition → remove label). Wait before starting the next update so the node
+			// is drained again first.
+			log.Info("Waiting for gardenlet to cleanup in-place update labels after successful in-place update")
+			return reconcile.Result{}, nil
 		}
 
 		log.Info("In-place update is in progress", "osUpdate", oscChanges.InPlaceUpdates.OperatingSystem,
@@ -350,7 +384,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed removing deleted files: %w", err)
 	}
 
-	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion); err != nil {
+	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion, gardenletOrchestratedInPlaceUpdate); err != nil {
 		// If the error is retriable, we requeue with a delay.
 		if retriableErrorPatternRegex.MatchString(err.Error()) {
 			log.Error(err, "Update failed with retriable error, Requeuing with a delay")
@@ -796,6 +830,19 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	return flow.Parallel(fns...)(ctx)
 }
 
+func (r *Reconciler) isGardenletOrchestratedInPlaceUpdate(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, secret *corev1.Secret, oscChecksum string, osVersion *string) (bool, error) {
+	if osc.Spec.InPlaceUpdates == nil || secret.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated] != "true" {
+		return false, nil
+	}
+
+	preChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, true, r.HostName)
+	if err != nil {
+		return false, fmt.Errorf("failed calculating the OSC changes: %w", err)
+	}
+
+	return isInPlaceUpdate(preChanges), nil
+}
+
 func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {
 	return changes.InPlaceUpdates.OperatingSystem ||
 		changes.InPlaceUpdates.Kubelet.MinorVersion ||
@@ -806,7 +853,7 @@ func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {
 		changes.InPlaceUpdates.ServiceAccountKeyRotation
 }
 
-func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChanges *operatingSystemConfigChanges, node *corev1.Node, osVersion *string) error {
+func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChanges *operatingSystemConfigChanges, node *corev1.Node, osVersion *string, gardenletOrchestrated bool) error {
 	// Node can be nil during the first reconciliation loop.
 	if node == nil {
 		return nil
@@ -863,11 +910,9 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 	}
 
 	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
-		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
+		if err := r.deleteRemainingPods(ctx, log, node, gardenletOrchestrated); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}
-
-		// If this point is reached, which means all the in-place updates are done, we can label the node with the update-successful label.
 		if err := r.patchNodeUpdateSuccessful(ctx, log, node); err != nil {
 			return err
 		}
@@ -1067,16 +1112,27 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 // The machine-controller-manager drains the node and marks it unschedulable before marking the node ready for in-place updates.
 // Despite this, DaemonSet pods and pods with local storage are recreated on the node during the update,
 // requiring an additional deletion step after the completion of update.
-func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	// List all pods running on the node and delete them.
-	// This should recreate daemonset pods and pods with local storage.
+func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node, skipGRM bool) error {
+	// List all pods running on the node and delete them so that the pods recreated by their managing controller
+	// (DaemonSet, ReplicaSet, etc.) pick up any changes from the in-place update (updated SA tokens, CA bundles,
+	// new file mounts). Pods without such a controller are not recreated.
+	// For gardenlet-orchestrated updates (skipGRM=true), gardener-resource-manager is skipped:
+	// it serves webhooks (projected-token-mount etc.) with failurePolicy:Fail. Deleting it
+	// prevents the DaemonSet controller from recreating any pod (including calico-node) because
+	// every pod CREATE in kube-system calls that webhook. GRM pods are deleted by the gardenlet.
 	log.Info("Deleting pods running on the node", "node", node.Name)
 	podList := &corev1.PodList{}
 	if err := r.Client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}); err != nil {
 		return fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
 	}
 
-	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, nil)
+	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtime.Object) bool {
+		pod, ok := obj.(*corev1.Pod)
+		if !ok {
+			return true
+		}
+		return !skipGRM || pod.Labels[v1beta1constants.LabelApp] != v1beta1constants.DeploymentNameGardenerResourceManager
+	})
 }
 
 // Logic copied from https://github.com/google/cadvisor/blob/5b649021c2dab9db34c8c37596f8f73c48548350/machine/operatingsystem_unix.go#L29-L54

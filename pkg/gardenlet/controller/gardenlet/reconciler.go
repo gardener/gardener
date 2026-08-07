@@ -28,6 +28,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
+	utils "github.com/gardener/gardener/pkg/utils"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -195,6 +196,14 @@ func (r *Reconciler) prepareGardenletChartValues(
 		// Similar to the <imageVectorOverwrite> (see above), we have to also get rid of the
 		// <componentImageVectorOverwrites> in case it is no longer specified in the `Gardenlet` resource.
 		delete(values, "componentImageVectorOverwrites")
+	}
+
+	if strings.HasPrefix(gardenlet.Name, gardenletutils.ResourcePrefixSelfHostedShoot) {
+		var err error
+		values, err = utils.SetToValuesMap(values, true, "selfHostedShoot")
+		if err != nil {
+			return nil, fmt.Errorf("failed setting selfHostedShoot value: %w", err)
+		}
 	}
 
 	return values, nil

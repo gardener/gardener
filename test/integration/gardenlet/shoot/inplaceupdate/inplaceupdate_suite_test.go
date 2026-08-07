@@ -1,0 +1,221 @@
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package inplaceupdate_test
+
+import (
+	"context"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/inplaceupdate"
+	"github.com/gardener/gardener/pkg/logger"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
+)
+
+func TestInPlaceUpdate(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Test Integration Gardenlet Shoot InPlaceUpdate Suite")
+}
+
+const testID = "shoot-inplace-update-test"
+
+const (
+	poolDefault           = "pool-default"
+	poolDefaultSecretName = "pool-default-secret"
+
+	poolMulti           = "pool-multi"
+	poolMultiSecretName = "pool-multi-secret"
+
+	poolControlPlane           = "pool-cp"
+	poolControlPlaneSecretName = "pool-cp-secret"
+
+	finalizerKeepAlive = "shoot-inplace-update-test.gardener.cloud/keep-alive"
+)
+
+var (
+	ctx       = context.Background()
+	log       logr.Logger
+	fakeClock *testclock.FakeClock
+
+	restConfig *rest.Config
+	testEnv    *envtest.Environment
+	testClient client.Client
+	mgrClient  client.Client
+
+	testNamespace *corev1.Namespace
+	testRunID     string
+)
+
+var _ = BeforeSuite(func() {
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	log = logf.Log.WithName(testID)
+
+	By("Start test environment")
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
+			},
+		},
+		ErrorIfCRDPathMissing: true,
+	}
+
+	var err error
+	restConfig, err = testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
+
+	DeferCleanup(func() {
+		By("Stop test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("Create test client")
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
+	Expect(err).NotTo(HaveOccurred())
+
+	testRunID = gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
+	By("Create control plane Namespace")
+	testNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			// The in-place update reconciler operates on self-hosted shoots, whose control plane always
+			// runs in-cluster in the kube-system namespace.
+			Name:   metav1.NamespaceSystem,
+			Labels: map[string]string{testID: testRunID},
+		},
+	}
+	// kube-system is created by the kube-apiserver on start-up, so it may already exist.
+	Expect(client.IgnoreAlreadyExists(testClient.Create(ctx, testNamespace))).To(Succeed())
+	log.Info("Created control plane Namespace for test", "namespace", testNamespace.Name, "testRunID", testRunID)
+
+	By("Setup manager")
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:  kubernetes.SeedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Node{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+				&corev1.Pod{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
+			},
+		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: new(true),
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
+
+	By("Setup field indexes")
+	Expect(indexer.AddPodNodeName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
+	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
+
+	By("Create Cluster resource with worker pool configuration")
+	workers := []gardencorev1beta1.Worker{
+		{
+			Name:           poolDefault,
+			Maximum:        5,
+			MaxUnavailable: new(intstr.FromInt32(1)),
+		},
+		{
+			Name:           poolMulti,
+			Maximum:        5,
+			MaxUnavailable: new(intstr.FromInt32(2)),
+		},
+		{
+			Name:           poolControlPlane,
+			Maximum:        5,
+			ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
+			MaxUnavailable: new(intstr.FromString("99%")),
+		},
+	}
+
+	codec := kubernetes.GardenCodec.LegacyCodec(gardencorev1beta1.SchemeGroupVersion)
+	shootRaw, err := runtime.Encode(codec, &gardencorev1beta1.Shoot{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
+		Spec: gardencorev1beta1.ShootSpec{
+			Provider: gardencorev1beta1.Provider{Workers: workers},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	cloudProfileRaw, err := runtime.Encode(codec, &gardencorev1beta1.CloudProfile{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "CloudProfile"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	seedRaw, err := runtime.Encode(codec, &gardencorev1beta1.Seed{
+		TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Seed"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	cluster := &extensionsv1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: testNamespace.Name},
+		Spec: extensionsv1alpha1.ClusterSpec{
+			CloudProfile: runtime.RawExtension{Raw: cloudProfileRaw},
+			Seed:         &runtime.RawExtension{Raw: seedRaw},
+			Shoot:        runtime.RawExtension{Raw: shootRaw},
+		},
+	}
+	Expect(testClient.Create(ctx, cluster)).To(Succeed())
+	DeferCleanup(func() {
+		By("Delete Cluster resource")
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, cluster))).To(Succeed())
+	})
+
+	Expect((&inplaceupdate.Reconciler{
+		ShootClient: mgr.GetClient(),
+		Clock:       fakeClock,
+		Config: gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration{
+			DrainTimeout:             &metav1.Duration{Duration: 2 * time.Second},
+			UpdateTimeout:            &metav1.Duration{Duration: 30 * time.Minute},
+			PodEvictionRetryInterval: &metav1.Duration{Duration: time.Second},
+		},
+	}).AddToManager(mgr, mgr)).To(Succeed())
+
+	By("Start manager")
+	mgrContext, mgrCancel := context.WithCancel(ctx)
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(mgrContext)).To(Succeed())
+	}()
+
+	DeferCleanup(func() {
+		By("Stop manager")
+		mgrCancel()
+	})
+})

@@ -193,6 +193,9 @@ type GardenletControllerConfiguration struct {
 	// ShootState defines the configuration of the ShootState controller.
 	// +optional
 	ShootState *ShootStateControllerConfiguration `json:"shootState,omitempty"`
+	// ShootInPlaceUpdate defines the configuration of the ShootInPlaceUpdate controller.
+	// +optional
+	ShootInPlaceUpdate *ShootInPlaceUpdateControllerConfiguration `json:"shootInPlaceUpdate,omitempty"`
 	// ShootStatus defines the configuration of the ShootStatus controller.
 	// +optional
 	ShootStatus *ShootStatusControllerConfiguration `json:"shootStatus,omitempty"`
@@ -384,6 +387,22 @@ type ShootStatusControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// ShootInPlaceUpdateControllerConfiguration defines the configuration of the ShootInPlaceUpdate controller. It orchestrates
+// in-place node updates for self-hosted shoots (cordon, drain, and completion tracking).
+type ShootInPlaceUpdateControllerConfiguration struct {
+	// DrainTimeout is the overall maximum duration for a node drain before remaining pods are force-deleted.
+	// +optional
+	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
+	// UpdateTimeout is the maximum duration to wait for gardener-node-agent to complete the in-place update after the
+	// node has been drained. If exceeded, the update is marked as failed.
+	// +optional
+	UpdateTimeout *metav1.Duration `json:"updateTimeout,omitempty"`
+	// PodEvictionRetryInterval is the time to wait before retrying eviction of pods that are protected by a
+	// PodDisruptionBudget.
+	// +optional
+	PodEvictionRetryInterval *metav1.Duration `json:"podEvictionRetryInterval,omitempty"`
 }
 
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.

@@ -12,6 +12,35 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 rules:
+{{- if .Values.selfHostedShoot }}
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - nodes/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - clusters
+  verbs:
+  - get
+{{- end }}
 - apiGroups:
   - operator.gardener.cloud
   resources:

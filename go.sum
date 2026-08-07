@@ -73,6 +73,8 @@ github.com/VictoriaMetrics/metricsql v0.87.3 h1:JU4JnVKSC5Vp3b4AvogXyOAjkz1iFF9n
 github.com/VictoriaMetrics/metricsql v0.87.3/go.mod h1:d4EisFO6ONP/HIGDYTAtwrejJBBeKGQYiRl095bS4QQ=
 github.com/VictoriaMetrics/operator/api v0.74.0 h1:H/DFF/hwhAYLqE+uwuPEYOHddj+fFFkv2Hg5wV2sWiA=
 github.com/VictoriaMetrics/operator/api v0.74.0/go.mod h1:EajQPzvsg6G3eiktL/co/ToU4nJr0XwK8buMTHGwG4A=
+github.com/acumino/machine-controller-manager v0.42.1-0.20260731085334-76d30d523730 h1:d4fYb+FNryXfzJHVCFejNt1ulvHIqdiyyiEdOavnkbY=
+github.com/acumino/machine-controller-manager v0.42.1-0.20260731085334-76d30d523730/go.mod h1:ICsymXK4VHm7NVr8Mpl6USvYcTZjUNSk6+XaVu/dd74=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
@@ -270,8 +272,6 @@ github.com/gardener/dependency-watchdog v1.8.0 h1:+3FE8sR1V6YM9JsGqX7m9oUjhr1wXh
 github.com/gardener/dependency-watchdog v1.8.0/go.mod h1:jRIyBZ4ySWy+EdQjfLm/N+90vBPdWJ7khiBN7CGQs18=
 github.com/gardener/etcd-druid/api v0.37.1 h1:FHaE88vUvcekO1Kcl1ad8VdpL+GYuhLiSEG/MF247pg=
 github.com/gardener/etcd-druid/api v0.37.1/go.mod h1:nFKkRStJEXoYE0xGf2Y5Ela1EayAdsfZAqfK+bBXV/M=
-github.com/gardener/machine-controller-manager v0.62.1 h1:TQ4Qs9aaYTqSkqFownIaEAvnrYoNpBMcp7ZMYVEgUWM=
-github.com/gardener/machine-controller-manager v0.62.1/go.mod h1:ICsymXK4VHm7NVr8Mpl6USvYcTZjUNSk6+XaVu/dd74=
 github.com/gardener/pvc-autoscaler v0.3.0 h1:vneqFW7WESecbucng0Ravuz825BzKLI3jSKmiopccrs=
 github.com/gardener/pvc-autoscaler v0.3.0/go.mod h1:GVA7q8qiMi2UD/vcCBVbHEUijZvxVqZ1SGqiwKGHTE4=
 github.com/gardener/terminal-controller-manager v0.38.0 h1:RYrxtXVdJ8kLjwJEVGOGnIykm/zp05blx07k5HK9wMA=

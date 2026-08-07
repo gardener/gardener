@@ -285,6 +285,18 @@ controllers:
     concurrentSyncs: {{ .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
     {{- end }}
   {{- end }}
+  {{- if .Values.config.controllers.shootInPlaceUpdate }}
+  shootInPlaceUpdate:
+    {{- if .Values.config.controllers.shootInPlaceUpdate.drainTimeout }}
+    drainTimeout: {{ .Values.config.controllers.shootInPlaceUpdate.drainTimeout }}
+    {{- end }}
+    {{- if .Values.config.controllers.shootInPlaceUpdate.updateTimeout }}
+    updateTimeout: {{ .Values.config.controllers.shootInPlaceUpdate.updateTimeout }}
+    {{- end }}
+    {{- if .Values.config.controllers.shootInPlaceUpdate.podEvictionRetryInterval }}
+    podEvictionRetryInterval: {{ .Values.config.controllers.shootInPlaceUpdate.podEvictionRetryInterval }}
+    {{- end }}
+  {{- end }}
 resources:
   capacity:
     shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}
