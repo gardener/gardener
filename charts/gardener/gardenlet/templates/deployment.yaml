@@ -112,7 +112,7 @@ spec:
           value: {{ index $value "value" | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.config.server.healthProbes.enable }}
+        {{- if .Values.enableHealthProbes }}
         livenessProbe:
           httpGet:
             path: /healthz

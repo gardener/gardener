@@ -130,37 +130,43 @@ make gardener-dev SKAFFOLD_MODULE=gardenlet
 
 ## Debugging Gardener
 
+To debug individual components, you need to build the respective `-debug` targets first. The available debug targets are:
 ```bash
-make gardener-debug
+make seed-debug
+```
+for the gardenlet,
+```bash
+make operator-debug
+```
+for the gardener-operator, and
+```bash
+make cloud-provider-local-debug
+```
+for the local cloud provider extension.
+
+The latter two make targets use Skaffold debugging features, which inject a [Delve](https://github.com/go-delve/delve) entrypoint into the image.
+The `make seed-debug` target does not change the entrypoint, so you must manually attach `dlv` after the pod is deployed.
+You can do so via a [helper script](../../hack/attach-gardenlet-debugger.sh) provided in the `hack` directory:
+
+```bash
+./hack/attach-debugger-gardenlet.sh
 ```
 
-This is using skaffold debugging features. In the Gardener case, Go debugging using [Delve](https://github.com/go-delve/delve) is the most relevant use case.
-Please see the [skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) how to set up your IDE accordingly or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
+To step through the code with a debugger, attach your IDE to the port forwarded to localhost on your host machine.
+The default port forwarded by the `attach-debugger-gardenlet.sh` script is `2345` (can be controlled via the `-p` option). For the gardener-operator and the local cloud provider extensions, the default port is `56268`. If you debug multiple pods at the same time (e.g. by running `make operator-debug` first, followed by `make cloud-provider-local-debug` in a second terminal), the port of the second pod will be forwarded to `56269`. This is done automatically by skaffold, which will write the port to your console.
+See the [Skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) for details on how to set up your IDE, or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
-`SKAFFOLD_MODULE` environment variable is working the same way as described for [Developing Gardener](#developing-gardener). However, skaffold is not watching for changes when debugging,
-because it would like to avoid interrupting your debugging session.
 
-For example, if you want to debug gardenlet:
+> Note: Resuming or stopping only a single goroutine is currently not supported (Go issues [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)), so the action causes all goroutines to be resumed or paused.
+> See the [vscode-go wiki](https://github.com/golang/vscode-go/wiki/debugging#connecting-to-headless-delve-with-target-specified-at-server-start-up).
 
-```bash
-# initial deployment of all components
-make gardener-up
-# start debugging gardenlet without deploying other components
-make gardener-debug SKAFFOLD_MODULE=gardenlet
-```
+This means that when a goroutine of the gardenlet, or any other gardener-core component you are debugging, is paused on a breakpoint, all other goroutines are paused as well. Consequently, when the whole gardenlet process is paused, it cannot renew its lease and cannot respond to the liveness and readiness probes.
 
-In debugging flow, skaffold builds your container images, reconfigures your pods and creates port forwardings for the `Delve` debugging ports to your localhost.
-The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod will be forwarded to `56269` and so on.
-Please check your console output for the concrete port-forwarding on your machine.
+Skaffold automatically increases the `timeoutSeconds` of liveness and readiness probes to `600`. However, we have still encountered problems where pods were killed after a while during debugging.
 
-> Note: Resuming or stopping only a single goroutine (Go Issue [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)) is currently not supported, so the action will cause all the goroutines to get activated or paused.
-([vscode-go wiki](https://github.com/golang/vscode-go/wiki/debugging#connecting-to-headless-delve-with-target-specified-at-server-start-up))
+Therefore, leader election, health checks, and readiness checks for the respective components are disabled when debugging.
 
-This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines are paused. Hence, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600. Anyway, we were facing problems when debugging that pods have been killed after a while.
-
-Thus, leader election, health and readiness checks for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`,`gardenlet` and `operator` are disabled when debugging.
-
-If you have similar problems with other components which are not deployed by skaffold, you could temporarily turn off the leader election and disable liveness and readiness probes there too.
+If you have similar problems with other components, you can temporarily turn off leader election and disable liveness and readiness probes there as well.
 
 ### Debugging in GoLand
 

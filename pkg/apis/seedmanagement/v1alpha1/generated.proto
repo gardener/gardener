@@ -103,6 +103,11 @@ message GardenletDeployment {
   // Tolerations are the tolerations to be applied to gardenlet pods.
   // +optional
   repeated .k8s.io.api.core.v1.Toleration tolerations = 11;
+
+  // EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet
+  // deployment. Defaults to true.
+  // +optional
+  optional bool enableHealthProbes = 12;
 }
 
 // GardenletHelm is the Helm deployment configuration for gardenlet.
