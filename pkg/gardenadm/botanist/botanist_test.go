@@ -182,7 +182,7 @@ metadata:
 					HaveField("ControllerRegistration.Name", "provider-stackit"),
 					HaveField("ControllerRegistration.Name", "dns-local"),
 				))
-				Expect(b.Seed.GetInfo()).To(HaveField("ObjectMeta.Labels", Not(HaveKeyWithValue("seed.gardener.cloud/self-hosted-shoot-cluster", "true"))))
+				Expect(b.Seed).To(BeNil())
 			})
 
 			It("should use the technical ID as the control plane namespace", func() {

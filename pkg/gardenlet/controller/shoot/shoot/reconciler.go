@@ -27,7 +27,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -44,9 +43,6 @@ import (
 	gardenletmetrics "github.com/gardener/gardener/pkg/gardenlet/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
-	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
-	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
-	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -374,103 +370,23 @@ func (r *Reconciler) initializeOperation(
 	*operation.Operation,
 	error,
 ) {
-	var (
-		gardenSecrets  map[string]*corev1.Secret
-		internalDomain *gardenerutils.Domain
-		defaultDomains []*gardenerutils.Domain
-		err            error
+	op, err := operation.Initialize(
+		ctx,
+		log,
+		r.GardenClient,
+		r.SeedClientSet,
+		r.ShootClientMap,
+		&r.Config,
+		r.Identity,
+		r.GardenClusterIdentity,
+		shoot,
+		project,
+		cloudProfile,
+		seed,
+		exposureClass,
 	)
-
-	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
-		// TODO(rfranzke): Enable shoot gardenlet to read the gardener.cloud/role=shoot-service-account-issuer secret from
-		//  garden namespace (adapt authorizer) --> requires virtual garden to be at least 1.34 (this promotes the selector
-		//  feature gate to GA, hence, we can enforce the needed label selectors)
-		gardenSecrets, err = gardenerutils.ReadGardenSecrets(
-			ctx,
-			log,
-			r.GardenClient,
-			gardenerutils.ComputeGardenNamespace(seed.Name),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		internalDomain, err = gardenerutils.ReadGardenInternalDomain(
-			ctx,
-			r.GardenClient,
-			gardenerutils.ComputeGardenNamespace(seed.Name),
-			true,
-			seed.Spec.DNS.Internal,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		defaultDomains, err = gardenerutils.ReadGardenDefaultDomains(
-			ctx,
-			r.GardenClient,
-			gardenerutils.ComputeGardenNamespace(seed.Name),
-			seed.Spec.DNS.Defaults,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	gardenObj, err := garden.
-		NewBuilder().
-		WithProject(project).
-		WithInternalDomain(internalDomain).
-		WithDefaultDomains(defaultDomains).
-		Build(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	shootBuilder := shootpkg.
-		NewBuilder().
-		WithProjectName(project.Name).
-		WithCloudProfileObject(cloudProfile).
-		WithShootObject(shoot).
-		WithShootCredentialsFrom(r.GardenClient).
-		WithExposureClassObject(exposureClass).
-		WithInternalDomain(gardenObj.InternalDomain).
-		WithDefaultDomains(gardenObj.DefaultDomains).
-		WithServiceAccountIssuerHostname(gardenSecrets[v1beta1constants.GardenRoleShootServiceAccountIssuer])
-
-	opBuilder := operation.
-		NewBuilder().
-		WithLogger(log).
-		WithConfig(&r.Config).
-		WithGardenerInfo(r.Identity).
-		WithGardenClusterIdentity(r.GardenClusterIdentity).
-		WithSecrets(gardenSecrets).
-		WithInternalDomain(gardenObj.InternalDomain).
-		WithDefaultDomains(gardenObj.DefaultDomains).
-		WithGarden(gardenObj)
-
-	if seed != nil {
-		seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		shootBuilder = shootBuilder.WithSeedObject(seed)
-		opBuilder = opBuilder.WithSeed(seedObj)
-	}
-
-	shootObj, err := shootBuilder.Build(ctx, r.SeedClientSet, r.GardenClient)
-	if err != nil {
-		return nil, err
-	}
-
-	op, err := opBuilder.WithShoot(shootObj).Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap, shoot)
-	if err != nil {
-		return nil, err
-	}
-
-	if containersCABundle := imagevector.ContainersCABundle(); containersCABundle != nil && containersCABundle.Inline != nil {
-		op.RegistryCABundle = containersCABundle.Inline
 	}
 
 	// Only set UID once the operation was initialized successfully.

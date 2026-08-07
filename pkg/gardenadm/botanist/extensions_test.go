@@ -259,7 +259,8 @@ var _ = Describe("Extensions", func() {
 					HaveField("ObjectMeta.Name", controllerRegistrationControlPlane.Name),
 					HaveField("Spec.RegistrationRef.Name", controllerRegistrationControlPlane.Name),
 					HaveField("Spec.DeploymentRef.Name", controllerDeploymentControlPlane.Name),
-					HaveField("Spec.SeedRef.Name", shoot.Name),
+					HaveField("Spec.ShootRef.Name", shoot.Name),
+					HaveField("Spec.ShootRef.Namespace", shoot.Namespace),
 				)),
 			))
 		})

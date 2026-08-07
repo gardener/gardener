@@ -19,6 +19,7 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -263,6 +264,8 @@ func (b *Builder) Build(
 			}
 			operation.Seed = seed
 		}
+	} else {
+		operation.ShootClientSet = seedClientSet
 	}
 
 	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
@@ -277,10 +280,12 @@ func (b *Builder) Build(
 	}
 	operation.Shoot = shoot
 
-	// Get the ManagedSeed object for this shoot, if it exists.
-	operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
-	if err != nil {
-		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
+	if !isSelfHostedShoot {
+		// Get the ManagedSeed object for this shoot, if it exists. A self-hosted shoot is never a managed seed.
+		operation.ManagedSeed, err = kubernetesutils.GetManagedSeedWithReader(ctx, gardenClient, shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+		if err != nil {
+			return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
+		}
 	}
 
 	gardenerInfo, err := b.gardenerInfoFunc()
@@ -300,6 +305,10 @@ func (b *Builder) Build(
 		return nil, err
 	}
 	operation.Logger = logger
+
+	if caBundle := imagevector.ContainersCABundle(); caBundle != nil && caBundle.Inline != nil {
+		operation.RegistryCABundle = caBundle.Inline
+	}
 
 	return operation, nil
 }
