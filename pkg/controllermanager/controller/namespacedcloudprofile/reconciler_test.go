@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -42,7 +43,9 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
-		fakeErr error
+		fakeErr   error
+		fakeClock *testclock.FakeClock
+		now       time.Time
 
 		namespaceName              string
 		cloudProfileName           string
@@ -58,6 +61,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		ctx = context.Background()
 
 		fakeErr = errors.New("fake err")
+		fakeClock = testclock.NewFakeClock(time.Now())
+		now = fakeClock.Now()
 
 		namespaceName = "test-namespace"
 		cloudProfileName = "test-cloudprofile"
@@ -90,9 +95,9 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 			).
 			Build()
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
-		newExpiryDate = metav1.NewTime(time.Now().Truncate(time.Second))
+		newExpiryDate = metav1.NewTime(now.Truncate(time.Second))
 	})
 
 	It("should return nil because object not found", func() {
@@ -291,7 +296,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		})
 
 		It("should use the override ExpirationDate when Kubernetes versions ExpirationDates are defined", func() {
-			firstExpiryDate := metav1.NewTime(time.Now().Add(24 * time.Hour).Truncate(time.Second))
+			firstExpiryDate := metav1.NewTime(now.Add(24 * time.Hour).Truncate(time.Second))
 			cloudProfileExpiryDate := metav1.NewTime(firstExpiryDate.Add(24 * time.Hour))
 			newLaterExpiryDate := metav1.NewTime(firstExpiryDate.Add(48 * time.Hour))
 
@@ -442,7 +447,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		})
 
 		It("should adjust all upcoming stages to the same date if override stage is earlier then the base", func() {
-			now := time.Now().Truncate(time.Second)
+			now := now.Truncate(time.Second)
 			overriddenDeprecatedDate := &metav1.Time{Time: now}
 			supportedDate := &metav1.Time{Time: now.AddDate(0, 0, 1)}
 			deprecatedDate := &metav1.Time{Time: now.AddDate(0, 0, 2)}
@@ -777,7 +782,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 		It("should merge MachineImages correctly and migrate an additional ExpirationDate", func() {
 			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
-			newExpiryDate := metav1.NewTime(time.Now().Truncate(time.Second))
+			newExpiryDate := metav1.NewTime(now.Truncate(time.Second))
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "test-image",
@@ -1183,7 +1188,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 				It("should add new elements and apply overrides consistently while keeping the existing elements ordered", func() {
 					DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
-					expirationDate := metav1.NewTime(time.Now().Add(time.Hour))
+					expirationDate := metav1.NewTime(now.Add(time.Hour))
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
