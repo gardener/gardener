@@ -385,11 +385,6 @@ var _ = Describe("Alertmanager", func() {
 						},
 					},
 					{
-						Headers: &istionetworkingv1alpha3.Headers{
-							Response: &istionetworkingv1alpha3.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
 							Destination: &istionetworkingv1alpha3.Destination{
 								Host: "alertmanager-test.some-namespace.svc.cluster.local",

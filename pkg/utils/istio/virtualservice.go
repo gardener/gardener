@@ -44,13 +44,6 @@ func VirtualServiceForTLSTermination(virtualService *istionetworkingv1beta1.Virt
 			Gateways: []string{gatewayName},
 			Http: []*istioapinetworkingv1beta1.HTTPRoute{
 				{
-					Headers: &istioapinetworkingv1beta1.Headers{
-						Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-							Set: map[string]string{
-								"strict-transport-security": "max-age=31536000",
-							},
-						},
-					},
 					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 						{
 							Destination: &istioapinetworkingv1beta1.Destination{
@@ -71,13 +64,6 @@ func VirtualServiceForTLSTermination(virtualService *istionetworkingv1beta1.Virt
 						Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
 							"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
 							"Upgrade":    {},
-						},
-					},
-				},
-				Headers: &istioapinetworkingv1beta1.Headers{
-					Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-						Set: map[string]string{
-							"strict-transport-security": "max-age=31536000",
 						},
 					},
 				},

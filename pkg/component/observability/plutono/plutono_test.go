@@ -618,11 +618,7 @@ spec:
     - uri:
         prefix: /api/admin/
     name: admin-endpoints
-  - headers:
-      response:
-        set:
-          strict-transport-security: max-age=31536000
-    route:
+  - route:
     - destination:
         host: plutono.` + namespace + `.svc.cluster.local
         port:

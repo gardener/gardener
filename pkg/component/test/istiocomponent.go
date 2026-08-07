@@ -57,8 +57,6 @@ func CmpOptsForVirtualService() cmp.Option {
 		istioapinetworkingv1beta1.TLSMatchAttributes{},
 		istioapinetworkingv1beta1.RouteDestination{},
 		istioapinetworkingv1beta1.StringMatch{},
-		istioapinetworkingv1beta1.Headers{},
-		istioapinetworkingv1beta1.Headers_HeaderOperations{},
 		istioapimetav1alpha1.IstioStatus{},
 	)
 }

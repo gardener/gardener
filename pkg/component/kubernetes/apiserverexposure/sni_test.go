@@ -531,11 +531,6 @@ var _ = Describe("#SNI", func() {
 								},
 							},
 						},
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -546,11 +541,6 @@ var _ = Describe("#SNI", func() {
 						},
 					},
 					{
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -622,11 +612,6 @@ var _ = Describe("#SNI", func() {
 								},
 							},
 						},
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -637,11 +622,6 @@ var _ = Describe("#SNI", func() {
 						},
 					},
 					{
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -712,11 +692,6 @@ var _ = Describe("#SNI", func() {
 								},
 							},
 						},
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -727,11 +702,6 @@ var _ = Describe("#SNI", func() {
 						},
 					},
 					{
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -755,11 +725,6 @@ var _ = Describe("#SNI", func() {
 								},
 							},
 						},
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -770,11 +735,6 @@ var _ = Describe("#SNI", func() {
 						},
 					},
 					{
-						Headers: &istioapinetworkingv1beta1.Headers{
-							Response: &istioapinetworkingv1beta1.Headers_HeaderOperations{
-								Set: map[string]string{"strict-transport-security": "max-age=31536000"},
-							},
-						},
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
