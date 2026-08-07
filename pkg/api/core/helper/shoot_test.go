@@ -292,57 +292,53 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	Describe("GetShootAuditPolicyConfigMapName", func() {
-		test := func(description string, config *core.KubeAPIServerConfig, expectedName string) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
-			})
-		}
+	DescribeTable("#GetShootAuditPolicyConfigMapName",
+		func(config *core.KubeAPIServerConfig, expectedName string) {
+			Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
+		},
 
-		test("KubeAPIServerConfig = nil", nil, "")
-		test("AuditConfig = nil", &core.KubeAPIServerConfig{}, "")
-		test("AuditPolicy = nil", &core.KubeAPIServerConfig{
+		Entry("KubeAPIServerConfig = nil", nil, ""),
+		Entry("AuditConfig = nil", &core.KubeAPIServerConfig{}, ""),
+		Entry("AuditPolicy = nil", &core.KubeAPIServerConfig{
 			AuditConfig: &core.AuditConfig{},
-		}, "")
-		test("ConfigMapRef = nil", &core.KubeAPIServerConfig{
+		}, ""),
+		Entry("ConfigMapRef = nil", &core.KubeAPIServerConfig{
 			AuditConfig: &core.AuditConfig{
 				AuditPolicy: &core.AuditPolicy{},
 			},
-		}, "")
-		test("ConfigMapRef set", &core.KubeAPIServerConfig{
+		}, ""),
+		Entry("ConfigMapRef set", &core.KubeAPIServerConfig{
 			AuditConfig: &core.AuditConfig{
 				AuditPolicy: &core.AuditPolicy{
 					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
 				},
 			},
-		}, "foo")
-	})
+		}, "foo"),
+	)
 
-	Describe("GetShootAuditPolicyConfigMapRef", func() {
-		test := func(description string, config *core.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
-			})
-		}
+	DescribeTable("#GetShootAuditPolicyConfigMapRef",
+		func(config *core.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
+			Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
+		},
 
-		test("KubeAPIServerConfig = nil", nil, nil)
-		test("AuditConfig = nil", &core.KubeAPIServerConfig{}, nil)
-		test("AuditPolicy = nil", &core.KubeAPIServerConfig{
+		Entry("KubeAPIServerConfig = nil", nil, nil),
+		Entry("AuditConfig = nil", &core.KubeAPIServerConfig{}, nil),
+		Entry("AuditPolicy = nil", &core.KubeAPIServerConfig{
 			AuditConfig: &core.AuditConfig{},
-		}, nil)
-		test("ConfigMapRef = nil", &core.KubeAPIServerConfig{
+		}, nil),
+		Entry("ConfigMapRef = nil", &core.KubeAPIServerConfig{
 			AuditConfig: &core.AuditConfig{
 				AuditPolicy: &core.AuditPolicy{},
 			},
-		}, nil)
-		test("ConfigMapRef set", &core.KubeAPIServerConfig{
+		}, nil),
+		Entry("ConfigMapRef set", &core.KubeAPIServerConfig{
 			AuditConfig: &core.AuditConfig{
 				AuditPolicy: &core.AuditPolicy{
 					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
 				},
 			},
-		}, &corev1.ObjectReference{Name: "foo"})
-	})
+		}, &corev1.ObjectReference{Name: "foo"}),
+	)
 
 	DescribeTable("#GetShootAuthenticationConfigurationConfigMapName",
 		func(kubeAPIServerConfig *core.KubeAPIServerConfig, expectedName string) {

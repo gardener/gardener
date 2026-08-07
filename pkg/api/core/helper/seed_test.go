@@ -156,51 +156,39 @@ var _ = Describe("Helper", func() {
 			specSeedName, statusSeedName string
 		}
 
-		test := func(shoots []shootCase, expectedUsage map[string]int) {
-			var shootList []*core.Shoot
+		DescribeTable("should calculate the seed usage",
+			func(shoots []shootCase, expectedUsage map[string]int) {
+				var shootList []*core.Shoot
 
-			for i, shoot := range shoots {
-				s := &core.Shoot{}
-				s.Name = fmt.Sprintf("shoot-%d", i)
-				if shoot.specSeedName != "" {
-					s.Spec.SeedName = new(shoot.specSeedName)
+				for i, shoot := range shoots {
+					s := &core.Shoot{}
+					s.Name = fmt.Sprintf("shoot-%d", i)
+					if shoot.specSeedName != "" {
+						s.Spec.SeedName = new(shoot.specSeedName)
+					}
+					if shoot.statusSeedName != "" {
+						s.Status.SeedName = new(shoot.statusSeedName)
+					}
+					shootList = append(shootList, s)
 				}
-				if shoot.statusSeedName != "" {
-					s.Status.SeedName = new(shoot.statusSeedName)
-				}
-				shootList = append(shootList, s)
-			}
 
-			ExpectWithOffset(1, CalculateSeedUsage(shootList)).To(Equal(expectedUsage))
-		}
+				Expect(CalculateSeedUsage(shootList)).To(Equal(expectedUsage))
+			},
 
-		It("no shoots", func() {
-			test([]shootCase{}, map[string]int{})
-		})
-		It("shoot with both fields unset", func() {
-			test([]shootCase{{}}, map[string]int{})
-		})
-		It("shoot with only spec set", func() {
-			test([]shootCase{{specSeedName: "seed"}}, map[string]int{"seed": 1})
-		})
-		It("shoot with only status set", func() {
-			test([]shootCase{{statusSeedName: "seed"}}, map[string]int{"seed": 1})
-		})
-		It("shoot with both fields set to same seed", func() {
-			test([]shootCase{{specSeedName: "seed", statusSeedName: "seed"}}, map[string]int{"seed": 1})
-		})
-		It("shoot with fields set to different seeds", func() {
-			test([]shootCase{{specSeedName: "seed", statusSeedName: "seed2"}}, map[string]int{"seed": 1, "seed2": 1})
-		})
-		It("multiple shoots", func() {
-			test([]shootCase{
+			Entry("no shoots", []shootCase{}, map[string]int{}),
+			Entry("shoot with both fields unset", []shootCase{{}}, map[string]int{}),
+			Entry("shoot with only spec set", []shootCase{{specSeedName: "seed"}}, map[string]int{"seed": 1}),
+			Entry("shoot with only status set", []shootCase{{statusSeedName: "seed"}}, map[string]int{"seed": 1}),
+			Entry("shoot with both fields set to same seed", []shootCase{{specSeedName: "seed", statusSeedName: "seed"}}, map[string]int{"seed": 1}),
+			Entry("shoot with fields set to different seeds", []shootCase{{specSeedName: "seed", statusSeedName: "seed2"}}, map[string]int{"seed": 1, "seed2": 1}),
+			Entry("multiple shoots", []shootCase{
 				{},
 				{specSeedName: "seed", statusSeedName: "seed2"},
 				{specSeedName: "seed2", statusSeedName: "seed2"},
 				{specSeedName: "seed3", statusSeedName: "seed2"},
 				{specSeedName: "seed3", statusSeedName: "seed4"},
-			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
-		})
+			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1}),
+		)
 	})
 
 	Describe("#ConvertSeed", func() {
