@@ -157,6 +157,25 @@ var _ = Describe("Reconciler", func() {
 				}
 			})
 
+			It("should copy the secret to all seed namespaces when the annotation is a wildcard", func() {
+				nsA := seedNs("seed-a")
+				nsB := seedNs("seed-b")
+				Expect(fakeClient.Create(ctx, nsA)).To(Succeed())
+				Expect(fakeClient.Create(ctx, nsB)).To(Succeed())
+
+				secret := pullSecret("my-pull", "*")
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(secret)})
+				Expect(err).NotTo(HaveOccurred())
+
+				for _, ns := range []string{nsA.Name, nsB.Name} {
+					s := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: secret.Name}, s)).To(Succeed())
+					Expect(s.Data).To(Equal(secret.Data))
+				}
+			})
+
 			It("should remove stale copies from seeds removed from the annotation", func() {
 				nsA := seedNs("seed-a")
 				nsB := seedNs("seed-b")

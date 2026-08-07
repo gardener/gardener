@@ -1174,7 +1174,8 @@ const (
 	// selector.
 	AnnotationStaticManifestsShootSelector = "static-manifests.shoot.gardener.cloud/selector"
 	// AnnotationImagePullSecretSeedNames is an annotation on an image pull secret in the garden namespace
-	// that lists the comma-separated names of the seeds this secret should be copied to.
+	// that lists the comma-separated names of the seeds this secret should be copied to. The wildcard "*"
+	// can be used to copy the secret to all seeds.
 	// gardener-controller-manager reads this annotation and copies the secret into each listed seed's
 	// seed-<name> namespace, from where the gardenlet propagates it to the seed cluster.
 	AnnotationImagePullSecretSeedNames = "seed.gardener.cloud/names"

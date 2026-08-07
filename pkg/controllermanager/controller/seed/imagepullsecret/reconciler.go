@@ -31,6 +31,10 @@ type Reconciler struct {
 	GardenNamespace string
 }
 
+// wildcardSeedName is the value that, when present in the seed-names annotation, causes the image pull
+// secret to be synced to all seed namespaces.
+const wildcardSeedName = "*"
+
 // Reconcile copies an image pull secret to the seed-<name> namespaces of all seeds listed in
 // the secret's annotation, and removes stale copies from seeds that were removed from it.
 // Only seeds that are actually registered in this cluster (have a seed-<name> namespace with
@@ -65,15 +69,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 // reconcileSeedNamespaces syncs the secret into seed namespaces whose seed name is in desiredSeeds,
-// and deletes it from seed namespaces whose seed name is not in desiredSeeds.
+// and deletes it from seed namespaces whose seed name is not in desiredSeeds. If desiredSeeds contains
+// the wildcard "*", the secret is synced into all seed namespaces.
 func (r *Reconciler) reconcileSeedNamespaces(ctx context.Context, secret *corev1.Secret, desiredSeeds sets.Set[string], seedNamespaces []string) error {
 	var fns []flow.TaskFn
+
+	syncToAll := desiredSeeds.Has(wildcardSeedName)
 
 	for _, namespace := range seedNamespaces {
 		seedName := strings.TrimPrefix(namespace, gardenerutils.SeedNamespaceNamePrefix)
 		ns := namespace
 
-		if desiredSeeds.Has(seedName) {
+		if syncToAll || desiredSeeds.Has(seedName) {
 			fns = append(fns, func(ctx context.Context) error {
 				secretCopy := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
