@@ -249,6 +249,8 @@ type ResourceManagerWebhookConfiguration struct {
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
 	// KubernetesServiceHost is the configuration for the kubernetes-service-host webhook.
 	KubernetesServiceHost KubernetesServiceHostWebhookConfig `json:"kubernetesServiceHost"`
+	// ImagePullSecret is the configuration for the image-pull-secret webhook.
+	ImagePullSecret ImagePullSecretWebhookConfig `json:"imagePullSecret"`
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
 	// PodKubeAPIServerLoadBalancing is the configuration for the pod-kube-apiserver-load-balancing webhook.
@@ -299,6 +301,12 @@ type KubernetesServiceHostWebhookConfig struct {
 	Enabled bool `json:"enabled"`
 	// Host is the FQDN of the API server.
 	Host string `json:"host"`
+}
+
+// ImagePullSecretWebhookConfig is the configuration for the image-pull-secret webhook.
+type ImagePullSecretWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
 }
 
 // SystemComponentsConfigWebhookConfig is the configuration for the system-components-config webhook.

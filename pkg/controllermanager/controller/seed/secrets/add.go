@@ -61,7 +61,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 var (
 	gardenRoleReq      = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq, gardenerutils.NoPullOrCABundleSecretsReq, gardenerutils.NoResourceReferenceSecretsReq)
+	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq, gardenerutils.NoPullOrCABundleSecretsReq, gardenerutils.NoResourceReferenceSecretsReq).Add(noImagePullSecret)
+	noImagePullSecret  = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.NotIn, v1beta1constants.GardenRoleImagePullSecret)
 )
 
 // GardenSecretPredicate returns true for all events when the respective secret is in the garden namespace and has a

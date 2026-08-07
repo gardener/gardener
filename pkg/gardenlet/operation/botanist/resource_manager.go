@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -69,6 +70,15 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		values.MachineNamespace = new(b.Shoot.ControlPlaneNamespace)
 	}
 
+	// Propagate gardenlet's own image vector overwrite to GRM so that its image-pull-secret webhook can inject the
+	// configured image pull secrets into pods it admits. This mirrors how the overwrite is propagated to other
+	// components deployed by gardenlet (e.g. etcd-druid).
+	overwrite, err := imagevector.OverwriteForImagePullSecretWebhook()
+	if err != nil {
+		return nil, err
+	}
+	values.ImageVectorOverwrite = overwrite
+
 	if b.Shoot.IsSelfHosted() {
 		values.KubernetesServiceHost = nil
 		// Disable the vpa-in-place-updates webhook as there are no VPA components that manage VPA resources and
@@ -100,10 +110,16 @@ func (b *Botanist) DefaultRuntimeGardenerResourceManager() (resourcemanager.Inte
 		return nil, nil
 	}
 
+	overwrite, err := imagevector.OverwriteForImagePullSecretWebhook()
+	if err != nil {
+		return nil, err
+	}
+
 	return shared.NewRuntimeGardenerResourceManager(b.SeedClientSet.Client(), v1beta1constants.GardenNamespace, b.SecretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:         features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		SystemComponentsConfigWebhookEnabled: true,
 		HighAvailabilityConfigWebhookEnabled: true,
+		ImageVectorOverwrite:                 overwrite,
 		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SystemComponentTolerations:           gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),

@@ -12,6 +12,24 @@ type CABundle struct {
 	Inline *string `json:"inline,omitempty" yaml:"inline,omitempty"`
 }
 
+// PullCredentialsType defines the mechanism used to provide image pull credentials.
+type PullCredentialsType string
+
+const (
+	// PullCredentialsTypeStaticSecret uses a static dockerconfigjson Secret.
+	PullCredentialsTypeStaticSecret PullCredentialsType = "StaticSecret"
+)
+
+// PullCredentials defines how image pull credentials are provided.
+type PullCredentials struct {
+	// Type is the credential delivery mechanism.
+	Type PullCredentialsType `json:"type" yaml:"type"`
+	// SecretNames is the list of dockerconfigjson Secret names.
+	// Required when Type is StaticSecret.
+	// +optional
+	SecretNames []string `json:"secretNames,omitempty" yaml:"secretNames,omitempty"`
+}
+
 // ImageSource contains the repository and the tag of a Docker container image. If the respective
 // image is only valid for a specific Kubernetes runtime version, then it must also contain the
 // 'runtimeVersion' field describing for which versions it can be used. Similarly, if it is only
@@ -34,6 +52,11 @@ type ImageSource struct {
 	// Version is a human-readable version of the image (helpful in case the ref/tag does not specify it because only a
 	// digest is used).
 	Version *string `json:"version,omitempty" yaml:"version,omitempty"`
+
+	// ImagePullCredential specifies how to authenticate when pulling this image.
+	// When set, it overrides the global imagePullCredential for this specific image.
+	// +optional
+	PullCredentials *PullCredentials `json:"pullCredentials,omitempty" yaml:"pullCredentials,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
@@ -43,6 +66,9 @@ type Image struct {
 	Repository *string
 	Tag        *string
 	Version    *string
+
+	// PullCredentials is the per-image pull credential, if configured.
+	PullCredentials *PullCredentials
 }
 
 // ImageVector is a list of image sources.

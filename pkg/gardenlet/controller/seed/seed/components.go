@@ -331,9 +331,17 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		additionalNetworkPolicyNamespaceSelectors = config.AdditionalNamespaceSelectors
 	}
 
+	// Propagate the image vector overwrite so GRM's image-pull-secret webhook can inject pull secrets into
+	// the seed control-plane pods (shoot control-plane and extension namespaces) it admits.
+	imageVectorOverwrite, err := imagevector.OverwriteForImagePullSecretWebhook()
+	if err != nil {
+		return nil, err
+	}
+
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.SeedClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		HighAvailabilityConfigWebhookEnabled:      true,
+		ImageVectorOverwrite:                      imageVectorOverwrite,
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
 		LogLevel:                                  r.Config.LogLevel,

@@ -58,6 +58,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/imagepullsecret"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
@@ -69,6 +70,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -128,16 +130,19 @@ const (
 
 	serverServicePort = 443
 
-	configMapDataKey = "config.yaml"
+	configMapDataKey                     = "config.yaml"
+	configMapImageVectorOverwriteDataKey = "images_overwrite.yaml"
 
-	volumeNameBootstrapKubeconfig = "kubeconfig-bootstrap"
-	volumeNameCerts               = "tls"
-	volumeNameAPIServerAccess     = "kube-api-access-gardener"
-	volumeNameConfiguration       = "config"
+	volumeNameBootstrapKubeconfig  = "kubeconfig-bootstrap"
+	volumeNameCerts                = "tls"
+	volumeNameAPIServerAccess      = "kube-api-access-gardener"
+	volumeNameConfiguration        = "config"
+	volumeNameImageVectorOverwrite = "imagevector-overwrite"
 
-	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
-	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
-	volumeMountPathConfiguration   = "/etc/gardener-resource-manager-config"
+	volumeMountPathCerts                = "/etc/gardener-resource-manager-tls"
+	volumeMountPathAPIServerAccess      = "/var/run/secrets/kubernetes.io/serviceaccount"
+	volumeMountPathConfiguration        = "/etc/gardener-resource-manager-config"
+	volumeMountPathImageVectorOverwrite = "/imagevector_overwrite"
 )
 
 var (
@@ -304,6 +309,10 @@ type Values struct {
 	// KubernetesServiceHost specifies the FQDN of the API server of the target cluster. If it is non-nil, the GRM's
 	// kubernetes-service-host webhook will be enabled.
 	KubernetesServiceHost *string
+	// ImageVectorOverwrite is the image vector overwrite for the components deployed by this GRM. If it is non-empty,
+	// the GRM's image-pull-secret webhook will be enabled and the overwrite will be propagated to the GRM pod so that
+	// the webhook can determine the image pull secrets to inject based on the container images.
+	ImageVectorOverwrite *string
 	// PodTopologySpreadConstraintsEnabled specifies if the pod's TSC should be mutated to support rolling updates.
 	PodTopologySpreadConstraintsEnabled bool
 	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
@@ -668,6 +677,10 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Webhooks.KubernetesServiceHost.Host = *r.values.KubernetesServiceHost
 	}
 
+	if r.values.ImageVectorOverwrite != nil {
+		config.Webhooks.ImagePullSecret.Enabled = true
+	}
+
 	if r.values.NodeAgentReconciliationMaxDelay != nil {
 		config.Controllers.NodeAgentReconciliationDelay.Enabled = true
 		config.Controllers.NodeAgentReconciliationDelay.MaxDelay = r.values.NodeAgentReconciliationMaxDelay
@@ -703,6 +716,11 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	configMap.Data = map[string]string{configMapDataKey: string(data)}
+
+	if r.values.ImageVectorOverwrite != nil {
+		configMap.Data[configMapImageVectorOverwriteDataKey] = *r.values.ImageVectorOverwrite
+	}
+
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return client.IgnoreAlreadyExists(r.client.Create(ctx, configMap))
@@ -875,6 +893,13 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		priorityClassName = "system-cluster-critical"
 	}
 
+	if r.values.ImageVectorOverwrite != nil {
+		env = append(env, corev1.EnvVar{
+			Name:  imagevector.OverrideEnv,
+			Value: volumeMountPathImageVectorOverwrite + "/" + configMapImageVectorOverwriteDataKey,
+		})
+	}
+
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -1040,6 +1065,24 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					},
 				},
 			},
+		}
+
+		if r.values.ImageVectorOverwrite != nil {
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameImageVectorOverwrite,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMap.Name,
+						},
+					},
+				},
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				Name:      volumeNameImageVectorOverwrite,
+				MountPath: volumeMountPathImageVectorOverwrite,
+				ReadOnly:  true,
+			})
 		}
 
 		if r.responsibleForHostedShootOrVirtualGarden() {
@@ -1360,6 +1403,10 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 
 	if r.values.KubernetesServiceHost != nil {
 		webhooks = append(webhooks, NewKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
+	}
+
+	if r.values.ImageVectorOverwrite != nil {
+		webhooks = append(webhooks, NewImagePullSecretMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.PodKubeAPIServerLoadBalancingWebhook.Enabled {
@@ -1846,8 +1893,51 @@ func NewKubernetesServiceHostMutatingWebhook(
 	}
 }
 
-// NewSystemComponentsConfigMutatingWebhook returns the system-components-config mutating webhook for the resourcemanager component for reuse
-// between the component and integration tests.
+// NewImagePullSecretMutatingWebhook returns the image-pull-secret mutating webhook for the resourcemanager
+// component for reuse between the component and integration tests.
+func NewImagePullSecretMutatingWebhook(
+	namespaceSelector *metav1.LabelSelector,
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) admissionregistrationv1.MutatingWebhook {
+	var nsSelector *metav1.LabelSelector
+	if namespaceSelector == nil {
+		nsSelector = &metav1.LabelSelector{}
+	} else {
+		nsSelector = namespaceSelector.DeepCopy()
+	}
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "image-pull-secret.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector: nsSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.ImagePullSecretSkip,
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				},
+			},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, imagepullsecret.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		ReinvocationPolicy:      new(admissionregistrationv1.NeverReinvocationPolicy),
+		FailurePolicy:           new(admissionregistrationv1.Ignore),
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+		TimeoutSeconds:          new(int32(2)),
+	}
+}
+
+// NewSystemComponentsConfigMutatingWebhook returns the system-components-config mutating webhook for the
+// resourcemanager component for reuse between the component and integration tests.
 func NewSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	oSelector := &metav1.LabelSelector{}
 	if objectSelector != nil {

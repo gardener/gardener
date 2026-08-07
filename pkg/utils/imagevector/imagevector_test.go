@@ -300,13 +300,13 @@ images:
 
 		Describe("#Read", func() {
 			It("should successfully read a JSON image vector", func() {
-				vector, _, err := Read([]byte(image1Src1VectorJSON))
+				vector, _, _, err := Read([]byte(image1Src1VectorJSON))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
 
 			It("should successfully read a YAML image vector", func() {
-				vector, _, err := Read([]byte(image1Src1VectorYAML))
+				vector, _, _, err := Read([]byte(image1Src1VectorYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
@@ -317,7 +317,7 @@ images:
 				tmpFile, cleanup := withTempFile("imagevector", []byte(image1Src1VectorJSON))
 				defer cleanup()
 
-				vector, _, err := ReadFile(tmpFile.Name())
+				vector, _, _, err := ReadFile(tmpFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
 			})
@@ -348,13 +348,48 @@ images:
 				defer cleanup()
 				defer test.WithEnvVar(OverrideEnv, file.Name())()
 
-				resultVector, _, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
+				resultVector, _, _, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resultVector).To(Equal(ImageVector{image1Src1, image2Src1}))
 			})
 
+			It("should override the ImageVector and return pullCredentials from override file", func() {
+				var (
+					vector       = ImageVector{image1Src3, image2Src1}
+					overrideJSON = `
+{
+	"pullCredentials": {
+		"type": "StaticSecret",
+		"secretNames": ["my-image-pull-secret"]
+	},
+	"images": [
+		{
+			"name": "image1",
+			"repository": "repo1",
+			"tag": "tag1",
+			"version": "tag1",
+			"runtimeVersion": ">= 1.6, < 1.8"
+		}
+	]
+}`
+				)
+
+				file, cleanup := withTempFile("imagevector", []byte(overrideJSON))
+
+				defer cleanup()
+				defer test.WithEnvVar(OverrideEnv, file.Name())()
+
+				mergedVector, _, pullCredentials, err := WithEnvOverride(vector, nil, "IMAGEVECTOR_OVERWRITE")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mergedVector).To(Equal(ImageVector{image1Src1, image2Src1}))
+				Expect(pullCredentials).To(PointTo(Equal(PullCredentials{
+					Type:        PullCredentialsTypeStaticSecret,
+					SecretNames: []string{"my-image-pull-secret"},
+				})))
+			})
+
 			It("should keep the vector as-is if the env variable is not set", func() {
-				resultVector, _, err := WithEnvOverride(image1Src1Vector, nil, "IMAGEVECTOR_OVERWRITE")
+				resultVector, _, _, err := WithEnvOverride(image1Src1Vector, nil, "IMAGEVECTOR_OVERWRITE")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resultVector).To(Equal(image1Src1Vector))
 			})
@@ -362,7 +397,7 @@ images:
 
 		Describe("#Read with caBundle", func() {
 			It("should read a vector without caBundle", func() {
-				_, caBundle, err := Read([]byte(image1Src1VectorYAML))
+				_, caBundle, _, err := Read([]byte(image1Src1VectorYAML))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(caBundle).To(BeNil())
 			})
@@ -379,7 +414,7 @@ images:
 				certPEMJSON, err := json.Marshal(certPEM)
 				Expect(err).NotTo(HaveOccurred())
 				vectorWithCA := fmt.Sprintf(`{"images":[{"name":"test","repository":"registry.example.com/test","tag":"v1.0"}],"caBundle":{"inline":%s}}`, string(certPEMJSON))
-				_, caBundle, err := Read([]byte(vectorWithCA))
+				_, caBundle, _, err := Read([]byte(vectorWithCA))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(caBundle).NotTo(BeNil())
 				Expect(caBundle.Inline).To(Equal(&certPEM))
