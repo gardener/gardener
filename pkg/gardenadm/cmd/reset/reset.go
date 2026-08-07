@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
@@ -122,7 +123,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed cleaning up operating system config: %w", err)
 	}
 
-	return nil
+	return cleanUpNodeAgentFolder(b)
 }
 
 func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
@@ -267,6 +268,24 @@ func cleanUpOperatingSystemConfig(ctx context.Context, b *botanist.GardenadmBota
 
 	if len(errs) > 0 {
 		return fmt.Errorf("failed cleaning up OperatingSystemConfig: %w", errors.Join(errs...))
+	}
+
+	return nil
+}
+
+// Failing to clean up the gardener-node-agent folder will block the node from joining the cluster again.
+func cleanUpNodeAgentFolder(b *botanist.GardenadmBotanist) error {
+	b.Logger.Info("Cleaning up gardener-node-agent folder")
+	entries, err := os.ReadDir(nodeagentconfigv1alpha1.BaseDir)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed listing garden-node-agent folder: %w", err)
+	}
+
+	for _, entry := range entries {
+		b.Logger.Info("Removing gardener-node-agent file", "file", entry.Name())
+		if err := b.FS.RemoveAll(nodeagentconfigv1alpha1.BaseDir + "/" + entry.Name()); err != nil {
+			return fmt.Errorf("failed removing %q in gardener-node-agent dir %q: %w", entry.Name(), nodeagentconfigv1alpha1.BaseDir, err)
+		}
 	}
 
 	return nil
