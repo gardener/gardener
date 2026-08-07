@@ -550,6 +550,14 @@ The following table explains which `ManagedResource`s are considered for which c
 | `VirtualComponentsHealthy`       | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `VirtualComponentsHealthy`                  |
 | `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                                   |
 
+##### Constraints
+
+The reconciler also computes the following constraint in `.status.constraints` of the `Garden`:
+
+| Constraint Type           | Meaning when `status=True`                                                                                            | Meaning when `status=False`                                                                                             |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `ManagedResourcesHonored` | No `ManagedResource` in the garden's namespaces carries the `resources.gardener.cloud/ignore=true` annotation.  | At least one `ManagedResource` is annotated with `resources.gardener.cloud/ignore=true`, disabling its reconciliation.  |
+
 #### [`Reference` Reconciler](../../pkg/operator/controller/garden/reference)
 
 `Garden` objects may specify references to other objects in the Garden cluster which are required for certain features.

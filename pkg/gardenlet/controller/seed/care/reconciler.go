@@ -23,6 +23,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
@@ -60,32 +61,47 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Initialize conditions based on the current status.
 	seedConditions := NewSeedConditions(r.Clock, seed.Status)
+	seedConstraints := NewSeedConstraints(r.Clock, seed.Status)
 
-	// Trigger health check
-	updatedConditions := NewHealthCheck(
-		seed,
-		r.SeedClient,
-		r.Clock,
-		r.Namespace,
-		checker.NewHealthChecker(
-			log,
-			r.SeedClient,
-			r.Clock,
-			checker.WithConditionThresholds(r.conditionThresholdsToProgressingMapping())),
-	).Check(
-		ctx,
-		seedConditions,
-	)
+	var updatedConditions, updatedConstraints []gardencorev1beta1.Condition
+	_ = flow.Parallel(
+		// Trigger health check
+		func(ctx context.Context) error {
+			updatedConditions = NewHealthCheck(
+				seed,
+				r.SeedClient,
+				r.Clock,
+				r.Namespace,
+				checker.NewHealthChecker(
+					log,
+					r.SeedClient,
+					r.Clock,
+					checker.WithConditionThresholds(r.conditionThresholdsToProgressingMapping())),
+			).Check(ctx, seedConditions)
+			return nil
+		},
+		// Trigger constraint check
+		func(ctx context.Context) error {
+			updatedConstraints = NewConstraintCheck(r.SeedClient, r.Clock, r.Namespace).Check(ctx, seedConstraints)
+			return nil
+		},
+	)(ctx)
 
-	// Update Seed status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(seedConditions.ConvertToSlice(), updatedConditions) {
-		// Rebuild seed conditions to ensure that only the conditions with the
-		// correct types will be updated, and any other conditions will remain intact
-		conditions := v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, seedConditions.ConditionTypes())
+	conditionsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(seedConditions.ConvertToSlice(), updatedConditions)
+	constraintsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(seedConstraints.ConvertToSlice(), updatedConstraints)
 
-		log.Info("Updating seed status conditions")
+	if conditionsNeedUpdate || constraintsNeedUpdate {
+		// Rebuild seed conditions/constraints to ensure that only the entries with the
+		// correct types will be updated, and any other entries will remain intact
 		patch := client.StrategicMergeFrom(seed.DeepCopy())
-		seed.Status.Conditions = conditions
+		if conditionsNeedUpdate {
+			seed.Status.Conditions = v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, seedConditions.ConditionTypes())
+		}
+		if constraintsNeedUpdate {
+			seed.Status.Constraints = v1beta1helper.BuildConditions(seed.Status.Constraints, updatedConstraints, seedConstraints.ConstraintTypes())
+		}
+
+		log.Info("Updating seed status conditions and constraints")
 		if err := r.GardenClient.Status().Patch(ctx, seed, patch); err != nil {
 			log.Error(err, "Could not update Seed status")
 			return reconcile.Result{}, err

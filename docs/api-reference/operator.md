@@ -1942,6 +1942,18 @@ Condition array
 </tr>
 <tr>
 <td>
+<code>constraints</code></br>
+<em>
+Condition array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Constraints represents conditions of a Garden's current state that constraint some operations on it.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastOperation</code></br>
 <em>
 <a href="#lastoperation">LastOperation</a>

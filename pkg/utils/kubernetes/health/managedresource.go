@@ -6,6 +6,10 @@ package health
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -68,4 +72,29 @@ func CheckManagedResourceProgressing(mr *resourcesv1alpha1.ManagedResource) erro
 	}
 
 	return nil
+}
+
+// CheckManagedResourcesHonored checks whether any of the given ManagedResources have been annotated with
+// resources.gardener.cloud/ignore=true, which disables their reconciliation. It returns a condition status,
+// reason, and message suitable for use in a constraint.
+func CheckManagedResourcesHonored(managedResources []resourcesv1alpha1.ManagedResource) (gardencorev1beta1.ConditionStatus, string, string) {
+	ignoredNames := sets.New[string]()
+	for _, mr := range managedResources {
+		if value, ok := mr.GetAnnotations()[resourcesv1alpha1.Ignore]; ok {
+			if truthy, _ := strconv.ParseBool(value); truthy {
+				ignoredNames.Insert(mr.Name)
+			}
+		}
+	}
+
+	if ignoredNames.Len() > 0 {
+		return gardencorev1beta1.ConditionFalse,
+			"ManagedResourcesIgnored",
+			fmt.Sprintf("Some ManagedResources have been annotated with %s=true, meaning their reconciliation is disabled: %s",
+				resourcesv1alpha1.Ignore, strings.Join(sets.List(ignoredNames), ", "))
+	}
+
+	return gardencorev1beta1.ConditionTrue,
+		"AllManagedResourcesActive",
+		"No ManagedResources are annotated to be ignored."
 }
