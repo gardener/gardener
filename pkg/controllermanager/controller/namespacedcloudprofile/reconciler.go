@@ -8,12 +8,12 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -36,6 +36,7 @@ import (
 // Reconciler reconciles NamespacedCloudProfiles.
 type Reconciler struct {
 	Client   client.Client
+	Clock    clock.Clock
 	Config   controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration
 	Recorder events.EventRecorder
 }
@@ -78,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{
-		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&namespacedCloudProfile.Status.CloudProfileSpec, time.Now()),
+		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&namespacedCloudProfile.Status.CloudProfileSpec, r.Clock.Now()),
 	}, nil
 }
 
