@@ -36,6 +36,7 @@ gardenadm token create
   -h, --help                     help for create
   -c, --print-connect-command    Instead of only printing the token, print the full machine-readable 'gardenadm connect' command that can be ran on a machine of a cluster that should be connected to Gardener
   -j, --print-join-command       Instead of only printing the token, print the full machine-readable 'gardenadm join' command that can be copied and ran on a machine that should join the cluster
+  -r, --print-reset-command      Instead of only printing the token, print the full machine-readable 'gardenadm reset' command that can be copied and ran on a machine that should be removed from the cluster
       --shoot-name string        Name of the Shoot which should be connected to Gardener via 'gardenadm connect' with this bootstrap token
       --shoot-namespace string   Namespace of the Shoot which should be connected to Gardener via 'gardenadm connect' with this bootstrap token
       --validity duration        Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h. (default 1h0m0s)
