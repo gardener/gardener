@@ -99,7 +99,16 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 		} else if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
 			!b.Shoot.IsSelfHosted() &&
 			(!failureToleranceTypeExisting || existingFailureToleranceType != newFailureToleranceType) {
-			zones, err = calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones, allShootZones(b.Shoot.GetInfo().Spec.Provider.Workers), v1beta1helper.SeedSettingZoneSelectionMode(b.Seed.GetInfo().Spec.Settings))
+			var explicitZones []string
+			if controlPlane := b.Shoot.GetInfo().Spec.ControlPlane; controlPlane != nil {
+				explicitZones = controlPlane.Zones
+			}
+
+			if len(explicitZones) > 0 {
+				zones, err = calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, explicitZones, explicitZones, "")
+			} else {
+				zones, err = calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones, allShootZones(b.Shoot.GetInfo().Spec.Provider.Workers), v1beta1helper.SeedSettingZoneSelectionMode(b.Seed.GetInfo().Spec.Settings))
+			}
 			if err != nil {
 				return err
 			}

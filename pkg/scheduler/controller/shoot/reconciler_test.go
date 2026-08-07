@@ -1206,6 +1206,12 @@ var _ = Describe("filterSeedsForZoneSelection", func() {
 		return s
 	}
 
+	makeShootWithControlPlaneZones := func(controlPlaneZones []string) *gardencorev1beta1.Shoot {
+		s := &gardencorev1beta1.Shoot{}
+		s.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{Zones: controlPlaneZones}
+		return s
+	}
+
 	DescribeTable("filterSeedsForZoneSelection",
 		func(seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, expectError bool, expectedSeedNames []string) {
 			result, err := filterSeedsForZoneSelection(seeds, shoot)
@@ -1312,5 +1318,78 @@ var _ = Describe("filterSeedsForZoneSelection", func() {
 			false,
 			[]string{"s1", "s2"},
 		),
+		Entry("explicit control plane zones — seed contains all → included",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"a", "b", "c"}, "")},
+			makeShootWithControlPlaneZones([]string{"a", "b"}),
+			false,
+			[]string{"s1"},
+		),
+		Entry("explicit control plane zones — seed missing a zone → excluded, error",
+			[]gardencorev1beta1.Seed{makeSeed("s1", []string{"a"}, "")},
+			makeShootWithControlPlaneZones([]string{"a", "b"}),
+			true,
+			nil,
+		),
+		Entry("explicit control plane zones — multiple seeds, only one has all zones → returns matching seed",
+			[]gardencorev1beta1.Seed{
+				makeSeed("full", []string{"a", "b", "c"}, ""),
+				makeSeed("partial", []string{"a"}, ""),
+			},
+			makeShootWithControlPlaneZones([]string{"a", "b"}),
+			false,
+			[]string{"full"},
+		),
+		Entry("explicit control plane zones — Enforce/Prefer modes ignored (strict containment applies instead)",
+			[]gardencorev1beta1.Seed{
+				makeSeed("enforce-full", []string{"a", "b"}, gardencorev1beta1.ZoneSelectionModeEnforce),
+				makeSeed("prefer-partial", []string{"a"}, gardencorev1beta1.ZoneSelectionModePrefer),
+			},
+			makeShootWithControlPlaneZones([]string{"a", "b"}),
+			false,
+			[]string{"enforce-full"},
+		),
 	)
+})
+
+var _ = Describe("controlPlaneZoneHints", func() {
+	It("should return worker zones when ControlPlane is nil", func() {
+		shoot := &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{{Name: "w", Zones: []string{"a", "b"}}},
+				},
+			},
+		}
+		zones, explicit := controlPlaneZoneHints(shoot)
+		Expect(explicit).To(BeFalse())
+		Expect(zones).To(ConsistOf("a", "b"))
+	})
+
+	It("should return worker zones when ControlPlane has no zones", func() {
+		shoot := &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				ControlPlane: &gardencorev1beta1.ControlPlane{},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{{Name: "w", Zones: []string{"a"}}},
+				},
+			},
+		}
+		zones, explicit := controlPlaneZoneHints(shoot)
+		Expect(explicit).To(BeFalse())
+		Expect(zones).To(ConsistOf("a"))
+	})
+
+	It("should return explicit zones when ControlPlane.Zones is set", func() {
+		shoot := &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				ControlPlane: &gardencorev1beta1.ControlPlane{Zones: []string{"x", "y"}},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{{Name: "w", Zones: []string{"a"}}},
+				},
+			},
+		}
+		zones, explicit := controlPlaneZoneHints(shoot)
+		Expect(explicit).To(BeTrue())
+		Expect(zones).To(Equal([]string{"x", "y"}))
+	})
 })
