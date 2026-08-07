@@ -42,6 +42,13 @@ var _ = Describe("Options", func() {
 		It("should fail when no token is provided", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a token")))
 		})
+
+		It("should fail when a negative timeout is provided", func() {
+			options.Token = "some-token"
+			options.Timeout = -1
+
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a timeout >= 0")))
+		})
 	})
 
 	Describe("#Complete", func() {

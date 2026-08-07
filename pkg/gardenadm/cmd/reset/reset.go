@@ -5,11 +5,23 @@
 package reset
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"math"
+	"time"
 
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
 	"github.com/spf13/cobra"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesinformers "k8s.io/client-go/informers"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/nodeagent"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -50,6 +62,98 @@ gardenadm reset --token <token> --ca-certificate <ca-cert> <control-plane-addres
 	return cmd
 }
 
-func run(_ context.Context, _ *Options) error {
+func run(ctx context.Context, opts *Options) error {
+	b, err := botanist.NewGardenadmBotanistWithoutResources(opts.Log)
+	if err != nil {
+		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
+	}
+
+	bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.Token, kubernetes.SeedScheme)
+	if err != nil {
+		return fmt.Errorf("failed creating a new bootstrap client set: %w", err)
+	}
+	version, err := b.DiscoverKubernetesVersion(bootstrapClientSet)
+	if err != nil {
+		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
+	}
+	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version, ControlPlaneNamespace: metav1.NamespaceSystem}
+	b.Shoot.SetInfo(nil)
+
+	b.Logger.Info("Retrieving short-lived shoot cluster kubeconfig via token")
+	b.ShootClientSet, err = cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
+	if err != nil {
+		return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
+	}
+	b.Logger.Info("Successfully retrieved short-lived kubeconfig")
+
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
+	if err != nil {
+		return fmt.Errorf("failed retrieving node for hostname %s: %w", b.HostName, err)
+	} else if node == nil {
+		return fmt.Errorf("no node found for hostname %s", b.HostName)
+	}
+
+	b.Logger.Info("Cordoning and draining node", "node", node.Name)
+	if err := cordonAndDrainNode(ctx, b, node.Name, opts); err != nil {
+		return fmt.Errorf("failed cordoning and draining node %s: %w", node.Name, err)
+	}
+
+	// TODO(scheererj): If node is a control plane node, remove its machine IP from the Etcd's
+	// .spec.externallyManagedMemberAddresses[], decrease .spec.replicas, and wait for reconciliation
+
+	b.Logger.Info("Deleting node from cluster", "node", node.Name)
+	if err := b.ShootClientSet.Client().Delete(ctx, node); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
+	}
+
+	return nil
+}
+
+func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
+	informerFactory := kubernetesinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
+	pdbLister := informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
+	podLister := informerFactory.Core().V1().Pods().Lister()
+	podsHaveSynced := informerFactory.Core().V1().Pods().Informer().HasSynced
+	synced := informerFactory.WaitForCacheSyncWithContext(ctx)
+	if err := synced.AsError(); err != nil {
+		return fmt.Errorf("failed waiting for informer cache to sync: %w", err)
+	}
+	for k, v := range synced.Synced {
+		// Only if desired log some information similar to this.
+		b.Logger.Info(fmt.Sprintf("Cache synced: %s=>%t", k, v))
+	}
+	informerFactory.StartWithContext(ctx)
+
+	buf := bytes.NewBuffer([]byte{})
+	errBuf := bytes.NewBuffer([]byte{})
+	d := drain.NewDrainOptions(
+		b.ShootClientSet.Kubernetes(),
+		b.Shoot.KubernetesVersion,
+		opts.Timeout,
+		math.MaxInt32,
+		0,
+		0,
+		nodeName,
+		0,
+		true,
+		true,
+		true,
+		true,
+		buf,
+		errBuf,
+		nil,
+		nil,
+		nil,
+		pdbLister,
+		nil,
+		podLister,
+		nil,
+		podsHaveSynced,
+	)
+
+	if err := d.RunDrain(ctx); err != nil {
+		return fmt.Errorf("failed to drain node %s: %w", nodeName, err)
+	}
+
 	return nil
 }
