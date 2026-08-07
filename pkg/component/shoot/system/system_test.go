@@ -593,12 +593,22 @@ var _ = Describe("ShootSystem", func() {
 							{
 								APIGroups: []string{""},
 								Resources: []string{"nodes"},
-								Verbs:     []string{"get", "list", "watch"},
+								Verbs:     []string{"get", "list", "watch", "patch", "update", "delete"},
 							},
 							{
 								APIGroups: []string{""},
 								Resources: []string{"secrets"},
 								Verbs:     []string{"get", "list", "watch", "create", "patch", "update"},
+							},
+							{
+								APIGroups: []string{""},
+								Resources: []string{"pods"},
+								Verbs:     []string{"get", "list", "watch", "delete", "patch", "update"},
+							},
+							{
+								APIGroups: []string{"policy"},
+								Resources: []string{"poddisruptionbudgets"},
+								Verbs:     []string{"get", "list", "watch"},
 							},
 						},
 					}
