@@ -630,6 +630,41 @@ var _ = Describe("utils", func() {
 			})),
 			))
 		})
+
+		// Regression for the "overlapping pods/services accepted at CREATE" bug.
+		//
+		// When a shoot is created without spec.networking.services (leaving it to
+		// be defaulted from the seed's spec.networks.shootDefaults.services), the
+		// disjointedness check receives services=nil and silently passes — even
+		// though the user-supplied pods CIDR overlaps the value services will be
+		// defaulted to. The invalid overlap is only detected much later, when the
+		// shoot is scheduled and services is finally populated, by which point the
+		// invalid spec is already persisted and (because networking is immutable)
+		// unrecoverable without deleting the shoot.
+		//
+		// This test documents the current (buggy) behaviour: the overlap is NOT
+		// reported when services is nil. It should FAIL once the bug is fixed —
+		// e.g. by validating the shoot pods CIDR against the resolvable seed
+		// services default at CREATE time.
+		It("RC2: does NOT catch pods/services overlap when services is nil at CREATE (bug)", func() {
+			var (
+				nodesCIDR = "10.241.0.0/16"
+				podsCIDR  = "10.242.0.0/16"
+				// servicesCIDR is intentionally nil: the user did not set it, and
+				// the seed will later default it to a value inside podsCIDR
+				// (e.g. 10.242.128.0/17), which overlaps.
+			)
+
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				nil,
+			)
+
+			// BUG: no error is reported, so the overlapping spec is accepted.
+			Expect(errorList).To(BeEmpty())
+		})
 	})
 
 	Describe("#ValidateShootNetworkDisjointedness IPv6", func() {
