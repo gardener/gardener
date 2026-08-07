@@ -33,7 +33,6 @@ import (
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	calicoselfhostedshootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/calicoselfhostedshoot"
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
-	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
 	rolloutspeedupwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/rolloutspeedup"
@@ -67,7 +66,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
 		extensionscmdwebhook.Switch(rolloutspeedupwebhook.WebhookName, rolloutspeedupwebhook.AddToManager),
 		extensionscmdwebhook.Switch(calicoselfhostedshootwebhook.WebhookName, calicoselfhostedshootwebhook.AddToManager),
-		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
 		extensionscmdwebhook.Switch(prometheuswebhook.WebhookName, prometheuswebhook.AddToManager),
 	)
