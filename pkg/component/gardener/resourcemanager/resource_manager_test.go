@@ -457,12 +457,12 @@ var _ = Describe("ResourceManager", func() {
 						Enabled: false,
 					},
 					NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
-						Enabled:                true,
+						Enabled:                !isWorkerless,
 						AuthorizeWithSelectors: new(true),
 						MachineNamespace:       cfg.MachineNamespace,
 					},
 					VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceUpdatesConfig{
-						Enabled: true,
+						Enabled: !isWorkerless,
 					},
 				},
 			}
@@ -1279,11 +1279,11 @@ metadata:
   labels:
     app: gardener-resource-manager
   name: gardener-resource-manager-shoot
-  namespace: fake-ns
-webhooks:`
+  namespace: fake-ns`
 
 			if !cfg.IsWorkerless {
 				out += `
+webhooks:
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -1580,7 +1580,8 @@ webhooks:`
   sideEffects: None
   timeoutSeconds: 10`
 			}
-			out += `
+			if !cfg.IsWorkerless {
+				out += `
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -1614,6 +1615,7 @@ webhooks:`
   sideEffects: None
   timeoutSeconds: 10
 `
+			}
 			return out
 		}
 
@@ -2532,6 +2534,20 @@ subjects:
 				actualConfigMap.ResourceVersion = ""
 				configMap.ResourceVersion = ""
 				Expect(actualConfigMap).To(DeepEqual(configMap))
+
+				By("verify that all workerless-disabled webhooks are turned off in the component config")
+				actualConfig := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
+				Expect(runtime.DecodeInto(codec, []byte(actualConfigMap.Data["config.yaml"]), actualConfig)).To(Succeed())
+				Expect(actualConfig.Webhooks.PodSchedulerName.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.SystemComponentsConfig.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.ProjectedTokenMount.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.HighAvailabilityConfig.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.PodTopologySpreadConstraints.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.SeccompProfile.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.KubernetesServiceHost.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.PodKubeAPIServerLoadBalancing.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.VPAInPlaceUpdates.Enabled).To(BeFalse())
+				Expect(actualConfig.Webhooks.NodeAgentAuthorizer.Enabled).To(BeFalse())
 
 				actualClusterRole := &rbacv1.ClusterRole{}
 				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: clusterRoleName}, actualClusterRole)).To(Succeed())
