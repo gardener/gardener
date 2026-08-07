@@ -43,7 +43,7 @@ var (
 	}
 )
 
-var _ = ginkgo.Describe("Seed logging testing", func() {
+var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 	shootFramework := framework.NewShootFramework(nil)
 
