@@ -5,6 +5,8 @@
 package logrotate
 
 import (
+	"strings"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -24,6 +26,10 @@ import (
 // which can cause spikes on the storage backend.
 // For more context, see https://github.com/gardener/gardener/issues/15149.
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
+	// Derive the pod log directory by stripping the glob suffix from pathLogFiles.
+	// e.g. "/var/log/pods/*/*/*.log" -> "/var/log/pods"
+	podLogDir := strings.TrimRight(strings.SplitN(pathLogFiles, "*", 2)[0], "/")
+
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
 		Permissions: new(uint32(0644)),
@@ -53,7 +59,7 @@ StartLimitBurst=5
 StartLimitIntervalSec=30
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
-ExecStartPost=/bin/sh -c 'find /var/log/pods -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d /var/log/pods ]'
+ExecStartPost=/bin/sh -c 'find ` + podLogDir + ` -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d ` + podLogDir + ` ]'
 Restart=on-failure
 RestartSec=5
 [Install]

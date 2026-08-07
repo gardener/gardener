@@ -29,6 +29,8 @@ var _ = Describe("Logrotate", func() {
 				pathLogFiles.WriteString(containerd.ContainerRuntime)
 				pathLogFiles.WriteString("/*.log")
 
+				podLogDir := "/var/log/" + containerd.ContainerRuntime
+
 				units, files := logrotate.Config(pathConfig, pathLogFiles.String(), prefix)
 
 				serviceUnit := extensionsv1alpha1.Unit{
@@ -40,7 +42,7 @@ StartLimitBurst=5
 StartLimitIntervalSec=30
 [Service]
 ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
-ExecStartPost=/bin/sh -c 'find /var/log/pods -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d /var/log/pods ]'
+ExecStartPost=/bin/sh -c 'find ` + podLogDir + ` -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d ` + podLogDir + ` ]'
 Restart=on-failure
 RestartSec=5
 [Install]
