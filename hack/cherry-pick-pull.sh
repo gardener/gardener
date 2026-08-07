@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # This file was copied from the kubernetes/kubernetes project
-# https://github.com/kubernetes/kubernetes/blob/v1.20.0/hack/cherry_pick_pull.sh
+# https://github.com/kubernetes/kubernetes/blob/v1.36.3/hack/cherry_pick_pull.sh
 #
 # Modifications Copyright SAP SE or an SAP affiliate company and Gardener contributors
 
