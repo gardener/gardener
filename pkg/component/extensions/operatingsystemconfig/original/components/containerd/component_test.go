@@ -36,12 +36,13 @@ var _ = Describe("Component", func() {
 				Enable: new(true),
 				Content: new(`[Unit]
 Description=Rotate and Compress System Logs
-[Service]
-ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
-Restart=on-failure
-RestartSec=5
 StartLimitBurst=5
 StartLimitIntervalSec=30
+[Service]
+ExecStart=/usr/sbin/logrotate -s /var/lib/containerd-logrotate.status /etc/systemd/containerd.conf
+ExecStartPost=/bin/sh -c 'find /var/log/pods -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d /var/log/pods ]'
+Restart=on-failure
+RestartSec=5
 [Install]
 WantedBy=multi-user.target`),
 				FilePaths: []string{"/etc/systemd/containerd.conf"},
@@ -82,7 +83,6 @@ const logRotateData = `/var/log/pods/*/*/*.log {
     rotate 14
     copytruncate
     missingok
-    notifempty
     compress
     daily
     dateext
