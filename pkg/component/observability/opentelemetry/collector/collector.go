@@ -430,6 +430,17 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							"limit_mib":       3000,
 							"spike_limit_mib": 600,
 						},
+						// VictoriaLogs merges resource attributes and log record attributes into stream tags.
+						// If host.name appears in both, it produces a duplicate stream tag which causes a panic.
+						// Delete it from log record attributes so it only exists at resource level.
+						"attributes/victorialogs": map[string]any{
+							"actions": []any{
+								map[string]any{
+									"key":    "host.name",
+									"action": "delete",
+								},
+							},
+						},
 						"resource/vali": map[string]any{
 							"attributes": []any{
 								map[string]any{
@@ -584,6 +595,8 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				"otlp",
 			},
 			Processors: []string{
+				"memory_limiter",
+				"attributes/victorialogs",
 				"batch",
 			},
 		}
