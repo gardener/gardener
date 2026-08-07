@@ -286,7 +286,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
-			Expect(result.RequeueAfter).To(BeNumerically("~", firstExpiryDate.Sub(time.Now()), time.Second))
+			Expect(result.RequeueAfter).To(BeNumerically("~", time.Until(firstExpiryDate.Time), time.Second))
 			Expect(err).ToNot(HaveOccurred())
 
 			updated := &gardencorev1beta1.NamespacedCloudProfile{}
@@ -509,7 +509,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}))
 		})
 
-		It("should merge Kubernetes version Lifecycles classification startTimes correctly and use base starttime when overrride starttime nil", func() {
+		It("should merge Kubernetes version Lifecycles classification startTimes correctly and use base starttime when override starttime nil", func() {
 			cloudProfileDeprecatedDate := metav1.NewTime(newExpiryDate.Add(12 * time.Hour))
 			cloudProfileExpiredDate := metav1.NewTime(newExpiryDate.Add(24 * time.Hour))
 
