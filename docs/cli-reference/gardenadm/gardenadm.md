@@ -17,6 +17,7 @@ gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener proj
 * [gardenadm discover](gardenadm_discover.md)	 - Conveniently download Gardener configuration resources from an existing garden cluster
 * [gardenadm init](gardenadm_init.md)	 - Bootstrap the first control plane node
 * [gardenadm join](gardenadm_join.md)	 - Bootstrap control plane or worker nodes and join them to the cluster
+* [gardenadm reset](gardenadm_reset.md)	 - Reset control plane or worker nodes and remove them from the cluster
 * [gardenadm token](gardenadm_token.md)	 - Manage bootstrap and discovery tokens for gardenadm join
 * [gardenadm version](gardenadm_version.md)	 - Print the client version information
 

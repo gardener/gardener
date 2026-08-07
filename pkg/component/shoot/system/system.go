@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -534,12 +535,22 @@ func (s *shootSystem) selfHostedShootResources() []client.Object {
 				{
 					APIGroups: []string{corev1.SchemeGroupVersion.Group},
 					Resources: []string{"nodes"},
-					Verbs:     []string{"get", "list", "watch"},
+					Verbs:     []string{"get", "list", "watch", "patch", "update", "delete"},
 				},
 				{
 					APIGroups: []string{corev1.SchemeGroupVersion.Group},
 					Resources: []string{"secrets"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "update"},
+				},
+				{
+					APIGroups: []string{corev1.SchemeGroupVersion.Group},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get", "list", "watch", "delete", "patch", "update"},
+				},
+				{
+					APIGroups: []string{policyv1.SchemeGroupVersion.Group},
+					Resources: []string{"poddisruptionbudgets"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}
