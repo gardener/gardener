@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -31,7 +32,7 @@ const (
 	dataKeySessionSecret         = "sessionSecret"
 	dataKeySessionSecretPrevious = "sessionSecretPrevious"
 
-	portNameServer  = "http"
+	portNameServer  = "https"
 	portNameMetrics = "metrics"
 
 	portServer  = 8080
@@ -49,6 +50,7 @@ const (
 	volumeMountPathSessionPrevious = "/etc/gardener-dashboard/secrets/session/sessionSecretPrevious"
 	volumeMountPathOIDC            = "/etc/gardener-dashboard/secrets/oidc"
 	volumeMountPathGithub          = "/etc/gardener-dashboard/secrets/github"
+	volumeMountPathTLS             = "/etc/gardener-dashboard/secrets/tls"
 
 	volumeNameConfig          = "gardener-dashboard-config"
 	volumeNameLoginConfig     = "gardener-dashboard-login-config"
@@ -57,6 +59,7 @@ const (
 	volumeNameSessionPrevious = "gardener-dashboard-sessionsecret-previous"
 	volumeNameOIDC            = "gardener-dashboard-oidc"
 	volumeNameGithub          = "gardener-dashboard-github"
+	volumeNameTLS             = "gardener-dashboard-tls"
 )
 
 func (g *gardenerDashboard) deployment(
@@ -65,6 +68,7 @@ func (g *gardenerDashboard) deployment(
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
 	secretSessionPrevious *corev1.Secret,
+	secretNameServerCert string,
 	configMapName string,
 ) (
 	*appsv1.Deployment,
@@ -178,7 +182,7 @@ func (g *gardenerDashboard) deployment(
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
 										Port:   intstr.FromString(portNameServer),
-										Scheme: corev1.URISchemeHTTP,
+										Scheme: corev1.URISchemeHTTPS,
 									},
 								},
 								InitialDelaySeconds: 5,
@@ -204,6 +208,11 @@ func (g *gardenerDashboard) deployment(
 									Name:      volumeNameLoginConfig,
 									MountPath: volumeMountPathLoginConfig,
 									SubPath:   dataKeyLoginConfig,
+								},
+								{
+									Name:      volumeNameTLS,
+									MountPath: volumeMountPathTLS,
+									ReadOnly:  true,
 								},
 							},
 						},
@@ -243,6 +252,15 @@ func (g *gardenerDashboard) deployment(
 										Key:  dataKeyLoginConfig,
 										Path: dataKeyLoginConfig,
 									}},
+								},
+							},
+						},
+						{
+							Name: volumeNameTLS,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameServerCert,
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
