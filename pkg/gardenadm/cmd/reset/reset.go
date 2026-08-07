@@ -7,20 +7,24 @@ package reset
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesinformers "k8s.io/client-go/informers"
 	criclient "k8s.io/cri-client/pkg"
+	"sigs.k8s.io/yaml"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -112,6 +116,10 @@ func run(ctx context.Context, opts *Options) error {
 
 	if err := stopContainers(ctx, b, node); err != nil {
 		return fmt.Errorf("failed stopping containers: %w", err)
+	}
+
+	if err := cleanUpOperatingSystemConfig(ctx, b, node); err != nil {
+		return fmt.Errorf("failed cleaning up operating system config: %w", err)
 	}
 
 	return nil
@@ -217,6 +225,48 @@ func stopContainers(ctx context.Context, b *botanist.GardenadmBotanist, node *co
 
 	if len(errs) > 0 {
 		return fmt.Errorf("Failed stopping some pods: %w", errors.Join(errs...))
+	}
+
+	return nil
+}
+
+func cleanUpOperatingSystemConfig(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) error {
+	b.Logger.Info("Checking last-applied OperatingSystemConfig for cleanup")
+	oscFileContent, err := b.FS.ReadFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath)
+	if err != nil {
+		if errors.Is(err, afero.ErrFileNotFound) {
+			b.Logger.Info("No last-applied OperatingSystemConfig found, skipping cleanup")
+			return nil
+		}
+		return fmt.Errorf("cannot read last-applied OperatingSystemConfig: %w", err)
+	}
+
+	var osc v1alpha1.OperatingSystemConfig
+	if err := yaml.Unmarshal(oscFileContent, &osc); err != nil {
+		return fmt.Errorf("cannot parse OperatingSystemConfig YAML: %w", err)
+	}
+
+	var errs []error
+	b.Logger.Info("Stopping systemd units")
+	for _, unit := range append(osc.Spec.Units, osc.Status.ExtensionUnits...) {
+		b.Logger.Info("Stopping systemd unit", "unit", unit.Name)
+		if err := b.DBus.Stop(ctx, nil, node, unit.Name); err != nil {
+			errs = append(errs, err)
+			b.Logger.Error(err, "Failed to stop unit", "unit", unit.Name)
+		}
+	}
+
+	b.Logger.Info("Removing installed files")
+	for _, file := range append(osc.Spec.Files, osc.Status.ExtensionFiles...) {
+		b.Logger.Info("Removing file", "path", file.Path)
+		if err := b.FS.Remove(file.Path); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+			errs = append(errs, err)
+			b.Logger.Error(err, "Failed to remove file", "path", file.Path)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("failed cleaning up OperatingSystemConfig: %w", errors.Join(errs...))
 	}
 
 	return nil
