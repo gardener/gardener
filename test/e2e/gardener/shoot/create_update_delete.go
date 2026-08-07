@@ -46,7 +46,7 @@ const (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Update, Delete", Label("simple"), func() {
-		test := func(s *ShootContext, withInPlaceUpdatePools bool) {
+		test := func(s *ShootContext, withInPlaceUpdatePools, testBastionAndExposureClass, testMaintenanceAnnotation bool) {
 			BeforeTestSetup(func() {
 				s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 					Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
@@ -132,7 +132,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}, SpecTimeout(time.Minute))
 
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
-				bastion.VerifyBastion(s)
+				if testBastionAndExposureClass {
+					bastion.VerifyBastion(s)
+				}
 			}
 
 			zeroDowntimeValidatorJob := &zerodowntimevalidator.Job{}
@@ -234,47 +236,51 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
 			}
 
-			exposureclass.VerifyExposureClassSwitch(s, ItShouldWaitForShootToBeReconciledAndHealthy)
+			if testBastionAndExposureClass {
+				exposureclass.VerifyExposureClassSwitch(s, ItShouldWaitForShootToBeReconciledAndHealthy)
+			}
 
-			ItShouldAnnotateShoot(s, map[string]string{
-				"shoot.gardener.cloud/skip-readiness": "",
-				"gardener.cloud/operation":            "maintain",
-			})
+			if testMaintenanceAnnotation {
+				ItShouldAnnotateShoot(s, map[string]string{
+					"shoot.gardener.cloud/skip-readiness": "",
+					"gardener.cloud/operation":            "maintain",
+				})
 
-			It("Wait for operation annotation to be gone (meaning controller picked up reconciliation request)", func(ctx SpecContext) {
-				Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
-					HaveField("Annotations", Not(HaveKey("gardener.cloud/operation"))),
-				)
-			}, SpecTimeout(time.Minute))
+				It("Wait for operation annotation to be gone (meaning controller picked up reconciliation request)", func(ctx SpecContext) {
+					Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+						HaveField("Annotations", Not(HaveKey("gardener.cloud/operation"))),
+					)
+				}, SpecTimeout(time.Minute))
 
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
+				ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
-			It("Wait for skip-readiness annotation to be gone", func(ctx SpecContext) {
-				Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
-					HaveField("Annotations", Not(HaveKey("shoot.gardener.cloud/skip-readiness"))),
-				)
-			}, SpecTimeout(time.Minute))
+				It("Wait for skip-readiness annotation to be gone", func(ctx SpecContext) {
+					Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+						HaveField("Annotations", Not(HaveKey("shoot.gardener.cloud/skip-readiness"))),
+					)
+				}, SpecTimeout(time.Minute))
+			}
 
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")), false)
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")), false, true, true)
 		})
 
 		Context("Shoot with only in-place workers", Label("basic", "in-place"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-inplace")), true)
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-inplace")), true, false, false)
 		})
 
 		Context("Shoot with workers and layer 4 load balancing", Ordered, Label("basic"), func() {
 			shoot := DefaultShoot("e2e-layer4-lb")
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
-			test(NewTestContext().ForShoot(shoot), false)
+			test(NewTestContext().ForShoot(shoot), false, true, false)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")), false)
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")), false, false, true)
 		})
 	})
 })
