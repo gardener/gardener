@@ -28,6 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -201,9 +202,13 @@ var (
 )
 
 // mergeExpirableVersions merges one parent ExpirableVersion with a NamespacedCloudProfile override.
-// Old classification and ExpirationDate fields are first migrated to lifecycle classifications so
-// old classifications can be merged with lifecycle classifications from parent data.
+// Old classification fields are kept while lifecycle classifications are disabled; otherwise,
+// old classification fields are migrated so they can merge with lifecycle classifications.
 func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
+	if !features.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
+		return mergeOldClassificationFields(base, override)
+	}
+
 	migratedBase := migrateVersionToLifecycles(base)
 	migratedOverride := migrateVersionToLifecycles(override)
 
@@ -225,6 +230,19 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 	adjustLifecycleStartTimes(migratedBase.Lifecycle, migratedOverride.Lifecycle)
 
 	return migratedBase
+}
+
+// mergeOldClassificationFields merges old classification fields without producing lifecycle classifications.
+// This is required while VersionClassificationLifecycle is disabled because lifecycle is rejected by API validation.
+func mergeOldClassificationFields(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
+	base.Lifecycle = nil
+	if override.Classification != nil {
+		base.Classification = override.Classification
+	}
+	if override.ExpirationDate != nil {
+		base.ExpirationDate = override.ExpirationDate
+	}
+	return base
 }
 
 // removeImplicitLaterLifecycleClassifications removes implicit no-start lifecycle classifications that are later than the
