@@ -957,6 +957,7 @@ deploy:
           replicaCount: 2
           config.featureGates.PrometheusHealthChecks: true
           config.featureGates.VictoriaLogsBackend: true
+          config.featureGates.GardenerMetricsCollector: true
           config.controllers.garden.etcdConfig.featureGates.UpgradeEtcdVersion: true
         createNamespace: true
         wait: true

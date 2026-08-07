@@ -1131,7 +1131,13 @@ func (r *Reconciler) newGardenerMetricsCollector(secretsManager secretsmanager.I
 		return nil, err
 	}
 
-	return gardenermetricscollector.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricscollector.Values{Image: image.String()}), nil
+	deployer := gardenermetricscollector.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricscollector.Values{Image: image.String()})
+
+	if !features.DefaultFeatureGate.Enabled(features.GardenerMetricsCollector) {
+		return component.OpDestroyAndWait(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newPlutono(
