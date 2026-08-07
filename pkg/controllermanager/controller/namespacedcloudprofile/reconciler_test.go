@@ -115,7 +115,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}).
 			Build()
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -659,7 +659,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}).
 					Build()
-				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 				ncp := namespacedCloudProfile.DeepCopy()
 				ncp.Finalizers = []string{finalizerName}
@@ -692,7 +692,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}).
 					Build()
-				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 				Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
@@ -955,7 +955,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					core.NamespacedCloudProfileParentRefName,
 					indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 				).Build()
-			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 			namespaceName = "garden-test"
 
