@@ -76,6 +76,12 @@ func IsPodDisrupted(conditions []corev1.PodCondition) bool {
 	})
 }
 
+// IsPodTerminal returns true when the pod is in a terminal phase (Succeeded or Failed), i.e. all of its containers
+// have terminated and will not be restarted.
+func IsPodTerminal(phase corev1.PodPhase) bool {
+	return phase == corev1.PodSucceeded || phase == corev1.PodFailed
+}
+
 // IsPodCompleted returns true when the pod ready condition indicates completeness.
 func IsPodCompleted(conditions []corev1.PodCondition) bool {
 	return slices.ContainsFunc(conditions, func(condition corev1.PodCondition) bool {
