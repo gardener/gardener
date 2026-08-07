@@ -51,6 +51,7 @@ const (
 	ingressHost                     = "otel.foo.bar"
 	managedResourceNameTarget       = "logging-target"
 	managedResourceSecretNameTarget = "managedresource-logging-target"
+	kubeRBACProxyImage              = "kube-rbac-proxy:latest"
 )
 
 var _ = Describe("OpenTelemetry Collector", func() {
@@ -60,7 +61,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		image                                       = "some-image:some-tag"
 		lokiEndpoint                                = "logging"
 		genericTokenKubeconfigSecretName            = "generic-token-kubeconfig"
-		kubeRBACProxyImage                          = "kube-rbac-proxy:latest"
 		kubeRBACProxyShootAccessSecretName          = "shoot-access-rbac-proxy"
 		opentelemetryCollectorShootAccessSecretName = "shoot-access-opentelemetry-collector"
 		values                                      Values
@@ -191,68 +191,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			AutomountServiceAccountToken: new(false),
 		}
 
-		kubeRBACProxyValiContainer = corev1.Container{
-			Name:  "rbac-proxy-vali",
-			Image: kubeRBACProxyImage,
-			Args: []string{
-				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-				"--logtostderr=true",
-				"--v=6",
-				"--secure-listen-address=[::]:8081",
-				"--upstream=http://logging:3100/",
-				"--tls-cert-file=/tls/tls.crt",
-				"--tls-private-key-file=/tls/tls.key",
-			},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("5m"),
-					corev1.ResourceMemory: resource.MustParse("30Mi"),
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: new(false),
-				RunAsUser:                new(int64(65532)),
-				RunAsGroup:               new(int64(65534)),
-				RunAsNonRoot:             new(true),
-				ReadOnlyRootFilesystem:   new(true),
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				volumeMount,
-				{Name: "tlsCertificateVolumeName", MountPath: "/tls", ReadOnly: true},
-			},
-		}
-
-		kubeRBACProxyOTLPContainer = corev1.Container{
-			Name:  "rbac-proxy-otlp",
-			Image: kubeRBACProxyImage,
-			Args: []string{
-				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-				"--logtostderr=true",
-				"--v=6",
-				"--secure-listen-address=[::]:8080",
-				"--upstream=http://127.0.0.1:4317/",
-				"--upstream-force-h2c",
-				"--tls-cert-file=/tls/tls.crt",
-				"--tls-private-key-file=/tls/tls.key",
-			},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("5m"),
-					corev1.ResourceMemory: resource.MustParse("30Mi"),
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: new(false),
-				RunAsUser:                new(int64(65532)),
-				RunAsGroup:               new(int64(65534)),
-				RunAsNonRoot:             new(true),
-				ReadOnlyRootFilesystem:   new(true),
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				volumeMount,
-				{Name: "tlsCertificateVolumeName", MountPath: "/tls", ReadOnly: true},
-			},
-		}
+		kubeRBACProxyValiContainer = getSecureValiKubeRBACContainer(volumeMount)
+		kubeRBACProxyOTLPContainer = getSecureOtlpKubeRBACContainer(volumeMount)
 
 		allowedMetrics := []string{
 			"otelcol_exporter_enqueue_failed_log_records",
@@ -569,7 +509,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
 		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume, {
-			Name: "tlsCertificateVolumeName",
+			Name: "tls-certificate",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: "logging-tls",
@@ -828,6 +768,67 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				vpa,
 				serviceMonitor,
 				serviceAccount,
+			))
+		})
+
+		It("should create kubeRBACProxy with insecure listen and no tls volumes when TLS secret is not installed", func() {
+			values.ClusterType = "seed"
+			values.ShootNodeLoggingEnabled = false
+			component = New(c, namespace, values, fakeSecretManager)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+			// Extract the OpenTelemetryCollector from the managed resource and verify insecure proxy args and no TLS volume
+			seedVolumeMount := corev1.VolumeMount{
+				Name:      "kubeconfig",
+				MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+				ReadOnly:  true,
+			}
+
+			seedCollector := openTelemetryCollector.DeepCopy()
+			seedCollector.Spec.AdditionalContainers = []corev1.Container{getInsecureValiKubeRBACContainer(seedVolumeMount), getInsecureOtlpKubeRBACContainer(seedVolumeMount)}
+			// Only the kubeconfig volume — no TLS volume
+			seedCollector.Spec.Volumes = []corev1.Volume{{
+				Name: "kubeconfig",
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: new(int32(420)),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: ""},
+									Items:                []corev1.KeyToPath{{Key: secrets.DataKeyKubeconfig, Path: secrets.DataKeyKubeconfig}},
+									Optional:             new(false),
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-rbac-proxy"},
+									Items:                []corev1.KeyToPath{{Key: resourcesv1alpha1.DataKeyToken, Path: resourcesv1alpha1.DataKeyToken}},
+									Optional:             new(false),
+								},
+							},
+						},
+					},
+				},
+			}}
+			seedCollector.Annotations = map[string]string{
+				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
+					v1beta1constants.LabelNetworkPolicySeedScrapeTargets +
+					resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
+			}
+			metav1.SetMetaDataLabel(&seedCollector.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
+
+			seedServiceMonitor := serviceMonitor.DeepCopy()
+			seedServiceMonitor.Name = "seed-opentelemetry-collector"
+			seedServiceMonitor.Labels = map[string]string{"prometheus": "seed"}
+
+			Expect(customResourcesManagedResource).To(consistOf(
+				seedCollector,
+				seedServiceMonitor,
+				serviceAccount,
+				vpa,
 			))
 		})
 	})
@@ -1148,5 +1149,129 @@ func getLabels() map[string]string {
 		gardenerutils.NetworkPolicyLabel("logging-vl", 9428): "allowed",
 		v1beta1constants.LabelNetworkPolicyToDNS:             "allowed",
 		v1beta1constants.LabelObservabilityApplication:       "opentelemetry-collector",
+	}
+}
+
+func getInsecureValiKubeRBACContainer(volumeMount corev1.VolumeMount) corev1.Container {
+	return corev1.Container{
+		Name:  "rbac-proxy-vali",
+		Image: kubeRBACProxyImage,
+		Args: []string{
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--logtostderr=true",
+			"--v=6",
+			"--insecure-listen-address=[::]:8081",
+			"--upstream=http://logging:3100/",
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("5m"),
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: new(false),
+			RunAsUser:                new(int64(65532)),
+			RunAsGroup:               new(int64(65534)),
+			RunAsNonRoot:             new(true),
+			ReadOnlyRootFilesystem:   new(true),
+		},
+		VolumeMounts: []corev1.VolumeMount{volumeMount},
+	}
+}
+
+func getInsecureOtlpKubeRBACContainer(volumeMount corev1.VolumeMount) corev1.Container {
+	return corev1.Container{
+		Name:  "rbac-proxy-otlp",
+		Image: kubeRBACProxyImage,
+		Args: []string{
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--logtostderr=true",
+			"--v=6",
+			"--insecure-listen-address=[::]:8080",
+			"--upstream=http://127.0.0.1:4317/",
+			"--upstream-force-h2c",
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("5m"),
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: new(false),
+			RunAsUser:                new(int64(65532)),
+			RunAsGroup:               new(int64(65534)),
+			RunAsNonRoot:             new(true),
+			ReadOnlyRootFilesystem:   new(true),
+		},
+		VolumeMounts: []corev1.VolumeMount{volumeMount},
+	}
+}
+
+func getSecureValiKubeRBACContainer(volumeMount corev1.VolumeMount) corev1.Container {
+	return corev1.Container{
+		Name:  "rbac-proxy-vali",
+		Image: kubeRBACProxyImage,
+		Args: []string{
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--logtostderr=true",
+			"--v=6",
+			"--secure-listen-address=[::]:8081",
+			"--upstream=http://logging:3100/",
+			"--tls-cert-file=/tls/tls.crt",
+			"--tls-private-key-file=/tls/tls.key",
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("5m"),
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: new(false),
+			RunAsUser:                new(int64(65532)),
+			RunAsGroup:               new(int64(65534)),
+			RunAsNonRoot:             new(true),
+			ReadOnlyRootFilesystem:   new(true),
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			volumeMount,
+			{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
+		},
+	}
+}
+
+func getSecureOtlpKubeRBACContainer(volumeMount corev1.VolumeMount) corev1.Container {
+	return corev1.Container{
+		Name:  "rbac-proxy-otlp",
+		Image: kubeRBACProxyImage,
+		Args: []string{
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--logtostderr=true",
+			"--v=6",
+			"--secure-listen-address=[::]:8080",
+			"--upstream=http://127.0.0.1:4317/",
+			"--upstream-force-h2c",
+			"--tls-cert-file=/tls/tls.crt",
+			"--tls-private-key-file=/tls/tls.key",
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("5m"),
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: new(false),
+			RunAsUser:                new(int64(65532)),
+			RunAsGroup:               new(int64(65534)),
+			RunAsNonRoot:             new(true),
+			ReadOnlyRootFilesystem:   new(true),
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			volumeMount,
+			{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
+		},
 	}
 }

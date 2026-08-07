@@ -53,8 +53,8 @@ const (
 
 	kubeRBACProxyName = "rbac-proxy"
 
-	tlsMountPath       = "/tls"
-	tlsCertificateName = "tlsCertificateVolumeName"
+	tlsMountPath             = "/tls"
+	tlsCertificateVolumeName = "tls-certificate"
 
 	metricsPort                    = 8888
 	timeoutWaitForManagedResources = 2 * time.Minute
@@ -617,6 +617,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		if ingressTLSSecret != nil {
 			o.injectSecureRBACProxy(obj, ingressTLSSecret, genericTokenKubeconfigSecretName)
 		} else {
+			// no tls => no istio => assume another type of network policies were configured
 			o.injectInsecureRBACProxy(obj, genericTokenKubeconfigSecretName)
 		}
 	}
@@ -700,11 +701,11 @@ func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryColl
 	o.injectRBACProxyContainers(obj, o.secureValiRBACProxyArgs(), o.secureOTLPRBACProxyArgs())
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
-	tlsVolumeMount := corev1.VolumeMount{Name: tlsCertificateName, MountPath: tlsMountPath, ReadOnly: true}
+	tlsVolumeMount := corev1.VolumeMount{Name: tlsCertificateVolumeName, MountPath: tlsMountPath, ReadOnly: true}
 	obj.Spec.Volumes = []corev1.Volume{
 		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
 		{
-			Name: tlsCertificateName,
+			Name: tlsCertificateVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: ingressTLSSecret.Name,
