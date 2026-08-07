@@ -58,6 +58,7 @@ const taskID = "initializeOperation"
 // Reconciler implements the main shoot reconciliation logic, i.e., creation, hibernation, migration and deletion.
 type Reconciler struct {
 	GardenClient                client.Client
+	GardenAPIReader             client.Reader
 	SeedClientSet               kubernetes.Interface
 	ShootClientMap              clientmap.ClientMap
 	Config                      gardenletconfigv1alpha1.GardenletConfiguration
@@ -373,6 +374,7 @@ func (r *Reconciler) initializeOperation(
 	op, err := operation.Initialize(
 		ctx,
 		log,
+		r.GardenAPIReader,
 		r.GardenClient,
 		r.SeedClientSet,
 		r.ShootClientMap,
