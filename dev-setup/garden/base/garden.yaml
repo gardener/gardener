@@ -50,7 +50,7 @@ spec:
         storage:
           capacity: 10Gi
     kubernetes:
-      version: 1.36.2
+      version: 1.36.1
     gardener:
       clusterIdentity: gardener-local
       gardenerAPIServer:
