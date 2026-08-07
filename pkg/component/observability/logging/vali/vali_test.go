@@ -377,7 +377,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		DescribeTable("should deploy the PersistentVolumeClaimAutoscaler when PVCAutoscaler is enabled",
-			func(maxCapacity resource.Quantity) {
+			func(maxCapacity resource.Quantity, isGardenCluster bool) {
 				valiDeployer := New(
 					c,
 					namespace,
@@ -396,7 +396,7 @@ var _ = Describe("Vali", func() {
 						ClusterType:                  "shoot",
 						IngressHost:                  valiHost,
 						IstioIngressGatewayNamespace: "istio-ingress",
-						IsGardenCluster:              false,
+						IsGardenCluster:              isGardenCluster,
 						PVCAutoscaling: PVCAutoscalingConfig{
 							Enabled:     true,
 							MaxCapacity: maxCapacity,
@@ -404,13 +404,19 @@ var _ = Describe("Vali", func() {
 					},
 				)
 
+				autoscalerName := ""
+				if isGardenCluster {
+					autoscalerName = "garden"
+				}
+
 				Expect(valiDeployer.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 
-				Expect(managedResource).To(NewManagedResourceContainsObjectsMatcher(c)(getPVCA(maxCapacity)))
+				Expect(managedResource).To(NewManagedResourceContainsObjectsMatcher(c)(getPVCA(maxCapacity, autoscalerName)))
 			},
-			Entry("shoot max capacity", resource.MustParse("40Gi")),
-			Entry("seed max capacity", resource.MustParse("200Gi")),
+			Entry("shoot max capacity", resource.MustParse("40Gi"), false),
+			Entry("seed max capacity", resource.MustParse("200Gi"), false),
+			Entry("garden max capacity", resource.MustParse("200Gi"), true),
 		)
 	})
 
@@ -1554,7 +1560,7 @@ func getLabels() map[string]string {
 	}
 }
 
-func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func getPVCA(maxCapacity resource.Quantity, autoscalerName string) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
@@ -1562,6 +1568,7 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			AutoscalerName: autoscalerName,
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "StatefulSet",

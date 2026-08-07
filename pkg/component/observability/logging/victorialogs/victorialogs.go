@@ -269,6 +269,7 @@ func (v *victoriaLogs) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscal
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			AutoscalerName: v.getAutoscalerName(),
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
@@ -296,6 +297,16 @@ func (v *victoriaLogs) getPrometheusLabel() string {
 		return seed.Label
 	}
 	return shoot.Label
+}
+
+// getAutoscalerName returns the name of the pvc-autoscaler instance that manages the VictoriaLogs PVCA. It must match
+// the --autoscaler-name flag of the pvc-autoscaler instance running in the cluster where VictoriaLogs is deployed. The
+// empty string denotes the default (unnamed) instance running in seeds.
+func (v *victoriaLogs) getAutoscalerName() string {
+	if v.values.IsGardenCluster {
+		return garden.Label
+	}
+	return ""
 }
 
 func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {

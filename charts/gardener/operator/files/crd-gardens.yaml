@@ -325,6 +325,19 @@ spec:
                             - allowed
                             type: object
                         type: object
+                      persistentVolumeClaimAutoscaler:
+                        description: |-
+                          PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler
+                          components deployed in the garden cluster.
+                        properties:
+                          enabled:
+                            description: |-
+                              Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the
+                              garden cluster.
+                            type: boolean
+                        required:
+                        - enabled
+                        type: object
                       topologyAwareRouting:
                         description: |-
                           TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.

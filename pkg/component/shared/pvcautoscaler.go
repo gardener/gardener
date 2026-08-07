@@ -18,6 +18,7 @@ func NewPVCAutoscaler(
 	gardenNamespaceName string,
 	enabled bool,
 	priorityClassName string,
+	isGardenCluster bool,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -33,6 +34,7 @@ func NewPVCAutoscaler(
 		pvcautoscaler.Values{
 			Image:             image.String(),
 			PriorityClassName: priorityClassName,
+			IsGardenCluster:   isGardenCluster,
 		},
 	)
 

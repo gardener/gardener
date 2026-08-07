@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	pvcautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
@@ -105,6 +106,7 @@ type components struct {
 	persesCRD        component.DeployWaiter
 	victoriaCRD      component.DeployWaiter
 	openTelemetryCRD component.DeployWaiter
+	pvcAutoscalerCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -154,6 +156,7 @@ type components struct {
 	persesOperator                component.DeployWaiter
 	victoriaOperator              component.DeployWaiter
 	victoriaLogs                  component.DeployWaiter
+	pvcAutoscaler                 component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -209,6 +212,14 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.victoriaCRD, err = victoriaoperator.NewCRDs(r.RuntimeClientSet.Client())
+	if err != nil {
+		return
+	}
+	c.pvcAutoscalerCRD, err = pvcautoscaler.NewCRDs(r.RuntimeClientSet.Client())
+	if err != nil {
+		return
+	}
+	c.pvcAutoscaler, err = r.newPVCAutoscaler(garden)
 	if err != nil {
 		return
 	}
@@ -335,7 +346,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(c.istio.GetValues().IngressGateway)
+	c.vali, err = r.newVali(garden.Spec.RuntimeCluster.Settings, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -379,7 +390,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs()
+	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings)
 	if err != nil {
 		return
 	}
@@ -483,6 +494,16 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 	}
 
 	return verticalPodAutoscaler, nil
+}
+
+func (r *Reconciler) newPVCAutoscaler(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+	return sharedcomponent.NewPVCAutoscaler(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		pvcAutoscalerEnabled(garden.Spec.RuntimeCluster.Settings),
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		true,
+	)
 }
 
 func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, runtimeIsSelfHostedShoot bool) (component.DeployWaiter, error) {
@@ -1428,7 +1449,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the vali config")
 	}
@@ -1446,7 +1467,10 @@ func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) 
 		true,
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
-		vali.PVCAutoscalingConfig{},
+		vali.PVCAutoscalingConfig{
+			Enabled:     pvcAutoscalerEnabled(settings),
+			MaxCapacity: resource.MustParse("200Gi"),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -1461,7 +1485,7 @@ func (r *Reconciler) newVali(ingressGatewayValues []istio.IngressGatewayValues) 
 	return deployer, nil
 }
 
-func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings) (component.DeployWaiter, error) {
 	deployer, err := sharedcomponent.NewVictoriaLogs(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1470,7 +1494,10 @@ func (r *Reconciler) newVictoriaLogs() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		true,
-		victorialogs.PVCAutoscalingConfig{},
+		victorialogs.PVCAutoscalingConfig{
+			Enabled:     pvcAutoscalerEnabled(settings),
+			MaxCapacity: resource.MustParse("200Gi"),
+		},
 	)
 	if err != nil {
 		return nil, err

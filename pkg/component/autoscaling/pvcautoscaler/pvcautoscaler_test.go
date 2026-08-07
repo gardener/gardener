@@ -261,8 +261,10 @@ var _ = Describe("PVCAutoscaler", func() {
 									"--health-probe-bind-address=:8081",
 									"--metrics-bind-address=:8080",
 									"--leader-elect",
+									"--leader-election-id=" + PVCAutoscalerManagedResourceName,
+									"--autoscaler-name=",
 									"--interval=60s",
-									"--prometheus-address=http://prometheus-cache.garden.svc.cluster.local:80",
+									"--prometheus-address=http://prometheus-cache." + namespace + ".svc.cluster.local:80",
 								},
 								Env: []corev1.EnvVar{
 									{

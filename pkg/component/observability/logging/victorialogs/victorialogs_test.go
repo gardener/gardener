@@ -302,7 +302,7 @@ var _ = Describe("VictoriaLogs", func() {
 					vpa,
 					serviceMonitor,
 					prometheusRule,
-					getPVCA(maxCapacity),
+					getPVCA(maxCapacity, ""),
 				))
 			},
 			Entry("shoot max capacity", resource.MustParse("40Gi")),
@@ -359,6 +359,10 @@ var _ = Describe("VictoriaLogs", func() {
 					ImageTag:        imageTag,
 					ClusterType:     componentpkg.ClusterTypeSeed,
 					IsGardenCluster: true,
+					PVCAutoscaling: PVCAutoscalingConfig{
+						Enabled:     true,
+						MaxCapacity: resource.MustParse("200Gi"),
+					},
 				}
 				component = New(c, namespace, values)
 			})
@@ -390,6 +394,7 @@ var _ = Describe("VictoriaLogs", func() {
 					vpa,
 					expectedServiceMonitor,
 					expectedPrometheusRule,
+					getPVCA(resource.MustParse("200Gi"), "garden"),
 				))
 			})
 		})
@@ -546,7 +551,7 @@ var _ = Describe("VictoriaLogs", func() {
 	})
 })
 
-func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
+func getPVCA(maxCapacity resource.Quantity, autoscalerName string) *pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler {
 	return &pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      victorialogsconstants.VLSingleResourceName,
@@ -554,6 +559,7 @@ func getPVCA(maxCapacity resource.Quantity) *pvcautoscalerv1alpha1.PersistentVol
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			AutoscalerName: autoscalerName,
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
