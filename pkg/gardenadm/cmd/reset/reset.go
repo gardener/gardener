@@ -13,10 +13,14 @@ import (
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesinformers "k8s.io/client-go/informers"
+	criclient "k8s.io/cri-client/pkg"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -106,6 +110,10 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
 	}
 
+	if err := stopContainers(ctx, b, node); err != nil {
+		return fmt.Errorf("failed stopping containers: %w", err)
+	}
+
 	return nil
 }
 
@@ -153,6 +161,62 @@ func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, node
 
 	if err := d.RunDrain(ctx); err != nil {
 		return fmt.Errorf("failed to drain node %s: %w", nodeName, err)
+	}
+
+	return nil
+}
+
+func stopContainers(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) error {
+	b.Logger.Info("Stopping gardener-node-agent systemd unit")
+	if err := b.DBus.Stop(ctx, nil, node, nodeagentconfigv1alpha1.UnitName); err != nil {
+		return fmt.Errorf("failed stopping gardener-node-agent systemd unit: %w", err)
+	}
+
+	b.Logger.Info("Stopping kubelet systemd unit")
+	if err := b.DBus.Stop(ctx, nil, node, v1beta1constants.OperatingSystemConfigUnitNameKubeletService); err != nil {
+		return fmt.Errorf("failed stopping kubelet systemd unit: %w", err)
+	}
+
+	b.Logger.Info("Stopping containers")
+	runtimeService, err := criclient.NewRemoteRuntimeService(ctx, "unix:///var/run/containerd/containerd.sock", 2*time.Second, nil, false)
+	if err != nil {
+		return fmt.Errorf("failed creating CRI client: %w", err)
+	}
+	defer runtimeService.Close(ctx)
+
+	pods, err := runtimeService.ListPodSandbox(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed listing pod sandboxes: %w", err)
+	}
+
+	var errs []error
+	for _, pod := range pods {
+		b.Logger.Info("Stopping pod sandbox", "podID", pod.GetId())
+		var lastErr error
+		for range 5 { // Retry up to 5 times
+			if err := runtimeService.StopPodSandbox(ctx, pod.GetId()); err != nil {
+				lastErr = err
+				b.Logger.Error(err, "Failed stopping pod sandbox", "podID", pod.Id)
+				continue
+			}
+
+			if err := runtimeService.RemovePodSandbox(ctx, pod.GetId()); err != nil {
+				lastErr = err
+				b.Logger.Error(err, "Failed removing pod sandbox", "podID", pod.Id)
+				continue
+			}
+
+			lastErr = nil
+			break
+		}
+
+		if lastErr != nil {
+			errs = append(errs, lastErr)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("Failed stopping some pods: %w", errors.Join(errs...))
 	}
 
 	return nil
