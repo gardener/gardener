@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -289,7 +288,7 @@ var _ = Describe("Admission", func() {
 			})
 
 			It("should fail if the latest Kubernetes version has an expiration date", func() {
-				parentCloudProfile.Spec.Kubernetes.Versions[0] = gardencorev1beta1.ExpirableVersion{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationExpired)}
+				parentCloudProfile.Spec.Kubernetes.Versions[0] = gardencorev1beta1.ExpirableVersion{Version: "1.30.0", Classification: new(gardencorev1beta1.ClassificationExpired)}
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{
