@@ -28,7 +28,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	namespacedcloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -190,6 +192,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 	Context("merge Kubernetes versions", func() {
 		BeforeEach(func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			cloudProfile.Spec.Kubernetes = gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.0.0"},
@@ -239,6 +242,26 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &newExpiryDate},
 					},
 				},
+			}))
+		})
+
+		It("should merge ExpirationDate as old classification field when lifecycle classifications are disabled", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, false))
+			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{Version: "1.0.0", ExpirationDate: &newExpiryDate},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{
+				{Version: "1.0.0", ExpirationDate: &newExpiryDate},
 			}))
 		})
 
@@ -753,6 +776,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		})
 
 		It("should merge MachineImages correctly and migrate an additional ExpirationDate", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			newExpiryDate := metav1.NewTime(time.Now().Truncate(time.Second))
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
@@ -1158,6 +1182,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 
 				It("should add new elements and apply overrides consistently while keeping the existing elements ordered", func() {
+					DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					expirationDate := metav1.NewTime(time.Now().Add(time.Hour))
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
