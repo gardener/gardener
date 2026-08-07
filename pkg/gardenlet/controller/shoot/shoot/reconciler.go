@@ -62,6 +62,7 @@ const taskID = "initializeOperation"
 // Reconciler implements the main shoot reconciliation logic, i.e., creation, hibernation, migration and deletion.
 type Reconciler struct {
 	GardenClient                client.Client
+	GardenAPIReader             client.Reader
 	SeedClientSet               kubernetes.Interface
 	ShootClientMap              clientmap.ClientMap
 	Config                      gardenletconfigv1alpha1.GardenletConfiguration
@@ -381,10 +382,23 @@ func (r *Reconciler) initializeOperation(
 		err            error
 	)
 
-	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
-		// TODO(rfranzke): Enable shoot gardenlet to read the gardener.cloud/role=shoot-service-account-issuer secret from
-		//  garden namespace (adapt authorizer) --> requires virtual garden to be at least 1.34 (this promotes the selector
-		//  feature gate to GA, hence, we can enforce the needed label selectors)
+	if v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		// The self-hosted gardenlet only needs the shoot service account issuer secret. The shoot authorizer
+		// only permits list/watch with the gardener.cloud/role=shoot-service-account-issuer label selector
+		// (enforced via AuthorizeWithSelectors, GA in Kubernetes 1.34), so we scope the list to that role.
+		// We use the uncached API reader because the self-hosted gardenlet uses SingleObjectCacheFunc for
+		// secrets (Get-by-name only) and the label-selector list would bypass the cache anyway.
+		gardenSecrets, err = gardenerutils.ReadGardenSecrets(
+			ctx,
+			log,
+			r.GardenAPIReader,
+			v1beta1constants.GardenNamespace,
+			v1beta1constants.GardenRoleShootServiceAccountIssuer,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		gardenSecrets, err = gardenerutils.ReadGardenSecrets(
 			ctx,
 			log,

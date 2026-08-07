@@ -246,11 +246,13 @@ func ReadInternalDomainSecret(ctx context.Context, c client.Reader, namespace st
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
+// When roles are provided, only secrets whose gardener.cloud/role label matches one of the given values are listed.
 func ReadGardenSecrets(
 	ctx context.Context,
 	log logr.Logger,
 	c client.Reader,
 	namespace string,
+	roles ...string,
 ) (
 	map[string]*corev1.Secret,
 	error,
@@ -263,8 +265,17 @@ func ReadGardenSecrets(
 		numberOfShootServiceAccountIssuerSecrets = 0
 	)
 
+	roleReq := gardenRoleReq
+	if len(roles) > 0 {
+		req, err := labels.NewRequirement(v1beta1constants.GardenRole, selection.In, roles)
+		if err != nil {
+			return nil, fmt.Errorf("failed building role label requirement: %w", err)
+		}
+		roleReq = *req
+	}
+
 	secretList := &corev1.SecretList{}
-	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq)}); err != nil {
+	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(roleReq)}); err != nil {
 		return nil, err
 	}
 

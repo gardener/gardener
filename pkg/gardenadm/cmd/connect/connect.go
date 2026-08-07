@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -106,6 +107,16 @@ func run(ctx context.Context, opts *Options) error {
 		bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.GardenScheme)
 		if err != nil {
 			return fmt.Errorf("failed creating a new bootstrap garden client set: %w", err)
+		}
+
+		// Self-hosted shoot gardenlets require the garden cluster to be at least Kubernetes 1.34: the shoot authorizer
+		// enforces label selectors via AuthorizeWithSelectors, which was promoted to GA in 1.34.
+		gardenVersion, err := b.DiscoverKubernetesVersion(bootstrapClientSet)
+		if err != nil {
+			return fmt.Errorf("failed discovering garden cluster version: %w", err)
+		}
+		if !versionutils.ConstraintK8sGreaterEqual134.Check(gardenVersion) {
+			return fmt.Errorf("garden cluster must be at least Kubernetes 1.34 (got %s): self-hosted shoots require the AuthorizeWithSelectors feature gate which was promoted to GA in 1.34", gardenVersion.Original())
 		}
 
 		var (
