@@ -421,10 +421,11 @@ func (g *garden) Start(ctx context.Context) error {
 						// resources on cluster level. Hence, we need to watch them individually with the help of a
 						// SingleObject cache.
 						&corev1.ConfigMap{}:                  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
+						&corev1.Namespace{}:                  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
 						&corev1.Secret{}:                     kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
 						&corev1.ServiceAccount{}:             kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
 						&gardencorev1.ControllerDeployment{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
-						&corev1.Namespace{}:                  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
+						&gardencorev1beta1.InternalSecret{}:  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.InternalSecret{}),
 						&gardencorev1beta1.Project{}:         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
 					},
 					kubernetes.GardenScheme,

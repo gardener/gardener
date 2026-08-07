@@ -84,6 +84,7 @@ var (
 	eventCoreResource                 = corev1.Resource("events")
 	eventResource                     = eventsv1.Resource("events")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
+	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource                 = corev1.Resource("namespaces")
@@ -196,7 +197,10 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			)
 
 		case configMapResource:
-			return requestAuthorizer.CheckRead(graph.VertexTypeConfigMap, attrs)
+			return requestAuthorizer.Check(graph.VertexTypeConfigMap, attrs,
+				authwebhook.WithAllowedVerbs("get", "patch", "update", "delete", "list", "watch"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
+			)
 
 		case controllerDeploymentResource:
 			return requestAuthorizer.CheckRead(graph.VertexTypeControllerDeployment, attrs)
@@ -226,6 +230,12 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAllowedSubresources("status"),
 				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
 				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: gardenletutils.ResourcePrefixSelfHostedShoot + requestAuthorizer.ToName}),
+			)
+
+		case internalSecretResource:
+			return requestAuthorizer.Check(graph.VertexTypeInternalSecret, attrs,
+				authwebhook.WithAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
+				authwebhook.WithAlwaysAllowedVerbs("create"),
 			)
 
 		case leaseResource:

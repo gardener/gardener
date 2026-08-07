@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
@@ -159,7 +160,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	graph := flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(flowCtx.isRestoring, "restoration", "reconciliation")))
-	if err := setupFlow(b, flowCtx, graph); err != nil {
+	if err := setupFlow(ctx, b, flowCtx, graph); err != nil {
 		err = fmt.Errorf("setting up reconciliation flow failed: %w", err)
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
@@ -214,7 +215,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	return nil
 }
 
-func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flowCtx flowContext, g *flow.Graph) error {
+func (r *Reconciler) setupReconcileHostedShootFlow(_ context.Context, b *botanistpkg.Botanist, flowCtx flowContext, g *flow.Graph) error {
 	var (
 		deployExtensionAfterKAPIMsg = "Deploying extension resources after kube-apiserver"
 		waitExtensionAfterKAPIMsg   = "Waiting until extension resources handled after kube-apiserver are ready"
@@ -1148,14 +1149,63 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 	return nil
 }
 
-func (r *Reconciler) setupReconcileSelfHostedShootFlow(b *botanistpkg.Botanist, flowCtx flowContext, g *flow.Graph) error {
-	_ = g.Add(flow.Task{
-		Name: "TODO(rfranzke): Construct this flow as progress on GEP-28 progresses.",
-		Fn: func(_ context.Context) error {
-			b.Logger.Info("Hello world!", "operationType", flowCtx.operationType)
-			return nil
-		},
-	})
+func (r *Reconciler) setupReconcileSelfHostedShootFlow(ctx context.Context, b *botanistpkg.Botanist, flowCtx flowContext, g *flow.Graph) error {
+	// If the self-hosted shoot is also the garden runtime cluster, then gardener-operator is taking over
+	// responsibility of some components (e.g., etcd-druid). Detect this by checking whether a Garden resource exists.
+	shootIsGarden, err := gardenletutils.ClusterIsGarden(ctx, b.SeedClientSet.Client())
+	if err != nil {
+		return fmt.Errorf("failed checking whether shoot is garden: %w", err)
+	}
+
+	var (
+		_                                = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                                = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		_                                = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		_                                = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
+		_                                = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
+		reconcileGardenerResourceManager = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden))
+		_                                = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
+		_                                = g.AddGroup(b.ReconcileInfrastructureTaskGroup())
+		_                                = g.AddGroup(b.ReconcileControlPlaneTaskGroup())
+		_                                = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		reconcileSystemComponents        = g.AddGroup(b.ReconcileSystemComponentsTaskGroup())
+
+		deployBackupBucketInGarden = g.Add(flow.Task{
+			Name:         "Deploying BackupBucket for ETCD data",
+			Fn:           b.Shoot.Components.BackupBucket.Deploy,
+			SkipIf:       !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager, reconcileSystemComponents),
+		})
+		waitUntilBackupBucketInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the backup bucket has been reconciled",
+			Fn:           b.Shoot.Components.BackupBucket.Wait,
+			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(deployBackupBucketInGarden),
+		})
+		deployBackupEntryInGarden = g.Add(flow.Task{
+			Name:         "Deploying BackupEntry for ETCD data",
+			Fn:           b.DeployBackupEntry,
+			SkipIf:       !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketInGardenReconciled),
+		})
+		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the backup entry has been reconciled",
+			Fn:           b.Shoot.Components.BackupEntry.Wait,
+			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup,
+			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
+		})
+
+		_ = g.AddGroup(
+			b.ReconcileETCDsTaskGroup(shootIsGarden).
+				WithDependencies(waitUntilBackupEntryInGardenReconciled),
+		)
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false, ""))
+		_                               = g.AddGroup(
+			b.ReconcileMachineControllerManagerTaskGroup().
+				WithDependencies(reconcileStaticControlPlanePods),
+		)
+		_ = g.AddGroup(b.ReconcileWorkerTaskGroup())
+	)
 
 	return nil
 }

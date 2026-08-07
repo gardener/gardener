@@ -23,6 +23,7 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // TaskGroupDeployNamespaces is a flow.TaskID for a logical flow.TaskGroup.
@@ -131,7 +132,7 @@ const TaskGroupInitializeSecretsManagement flow.TaskID = "TaskGroupInitializeSec
 // InitializeSecretsManagementTaskGroup returns the flow.TaskGroup for initializing the secret management.
 func (b *Botanist) InitializeSecretsManagementTaskGroup() flow.TaskGroup {
 	return flow.NewTaskGroup(TaskGroupInitializeSecretsManagement, flow.Task{
-		Name: "Initializing internal state of Gardener secrets manager",
+		Name: "Initializing secrets management",
 		Fn:   b.InitializeSecretsManagement,
 	}).WithDependencies(TaskGroupReconcileClusterResource)
 }
@@ -316,8 +317,9 @@ func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup() flow.TaskGroup {
 // TaskGroupReconcileWorker is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileWorker flow.TaskID = "TaskGroupReconcileWorker"
 
-// ReconcileWorkerTaskGroup returns the flow.TaskGroup for deploying the Worker extension
-// resource and waiting for its readiness.
+// ReconcileWorkerTaskGroup returns the flow.TaskGroup for deploying the Worker extension resource. It waits until its
+// status was updated with the latest machine deployments, deploys cluster-autoscaler and finally waits for the pools
+// to get reconciled.
 func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileWorker).WithDependencies(
@@ -329,15 +331,31 @@ func (b *Botanist) ReconcileWorkerTaskGroup() flow.TaskGroup {
 		)
 
 		deployWorker = g.Add(flow.Task{
-			Name:   "Deploying control plane machines",
+			Name:   "Configuring worker pools",
 			Fn:     b.DeployWorker,
 			SkipIf: !b.Shoot.HasManagedInfrastructure(),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until control plane machines have been deployed",
-			Fn:           b.Shoot.Components.Extensions.Worker.Wait,
+		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
+			Name: "Waiting until worker resource status is updated with latest machine deployments",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
+			},
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(deployWorker),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying cluster-autoscaler",
+			Fn:           b.DeployClusterAutoscaler,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until worker pools have been reconciled",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Worker.Wait(ctx)
+			},
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 	)
 
@@ -401,6 +419,87 @@ func (b *Botanist) ReconcileSystemComponentsTaskGroup() flow.TaskGroup {
 			Name:         "Waiting until CoreDNS system component is ready",
 			Fn:           b.Shoot.Components.SystemComponents.CoreDNS.Wait,
 			Dependencies: flow.NewTaskIDs(deployCoreDNS),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupReconcileETCDs is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileETCDs flow.TaskID = "TaskGroupReconcileETCDs"
+
+// ReconcileETCDsTaskGroup returns the flow.TaskGroup for deploying etcd-druid, the ETCDs resources, and waiting for
+// their readiness.
+func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileETCDs).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileGardenerResourceManager,
+		)
+
+		deployEtcdDruid = g.Add(flow.Task{
+			Name:   "Deploying ETCD Druid",
+			Fn:     b.Shoot.Components.ControlPlane.EtcdDruid.Deploy,
+			SkipIf: shootIsGarden,
+		})
+		deployEtcds = g.Add(flow.Task{
+			Name: "Deploying main and events ETCDs",
+			Fn: func(ctx context.Context) error {
+				nodes, err := b.ListControlPlaneNodes(ctx)
+				if err != nil {
+					return fmt.Errorf("failed listing control plane nodes: %w", err)
+				}
+
+				ip, err := kubernetesutils.NodeInternalIP(nodes[0], b.Shoot.PreferIPv6())
+				if err != nil {
+					return fmt.Errorf("failed determining IP address of first control plane node: %w", err)
+				}
+
+				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(ip)
+				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(ip)
+				return b.DeployEtcd(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until main and event ETCDs have been reconciled",
+			Fn:           b.WaitUntilEtcdsReady,
+			Dependencies: flow.NewTaskIDs(deployEtcds),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupReconcileStaticPods is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileStaticPods flow.TaskID = "TaskGroupReconcileStaticPods"
+
+// ReconcileStaticControlPlanePodsTaskGroup returns the flow.TaskGroup for deploying the static control plane
+// deployments to the cluster (with replicas=0). It then translates them into static pod manifests, adds them to the
+// OperatingSystemConfig, updates the ManagedResource containing the gardener-node-agent OSC Secret, and waits for the
+// changes to be rolled out.
+func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd bool, backupDataPath string) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileStaticPods).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileGardenerResourceManager,
+			TaskGroupReconcileControlPlane,
+			TaskGroupReconcileETCDs,
+		)
+
+		deployControlPlaneDeployments = g.Add(flow.Task{
+			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
+			Fn: func(ctx context.Context) error {
+				return b.DeployStaticControlPlaneDeployments(ctx, useBootstrapEtcd, backupDataPath)
+			},
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until control plane components (static pods) are ready",
+			Fn: func(ctx context.Context) error {
+				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
+			},
+			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
 		})
 	)
 
