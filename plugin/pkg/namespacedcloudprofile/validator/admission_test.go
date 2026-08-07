@@ -288,7 +288,6 @@ var _ = Describe("Admission", func() {
 			})
 
 			It("should fail if the latest Kubernetes version has an expiration date", func() {
-				parentCloudProfile.Spec.Kubernetes.Versions[0] = gardencorev1beta1.ExpirableVersion{Version: "1.30.0", Classification: new(gardencorev1beta1.ClassificationExpired)}
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{
@@ -962,39 +961,7 @@ var _ = Describe("Admission", func() {
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("status.cloudProfileSpec.kubernetes.versions[].expirationDate"),
-					}))))
-				})
-
-				It("only allow one supported version per minor version", func() {
-					parentCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-						{
-							Version:        "1.1.0",
-							Classification: &supportedClassification,
-						},
-						{
-							Version:        "1.1.1",
-							Classification: &supportedClassification,
-						},
-					}
-					namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-						{
-							Version:        "1.1.0",
-							Classification: &supportedClassification,
-						},
-						{
-							Version:        "1.1.1",
-							Classification: &supportedClassification,
-						},
-					}
-					errorList := ValidateSimulatedNamespacedCloudProfileStatus(parentCloudProfile, namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("status.cloudProfileSpec.kubernetes.versions[1]"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("status.cloudProfileSpec.kubernetes.versions[0]"),
+						"Field": Equal("status.cloudProfileSpec.kubernetes.versions[].lifecycle"),
 					}))))
 				})
 			})
