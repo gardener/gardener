@@ -371,12 +371,13 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		}
 	}
 
+	config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
 	configMap := r.emptyConfigMap()
 
 	fns := []flow.TaskFn{
 		r.ensureServiceAccount,
 		func(ctx context.Context) error {
-			return r.ensureConfigMap(ctx, configMap)
+			return r.ensureConfigMap(ctx, config, configMap)
 		},
 		r.ensureRBAC,
 		r.ensureService,
@@ -385,7 +386,9 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		},
 		// Webhook configs must be applied directly after the deployment to avoid a situation where the GRM deployment
 		// is rolled out after a certificate (CA) rotation but the webhook configurations are not yet updated.
-		r.ensureWebhookConfiguration,
+		func(ctx context.Context) error {
+			return r.ensureWebhookConfiguration(ctx, config)
+		},
 		r.ensurePodDisruptionBudget,
 		r.ensureVPA,
 		r.ensureServiceMonitor,
@@ -542,8 +545,8 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
 
-func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
-	config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
+func (r *resourceManager) ensureConfigMap(ctx context.Context, config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration, configMap *corev1.ConfigMap) error {
+	*config = resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       new(true),
 			ResourceName:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -1210,18 +1213,18 @@ func (r *resourceManager) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(r.values.NamePrefix+"gardener-resource-manager", r.namespace, r.getPrometheusLabel())}
 }
 
-func (r *resourceManager) ensureWebhookConfiguration(ctx context.Context) error {
+func (r *resourceManager) ensureWebhookConfiguration(ctx context.Context, config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	if r.values.ResponsibilityMode == ForShootOrVirtualGarden {
-		return r.ensureShootResources(ctx)
+		return r.ensureShootResources(ctx, config)
 	}
 
-	if err := r.ensureMutatingWebhookConfiguration(ctx); err != nil {
+	if err := r.ensureMutatingWebhookConfiguration(ctx, config); err != nil {
 		return err
 	}
 	return r.ensureValidatingWebhookConfiguration(ctx)
 }
 
-func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
+func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context, config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	if SkipWebhookDeployment {
 		return nil
 	}
@@ -1237,7 +1240,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(r.appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
-		mutatingWebhookConfiguration.Webhooks = r.newMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
+		mutatingWebhookConfiguration.Webhooks = r.newMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig, config)
 		return nil
 	})
 	return err
@@ -1277,7 +1280,7 @@ func (r *resourceManager) emptyValidatingWebhookConfiguration() *admissionregist
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
 }
 
-func (r *resourceManager) ensureShootResources(ctx context.Context) error {
+func (r *resourceManager) ensureShootResources(ctx context.Context, config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
 	if !found {
 		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
@@ -1308,7 +1311,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 
 	mutatingWebhookConfiguration := r.emptyMutatingWebhookConfiguration()
 	mutatingWebhookConfiguration.Labels = r.appLabel()
-	mutatingWebhookConfiguration.Webhooks = r.newMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
+	mutatingWebhookConfiguration.Webhooks = r.newMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig, config)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
@@ -1324,9 +1327,11 @@ func (r *resourceManager) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
+// Make sure to update disableControllersAndWebhooksForWorkerlessShoot when adding webhooks to this method which are not relevant for workerless shoots.
 func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+	config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration,
 ) []admissionregistrationv1.MutatingWebhook {
 	var (
 		namespaceSelector = r.buildWebhookNamespaceSelector()
@@ -1343,34 +1348,34 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 
 	var webhooks []admissionregistrationv1.MutatingWebhook
 
-	if !r.values.IsWorkerless {
+	if config.Webhooks.ProjectedTokenMount.Enabled {
 		webhooks = append(webhooks, r.newProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.HighAvailabilityConfigWebhookEnabled && !r.values.IsWorkerless {
+	if config.Webhooks.HighAvailabilityConfig.Enabled {
 		webhooks = append(webhooks, NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking && !r.values.IsWorkerless {
+	if config.Webhooks.PodSchedulerName.Enabled && r.values.SchedulingProfile != nil {
 		// pod scheduler name webhook should be active on all namespaces
 		webhooks = append(webhooks, NewPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.DefaultSeccompProfileEnabled && !r.values.IsWorkerless {
+	if config.Webhooks.SeccompProfile.Enabled {
 		webhooks = append(webhooks, NewSeccompProfileMutatingWebhook(r.values.NamePrefix, namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.KubernetesServiceHost != nil && !r.values.IsWorkerless {
+	if config.Webhooks.KubernetesServiceHost.Enabled && r.values.KubernetesServiceHost != nil {
 		webhooks = append(webhooks, NewKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.PodKubeAPIServerLoadBalancingWebhook.Enabled && !r.values.IsWorkerless {
+	if config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled {
 		for _, config := range r.values.PodKubeAPIServerLoadBalancingWebhook.Configs {
 			webhooks = append(webhooks, NewPodKubeAPIServerLoadBalancingMutatingWebhook(&metav1.LabelSelector{MatchLabels: config.NamespaceSelector}, config.ObjectSelector, config.KubeAPIServerNamePrefix, secretServerCA, buildClientConfigFn))
 		}
 	}
 
-	if r.values.SystemComponentsConfigWebhookEnabled && !r.values.IsWorkerless {
+	if config.Webhooks.SystemComponentsConfig.Enabled {
 		systemComponentsNamespaceSelector := namespaceSelector.DeepCopy()
 		if r.values.ResponsibilityMode == ForRuntime {
 			if systemComponentsNamespaceSelector.MatchLabels == nil {
@@ -1382,11 +1387,11 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewSystemComponentsConfigMutatingWebhook(systemComponentsNamespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.PodTopologySpreadConstraintsEnabled && !r.values.IsWorkerless {
+	if config.Webhooks.PodTopologySpreadConstraints.Enabled {
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.VPAInPlaceUpdatesEnabled {
+	if config.Webhooks.VPAInPlaceUpdates.Enabled {
 		webhooks = append(webhooks, NewInPlaceUpdatesWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
@@ -2186,6 +2191,8 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconf
 	config.Webhooks.KubernetesServiceHost.Enabled = false
 	config.Webhooks.SeccompProfile.Enabled = false
 	config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = false
+	config.Webhooks.VPAInPlaceUpdates.Enabled = false
+	config.Webhooks.NodeAgentAuthorizer.Enabled = false
 }
 
 func (r *resourceManager) healthPort() int32 {
