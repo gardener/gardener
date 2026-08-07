@@ -7,6 +7,7 @@ package project
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -57,7 +58,27 @@ func (projectStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 	return validation.ValidateProject(project)
 }
 
-func (projectStrategy) Canonicalize(_ runtime.Object) {
+func (projectStrategy) Canonicalize(obj runtime.Object) {
+	var (
+		project = obj.(*core.Project)
+		owner   = project.Spec.Owner
+	)
+
+	if owner == nil {
+		return
+	}
+
+	for i, member := range project.Spec.Members {
+		if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
+			if !slices.Contains(member.Roles, core.ProjectMemberOwner) {
+				project.Spec.Members[i].Roles = append(project.Spec.Members[i].Roles, core.ProjectMemberOwner)
+			}
+		} else {
+			project.Spec.Members[i].Roles = slices.DeleteFunc(member.Roles, func(r string) bool {
+				return r == core.ProjectMemberOwner
+			})
+		}
+	}
 }
 
 func (projectStrategy) AllowCreateOnUpdate() bool {

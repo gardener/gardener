@@ -7,6 +7,7 @@ package project_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -58,6 +59,162 @@ var _ = Describe("MatchProject", func() {
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
 		Expect(result.IndexFields).To(ConsistOf(core.ProjectNamespace))
+	})
+})
+
+var _ = Describe("Canonicalize", func() {
+	var (
+		owner = rbacv1.Subject{
+			APIGroup: "group",
+			Kind:     "kind",
+			Name:     "owner",
+		}
+		member1 = rbacv1.Subject{
+			APIGroup: "group",
+			Kind:     "kind",
+			Name:     "member1",
+		}
+		member2 = rbacv1.Subject{
+			APIGroup: "group",
+			Kind:     "kind",
+			Name:     "member2",
+		}
+		member3 = rbacv1.Subject{
+			APIGroup: "group",
+			Kind:     "kind",
+			Name:     "member3",
+		}
+		extensionRole = "extension:role"
+	)
+
+	It("should do nothing if owner is nil", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+				},
+			},
+		}
+		Strategy.Canonicalize(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+				},
+			},
+		}))
+	})
+
+	It("should do nothing if owner is not (yet) a member", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+			},
+		}
+		Strategy.Canonicalize(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+			},
+		}))
+	})
+
+	It("should add the owner role to the owner member when not present", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1},
+					{Subject: owner},
+					{Subject: member2},
+				},
+			},
+		}
+		Strategy.Canonicalize(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
+		}))
+	})
+
+	It("should do nothing if the owner role is already present for the owner member", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
+		}
+		Strategy.Canonicalize(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
+		}))
+	})
+
+	It("should remove the owner role from all non-owner members", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: owner},
+					{Subject: member2, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member3, Roles: []string{core.ProjectMemberOwner, extensionRole, core.ProjectMemberOwner}},
+				},
+			},
+		}
+		Strategy.Canonicalize(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{}},
+					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: member2, Roles: []string{}},
+					{Subject: member3, Roles: []string{extensionRole}},
+				},
+			},
+		}))
+	})
+
+	It("should both add owner role to owner member and remove it from non-owner members", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{core.ProjectMemberOwner, extensionRole}},
+					{Subject: owner, Roles: []string{extensionRole}},
+					{Subject: member2},
+				},
+			},
+		}
+		Strategy.Canonicalize(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &owner,
+				Members: []core.ProjectMember{
+					{Subject: member1, Roles: []string{extensionRole}},
+					{Subject: owner, Roles: []string{extensionRole, core.ProjectMemberOwner}},
+					{Subject: member2},
+				},
+			},
+		}))
 	})
 })
 
