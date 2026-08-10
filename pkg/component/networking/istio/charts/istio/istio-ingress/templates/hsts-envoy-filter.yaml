@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+  name: hsts
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 9443
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.lua
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+          inlineCode: |
+            function envoy_on_response(response_handle)
+              response_handle:headers():replace("strict-transport-security", "max-age=31536000")
+            end
