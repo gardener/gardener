@@ -29,6 +29,8 @@ var _ = Describe("Logrotate", func() {
 				pathLogFiles.WriteString(containerd.ContainerRuntime)
 				pathLogFiles.WriteString("/*.log")
 
+				podLogDir := "/var/log/" + containerd.ContainerRuntime
+
 				units, files := logrotate.Config(pathConfig, pathLogFiles.String(), prefix)
 
 				serviceUnit := extensionsv1alpha1.Unit{
@@ -36,12 +38,13 @@ var _ = Describe("Logrotate", func() {
 					Enable: new(true),
 					Content: new(`[Unit]
 Description=Rotate and Compress System Logs
-[Service]
-ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
-Restart=on-failure
-RestartSec=5
 StartLimitBurst=5
 StartLimitIntervalSec=30
+[Service]
+ExecStart=/usr/sbin/logrotate -s /var/lib/` + prefix + `-logrotate.status ` + pathConfig + `
+ExecStartPost=/bin/sh -c 'find ` + podLogDir + ` -name "*.log.*" -mtime +14 -delete 2>&1 || [ ! -d ` + podLogDir + ` ]'
+Restart=on-failure
+RestartSec=5
 [Install]
 WantedBy=multi-user.target`),
 					FilePaths: []string{pathConfig},
@@ -71,7 +74,6 @@ WantedBy=multi-user.target`),
     rotate 14
     copytruncate
     missingok
-    notifempty
     compress
     daily
     dateext
