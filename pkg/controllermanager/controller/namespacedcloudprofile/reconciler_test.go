@@ -61,7 +61,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		ctx = context.Background()
 
 		fakeErr = errors.New("fake err")
-		fakeClock = testclock.NewFakeClock(time.Now())
+		fakeClock = testclock.NewFakeClock(time.Now().Truncate(time.Second))
 		now = fakeClock.Now()
 
 		namespaceName = "test-namespace"
