@@ -202,7 +202,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	if _, ok := b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootSkipReadiness]; ok {
 		b.Logger.Info("Removing skip-readiness annotation")
 
-		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 			delete(shoot.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
 			return nil
 		}); err != nil {
@@ -934,7 +934,7 @@ func (r *Reconciler) setupReconcileHostedShootFlow(b *botanistpkg.Botanist, flow
 				// If there are no pending workers rollouts for in-place updates, we can remove the force in-place update annotation.
 				if (b.Shoot.GetInfo().Status.InPlaceUpdates == nil || b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil) &&
 					kubernetesutils.HasMetaDataAnnotation(b.Shoot.GetInfo(), v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
-					return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+					return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 						delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 						return nil
 					})
@@ -1172,7 +1172,7 @@ func removeTaskAnnotation(ctx context.Context, b *botanistpkg.Botanist, tasksToR
 		return nil
 	}
 
-	return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
+	return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
