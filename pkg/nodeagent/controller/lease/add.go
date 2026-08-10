@@ -42,11 +42,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		For(&corev1.Node{}, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
-			// Bound each renewal attempt so that a hung API request (e.g. a write blocking on a half-open
-			// connection after a network disruption) cannot occupy the single reconcile worker indefinitely
-			// and silently stall the heartbeat. The timeout is kept well below the lease duration so that a
-			// stuck attempt is cancelled and re-queued long before the Lease would expire.
-			ReconciliationTimeout: time.Duration(r.LeaseDurationSeconds) * time.Second / 4,
+			ReconciliationTimeout:   time.Duration(r.LeaseDurationSeconds) * time.Second,
 		}).
 		Complete(r)
 }
