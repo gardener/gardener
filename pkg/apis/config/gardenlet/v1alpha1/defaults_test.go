@@ -45,6 +45,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.SeedCare).NotTo(BeNil())
 			Expect(obj.Controllers.ShootState).NotTo(BeNil())
+			Expect(obj.Controllers.ShootInPlaceUpdate).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(Equal(config.LogLevelInfo))
@@ -459,6 +460,35 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.ShootState.ConcurrentSyncs).To(PointTo(Equal(10)))
 			Expect(obj.Controllers.ShootState.SyncPeriod).To(PointTo(Equal(syncPeriod)))
+		})
+	})
+
+	Describe("ShootInPlaceUpdateControllerConfiguration defaulting", func() {
+		It("should default the in-place update controller configuration", func() {
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.ShootInPlaceUpdate.DrainTimeout).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
+			Expect(obj.Controllers.ShootInPlaceUpdate.UpdateTimeout).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
+			Expect(obj.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Second})))
+		})
+
+		It("should not overwrite already set values for the in-place update controller configuration", func() {
+			drainTimeout := metav1.Duration{Duration: 5 * time.Minute}
+			updateTimeout := metav1.Duration{Duration: 10 * time.Minute}
+			podEvictionRetryInterval := metav1.Duration{Duration: 30 * time.Second}
+			obj.Controllers = &GardenletControllerConfiguration{
+				ShootInPlaceUpdate: &ShootInPlaceUpdateControllerConfiguration{
+					DrainTimeout:             &drainTimeout,
+					UpdateTimeout:            &updateTimeout,
+					PodEvictionRetryInterval: &podEvictionRetryInterval,
+				},
+			}
+
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.ShootInPlaceUpdate.DrainTimeout).To(PointTo(Equal(drainTimeout)))
+			Expect(obj.Controllers.ShootInPlaceUpdate.UpdateTimeout).To(PointTo(Equal(updateTimeout)))
+			Expect(obj.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(podEvictionRetryInterval)))
 		})
 	})
 

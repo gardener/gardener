@@ -1,6 +1,7 @@
 replicaCount: 2
 revisionHistoryLimit: 2
 isolateClusterResources: false
+selfHostedShoot: false
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
 image:
@@ -138,6 +139,10 @@ config:
     # tokenExpirationDuration: 6h  
     vpaEvictionRequirements:
       concurrentSyncs: 5
+  # shootInPlaceUpdate:
+  #   drainTimeout: 20m
+  #   updateTimeout: 30m
+  #   podEvictionRetryInterval: 20s
   resources:
     capacity:
       shoots: 250

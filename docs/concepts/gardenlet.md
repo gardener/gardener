@@ -523,6 +523,20 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-0022: Improved Usage of the `ShootState` API](https://github.com/gardener/enhancements/tree/main/geps/0022-improved-shootstate-usage) for all information.
 
+#### ["InPlaceUpdate" Reconciler](../../pkg/gardenlet/controller/shoot/inplaceupdate)
+
+This reconciler is only enabled for self-hosted shoot clusters with unmanaged infrastructure (i.e. shoots connected via `gardenadm connect`).
+Such clusters have no `machine-controller-manager` since their nodes are physical or pre-existing machines joined via `gardenadm join`.
+For worker pools with an in-place update strategy, the `gardenlet` therefore takes over the coordination role that the `machine-controller-manager` performs for managed shoots.
+
+The reconciler watches the `Node` objects of the shoot's worker pools and drives their in-place update in lockstep with `gardener-node-agent` (GNA):
+
+- When GNA detects that the `OperatingSystemConfig` of a node changed (e.g. a Kubernetes minor version bump) it sets the `in-place-update.node-agent.gardener.cloud/needs-drain=true` annotation on the `Node` and waits, instead of draining itself.
+- The reconciler enforces the pool's `maxUnavailable` (capped at `1` for control plane pools) and, for eligible nodes, cordons them and evicts their pods. It honors `PodDisruptionBudget`s, skips pods that must not be evicted (`DaemonSet` pods, mirror pods, `gardenlet`, `gardener-resource-manager`, pods tolerating the unschedulable taint, and already-terminated pods) and force-deletes remaining pods once a drain times out.
+- Once a node is drained it sets the `NodeInPlaceUpdate` condition to `ReadyForUpdate`, which is GNA's signal to perform the actual update.
+- After GNA has finished, it reports the outcome via the `machine.sapcloud.io/node-update-result=successful|failed` label. The reconciler records the result in the `NodeInPlaceUpdate` condition, restarts `gardener-resource-manager` so it picks up the updated configuration, and cleans up the coordination annotations/labels.
+- If GNA does not complete the update within a timeout, the reconciler marks the update as failed.
+
 ### ["Status" Reconciler](../../pkg/gardenlet/controller/shoot/status)
 
 This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. A worker pool is removed from `status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate` field in the `Shoot` if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that all the nodes of that worker pool are successfully updated and are no longer pending manual in-place updates.

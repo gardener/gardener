@@ -9,3 +9,20 @@ resources:
 
 patches:
 - path: patch-shoot.yaml
+# TODO(acumino): Uncomment this once the gardenlet's Shoot flow starts reconciling OSCs for self-hosted shoots.
+# - patch: |
+#     - op: add
+#       path: /spec/provider/workers/0/updateStrategy
+#       value: AutoInPlaceUpdate
+#     - op: add
+#       path: /spec/provider/workers/0/kubernetes
+#       # One minor below the shoot-level version so the e2e in-place update test can bump it.
+#       value:
+#         version: "1.34.3"
+#     - op: add
+#       path: /spec/provider/workers/1/updateStrategy
+#       value: AutoInPlaceUpdate
+#   target:
+#     group: core.gardener.cloud
+#     kind: Shoot
+#     name: root
