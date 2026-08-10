@@ -7,6 +7,7 @@ package namespacedcloudprofile_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -15,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -50,6 +52,7 @@ var (
 
 	testNamespace *corev1.Namespace
 	testRunID     string
+	fakeClock     *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -113,10 +116,12 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddNamespacedCloudProfileParentRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
+	fakeClock = testclock.NewFakeClock(time.Now().Truncate(time.Second))
 	Expect((&namespacedcloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration{
 			ConcurrentSyncs: new(5),
 		},
+		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
