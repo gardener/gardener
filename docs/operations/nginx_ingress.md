@@ -246,9 +246,10 @@ spec:
     providerConfig:
       apiVersion: traefik.extensions.gardener.cloud/v1alpha1
       kind: TraefikConfig
-      replicas: 2
-      # KubernetesIngressNGINX enables NGINX annotation compatibility
-      ingressProvider: KubernetesIngressNGINX
+      spec:
+        replicas: 2
+        # KubernetesIngressNGINX enables NGINX annotation compatibility
+        ingressProvider: KubernetesIngressNGINX
 ```
 
 Apply the change and wait for the Shoot to reconcile:
