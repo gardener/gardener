@@ -133,8 +133,11 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.3.0"},
 					{
-						Version:        "1.2.3",
-						ExpirationDate: &expirationDateFuture,
+						Version: "1.2.3",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &expirationDateFuture},
+						},
 					},
 				},
 			},
@@ -148,9 +151,15 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 							Architectures:    []string{"amd64"},
 						},
 						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture},
-							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
-							Architectures:    []string{"amd64"},
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "4.5.6",
+								Lifecycle: []gardencorev1beta1.LifecycleStage{
+									{Classification: gardencorev1beta1.ClassificationSupported},
+									{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &expirationDateFuture},
+								},
+							},
+							CRI:           []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures: []string{"amd64"},
 						},
 					},
 					UpdateStrategy: &updateStrategy,
@@ -375,7 +384,13 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(
-					gardencorev1beta1.ExpirableVersion{Version: "1.2.3", ExpirationDate: &expirationDateFuture},
+					gardencorev1beta1.ExpirableVersion{
+						Version: "1.2.3",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &expirationDateFuture},
+						},
+					},
 					gardencorev1beta1.ExpirableVersion{Version: "1.3.0"},
 					gardencorev1beta1.ExpirableVersion{Version: "1.4.0"},
 				))
@@ -458,7 +473,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
-				now    = time.Now()
+				now    = fakeClock.Now()
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 				past   = &metav1.Time{Time: now.Add(-24 * time.Hour)}
 			)
@@ -577,7 +592,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
-				now    = time.Now()
+				now    = fakeClock.Now()
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 			)
 

@@ -205,7 +205,7 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		if _, exists := parentVersions[newVersion.Version]; !exists {
 			return fmt.Errorf("invalid kubernetes version specified: '%s' does not exist in parent CloudProfile and thus cannot be overridden", newVersion.Version)
 		}
-		if newVersion.ExpirationDate == nil {
+		if newVersion.ExpirationDate == nil && len(newVersion.Lifecycle) == 0 {
 			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
 		}
 		if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(newVersion) {
@@ -270,6 +270,8 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						machineImageVersionWithoutExpiration := imageVersion.DeepCopy()
 						oldMachineImageVersionWithoutExpiration.ExpirationDate = nil
 						machineImageVersionWithoutExpiration.ExpirationDate = nil
+						oldMachineImageVersionWithoutExpiration.Lifecycle = nil
+						machineImageVersionWithoutExpiration.Lifecycle = nil
 						// Compare the old and new image version without considering the expiration date.
 						// The expiration date is neglected here because it is the only field allowed to change for an existing image version.
 						// If the image versions are equal except for the expiration date, then the update is allowed.
