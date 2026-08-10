@@ -10,11 +10,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	cmfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
 func TestCloudProfile(t *testing.T) {
-	cmfeatures.RegisterFeatureGates()
+	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager Controller NamespacedCloudProfile Suite")
 }
