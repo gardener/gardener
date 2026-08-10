@@ -35,7 +35,7 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
-	google.golang.org/protobuf v1.36.12-0.20260806062936-644d0267c26e // indirect
+	google.golang.org/protobuf v1.36.12-0.20260810132945-cdd4c5f7406e // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260603220949-865597e52e25 // indirect
