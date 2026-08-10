@@ -182,10 +182,12 @@ If an in-place update fails and nodes are left in a problematic state, user inte
 
 When GNA marks a node update as failed (by setting the label `node.machine.sapcloud.io/update-result=failed`), it automatically retries the update on the next reconcile without any user intervention.
 
-The one exception is an OS update that rolls back to the previous version. In this case GNA returns a terminal error and stops reconciling that node. To unblock it, remove the OS update annotation and re-set the `InPlaceUpdate` node condition with reason `ReadyForUpdate` to trigger a new reconcile:
+The one exception is an OS update that rolls back to the previous version. In this case, GNA returns a terminal error and stops reconciling that node.
+This can be detected by checking the node's `InPlaceUpdate` condition (reason `UpdateFailed`) or the annotation `node.machine.sapcloud.io/update-failed-reason`.
+To unblock it, remove the OS update annotation and the failure label/annotation, then re-set the `InPlaceUpdate` node condition with reason `ReadyForUpdate` to trigger a new reconcile:
 
 ```bash
-kubectl annotate node <node-name> node-agent.gardener.cloud/updating-operating-system-version-
+kubectl annotate node <node-name> node-agent.gardener.cloud/updating-operating-system-version- && \
 kubectl patch node <node-name> --subresource=status --type=json \
   -p='[{"op":"add","path":"/status/conditions/-","value":{"type":"InPlaceUpdate","status":"True","reason":"ReadyForUpdate","message":"Retrying failed in-place update"}}]'
 ```
