@@ -1319,7 +1319,7 @@ func (r *Reconciler) newGardenerDashboard(
 	values := gardenerdashboard.Values{
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
-		APIServerURL:     v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
+		APIServerURL:     virtualGardenAPIServerHost(garden),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
 			Enabled:                   true,
@@ -1327,10 +1327,6 @@ func (r *Reconciler) newGardenerDashboard(
 			TLSSecretName:             dashboardTLSSecretName(garden, wildcardCertSecretName),
 			IstioIngressGatewayLabels: ingressGatewayValues[0].Labels,
 		},
-	}
-
-	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
-		values.APIServerURL = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns[0]
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil {
@@ -1378,7 +1374,10 @@ func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garde
 	}
 
 	values := terminal.Values{
-		Image:                       image.String(),
+		Image: image.String(),
+		// Must match the dashboard's apiServerUrl: Garden terminals set
+		// spec.target.apiServer.server to that exact value.
+		AllowedAPIServerURLs:        []string{"https://" + virtualGardenAPIServerHost(garden)},
 		RuntimeVersion:              r.RuntimeVersion,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
@@ -1389,6 +1388,15 @@ func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garde
 	}
 
 	return deployer, nil
+}
+
+// virtualGardenAPIServerHost returns the virtual garden kube-apiserver hostname used by the
+// dashboard (apiServerUrl) and terminal-controller-manager (allowedAPIServerURLs).
+func virtualGardenAPIServerHost(garden *operatorv1alpha1.Garden) string {
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
+		return garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns[0]
+	}
+	return v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)
 }
 
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {

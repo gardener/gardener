@@ -57,6 +57,7 @@ var _ = Describe("Terminal", func() {
 		namespace                  = "some-namespace"
 
 		image                string
+		allowedAPIServerURLs []string
 		topologyAwareRouting bool
 		runtimeVersion       *semver.Version
 
@@ -94,6 +95,7 @@ var _ = Describe("Terminal", func() {
 		ctx = context.Background()
 
 		image = "terminal-image:latest"
+		allowedAPIServerURLs = []string{"https://api.example.com"}
 		topologyAwareRouting = false
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
@@ -177,31 +179,7 @@ var _ = Describe("Terminal", func() {
 			},
 		}
 
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "terminal-controller-manager",
-				Namespace: namespace,
-				Labels:    map[string]string{"app": "terminal-controller-manager"},
-			},
-			Data: map[string]string{"config.yaml": `apiVersion: dashboard.gardener.cloud/v1alpha1
-kind: ControllerManagerConfiguration
-controllers:
-  serviceAccount:
-    allowedServiceAccountNames:
-    - dashboard-webterminal
-honourCleanupProjectMembership: true
-honourServiceAccountRefHostCluster: false
-leaderElection:
-  leaderElect: true
-  resourceNamespace: kube-system
-server:
-  healthProbes:
-    port: 8081
-  metrics:
-    port: 8443
-`},
-		}
-		utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+		configMap = expectedConfigMap(namespace, `["https://api.example.com"]`)
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -595,6 +573,7 @@ server:
 	JustBeforeEach(func() {
 		values = Values{
 			Image:                       image,
+			AllowedAPIServerURLs:        allowedAPIServerURLs,
 			TopologyAwareRoutingEnabled: topologyAwareRouting,
 			RuntimeVersion:              runtimeVersion,
 		}
@@ -718,6 +697,30 @@ server:
 
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+			})
+
+			When("the allowed API server URL input is nil", func() {
+				BeforeEach(func() {
+					allowedAPIServerURLs = nil
+					configMap = expectedConfigMap(namespace, `[]`)
+					setExpectedDeploymentConfigMap(deployment, configMap.Name)
+				})
+
+				It("should render an empty allowlist", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+				})
+			})
+
+			When("the allowed API server URL input is empty", func() {
+				BeforeEach(func() {
+					allowedAPIServerURLs = []string{}
+					configMap = expectedConfigMap(namespace, `[]`)
+					setExpectedDeploymentConfigMap(deployment, configMap.Name)
+				})
+
+				It("should render an empty allowlist", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+				})
 			})
 
 			Context("secrets", func() {
@@ -1013,6 +1016,46 @@ server:
 		})
 	})
 })
+
+func expectedConfigMap(namespace, allowedAPIServerURLs string) *corev1.ConfigMap {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "terminal-controller-manager",
+			Namespace: namespace,
+			Labels:    map[string]string{"app": "terminal-controller-manager"},
+		},
+		Data: map[string]string{"config.yaml": `apiVersion: dashboard.gardener.cloud/v1alpha1
+kind: ControllerManagerConfiguration
+allowedAPIServerURLs: ` + allowedAPIServerURLs + `
+controllers:
+  serviceAccount:
+    allowedServiceAccountNames:
+    - dashboard-webterminal
+honourCleanupProjectMembership: true
+honourServiceAccountRefHostCluster: false
+leaderElection:
+  leaderElect: true
+  resourceNamespace: kube-system
+server:
+  healthProbes:
+    port: 8081
+  metrics:
+    port: 8443
+`},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	return configMap
+}
+
+func setExpectedDeploymentConfigMap(deployment *appsv1.Deployment, configMapName string) {
+	oldConfigMapName := deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+	oldAnnotationKey := references.AnnotationKey(references.KindConfigMap, oldConfigMapName)
+	delete(deployment.Annotations, oldAnnotationKey)
+	delete(deployment.Spec.Template.Annotations, oldAnnotationKey)
+
+	deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name = configMapName
+	utilruntime.Must(references.InjectAnnotations(deployment))
+}
 
 var (
 	healthyManagedResourceStatus = resourcesv1alpha1.ManagedResourceStatus{

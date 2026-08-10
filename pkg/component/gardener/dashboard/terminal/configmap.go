@@ -5,6 +5,7 @@
 package terminal
 
 import (
+	"encoding/json"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,8 @@ func (t *terminal) configMap() *corev1.ConfigMap {
 	// This is the name of ServiceAccounts when the Gardener Dashboard creates Terminal resources, see
 	// https://github.com/gardener/dashboard/blob/b99a6ef584eec26dee95028d755f5ebdf5973b2c/backend/lib/services/terminals/index.js#L45-L46
 	dashboardServiceAccountName := "dashboard-webterminal"
+	allowedAPIServerURLs, err := json.Marshal(append([]string{}, t.values.AllowedAPIServerURLs...))
+	utilruntime.Must(err)
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,6 +32,7 @@ func (t *terminal) configMap() *corev1.ConfigMap {
 		},
 		Data: map[string]string{dataKeyConfig: `apiVersion: dashboard.gardener.cloud/v1alpha1
 kind: ControllerManagerConfiguration
+allowedAPIServerURLs: ` + string(allowedAPIServerURLs) + `
 controllers:
   serviceAccount:
     allowedServiceAccountNames:

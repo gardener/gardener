@@ -44,6 +44,8 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of terminal-controller-manager.
 	Image string
+	// AllowedAPIServerURLs is the exact-match allowlist for explicit API server URLs.
+	AllowedAPIServerURLs []string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended.
