@@ -642,6 +642,7 @@ var _ = Describe("Seed controller tests", func() {
 					}).Should(Succeed())
 
 					patchMRHealth("plutono")
+					patchMRHealth("perses")
 				} else {
 					By("Verify that the CRDs shared with the garden cluster have not been deployed (gardener-operator deploys them)")
 					Eventually(func(g Gomega) []string {
@@ -723,6 +724,7 @@ var _ = Describe("Seed controller tests", func() {
 					}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
 
 					patchMRHealth("plutono-seed-config-only")
+					patchMRHealth("perses-seed-config-only")
 				}
 				patchMRHealth("prometheus-aggregate")
 
@@ -757,6 +759,7 @@ var _ = Describe("Seed controller tests", func() {
 						"vpa",
 						"etcd-druid",
 						"plutono",
+						"perses",
 						"vali",
 						"fluent-bit",
 						"fluent-operator",
@@ -774,6 +777,7 @@ var _ = Describe("Seed controller tests", func() {
 				} else {
 					expectedManagedResources = append(expectedManagedResources,
 						"plutono-seed-config-only",
+						"perses-seed-config-only",
 					)
 				}
 				// There are additional parts in the flow that we not check here, which could take time.
@@ -1093,6 +1097,7 @@ var _ = Describe("Seed controller tests", func() {
 					}
 
 					patchMRHealth("plutono")
+					patchMRHealth("perses")
 					patchMRHealth("prometheus-aggregate")
 
 					controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
@@ -1117,6 +1122,7 @@ var _ = Describe("Seed controller tests", func() {
 						// Components not skipped for self-hosted shoots (only for garden):
 						"vpa",
 						"plutono",
+						"perses",
 						"vali",
 						"fluent-bit",
 						"fluent-operator",
