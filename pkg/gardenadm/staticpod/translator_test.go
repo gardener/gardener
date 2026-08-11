@@ -960,6 +960,12 @@ kind: Config
 			Expect(StatefulSetVolumeClaimTemplateHostPath("foo")).To(Equal("/var/lib/foo/data"))
 		})
 	})
+
+	Describe("#FilePathForProjectedVolumeItem", func() {
+		It("should return the expected path", func() {
+			Expect(FilePathForProjectedVolumeItem("my-pod", "my-volume", "subdir/token")).To(Equal("/var/lib/static-pods/my-pod/my-volume/subdir/token"))
+		})
+	})
 })
 
 func foobarThePod(pod *corev1.Pod) {

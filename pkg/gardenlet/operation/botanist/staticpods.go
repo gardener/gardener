@@ -323,3 +323,24 @@ func (b *Botanist) UpdateNodeAgentSecretNameLabelsOnNodes(ctx context.Context) e
 
 	return flow.Parallel(tasks...)(ctx)
 }
+
+// useShootAccessTokensForSelfHostedShootControlPlane returns true for self-hosted shoots whose
+// gardener-resource-manager deployment runs in the pod network. If the shoot status indicates that gardenadm
+// instantiated the Botanist instance, it returns false, since only the shoot gardenlet is the only instance who should
+// take care to disable the static token after initialization of the cluster (gardenadm init).
+func (b *Botanist) useShootAccessTokensForSelfHostedShootControlPlane(ctx context.Context) (bool, error) {
+	if !b.Shoot.IsSelfHosted() ||
+		b.Shoot.GetInfo().Status.Gardener.Name == "gardenadm" {
+		return false, nil
+	}
+
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: b.Shoot.ControlPlaneNamespace}}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("failed fetching deployment %s: %w", client.ObjectKeyFromObject(deployment), err)
+		}
+		return false, nil
+	}
+
+	return !deployment.Spec.Template.Spec.HostNetwork, nil
+}

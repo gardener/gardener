@@ -200,3 +200,8 @@ func StatefulSetVolumeClaimTemplateHostPath(volumeClaimTemplateName string) stri
 func HostPath(podName, volumeName string) string {
 	return filepath.Join(string(filepath.Separator), "var", "lib", "static-pods", podName, volumeName)
 }
+
+// FilePathForProjectedVolumeItem returns the file path for an item in a projected volume for the given pod.
+func FilePathForProjectedVolumeItem(podName, volumeName, itemPath string) string {
+	return filepath.Join(HostPath(podName, volumeName), string(filepath.Separator), itemPath)
+}

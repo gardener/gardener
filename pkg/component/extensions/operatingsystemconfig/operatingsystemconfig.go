@@ -82,6 +82,8 @@ type Interface interface {
 	WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
 	// SetClusterDNSAddresses sets the cluster DNS addresses.
 	SetClusterDNSAddresses([]string)
+	// SetSyncControlPlaneAuthTokens sets the SyncControlPlaneAuthTokens field in the values.
+	SetSyncControlPlaneAuthTokens(bool)
 }
 
 // Values contains the values used to create an OperatingSystemConfig resource.
@@ -149,6 +151,10 @@ type OriginalValues struct {
 	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
 	// Region is the name of the region specified in the Shoot spec.
 	Region *string
+	// SyncControlPlaneAuthTokens indicates whether the shoot access secret tokens for the Kubernetes control
+	// plane components (running as static pods) should be included in gardener-node-agent's token controller config for
+	// getting synced to the host filesystem.
+	SyncControlPlaneAuthTokens bool
 }
 
 // New creates a new instance of Interface.
@@ -512,6 +518,10 @@ func (o *operatingSystemConfig) SetClusterDNSAddresses(clusterDNSAddresses []str
 	o.values.ClusterDNSAddresses = clusterDNSAddresses
 }
 
+func (o *operatingSystemConfig) SetSyncControlPlaneAuthTokens(sync bool) {
+	o.values.SyncControlPlaneAuthTokens = sync
+}
+
 func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
 	criName := extensionsv1alpha1.CRINameContainerD
 	if worker.CRI != nil {
@@ -621,8 +631,9 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		primaryIPFamily:                         o.values.PrimaryIPFamily,
 		taints:                                  taints,
 		caRotationLastInitiationTime:            caRotationLastInitiationTime,
+		region:                                  o.values.Region,
+		syncControlPlaneAuthTokens:              o.values.SyncControlPlaneAuthTokens,
 		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
-		region: o.values.Region,
 	}, nil
 }
 
@@ -696,6 +707,7 @@ type deployer struct {
 	caRotationLastInitiationTime                *metav1.Time
 	serviceAccountKeyRotationLastInitiationTime *metav1.Time
 	region                                      *string
+	syncControlPlaneAuthTokens                  bool
 }
 
 // exposed for testing
@@ -739,6 +751,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		Sysctls:                                 d.worker.Sysctls,
 		PreferIPv6:                              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 		Taints:                                  d.taints,
+		SyncControlPlaneAuthTokens:              d.syncControlPlaneAuthTokens && d.worker.ControlPlane != nil,
 	}
 
 	switch d.purpose {
