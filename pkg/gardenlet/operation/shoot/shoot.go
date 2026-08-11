@@ -555,6 +555,17 @@ func (s *Shoot) ProxyMode() gardencorev1beta1.ProxyMode {
 	return gardencorev1beta1.ProxyModeIPTables
 }
 
+// PreferIPv6 returns true if IPv6 is the primary IP family of the shoot (i.e., the first entry in
+// .spec.networking.ipFamilies is IPv6). This is true for both IPv6 single-stack and dual-stack shoots with IPv6
+// primary.
+func (s *Shoot) PreferIPv6() bool {
+	networking := s.GetInfo().Spec.Networking
+	if networking == nil {
+		return false
+	}
+	return len(networking.IPFamilies) > 0 && networking.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv6
+}
+
 // IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled
 func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)

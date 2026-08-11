@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -88,9 +87,8 @@ var LookupIP = net.LookupIP
 // Similar to https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
 func (b *GardenadmBotanist) MachineIP() (net.IP, error) {
 	var (
-		preferIPv6 = len(b.Shoot.GetInfo().Spec.Networking.IPFamilies) > 0 &&
-			b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv6
-		fallback net.IP
+		preferIPv6 = b.Shoot.PreferIPv6()
+		fallback   net.IP
 	)
 
 	addrs, err := LookupIP(b.HostName)

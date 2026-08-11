@@ -29,7 +29,6 @@ var _ = Describe("handler", func() {
 		handler = &updaterestriction.Handler{}
 		req.UserInfo = authenticationv1.UserInfo{
 			Username: "gardenlet",
-			Groups:   []string{"gardener.cloud:system:seeds"},
 		}
 		req.Resource = metav1.GroupVersionResource{
 			Resource: "configmaps",
@@ -38,18 +37,24 @@ var _ = Describe("handler", func() {
 	})
 
 	Describe("#Handle", func() {
-		It("should allow the request as it is made by a gardenlet", func() {
-			resp := handler.Handle(ctx, req)
-			Expect(resp.Allowed).To(BeTrue())
-			Expect(resp.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
-				Allowed: true,
-				Result: &metav1.Status{
-					Code:    int32(200),
-					Reason:  "",
-					Message: "gardenlet is allowed to modify system resources",
-				},
-			}))
-		})
+		DescribeTable("should allow the request as it is made by a gardenlet",
+			func(group string) {
+				req.UserInfo.Groups = []string{group}
+				resp := handler.Handle(ctx, req)
+				Expect(resp.Allowed).To(BeTrue())
+				Expect(resp.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result: &metav1.Status{
+						Code:    int32(200),
+						Reason:  "",
+						Message: "gardenlet is allowed to modify system resources",
+					},
+				}))
+			},
+
+			Entry("seed gardenlet", "gardener.cloud:system:seeds"),
+			Entry("self-hosted shoot gardenlet", "gardener.cloud:system:shoots"),
+		)
 
 		It("should deny the request as it is not made by a gardenlet", func() {
 			req.UserInfo = authenticationv1.UserInfo{

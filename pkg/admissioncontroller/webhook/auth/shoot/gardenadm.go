@@ -21,7 +21,7 @@ func (a *authorizer) authorizeGardenadmRequests(requestLog logr.Logger, shootNam
 				return auth.DecisionAllow, "", nil
 			}
 
-		case backupBucketResource, backupEntryResource, projectResource:
+		case projectResource:
 			if isGardenadmRequestAllowed(attrs, nil, "create") {
 				return auth.DecisionAllow, "", nil
 			}

@@ -1298,7 +1298,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{"core.gardener.cloud"},
 							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"backupbuckets", "backupentries", "projects", "shoots"},
+							Resources:   []string{"backupbuckets", "backupentries", "internalsecrets", "projects", "shoots"},
 						},
 					},
 				},
