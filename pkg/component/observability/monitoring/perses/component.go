@@ -101,10 +101,14 @@ type perses struct {
 func (p *perses) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	objs := []client.Object{
-		p.perses(),
-		p.serviceMonitor(),
+	var objs []client.Object
+	if !p.values.OnlyDeployDatasourcesAndDashboards {
+		objs = append(objs,
+			p.perses(),
+			p.serviceMonitor(),
+		)
 	}
+	objs = append(objs, p.datasources()...)
 
 	resources, err := registry.AddAllAndSerialize(objs...)
 	if err != nil {
