@@ -646,7 +646,7 @@ var _ = Describe("Authorizer", func() {
 					ResourceRequest: true,
 					Verb:            verb,
 				}
-				secretNames := []string{machineSecretName, "gardener-valitail"}
+				secretNames := []string{machineSecretName, "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin"}
 
 				for _, secretName := range secretNames {
 					attrs.Name = secretName
@@ -677,7 +677,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s] in \"kube-system\" namespace", machineSecretName)))
+				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector shoot-access-kube-controller-manager shoot-access-kube-scheduler shoot-access-cluster-admin %s] in \"kube-system\" namespace", machineSecretName)))
 			},
 				Entry("get", "get"),
 				Entry("list", "list"),
@@ -694,7 +694,7 @@ var _ = Describe("Authorizer", func() {
 					ResourceRequest: true,
 					Verb:            verb,
 				}
-				secretNames := []string{machineSecretName, "gardener-valitail"}
+				secretNames := []string{machineSecretName, "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin"}
 
 				for _, secretName := range secretNames {
 					attrs.Name = secretName
@@ -702,7 +702,7 @@ var _ = Describe("Authorizer", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionDeny))
-					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector %s] in \"kube-system\" namespace", machineSecretName)))
+					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector shoot-access-kube-controller-manager shoot-access-kube-scheduler shoot-access-cluster-admin %s] in \"kube-system\" namespace", machineSecretName)))
 				}
 			},
 				Entry("get", "get"),

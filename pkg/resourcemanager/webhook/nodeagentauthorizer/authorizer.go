@@ -31,7 +31,9 @@ import (
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardener-node-agents. It never has an opinion on the request.
@@ -292,7 +294,13 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 		return auth.DecisionDeny, reason, nil
 	}
 
-	validSecrets := []string{valitailTokenSecretName, openTelemetryCollectorTokenSecretName}
+	validSecrets := []string{
+		valitailTokenSecretName,
+		openTelemetryCollectorTokenSecretName,
+		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameKubeControllerManager,
+		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameKubeScheduler,
+		gardenerutils.SecretNamePrefixShootAccess + adminaccess.ShootAccessSecretNameSuffix,
+	}
 
 	if a.machineNamespace != nil {
 		machine := &machinev1alpha1.Machine{}
