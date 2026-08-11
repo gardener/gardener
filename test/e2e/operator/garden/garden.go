@@ -44,6 +44,7 @@ var gardenManagedResourceList = []string{
 	"vali",
 	"victoria-logs",
 	"plutono",
+	"perses",
 	"prometheus-operator",
 	"perses-operator",
 	"victoria-operator",
