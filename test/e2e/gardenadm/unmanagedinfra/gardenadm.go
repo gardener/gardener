@@ -306,6 +306,57 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					))
 				}
 			}, SpecTimeout(5*time.Minute))
+
+			// `gardenadm connect` deploys the shoot gardenlet and registers the `Shoot` in the garden cluster. However,
+			// after `gardenadm init`, the status indicates a successful reconciliation, and since the shoot gardenlet
+			// is configured to only proactively reconcile in the maintenance time window, we have to explicitly request
+			// a reconciliation from it. This is to test whether its `Shoot` controller works as expected.
+			Context("shoot gardenlet reconciles self-hosted shoot", func() {
+				var s *e2egardener.ShootContext
+
+				BeforeAll(func() {
+					s = (&e2egardener.TestContext{
+						GardenClientSet: gardenClientSet,
+						GardenClient:    gardenClientSet.Client(),
+						GardenKomega:    New(gardenClientSet.Client()),
+					}).ForShoot(shoot)
+				})
+
+				It("should annotate the shoot to trigger reconciliation", func(ctx SpecContext) {
+					patch := client.MergeFrom(s.Shoot.DeepCopy())
+					metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+					Eventually(ctx, func() error {
+						return s.GardenClient.Patch(ctx, s.Shoot, patch)
+					}).Should(Succeed())
+				}, SpecTimeout(time.Minute))
+
+				It("should wait for the self-hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) bool {
+						g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+						// TODO(rfranzke): Uncomment this code and remove the manual checks once the Shoot controller
+						//  has progressed and the .status.conditions properly reflect healthiness.
+						//
+						// completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
+						// return completed
+
+						if s.Shoot.Generation != s.Shoot.Status.ObservedGeneration {
+							return false
+						}
+						if len(s.Shoot.Status.Conditions) == 0 && s.Shoot.Status.LastOperation == nil {
+							return false
+						}
+						if shoot.Status.LastOperation != nil {
+							switch shoot.Status.LastOperation.Type {
+							case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationTypeRestore:
+								if shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+									return false
+								}
+							}
+						}
+						return true
+					}).WithPolling(30 * time.Second).Should(BeTrue())
+				}, SpecTimeout(30*time.Minute))
+			})
 		})
 
 		Context("self-hosted shoot -> seed promotion", Ordered, Label("seed"), func() {
