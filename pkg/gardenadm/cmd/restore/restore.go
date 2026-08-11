@@ -27,6 +27,8 @@ onto a new or existing node.`,
 		Example: `# Restore a control plane node from an etcd backup
 gardenadm restore --config-dir /path/to/manifests --backup-data-path /path/to/etcd-main/v2 --prior-node-name <name>`,
 
+		Args: cobra.NoArgs,
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
 				return err

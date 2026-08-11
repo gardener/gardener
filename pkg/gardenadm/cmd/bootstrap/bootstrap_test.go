@@ -74,4 +74,14 @@ var _ = Describe("Bootstrap", func() {
 			})
 		})
 	})
+
+	Describe("#Args", func() {
+		It("should accept no arguments", func() {
+			Expect(command.Args(command, nil)).To(Succeed())
+		})
+
+		It("should reject any positional arguments", func() {
+			Expect(command.Args(command, []string{"foo"})).To(HaveOccurred())
+		})
+	})
 })

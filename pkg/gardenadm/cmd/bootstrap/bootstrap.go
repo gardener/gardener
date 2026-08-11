@@ -49,6 +49,8 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Example: `# Bootstrap the infrastructure
 gardenadm bootstrap --config-dir /path/to/manifests`,
 
+		Args: cobra.NoArgs,
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
 				return err

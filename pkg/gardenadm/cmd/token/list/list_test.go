@@ -101,4 +101,14 @@ bootstrap-token-token2\s+token2\s+token2secret5678\s+token2.token2secret5678\s+1
 			})
 		})
 	})
+
+	Describe("#Args", func() {
+		It("should accept no arguments", func() {
+			Expect(command.Args(command, nil)).To(Succeed())
+		})
+
+		It("should reject any positional arguments", func() {
+			Expect(command.Args(command, []string{"foo"})).To(HaveOccurred())
+		})
+	})
 })

@@ -37,6 +37,8 @@ gardenadm init --config-dir /path/to/manifests
 # Bootstrap the first control plane node in a specific zone (required when multiple zones are configured in the ` + "`Shoot`" + ` resource)
 gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 
+		Args: cobra.NoArgs,
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
 				return err

@@ -53,6 +53,8 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Example: `# Deploy a gardenlet
 gardenadm connect`,
 
+		Args: cobra.MaximumNArgs(1),
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
 				return err

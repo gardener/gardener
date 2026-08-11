@@ -31,7 +31,7 @@ Read more about it here: https://kubernetes.io/docs/reference/access-authn-authz
 		Example: `# Generate a random bootstrap token for joining a node
 gardenadm token generate`,
 
-		Args: cobra.ExactArgs(0),
+		Args: cobra.NoArgs,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {

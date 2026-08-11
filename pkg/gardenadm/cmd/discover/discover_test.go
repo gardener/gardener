@@ -26,4 +26,16 @@ var _ = Describe("Discover", func() {
 			Expect(subs).To(HaveKey("existing"))
 		})
 	})
+
+	Describe("#Args", func() {
+		It("should accept no arguments", func() {
+			command := NewCommand(&cmd.Options{})
+			Expect(command.Args(command, nil)).To(Succeed())
+		})
+
+		It("should reject any positional arguments", func() {
+			command := NewCommand(&cmd.Options{})
+			Expect(command.Args(command, []string{"foo"})).To(HaveOccurred())
+		})
+	})
 })
