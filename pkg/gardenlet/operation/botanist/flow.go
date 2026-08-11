@@ -145,13 +145,15 @@ const TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcil
 
 // ReconcileGardenerResourceManagerTaskGroup returns the flow.TaskGroup for deploying the gardener-resource-manager
 // instances. It waits for their readiness and also deploys the seed and shoot system resources afterwards.
-func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, skipRuntimeResourceManager, skipReadiness bool) flow.TaskGroup {
+func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileGardenerResourceManager).WithDependencies(
 			TaskGroupDeployNamespaces,
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupReconcileCustomResourceDefinitions,
 		)
+
+		skipRuntimeResourceManager = !b.Shoot.IsSelfHosted() || shootIsGarden || b.isGardenadmBootstrap()
 
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",

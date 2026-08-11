@@ -112,7 +112,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
 		})
 		_ = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, true, false).
+			b.ReconcileGardenerResourceManagerTaskGroup(true, false, false).
 				WithDependencies(deployPriorityClassCritical),
 		)
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
