@@ -35,6 +35,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // PathKubeconfig is the path to a file on the control plane node containing an admin kubeconfig.
@@ -84,13 +85,28 @@ func (b *Botanist) deployETCD(role string, bootstrapEtcdBackupPath string) func(
 	}
 }
 
-func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
-	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
+func (b *Botanist) deployKubeAPIServer(ctx context.Context, useShootAccessTokens bool) error {
+	if !useShootAccessTokens {
+		b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
+	} else {
+		// Usually, these secrets would be deleted by a `b.SecretsManager.Cleanup()` call. However, we don't run this
+		// call in gardenlet yet. Hence, for now, let's explicitly delete them.
+		// TODO(rfranzke): Remove this in favor of the `b.SecretsManager.Cleanup()` call at the end of the shoot
+		//  reconciliation (see TODO statement there).
+		if err := b.SeedClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(
+			utils.MustNewRequirement(secretsmanager.LabelKeyManagedBy, selection.Equals, secretsmanager.LabelValueSecretsManager),
+			utils.MustNewRequirement(secretsmanager.LabelKeyManagerIdentity, selection.Equals, b.SecretsManager.Identity()),
+			utils.MustNewRequirement(secretsmanager.LabelKeyName, selection.In, kubeapiserver.SecretNameUserKubeconfig),
+		)}); err != nil {
+			return fmt.Errorf("failed to cleanup static token kubeconfig and user kubeconfig secrets: %w", err)
+		}
+	}
+
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(new(int32(0)))
 	return b.DeployKubeAPIServer(ctx)
 }
 
-func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool, bootstrapEtcdBackupPath string) []staticControlPlaneComponent {
+func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) []staticControlPlaneComponent {
 	var (
 		components []staticControlPlaneComponent
 
@@ -118,7 +134,7 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool, bootstrap
 	}
 
 	return append(components,
-		staticControlPlaneComponent{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, nil},
+		staticControlPlaneComponent{func(ctx context.Context) error { return b.deployKubeAPIServer(ctx, useShootAccessTokens) }, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, nil},
 		staticControlPlaneComponent{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}, nil},
 		staticControlPlaneComponent{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}, nil},
 	)
@@ -155,7 +171,7 @@ func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useB
 
 // DeployControlPlaneDeployments runs the Deploy function of the control plane components.
 func (b *Botanist) DeployControlPlaneDeployments(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) error {
-	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, bootstrapEtcdBackupPath) {
+	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath) {
 		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name, useShootAccessTokens); err != nil {
 			return fmt.Errorf("failed deploying %q: %w", component.name, err)
 		}
@@ -224,9 +240,12 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
 
-	files, err := b.appendAdminKubeconfigToFiles(pods.allFiles())
-	if err != nil {
-		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
+	files := pods.allFiles()
+	if !useShootAccessTokens {
+		files, err = b.appendAdminKubeconfigToFiles(files)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
+		}
 	}
 
 	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
@@ -292,7 +311,7 @@ func (s staticPods) allFiles() []extensionsv1alpha1.File {
 func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) (staticPods, error) {
 	var pods staticPods
 
-	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, bootstrapEtcdBackupPath) {
+	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath) {
 		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: component.name, Namespace: b.Shoot.ControlPlaneNamespace}, component.targetObject); err != nil {
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
