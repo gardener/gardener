@@ -87,3 +87,13 @@ deploy:
         setValueTemplates:
           images.cloud-controller-manager-local: '{{.IMAGE_REPO_local_skaffold_cloud_controller_manager_local}}:{{.IMAGE_TAG_local_skaffold_cloud_controller_manager_local}}@{{.IMAGE_DIGEST_local_skaffold_cloud_controller_manager_local}}'
           clusterName: '{{.CLUSTER_NAME}}'
+profiles:
+  - name: debug
+    activation:
+      - command: debug
+    patches:
+      - op: add
+        path: /deploy/helm/releases/2/setValues
+        value:
+          leaderElection: false
+          healthProbes.enable: false

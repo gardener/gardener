@@ -106,6 +106,10 @@ type GardenletDeployment struct {
 	Env []corev1.EnvVar
 	// Tolerations are the tolerations to be applied to gardenlet pods.
 	Tolerations []corev1.Toleration
+	// EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet
+	// deployment. Defaults to true.
+	// +optional
+	EnableHealthProbes *bool
 }
 
 // Image specifies container image parameters.

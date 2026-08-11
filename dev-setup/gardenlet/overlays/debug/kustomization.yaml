@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../single-node
+
+patches:
+  - patch: |
+      - op: add
+        path: /spec/config/leaderElection
+        value:
+          leaderElect: false
+      - op: add
+        path: /spec/deployment/enableHealthProbes
+        value: false
+    target:
+      group: seedmanagement.gardener.cloud
+      kind: Gardenlet

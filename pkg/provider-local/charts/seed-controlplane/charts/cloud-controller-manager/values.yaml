@@ -8,6 +8,10 @@ podAnnotations: {}
 podLabels: {}
 priorityClassName: system-cluster-critical
 
+leaderElection: true
+healthProbes:
+  enable: true
+
 server:
   port: 10258
   tlsSecret: ""

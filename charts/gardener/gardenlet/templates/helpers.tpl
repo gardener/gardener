@@ -289,7 +289,7 @@ resources:
   capacity:
     shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}
 leaderElection:
-  {{- if .Values.config.leaderElection.leaderElect }}
+  {{- if hasKey .Values.config.leaderElection "leaderElect" }}
   leaderElect: {{ .Values.config.leaderElection.leaderElect }}
   {{- end }}
   {{- if .Values.config.leaderElection.leaseDuration }}
