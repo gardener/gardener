@@ -62,6 +62,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/perses"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	aggregateprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
@@ -126,6 +127,7 @@ type components struct {
 	aggregatePrometheus           component.DeployWaiter
 	alertManager                  component.DeployWaiter
 	persesOperator                component.DeployWaiter
+	perses                        perses.Interface
 	victoriaOperator              component.DeployWaiter
 	openTelemetryOperator         component.DeployWaiter
 	openTelemetryCollector        component.Deployer
@@ -300,6 +302,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesOperator, err = r.newPersesOperator()
+	if err != nil {
+		return
+	}
+	c.perses, err = r.newPerses(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, seedIsGarden, c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -962,6 +968,38 @@ func (r *Reconciler) newPersesOperator() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
+}
+
+func (r *Reconciler) newPerses(seed *seedpkg.Seed, secretsManager secretsmanager.Interface, authSecret, wildcardCertSecret *corev1.Secret, seedIsGarden bool, istioIngressGatewayLabels map[string]string, istioIngressGatewayNamespace string) (perses.Interface, error) {
+	values := perses.Values{
+		ClusterType: component.ClusterTypeSeed,
+		Replicas:    1,
+		// TODO(rickardsjp): Set PriorityClassNameSeedSystem600 on the Perses pods once perses-operator supports
+		// configuring a pod priority class on the Perses resource (see github.com/perses/perses-operator/pull/456).
+		VPAEnabled:                         v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(seed.GetInfo().Spec.Settings),
+		VictoriaLogsEnabled:                gardenlethelper.IsVictoriaLogsEnabled(&r.Config),
+		OnlyDeployDatasourcesAndDashboards: seedIsGarden,
+	}
+
+	if !seedIsGarden {
+		values.ExternalExposure = &perses.ExposureValues{
+			Host:                         seed.GetIngressFQDN("perses-seed"),
+			IstioIngressGatewayLabels:    istioIngressGatewayLabels,
+			IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
+			SecretsManager:               secretsManager,
+			SigningCA:                    v1beta1constants.SecretNameCASeed,
+		}
+		if authSecret != nil {
+			values.ExternalExposure.AuthSecretName = authSecret.Name
+			// The seed's global monitoring secret is referenced verbatim, not managed by the secrets manager.
+			values.ExternalExposure.AuthSecretManaged = false
+		}
+		if wildcardCertSecret != nil {
+			values.ExternalExposure.WildcardCertSecretName = new(wildcardCertSecret.GetName())
+		}
+	}
+
+	return sharedcomponent.NewPerses(r.SeedClientSet.Client(), r.GardenNamespace, values)
 }
 
 func (r *Reconciler) newVictoriaOperator() (component.DeployWaiter, error) {
