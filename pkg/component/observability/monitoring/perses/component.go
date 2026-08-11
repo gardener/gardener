@@ -59,6 +59,9 @@ type Values struct {
 type ExposureValues struct {
 	// AuthSecretName is the name of the auth secret.
 	AuthSecretName string
+	// AuthSecretManaged indicates whether the auth secret is managed by the secrets manager (referenced by its base
+	// name) or used verbatim.
+	AuthSecretManaged bool
 	// Host is the hostname under which the Perses instance should be exposed.
 	Host string
 	// IsGardenCluster specifies whether the cluster is the garden cluster.
@@ -107,6 +110,12 @@ func (p *perses) Deploy(ctx context.Context) error {
 			p.perses(),
 			p.serviceMonitor(),
 		)
+
+		istioResources, err := p.istioResources(ctx)
+		if err != nil {
+			return err
+		}
+		objs = append(objs, istioResources...)
 	}
 	objs = append(objs, p.datasources()...)
 	objs = append(objs, p.dashboards()...)
