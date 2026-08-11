@@ -145,6 +145,7 @@ func DeployGardenerResourceManager(
 	namespace string,
 	determineReplicas func(ctx context.Context) (int32, error),
 	getAPIServerAddress func() string,
+	skipClientCertBootstrap bool,
 ) error {
 	var secrets resourcemanager.Secrets
 
@@ -156,7 +157,7 @@ func DeployGardenerResourceManager(
 		gardenerResourceManager.SetReplicas(&replicaCount)
 	}
 
-	mustBootstrap, err := mustBootstrapGardenerResourceManager(ctx, c, clock, gardenerResourceManager, namespace)
+	mustBootstrap, err := mustBootstrapGardenerResourceManager(ctx, c, clock, gardenerResourceManager, namespace, skipClientCertBootstrap)
 	if err != nil {
 		return err
 	}
@@ -193,7 +194,10 @@ func DeployGardenerResourceManager(
 	return gardenerResourceManager.Deploy(ctx)
 }
 
-func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, clock clockutils.Clock, gardenerResourceManager resourcemanager.Interface, namespace string) (bool, error) {
+func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, clock clockutils.Clock, gardenerResourceManager resourcemanager.Interface, namespace string, skipClientCertBootstrap bool) (bool, error) {
+	if skipClientCertBootstrap {
+		return false, nil
+	}
 	if ptr.Deref(gardenerResourceManager.GetReplicas(), 0) == 0 {
 		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}

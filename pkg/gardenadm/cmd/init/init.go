@@ -86,8 +86,9 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	var (
-		g           = flow.NewGraph("init")
-		allowBackup = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
+		g                = flow.NewGraph("init")
+		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
+		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
 		_                           = g.AddGroup(b.DeployNamespacesTaskGroup())
 		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
@@ -105,24 +106,24 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 		reconcileGardenerResourceManager = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden).
+			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, false).
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
 		_                             = g.AddGroup(
-			b.ReconcileInfrastructureTaskGroup().
+			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
-		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup())
+		_                         = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(false))
 		reconcileSystemComponents = g.AddGroup(
-			b.ReconcileSystemComponentsTaskGroup().
+			b.ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
 		)
 
 		reconcileGardenerResourceManagerInPodNetwork = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden).
+			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden, false).
 				WithID(botanist.TaskGroupReconcileGardenerResourceManager + "InPodNetwork").
 				WithDependencies(reconcileSystemComponents).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
@@ -134,7 +135,7 @@ func run(ctx context.Context, opts *Options) error {
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
 		_ = g.AddGroup(
-			b.ReconcileControlPlaneTaskGroup().
+			b.ReconcileControlPlaneTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
 		syncPointBootstrapped = flow.NewTaskIDs(
@@ -221,7 +222,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(waitUntilWebhookComponentsReady),
 		)
 		reconcileWorker = g.AddGroup(
-			b.ReconcileWorkerTaskGroup().
+			b.ReconcileWorkerTaskGroup(false).
 				WithDependencies(syncPointBootstrapped),
 		)
 
