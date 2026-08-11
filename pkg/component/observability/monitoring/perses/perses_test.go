@@ -12,6 +12,9 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
+	persescommon "github.com/perses/spec/go/common"
+	"github.com/perses/spec/go/datasource"
+	persesplugin "github.com/perses/spec/go/plugin"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -56,7 +59,13 @@ var _ = Describe("Perses", func() {
 		managedResourceSecret *corev1.Secret
 
 		persesCR           *persesv1alpha2.Perses
+		dsAggregate        *persesv1alpha2.PersesDatasource
+		dsSeed             *persesv1alpha2.PersesDatasource
+		dsGarden           *persesv1alpha2.PersesDatasource
+		dsLongterm         *persesv1alpha2.PersesDatasource
 		seedServiceMonitor *monitoringv1.ServiceMonitor
+
+		newExpectedDatasource func(string, string, string, bool, string) *persesv1alpha2.PersesDatasource
 	)
 
 	BeforeEach(func() {
@@ -152,6 +161,52 @@ var _ = Describe("Perses", func() {
 			},
 		}
 
+		newExpectedDatasource = func(dsName, pluginKind, url string, isDefault bool, instanceName string) *persesv1alpha2.PersesDatasource {
+			return &persesv1alpha2.PersesDatasource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      dsName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":  "perses",
+						"role": "monitoring",
+					},
+				},
+				Spec: persesv1alpha2.DatasourceSpec{
+					Config: persesv1alpha2.Datasource{
+						Spec: datasource.Spec{
+							Display: &persescommon.Display{
+								Name: dsName,
+							},
+							Default: isDefault,
+							Plugin: persesplugin.Plugin{
+								Kind: pluginKind,
+								Spec: map[string]any{
+									"proxy": map[string]any{
+										"kind": "HTTPProxy",
+										"spec": map[string]any{
+											"url": url,
+										},
+									},
+								},
+							},
+						},
+					},
+					InstanceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "app.kubernetes.io/instance",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{instanceName},
+						}},
+					},
+				},
+			}
+		}
+
+		dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", true, "perses-seed")
+		dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-seed")
+		dsGarden = newExpectedDatasource("prometheus-garden", "PrometheusDatasource", "http://prometheus-garden:80", true, "perses-garden")
+		dsLongterm = newExpectedDatasource("prometheus-longterm", "PrometheusDatasource", "http://prometheus-longterm:81", false, "perses-garden")
+
 		seedServiceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("perses", namespace, "seed"),
 			Spec: monitoringv1.ServiceMonitorSpec{
@@ -222,7 +277,111 @@ var _ = Describe("Perses", func() {
 				It("should successfully deploy all resources", func() {
 					Expect(managedResource).To(consistOf(
 						persesCR,
+						dsAggregate,
+						dsSeed,
 						seedServiceMonitor,
+					))
+				})
+			})
+
+			Context("seed cluster with VictoriaLogs enabled", func() {
+				BeforeEach(func() {
+					values.VictoriaLogsEnabled = true
+
+					persesCR.Spec.Metadata.Labels[gardenerutils.NetworkPolicyLabel("logging-vl", 9428)] = v1beta1constants.LabelNetworkPolicyAllowed
+				})
+
+				It("should include VictoriaLogs datasource", func() {
+					Expect(managedResource).To(consistOf(
+						persesCR,
+						dsAggregate,
+						dsSeed,
+						newExpectedDatasource("victorialogs", "VictoriaLogsDatasource", "http://logging-vl."+namespace+".svc:9428", false, "perses-seed"),
+						seedServiceMonitor,
+					))
+				})
+			})
+
+			Context("garden cluster", func() {
+				BeforeEach(func() {
+					values.IsGardenCluster = true
+
+					persesCR.Name = "perses-garden"
+					persesCR.Labels["app.kubernetes.io/instance"] = "perses-garden"
+					persesCR.Spec.Service = &persesv1alpha2.PersesService{
+						Annotations: map[string]string{
+							"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":8080}]`,
+							"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+						},
+					}
+					persesCR.Spec.Metadata.Labels = map[string]string{
+						v1beta1constants.LabelObservabilityApplication:                 "perses",
+						v1beta1constants.LabelNetworkPolicyToDNS:                       v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:          v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
+						gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):    v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091):  v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
+					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					gardenServiceMonitor := &monitoringv1.ServiceMonitor{
+						ObjectMeta: monitoringutils.ConfigObjectMeta("perses", namespace, "garden"),
+						Spec: monitoringv1.ServiceMonitorSpec{
+							Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+								"app.kubernetes.io/instance": "perses-garden",
+							}},
+							Endpoints: []monitoringv1.Endpoint{{
+								TargetPort: new(intstr.FromInt32(8080)),
+							}},
+						},
+					}
+					Expect(managedResource).To(consistOf(
+						persesCR,
+						dsGarden,
+						dsLongterm,
+						gardenServiceMonitor,
+					))
+				})
+			})
+
+			Context("only datasources and dashboards", func() {
+				BeforeEach(func() {
+					values.OnlyDeployDatasourcesAndDashboards = true
+
+					managedResourceName = "perses-seed-config-only"
+					managedResource = &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      managedResourceName,
+							Namespace: namespace,
+						},
+					}
+					managedResourceSecret = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-" + managedResourceName,
+							Namespace: namespace,
+						},
+					}
+
+					Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceName,
+							Namespace:  namespace,
+							Generation: 1,
+						},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+
+					dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", false, "perses-garden")
+				})
+
+				It("should only deploy datasources", func() {
+					dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-garden")
+					Expect(managedResource).To(consistOf(
+						dsAggregate,
+						dsSeed,
 					))
 				})
 			})
