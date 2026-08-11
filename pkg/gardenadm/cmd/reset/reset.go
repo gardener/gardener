@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
@@ -18,19 +20,21 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesinformers "k8s.io/client-go/informers"
 	criclient "k8s.io/cri-client/pkg"
-	"sigs.k8s.io/yaml"
+	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
-	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -72,28 +76,10 @@ gardenadm reset --token <token> --ca-certificate <ca-cert> <control-plane-addres
 }
 
 func run(ctx context.Context, opts *Options) error {
-	b, err := botanist.NewGardenadmBotanistWithoutResources(opts.Log)
+	b, err := cmd.InitializeGardenadmWithTemporaryClientSet(ctx, opts.Log, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.Token)
 	if err != nil {
-		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
+		return fmt.Errorf("failed initializing gardenadm botanist with temporary client set: %w", err)
 	}
-
-	bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.Token, kubernetes.SeedScheme)
-	if err != nil {
-		return fmt.Errorf("failed creating a new bootstrap client set: %w", err)
-	}
-	version, err := b.DiscoverKubernetesVersion(bootstrapClientSet)
-	if err != nil {
-		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
-	}
-	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version, ControlPlaneNamespace: metav1.NamespaceSystem}
-	b.Shoot.SetInfo(nil)
-
-	b.Logger.Info("Retrieving short-lived shoot cluster kubeconfig via token")
-	b.ShootClientSet, err = cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
-	if err != nil {
-		return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
-	}
-	b.Logger.Info("Successfully retrieved short-lived kubeconfig")
 
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
 	if err != nil {
@@ -102,36 +88,91 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("no node found for hostname %s", b.HostName)
 	}
 
-	b.Logger.Info("Cordoning and draining node", "node", node.Name)
-	if err := cordonAndDrainNode(ctx, b, node.Name, opts); err != nil {
-		return fmt.Errorf("failed cordoning and draining node %s: %w", node.Name, err)
+	var (
+		g        = flow.NewGraph("reset")
+		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
+
+		cordonAndDrainNodeComplete = g.Add(flow.Task{
+			Name: "Cordoning and draining node",
+			Fn: func(ctx context.Context) error {
+				return cordonAndDrainNode(ctx, b, node.Name, opts)
+			},
+		})
+
+		// TODO(scheererj): If node is a control plane node, remove its machine IP from the Etcd's
+		// .spec.externallyManagedMemberAddresses[], decrease .spec.replicas, and wait for reconciliation
+
+		deletedNode = g.Add(flow.Task{
+			Name: "Deleting node from cluster",
+			Fn: func(ctx context.Context) error {
+				if err := b.ShootClientSet.Client().Delete(ctx, node); err != nil && !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
+				}
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(cordonAndDrainNodeComplete),
+		})
+		stoppedContainers = g.Add(flow.Task{
+			Name: "Stopping containers",
+			Fn: func(ctx context.Context) error {
+				return stopContainers(ctx, b, node)
+			},
+			Dependencies: flow.NewTaskIDs(deletedNode),
+		})
+		cleanedUpOSC = g.Add(flow.Task{
+			Name: "Cleaning up operating system configuration",
+			Fn: func(ctx context.Context) error {
+				return cleanUpOperatingSystemConfig(ctx, b, node)
+			},
+			Dependencies: flow.NewTaskIDs(stoppedContainers),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up gardener node agent folder",
+			Fn: func(ctx context.Context) error {
+				return cleanUpNodeAgentFolder(b)
+			},
+			Dependencies: flow.NewTaskIDs(cleanedUpOSC),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up kubelet folder",
+			Fn: func(ctx context.Context) error {
+				return cleanUpKubeletFolder(b)
+			},
+			Dependencies: flow.NewTaskIDs(cleanedUpOSC),
+		})
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              opts.Log,
+		ProgressReporter: reporter,
+	}); err != nil {
+		return flow.Errors(err)
 	}
 
-	// TODO(scheererj): If node is a control plane node, remove its machine IP from the Etcd's
-	// .spec.externallyManagedMemberAddresses[], decrease .spec.replicas, and wait for reconciliation
+	fmt.Fprintf(opts.Out, `
+The node has been successfully removed from the cluster!
 
-	b.Logger.Info("Deleting node from cluster", "node", node.Name)
-	if err := b.ShootClientSet.Client().Delete(ctx, node); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
-	}
+The token will be deleted automatically by kube-controller-manager
+after it has expired. If you want to delete it right away, run the following
+command on any control plane node:
 
-	if err := stopContainers(ctx, b, node); err != nil {
-		return fmt.Errorf("failed stopping containers: %w", err)
-	}
+  gardenadm token delete %s
+`, opts.Token)
 
-	if err := cleanUpOperatingSystemConfig(ctx, b, node); err != nil {
-		return fmt.Errorf("failed cleaning up operating system config: %w", err)
-	}
-
-	return cleanUpNodeAgentFolder(b)
+	return nil
 }
 
 func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
-	informerFactory := kubernetesinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
-	pdbLister := informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
-	podLister := informerFactory.Core().V1().Pods().Lister()
-	podsHaveSynced := informerFactory.Core().V1().Pods().Informer().HasSynced
-	synced := informerFactory.WaitForCacheSyncWithContext(ctx)
+	var (
+		informerFactory = kubernetesinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
+		pdbLister       = informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
+		podLister       = informerFactory.Core().V1().Pods().Lister()
+		podsHaveSynced  = informerFactory.Core().V1().Pods().Informer().HasSynced
+		synced          = informerFactory.WaitForCacheSyncWithContext(ctx)
+		buf             = bytes.NewBuffer([]byte{})
+		errBuf          = bytes.NewBuffer([]byte{})
+	)
+
 	if err := synced.AsError(); err != nil {
 		return fmt.Errorf("failed waiting for informer cache to sync: %w", err)
 	}
@@ -141,8 +182,6 @@ func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, node
 	}
 	informerFactory.StartWithContext(ctx)
 
-	buf := bytes.NewBuffer([]byte{})
-	errBuf := bytes.NewBuffer([]byte{})
 	d := drain.NewDrainOptions(
 		b.ShootClientSet.Kubernetes(),
 		b.Shoot.KubernetesVersion,
@@ -225,7 +264,7 @@ func stopContainers(ctx context.Context, b *botanist.GardenadmBotanist, node *co
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("Failed stopping some pods: %w", errors.Join(errs...))
+		return fmt.Errorf("failed stopping some pods: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -242,9 +281,13 @@ func cleanUpOperatingSystemConfig(ctx context.Context, b *botanist.GardenadmBota
 		return fmt.Errorf("cannot read last-applied OperatingSystemConfig: %w", err)
 	}
 
-	var osc v1alpha1.OperatingSystemConfig
-	if err := yaml.Unmarshal(oscFileContent, &osc); err != nil {
-		return fmt.Errorf("cannot parse OperatingSystemConfig YAML: %w", err)
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
+	oscDecoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
+	osc := &extensionsv1alpha1.OperatingSystemConfig{}
+	if err := runtime.DecodeInto(oscDecoder, oscFileContent, osc); err != nil {
+		return fmt.Errorf("unable to decode OperatingSystemConfig read from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 	}
 
 	var errs []error
@@ -253,7 +296,10 @@ func cleanUpOperatingSystemConfig(ctx context.Context, b *botanist.GardenadmBota
 		b.Logger.Info("Stopping systemd unit", "unit", unit.Name)
 		if err := b.DBus.Stop(ctx, nil, node, unit.Name); err != nil {
 			errs = append(errs, err)
-			b.Logger.Error(err, "Failed to stop unit", "unit", unit.Name)
+		}
+		b.Logger.Info("Disabling systemd unit", "unit", unit.Name)
+		if err := b.DBus.Disable(ctx, unit.Name); err != nil {
+			errs = append(errs, err)
 		}
 	}
 
@@ -262,7 +308,6 @@ func cleanUpOperatingSystemConfig(ctx context.Context, b *botanist.GardenadmBota
 		b.Logger.Info("Removing file", "path", file.Path)
 		if err := b.FS.Remove(file.Path); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 			errs = append(errs, err)
-			b.Logger.Error(err, "Failed to remove file", "path", file.Path)
 		}
 	}
 
@@ -286,6 +331,62 @@ func cleanUpNodeAgentFolder(b *botanist.GardenadmBotanist) error {
 		if err := b.FS.RemoveAll(nodeagentconfigv1alpha1.BaseDir + "/" + entry.Name()); err != nil {
 			return fmt.Errorf("failed removing %q in gardener-node-agent dir %q: %w", entry.Name(), nodeagentconfigv1alpha1.BaseDir, err)
 		}
+	}
+
+	return nil
+}
+
+func cleanUpKubeletFolder(b *botanist.GardenadmBotanist) error {
+	b.Logger.Info("Cleaning up kubelet folder")
+	entries, err := os.ReadDir(kubelet.PathKubeletDirectory)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed listing kubelet folder: %w", err)
+	}
+
+	if err := unmountKubeletSubFolders(b); err != nil {
+		return fmt.Errorf("failed unmounting kubelet sub folders: %w", err)
+	}
+
+	for _, entry := range entries {
+		b.Logger.Info("Removing kubelet file", "file", entry.Name())
+		if err := b.FS.RemoveAll(kubelet.PathKubeletDirectory + "/" + entry.Name()); err != nil {
+			return fmt.Errorf("failed removing %q in kubelet dir %q: %w", entry.Name(), kubelet.PathKubeletDirectory, err)
+		}
+	}
+
+	return nil
+}
+
+func unmountKubeletSubFolders(b *botanist.GardenadmBotanist) error {
+	// Add trailing '/' to prevent unmounting the actual directory.
+	kubletFolderPrefix := kubelet.PathKubeletDirectory + "/"
+
+	mounts, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return fmt.Errorf("failed reading /proc/mounts: %w", err)
+	}
+
+	var errs []error
+	for _, mount := range strings.Split(string(mounts), "\n") {
+		// Looking for entries like "tmpfs /var/lib/kubelet/pods/..."
+		words := strings.Split(mount, " ")
+		if len(words) < 2 || !strings.HasPrefix(words[1], kubletFolderPrefix) {
+			continue
+		}
+
+		b.Logger.Info("Unmounting kubelet sub folder", "path", words[1])
+		if err := syscall.Unmount(words[1], 0); err != nil {
+			if err == syscall.EINVAL {
+				// Entry may have already been unmounted due to duplicate entries => ignore it
+				continue
+			}
+
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("failed unmounting folders: %w", errors.Join(errs...))
 	}
 
 	return nil
