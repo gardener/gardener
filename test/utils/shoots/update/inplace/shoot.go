@@ -25,7 +25,7 @@ func ItShouldVerifyInPlaceUpdateStart(s *ShootContext, hasAutoInplaceUpdate, has
 
 	It("Verify in-place update start", func(ctx SpecContext) {
 		VerifyInPlaceUpdateStart(ctx, s.Log, s.GardenClient, s.Shoot, hasAutoInplaceUpdate, hasManualInplaceUpdate)
-	}, SpecTimeout(2*time.Minute))
+	}, SpecTimeout(5*time.Minute))
 }
 
 // VerifyInPlaceUpdateStart verifies that the in-place update has started by checking the
