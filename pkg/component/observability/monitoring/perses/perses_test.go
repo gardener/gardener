@@ -20,11 +20,13 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -418,6 +420,56 @@ var _ = Describe("Perses", func() {
 						gateway,
 						virtualService,
 						destinationRule,
+						seedServiceMonitor,
+					))
+				})
+			})
+
+			Context("seed cluster with VPA enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+				})
+
+				It("should include VPA resource", func() {
+					Expect(managedResource).To(consistOf(
+						persesCR,
+						dsAggregate,
+						dsSeed,
+						&vpaautoscalingv1.VerticalPodAutoscaler{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "perses-seed",
+								Namespace: namespace,
+								Labels: map[string]string{
+									"app":  "perses",
+									"role": "monitoring",
+								},
+							},
+							Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+								TargetRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "apps/v1",
+									Kind:       "Deployment",
+									Name:       "perses-seed",
+								},
+								UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+									UpdateMode: new(vpaautoscalingv1.UpdateModeAuto),
+								},
+								ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+									ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+										{
+											ContainerName: "perses",
+											MinAllowed: corev1.ResourceList{
+												corev1.ResourceMemory: resource.MustParse("32Mi"),
+											},
+											ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+										},
+										{
+											ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+											Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
+										},
+									},
+								},
+							},
+						},
 						seedServiceMonitor,
 					))
 				})
