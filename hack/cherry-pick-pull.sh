@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # This file was copied from the kubernetes/kubernetes project
-# https://github.com/kubernetes/kubernetes/blob/v1.20.0/hack/cherry_pick_pull.sh
+# https://github.com/kubernetes/kubernetes/blob/v1.36.3/hack/cherry_pick_pull.sh
 #
 # Modifications Copyright SAP SE or an SAP affiliate company and Gardener contributors
 
@@ -51,8 +51,8 @@ if [[ -z ${GITHUB_USER:-} ]]; then
   exit 1
 fi
 
-if ! which hub > /dev/null; then
-  echo "Can't find 'hub' tool in PATH, please install from https://github.com/github/hub"
+if ! command -v gh > /dev/null; then
+  echo "Can't find 'gh' tool in PATH, please install from https://github.com/cli/cli"
   exit 1
 fi
 
@@ -70,8 +70,13 @@ if [[ "$#" -lt 2 ]]; then
   echo
   echo "  Set UPSTREAM_REMOTE (default: upstream) and FORK_REMOTE (default: origin)"
   echo "  to override the default remote names to what you have locally."
+  echo
+  echo "  For merge process info, see https://github.com/gardener/gardener/blob/master/docs/development/process.md#cherry-picks"
   exit 2
 fi
+
+# Checks if you are logged in. Will error/bail if you are not.
+gh auth status
 
 if git_status=$(git status --porcelain --untracked=no 2>/dev/null) && [[ -n "${git_status}" ]]; then
   echo "!!! Dirty tree. Clean up and try again."
@@ -111,7 +116,6 @@ declare -r NEWBRANCHUNIQ
 echo "+++ Creating local branch ${NEWBRANCHUNIQ}"
 
 cleanbranch=""
-prtext=""
 gitamcleanup=false
 function return_to_kansas {
   if [[ "${gitamcleanup}" == "true" ]]; then
@@ -128,9 +132,6 @@ function return_to_kansas {
     if [[ -n "${cleanbranch}" ]]; then
       git branch -D "${cleanbranch}" >/dev/null 2>&1 || true
     fi
-    if [[ -n "${prtext}" ]]; then
-      rm "${prtext}"
-    fi
   fi
 }
 trap return_to_kansas EXIT
@@ -144,18 +145,12 @@ function make-a-pr() {
   echo
   echo "+++ Creating a pull request on GitHub at ${GITHUB_USER}:${NEWBRANCH}"
 
-  # This looks like an unnecessary use of a tmpfile, but it avoids
-  # https://github.com/github/hub/issues/976 Otherwise stdin is stolen
-  # when we shove the heredoc at hub directly, tickling the ioctl
-  # crash.
-  prtext="$(mktemp -t prtext.XXXX)" # cleaned in return_to_kansas
   local numandtitle
   numandtitle=$(printf '%s\n' "${SUBJECTS[@]}")
-  relnotes=$(printf "${RELEASE_NOTES[@]}")
-  labels=$(printf "${LABELS[@]}")
-  cat >"${prtext}" <<EOF
-[${rel}] Automated cherry pick of ${numandtitle}
+  local labels
+  labels=$(printf '%s\n' "${LABELS[@]}")
 
+  prtext=$(cat <<EOF
 ${labels}
 
 Cherry pick of ${PULLSUBJ} on ${rel}.
@@ -163,10 +158,11 @@ Cherry pick of ${PULLSUBJ} on ${rel}.
 ${numandtitle}
 
 **Release Notes:**
-${relnotes}
+$(printf '%s\n' "${RELEASE_NOTES[@]}")
 EOF
+)
 
-  hub pull-request -F "${prtext}" -h "${GITHUB_USER}:${NEWBRANCH}" -b "${MAIN_REPO_ORG}:${rel}"
+  gh pr create --title="[${rel}] Automated cherry pick of ${numandtitle}" --body="${prtext}" --head "${GITHUB_USER}:${NEWBRANCH}" --base "${rel}" --repo="${MAIN_REPO_ORG}/${MAIN_REPO_NAME}"
 }
 
 git checkout -b "${NEWBRANCHUNIQ}" "${BRANCH}"
@@ -192,7 +188,7 @@ for pull in "${PULLS[@]}"; do
       (git status --porcelain | grep ^U) || echo "!!! None. Did you git am --continue?"
       echo
       echo "+++ Please resolve the conflicts in another window (and remember to 'git add / git am --continue')"
-      read -p "+++ Proceed (anything but 'y' aborts the cherry-pick)? [y/n] " -r
+      read -p "+++ Proceed (anything other than 'y' aborts the cherry-pick)? [y/n] " -r
       echo
       if ! [[ "${REPLY}" =~ ^[yY]$ ]]; then
         echo "Aborting." >&2
@@ -207,20 +203,30 @@ for pull in "${PULLS[@]}"; do
   }
 
   # set the subject
-  pr_info=$(curl "https://api.github.com/repos/${MAIN_REPO_ORG}/${MAIN_REPO_NAME}/pulls/${pull}" -sS)
-  subject=$(echo ${pr_info} | jq -cr '.title')
+  subject=$(gh pr view "$pull" --json title --jq '.["title"]')
   SUBJECTS+=("#${pull}: ${subject}")
-  labels=$(echo ${pr_info} | jq '.labels[].name' -cr | grep -P '^(area|kind)' | sed -e 's|/| |' -e 's|^|/|g')
-  LABELS+=("${labels}")
+
+  # set the release note
+  release_note=$(gh pr view "$pull" --json body --jq '.body' | tr -d '\r' | awk "/^\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}/{f=1} f; /^\`\`\`$/{f=0}" || true)
+  RELEASE_NOTES+=("${release_note}")
+
+  # collect area/* and kind/* labels from the original PR as prow commands
+  while IFS= read -r label; do
+    if [[ -n "${label}" ]]; then
+      LABELS+=("${label}")
+    fi
+  done < <(gh pr view "$pull" --json labels --jq '.labels[].name | select(startswith("area/") or startswith("kind/"))' --repo="${MAIN_REPO_ORG}/${MAIN_REPO_NAME}" \
+    | sed -e 's|/| |' -e 's|^|/|g')
 
   # remove the patch file from /tmp
   rm -f "/tmp/${pull}.patch"
-
-  # get the release notes
-  notes=$(echo ${pr_info} | jq '.body' | grep -Po "\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}.*?\`\`\`" || true)
-  RELEASE_NOTES+=("${notes}")
 done
 gitamcleanup=false
+
+if [[ -z "$(git log "${BRANCH}..HEAD" --oneline)" ]]; then
+  echo "!!! No new commits after cherry-pick — patch is already applied to ${BRANCH}. Nothing to do."
+  exit 0
+fi
 
 if [[ -n "${DRY_RUN}" ]]; then
   echo "!!! Skipping git push and PR creation because you set DRY_RUN."
