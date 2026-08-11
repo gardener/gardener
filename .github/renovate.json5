@@ -489,7 +489,7 @@
       ],
     },
     {
-      // Do not update etcd images since they have to be in sync with the etcd-druid version.
+      // Do not update etcd and etcd-backup-restore images since they have to be in sync with the etcd-druid version.
       matchDatasources: [
         'docker',
       ],
@@ -499,6 +499,7 @@
       enabled: false,
       matchPackageNames: [
         '/gcr.io/etcd-development/etcd/',
+        'gardener/etcd-backup-restore',
       ],
     },
     {
