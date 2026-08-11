@@ -106,16 +106,19 @@ func (p *perses) Deploy(ctx context.Context) error {
 
 	var objs []client.Object
 	if !p.values.OnlyDeployDatasourcesAndDashboards {
-		objs = append(objs,
-			p.perses(),
-			p.serviceMonitor(),
-		)
+		objs = append(objs, p.perses())
 
 		istioResources, err := p.istioResources(ctx)
 		if err != nil {
 			return err
 		}
 		objs = append(objs, istioResources...)
+
+		if vpa := p.vpa(); vpa != nil {
+			objs = append(objs, vpa)
+		}
+
+		objs = append(objs, p.serviceMonitor())
 	}
 	objs = append(objs, p.datasources()...)
 	objs = append(objs, p.dashboards()...)
