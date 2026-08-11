@@ -137,3 +137,20 @@ func (p *perses) getPodLabels() map[string]string {
 
 	return labels
 }
+
+func (p *perses) instanceSelector() *metav1.LabelSelector {
+	instanceName := p.persesName()
+	// In OnlyDeployDatasourcesAndDashboards mode (seed-is-garden), datasources must target the garden
+	// Perses instance since no separate seed instance is deployed.
+	if p.values.OnlyDeployDatasourcesAndDashboards {
+		instanceName = "perses-garden"
+	}
+
+	return &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key:      "app.kubernetes.io/instance",
+			Operator: metav1.LabelSelectorOpIn,
+			Values:   []string{instanceName},
+		}},
+	}
+}
