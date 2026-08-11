@@ -840,6 +840,7 @@ func clusterRole() *rbacv1.ClusterRole {
 					"backupentries",
 					"controllerdeployments",
 					"controllerinstallations",
+					"internalsecrets",
 					"secretbindings",
 					"seeds",
 					"shoots",
