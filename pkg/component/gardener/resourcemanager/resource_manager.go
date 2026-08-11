@@ -1356,7 +1356,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if config.Webhooks.PodSchedulerName.Enabled && r.values.SchedulingProfile != nil {
+	if config.Webhooks.PodSchedulerName.Enabled {
 		// pod scheduler name webhook should be active on all namespaces
 		webhooks = append(webhooks, NewPodSchedulerNameMutatingWebhook(&metav1.LabelSelector{}, secretServerCA, buildClientConfigFn))
 	}
@@ -1365,7 +1365,7 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewSeccompProfileMutatingWebhook(r.values.NamePrefix, namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if config.Webhooks.KubernetesServiceHost.Enabled && r.values.KubernetesServiceHost != nil {
+	if config.Webhooks.KubernetesServiceHost.Enabled {
 		webhooks = append(webhooks, NewKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
