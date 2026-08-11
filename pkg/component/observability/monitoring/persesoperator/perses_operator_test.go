@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -118,7 +119,9 @@ var _ = Describe("PersesOperator", func() {
 						Labels: map[string]string{
 							"app":                              "perses-operator",
 							"networking.gardener.cloud/to-dns": "allowed",
-							"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver":        "allowed",
+							gardenerutils.NetworkPolicyLabel("perses-garden", 8080): "allowed",
+							gardenerutils.NetworkPolicyLabel("perses-seed", 8080):   "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{
