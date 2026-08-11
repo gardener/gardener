@@ -109,6 +109,7 @@ func (p *perses) Deploy(ctx context.Context) error {
 		)
 	}
 	objs = append(objs, p.datasources()...)
+	objs = append(objs, p.dashboards()...)
 
 	resources, err := registry.AddAllAndSerialize(objs...)
 	if err != nil {
