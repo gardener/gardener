@@ -7,6 +7,7 @@ package perses
 import (
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
+	istioapiannotation "istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,19 +34,6 @@ func (p *perses) perses() *persesv1alpha2.Perses {
 	labels := p.getLabels()
 	labels["app.kubernetes.io/instance"] = p.persesName()
 
-	scrapeTargetAnnotationKey := resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
-		v1beta1constants.LabelNetworkPolicySeedScrapeTargets +
-		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix
-	serviceAnnotations := map[string]string{
-		scrapeTargetAnnotationKey: `[{"protocol":"TCP","port":8080}]`,
-	}
-	if p.values.IsGardenCluster {
-		gardenScrapeKey := resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
-			v1beta1constants.LabelNetworkPolicyGardenScrapeTargets +
-			resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix
-		serviceAnnotations[gardenScrapeKey] = `[{"protocol":"TCP","port":8080}]`
-	}
-
 	obj := &persesv1alpha2.Perses{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.persesName(),
@@ -57,7 +45,7 @@ func (p *perses) perses() *persesv1alpha2.Perses {
 				Labels: p.getPodLabels(),
 			},
 			Service: &persesv1alpha2.PersesService{
-				Annotations: serviceAnnotations,
+				Annotations: p.getServiceAnnotations(),
 			},
 			Config: persesv1alpha2.PersesConfig{
 				Config: persesconfig.Config{
@@ -93,6 +81,28 @@ func (p *perses) perses() *persesv1alpha2.Perses {
 	}
 
 	return obj
+}
+
+func (p *perses) getServiceAnnotations() map[string]string {
+	scrapeTargetAnnotationKey := resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
+		v1beta1constants.LabelNetworkPolicySeedScrapeTargets +
+		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix
+	annotations := map[string]string{
+		scrapeTargetAnnotationKey: `[{"protocol":"TCP","port":8080}]`,
+	}
+	// Export the Service only to the istio ingress gateway namespace where it is consumed. When the instance is not
+	// externally exposed there is no consumer, so no export annotation is set.
+	if p.values.ExternalExposure != nil {
+		annotations[istioapiannotation.NetworkingExportTo.Name] = p.values.ExternalExposure.IstioIngressGatewayNamespace
+	}
+	if p.values.IsGardenCluster {
+		gardenScrapeKey := resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
+			v1beta1constants.LabelNetworkPolicyGardenScrapeTargets +
+			resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix
+		annotations[gardenScrapeKey] = `[{"protocol":"TCP","port":8080}]`
+	}
+
+	return annotations
 }
 
 func (p *perses) getLabels() map[string]string {

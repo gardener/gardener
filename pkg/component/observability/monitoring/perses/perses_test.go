@@ -16,6 +16,10 @@ import (
 	"github.com/perses/spec/go/datasource"
 	persesplugin "github.com/perses/spec/go/plugin"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/perses"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -87,7 +92,7 @@ var _ = Describe("Perses", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -279,6 +284,140 @@ var _ = Describe("Perses", func() {
 						persesCR,
 						dsAggregate,
 						dsSeed,
+						seedServiceMonitor,
+					))
+				})
+			})
+
+			Context("seed cluster with external exposure", func() {
+				var (
+					tlsSecret       *corev1.Secret
+					gateway         *istionetworkingv1beta1.Gateway
+					virtualService  *istionetworkingv1beta1.VirtualService
+					destinationRule *istionetworkingv1beta1.DestinationRule
+				)
+
+				BeforeEach(func() {
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "wildcard-tls", Namespace: namespace},
+					})).To(Succeed())
+
+					values.ExternalExposure = &ExposureValues{
+						AuthSecretName:               "auth-secret",
+						AuthSecretManaged:            true,
+						Host:                         "perses-seed.example.com",
+						IstioIngressGatewayLabels:    map[string]string{"istio": "ingressgateway"},
+						IstioIngressGatewayNamespace: "istio-ingress",
+						WildcardCertSecretName:       new("wildcard-tls"),
+					}
+
+					persesCR.Spec.Service.Annotations["networking.istio.io/exportTo"] = "istio-ingress"
+
+					tlsSecret = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      namespace + "-perses-seed-wildcard-tls",
+							Namespace: "istio-ingress",
+							Labels: map[string]string{
+								"app":  "perses",
+								"role": "monitoring",
+							},
+						},
+					}
+					gateway = &istionetworkingv1beta1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "perses-seed",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"app":  "perses",
+								"role": "monitoring",
+							},
+						},
+						Spec: istionetworkingv1alpha3.Gateway{
+							Selector: map[string]string{"istio": "ingressgateway"},
+							Servers: []*istionetworkingv1alpha3.Server{{
+								Port: &istionetworkingv1alpha3.Port{
+									Name: "tls", Number: 443, Protocol: "HTTPS",
+								},
+								Hosts: []string{"perses-seed.example.com"},
+								Tls: &istionetworkingv1alpha3.ServerTLSSettings{
+									CredentialName: namespace + "-perses-seed-wildcard-tls",
+									Mode:           istionetworkingv1alpha3.ServerTLSSettings_SIMPLE,
+								},
+							}},
+						},
+					}
+					virtualService = &istionetworkingv1beta1.VirtualService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "perses-seed",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"app":  "perses",
+								"role": "monitoring",
+								"reference.gardener.cloud/basic-auth-secret-name":    "auth-secret",
+								"reference.gardener.cloud/basic-auth-server-name":    "istio-basic-auth-server",
+								"reference.gardener.cloud/basic-auth-secret-managed": "true",
+							},
+						},
+						Spec: istionetworkingv1alpha3.VirtualService{
+							ExportTo: []string{"istio-ingress"},
+							Gateways: []string{"perses-seed"},
+							Hosts:    []string{"perses-seed.example.com"},
+							Http: []*istionetworkingv1alpha3.HTTPRoute{
+								{
+									Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
+										Destination: &istionetworkingv1alpha3.Destination{
+											Host: "perses-seed." + namespace + ".svc.cluster.local",
+											Port: &istionetworkingv1alpha3.PortSelector{Number: 8080},
+										},
+									}},
+								},
+							},
+						},
+					}
+					destinationRule = &istionetworkingv1beta1.DestinationRule{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "perses-seed",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"app":  "perses",
+								"role": "monitoring",
+							},
+						},
+						Spec: istionetworkingv1alpha3.DestinationRule{
+							Host: "perses-seed." + namespace + ".svc.cluster.local",
+							TrafficPolicy: &istionetworkingv1alpha3.TrafficPolicy{
+								LoadBalancer: &istionetworkingv1alpha3.LoadBalancerSettings{
+									LocalityLbSetting: &istionetworkingv1alpha3.LocalityLoadBalancerSetting{
+										FailoverPriority: []string{"topology.kubernetes.io/zone"},
+										Enabled:          &wrapperspb.BoolValue{Value: true},
+									},
+								},
+								ConnectionPool: &istionetworkingv1alpha3.ConnectionPoolSettings{
+									Tcp: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
+										TcpKeepalive: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+											Time:     &durationpb.Duration{Seconds: 7200},
+											Interval: &durationpb.Duration{Seconds: 75},
+										},
+										MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+									},
+								},
+								OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
+								Tls:              &istionetworkingv1alpha3.ClientTLSSettings{},
+							},
+							ExportTo: []string{"istio-ingress"},
+						},
+					}
+				})
+
+				It("should include istio exposure resources", func() {
+					Expect(managedResource).To(consistOf(
+						persesCR,
+						dsAggregate,
+						dsSeed,
+						tlsSecret,
+						gateway,
+						virtualService,
+						destinationRule,
 						seedServiceMonitor,
 					))
 				})
