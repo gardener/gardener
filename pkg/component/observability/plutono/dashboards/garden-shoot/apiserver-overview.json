@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1785002102603,
+  "iteration": 1786438450895,
   "links": [
     {
       "icon": "external link",
@@ -49,103 +49,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Number of unreachable API server instances",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "fill": 0,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 1
-      },
-      "hiddenSeries": false,
-      "id": 104,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.50",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "max_over_time(count(up{role=\"apiserver\"} == 0) by (pod)[5m:])",
-          "interval": "",
-          "legendFormat": "{{pod}} - unreachable",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "API Server Unreachable",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:408",
-          "format": "short",
-          "label": "instances",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:409",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
       "description": "Number of kube-apiserver restarts.",
       "fieldConfig": {
         "defaults": {},
@@ -156,7 +59,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 1
       },
       "hiddenSeries": false,
@@ -253,8 +156,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 9
+        "x": 12,
+        "y": 1
       },
       "hiddenSeries": false,
       "id": 106,
@@ -335,207 +238,13 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "description": "Shows CPU utilization as percentage",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "fill": 0,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
-      },
-      "hiddenSeries": false,
-      "id": 107,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.50",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{container=\"kube-apiserver\"}[5m])) by(pod) / sum(kube_pod_container_resource_requests{container=\"kube-apiserver\", resource=\"cpu\", unit=\"core\"}) by(pod)) * 100",
-          "interval": "",
-          "legendFormat": "{{pod}} - CPU usage",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "API Server CPU utilization",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:408",
-          "format": "percent",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:409",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "description": "Shows memory utilization as percentage",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "fill": 0,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 17
-      },
-      "hiddenSeries": false,
-      "id": 108,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.50",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "(sum(container_memory_working_set_bytes{container=\"kube-apiserver\"}) by(pod) / sum(kube_pod_container_resource_requests{container=\"kube-apiserver\", resource=\"memory\", unit=\"byte\"}) by(pod)) * 100",
-          "interval": "",
-          "legendFormat": "{{pod}} - memory usage",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "API Server memory utilization",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:408",
-          "format": "percent",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:409",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 9
       },
       "id": 73,
       "panels": [],
@@ -558,7 +267,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 10
       },
       "hiddenSeries": false,
       "id": 70,
@@ -665,7 +374,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 10
       },
       "hiddenSeries": false,
       "id": 71,
@@ -772,7 +481,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 16
       },
       "hiddenSeries": false,
       "id": 74,
@@ -871,7 +580,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 16
       },
       "hiddenSeries": false,
       "id": 75,
@@ -961,7 +670,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 22
       },
       "id": 91,
       "panels": [],
@@ -984,7 +693,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 23
       },
       "hiddenSeries": false,
       "id": 88,
@@ -1079,7 +788,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 23
       },
       "hiddenSeries": false,
       "id": 89,
@@ -1165,7 +874,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 28
       },
       "id": 97,
       "panels": [],
@@ -1188,7 +897,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 93,
@@ -1283,7 +992,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 95,
@@ -1373,7 +1082,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 34
       },
       "id": 53,
       "panels": [],
@@ -1406,7 +1115,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 51
+        "y": 35
       },
       "hiddenSeries": false,
       "id": 6,
@@ -1516,7 +1225,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 35
       },
       "hiddenSeries": false,
       "id": 7,
@@ -1630,7 +1339,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 49,
@@ -1739,7 +1448,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 51,
@@ -1847,7 +1556,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 51
       },
       "hiddenSeries": false,
       "id": 47,
@@ -1960,7 +1669,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 48,
@@ -2073,7 +1782,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 99,
@@ -2187,7 +1896,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 45,
@@ -2300,7 +2009,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 85
       },
       "hiddenSeries": false,
       "id": 100,
@@ -2405,7 +2114,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 111
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 67,
@@ -2504,7 +2213,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 111
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 68,
@@ -2599,7 +2308,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 119
+        "y": 103
       },
       "hiddenSeries": false,
       "id": 63,
@@ -2707,7 +2416,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 119
+        "y": 103
       },
       "hiddenSeries": false,
       "id": 65,
@@ -2807,7 +2516,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 127
+        "y": 111
       },
       "hiddenSeries": false,
       "id": 98,
@@ -2901,7 +2610,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 135
+        "y": 119
       },
       "id": 85,
       "panels": [],
@@ -2924,7 +2633,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 136
+        "y": 120
       },
       "hiddenSeries": false,
       "id": 80,
@@ -3019,7 +2728,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 136
+        "y": 120
       },
       "hiddenSeries": false,
       "id": 81,
@@ -3118,7 +2827,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 142
+        "y": 126
       },
       "hiddenSeries": false,
       "id": 77,
@@ -3217,7 +2926,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 142
+        "y": 126
       },
       "hiddenSeries": false,
       "id": 78,
@@ -3316,7 +3025,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 148
+        "y": 132
       },
       "hiddenSeries": false,
       "id": 82,
@@ -3417,7 +3126,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 154
+        "y": 138
       },
       "id": 61,
       "panels": [],
@@ -3442,7 +3151,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 155
+        "y": 139
       },
       "hiddenSeries": false,
       "id": 55,
@@ -3545,7 +3254,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 155
+        "y": 139
       },
       "hiddenSeries": false,
       "id": 76,
@@ -3645,7 +3354,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 163
+        "y": 147
       },
       "hiddenSeries": false,
       "id": 57,
@@ -3752,7 +3461,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 163
+        "y": 147
       },
       "hiddenSeries": false,
       "id": 59,
@@ -3853,7 +3562,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 170
+        "y": 154
       },
       "hiddenSeries": false,
       "id": 83,
@@ -3955,7 +3664,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 170
+        "y": 154
       },
       "hiddenSeries": false,
       "id": 86,
@@ -4053,7 +3762,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -4254,9 +3962,10 @@
       {
         "allValue": null,
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "0.99",
-          "value": "0.99"
+          "text": "None",
+          "value": ""
         },
         "datasource": null,
         "definition": "label_values(shoot:apiserver_latency_seconds:quantile, quantile)",
