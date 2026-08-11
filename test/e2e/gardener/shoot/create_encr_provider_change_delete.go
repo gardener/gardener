@@ -37,7 +37,7 @@ func init() {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Change Encryption Provider Type and Delete Shoot", Label("encryption-provider-change"), func() {
-		Context("Shoot with workers", Ordered, func() {
+		Context("Shoot with workers", Ordered, PriorityLong, func() {
 			var s *ShootContext
 
 			BeforeTestSetup(func() {

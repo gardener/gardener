@@ -15,6 +15,17 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// These decorators are used to prioritize long-running tests cases ("boulders first, then sand"),
+// see https://onsi.github.io/ginkgo/#prioritizing-specs.
+const (
+	// PriorityLonger is used for the longest-running tests (typically > 30 minutes).
+	PriorityLonger = SpecPriority(10)
+	// PriorityLong is used for long-running tests (typically > 15 minutes).
+	PriorityLong = SpecPriority(5)
+	// PriorityFast is used for fast tests (typically < 3 minutes).
+	PriorityFast = SpecPriority(-1)
+)
+
 // BeforeTestSetup looks like a ginkgo setup node but runs the given function right away, i.e., during ginkgo's tree
 // construction. It's sole purpose is to structure test setup code similar to BeforeEach and friends, while allowing to
 // use the side effects when constructing further test nodes.

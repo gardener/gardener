@@ -66,15 +66,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeDeleted(s)
 		}
 
-		Context("Shoot with workers", Label("basic"), Ordered, func() {
+		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
 			test(NewTestContext().ForShoot(DefaultShoot("e2e-wake-up")))
 		})
 
-		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
 			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")))
 		})
 
-		Context("Shoot with workers with NamespacedCloudProfile", Label("basic"), Ordered, func() {
+		Context("Shoot with workers with NamespacedCloudProfile", Label("basic"), Ordered, PriorityLong, func() {
 			var s *ShootContext
 
 			BeforeTestSetup(func() {

@@ -29,7 +29,7 @@ import (
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
-	Describe("Garden Cluster Access For Seed Components", Ordered, func() {
+	Describe("Garden Cluster Access For Seed Components", Ordered, PriorityFast, func() {
 		var (
 			s                *SeedContext
 			seedNamespace    string
