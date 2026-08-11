@@ -72,6 +72,13 @@ func (j *Job) AfterAllDeleteJob(s *ShootContext) {
 	GinkgoHelper()
 
 	AfterAll(func(ctx SpecContext) {
+		// In ordered containers, the seed client might not have been initialized if a previous spec failed,
+		// e.g., before ItShouldInitializeSeedClient ran. Skip the deletion in this case to avoid a panic
+		// that would mask the actual failure.
+		if s.SeedClient == nil {
+			return
+		}
+
 		j.initJobIfNeeded(s)
 		Eventually(ctx, func() error {
 			return s.SeedClient.Delete(ctx, j.job, client.PropagationPolicy(metav1.DeletePropagationForeground))
