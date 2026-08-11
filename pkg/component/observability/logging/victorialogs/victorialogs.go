@@ -28,6 +28,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
@@ -304,7 +305,7 @@ func (v *victoriaLogs) getPrometheusLabel() string {
 // empty string denotes the default (unnamed) instance running in seeds.
 func (v *victoriaLogs) getAutoscalerName() string {
 	if v.values.IsGardenCluster {
-		return garden.Label
+		return pvcautoscaler.GardenAutoscalerName
 	}
 	return ""
 }

@@ -35,10 +35,8 @@ import (
 )
 
 const (
-	// PVCAutoscalerManagedResourceName is the name of the PVCAutoscaler managed resource.
-	PVCAutoscalerManagedResourceName = name
-	// PVCAutoscalerGardenManagedResourceName is the name of the PVCAutoscaler managed resource for the garden cluster.
-	PVCAutoscalerGardenManagedResourceName = "pvc-autoscaler-garden"
+	// GardenAutoscalerName is the value of the --autoscaler-name flag for the PVCAutoscaler instance running in the garden cluster.
+	GardenAutoscalerName = "garden"
 
 	name            = "pvc-autoscaler"
 	metricsPortName = "metrics"
@@ -147,9 +145,9 @@ func (p *pvcAutoscaler) getLabels() map[string]string {
 // PVCAutoscaler is deployed in the garden or in the seed cluster.
 func (p *pvcAutoscaler) name() string {
 	if p.values.IsGardenCluster {
-		return PVCAutoscalerGardenManagedResourceName
+		return name + "-garden"
 	}
-	return PVCAutoscalerManagedResourceName
+	return name
 }
 
 // autoscalerName returns the value for the --autoscaler-name flag. It matches the AutoscalerName configured on the
@@ -157,7 +155,7 @@ func (p *pvcAutoscaler) name() string {
 // seed instance.
 func (p *pvcAutoscaler) autoscalerName() string {
 	if p.values.IsGardenCluster {
-		return "garden"
+		return GardenAutoscalerName
 	}
 	return ""
 }
