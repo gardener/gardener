@@ -221,10 +221,7 @@ get_self_hosted_shoot_certs() {
   remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.crt}' | base64 -d > "$client_ca_cert"
   remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.key}' | base64 -d > "$client_ca_key"
 
-  local dns_domain
-  dns_domain=$(remote_kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' | sed 's|https://api\.||')
-
-  echo "${tmp_dir}:${dns_domain}"
+  echo "${tmp_dir}:${shoot_name}.${shoot_namespace}.external.local.gardener.cloud"
 }
 
 generate_client_cert_kubeconfig() {

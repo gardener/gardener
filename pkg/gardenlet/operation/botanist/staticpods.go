@@ -16,7 +16,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -28,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils"
@@ -240,12 +244,14 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
 
-	files := pods.allFiles()
-	if !useShootAccessTokens {
-		files, err = b.appendAdminKubeconfigToFiles(files)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
-		}
+	appendAdminKubeconfigFunc := b.appendStaticAdminKubeconfigToFiles
+	if useShootAccessTokens {
+		appendAdminKubeconfigFunc = b.appendDynamicAdminKubeconfigToFiles
+	}
+
+	files, err := appendAdminKubeconfigFunc(pods.allFiles())
+	if err != nil {
+		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
 
 	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
@@ -280,7 +286,7 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	return &oscData.Original, controlPlaneWorkerPool.Name, nil
 }
 
-func (b *Botanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
+func (b *Botanist) appendStaticAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
 	userKubeconfigSecret, ok := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
 	if !ok {
 		return nil, fmt.Errorf("failed fetching secret %q", kubeapiserver.SecretNameUserKubeconfig)
@@ -290,6 +296,31 @@ func (b *Botanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File)
 		Path:        PathKubeconfig,
 		Permissions: new(uint32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(userKubeconfigSecret.Data[secretsutils.DataKeyKubeconfig])}},
+	}), nil
+}
+
+func (b *Botanist) appendDynamicAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
+	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	kubeconfig := kubernetesutils.NewKubeconfig(
+		b.Shoot.GetInfo().Status.TechnicalID,
+		clientcmdv1.Cluster{Server: "localhost", CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle]},
+		clientcmdv1.AuthInfo{TokenFile: adminaccess.PathOnControlPlaneNodes},
+	)
+	kubeconfig.Contexts[0].Context.Namespace = b.Shoot.ControlPlaneNamespace
+
+	rawKubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+	}
+
+	return append(files, extensionsv1alpha1.File{
+		Path:        PathKubeconfig,
+		Permissions: new(uint32(0600)),
+		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(rawKubeconfig)}},
 	}), nil
 }
 

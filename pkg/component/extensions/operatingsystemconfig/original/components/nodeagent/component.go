@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
+	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/features"
@@ -83,6 +84,11 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 				Path:       staticpod.FilePathForProjectedVolumeItem(componentName, "kubeconfig", resourcesv1alpha1.DataKeyToken),
 			})
 		}
+
+		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+			SecretName: gardenerutils.SecretNamePrefixShootAccess + adminaccess.ShootAccessSecretNameSuffix,
+			Path:       adminaccess.PathOnControlPlaneNodes,
+		})
 	}
 
 	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, additionalTokenSyncConfigs))

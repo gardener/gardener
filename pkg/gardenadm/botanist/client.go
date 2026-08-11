@@ -36,6 +36,7 @@ func NewClientSetFromFile(kubeconfigPath string, scheme *runtime.Scheme) (kubern
 		kubernetes.WithClientOptions(client.Options{Scheme: scheme}),
 		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
 		kubernetes.WithDisabledCachedClient(),
+		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
 	)
 }
 

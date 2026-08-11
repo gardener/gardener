@@ -111,6 +111,10 @@ WantedBy=multi-user.target`),
 						SecretName: "shoot-access-kube-scheduler",
 						Path:       "/var/lib/static-pods/kube-scheduler/kubeconfig/token",
 					},
+					{
+						SecretName: "shoot-access-cluster-admin",
+						Path:       "/etc/kubernetes/admin-token",
+					},
 				}
 			)
 
