@@ -41,6 +41,7 @@ func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 					"secretbindings",
 					"seeds",
 					"shoots",
+					"shootstates",
 					"projects",
 				},
 				Verbs: []string{"get", "list", "watch"},
