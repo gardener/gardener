@@ -7,30 +7,17 @@ package reset
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math"
-	"os"
-	"strings"
-	"syscall"
+	"os/exec"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesinformers "k8s.io/client-go/informers"
-	criclient "k8s.io/cri-client/pkg"
-	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -112,33 +99,15 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(cordonAndDrainNodeComplete),
 		})
-		stoppedContainers = g.Add(flow.Task{
-			Name: "Stopping containers",
+		_ = g.Add(flow.Task{
+			Name: "Executing 'gardener-node-agent reset'",
 			Fn: func(ctx context.Context) error {
-				return stopContainers(ctx, b, node)
+				out, err := exec.CommandContext(ctx, nodeagentconfigv1alpha1.BinaryDir+"/gardener-node-agent", "reset", "--config-dir", nodeagentconfigv1alpha1.BaseDir).CombinedOutput()
+				b.Logger.Info("gardener-node-agent reset")
+				fmt.Fprintln(opts.ErrOut, string(out))
+				return err
 			},
 			Dependencies: flow.NewTaskIDs(deletedNode),
-		})
-		cleanedUpOSC = g.Add(flow.Task{
-			Name: "Cleaning up operating system configuration",
-			Fn: func(ctx context.Context) error {
-				return cleanUpOperatingSystemConfig(ctx, b, node)
-			},
-			Dependencies: flow.NewTaskIDs(stoppedContainers),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Cleaning up gardener node agent folder",
-			Fn: func(ctx context.Context) error {
-				return cleanUpNodeAgentFolder(b)
-			},
-			Dependencies: flow.NewTaskIDs(cleanedUpOSC),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Cleaning up kubelet folder",
-			Fn: func(ctx context.Context) error {
-				return cleanUpKubeletFolder(b)
-			},
-			Dependencies: flow.NewTaskIDs(cleanedUpOSC),
 		})
 	)
 
@@ -209,184 +178,6 @@ func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, node
 
 	if err := d.RunDrain(ctx); err != nil {
 		return fmt.Errorf("failed to drain node %s: %w", nodeName, err)
-	}
-
-	return nil
-}
-
-func stopContainers(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) error {
-	b.Logger.Info("Stopping gardener-node-agent systemd unit")
-	if err := b.DBus.Stop(ctx, nil, node, nodeagentconfigv1alpha1.UnitName); err != nil {
-		return fmt.Errorf("failed stopping gardener-node-agent systemd unit: %w", err)
-	}
-
-	b.Logger.Info("Stopping kubelet systemd unit")
-	if err := b.DBus.Stop(ctx, nil, node, v1beta1constants.OperatingSystemConfigUnitNameKubeletService); err != nil {
-		return fmt.Errorf("failed stopping kubelet systemd unit: %w", err)
-	}
-
-	b.Logger.Info("Stopping containers")
-	runtimeService, err := criclient.NewRemoteRuntimeService(ctx, "unix:///var/run/containerd/containerd.sock", 2*time.Second, nil, false)
-	if err != nil {
-		return fmt.Errorf("failed creating CRI client: %w", err)
-	}
-	defer runtimeService.Close(ctx)
-
-	pods, err := runtimeService.ListPodSandbox(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed listing pod sandboxes: %w", err)
-	}
-
-	var errs []error
-	for _, pod := range pods {
-		b.Logger.Info("Stopping pod sandbox", "podID", pod.GetId())
-		var lastErr error
-		for range 5 { // Retry up to 5 times
-			if err := runtimeService.StopPodSandbox(ctx, pod.GetId()); err != nil {
-				lastErr = err
-				b.Logger.Error(err, "Failed stopping pod sandbox", "podID", pod.Id)
-				continue
-			}
-
-			if err := runtimeService.RemovePodSandbox(ctx, pod.GetId()); err != nil {
-				lastErr = err
-				b.Logger.Error(err, "Failed removing pod sandbox", "podID", pod.Id)
-				continue
-			}
-
-			lastErr = nil
-			break
-		}
-
-		if lastErr != nil {
-			errs = append(errs, lastErr)
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("failed stopping some pods: %w", errors.Join(errs...))
-	}
-
-	return nil
-}
-
-func cleanUpOperatingSystemConfig(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) error {
-	b.Logger.Info("Checking last-applied OperatingSystemConfig for cleanup")
-	oscFileContent, err := b.FS.ReadFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath)
-	if err != nil {
-		if errors.Is(err, afero.ErrFileNotFound) {
-			b.Logger.Info("No last-applied OperatingSystemConfig found, skipping cleanup")
-			return nil
-		}
-		return fmt.Errorf("cannot read last-applied OperatingSystemConfig: %w", err)
-	}
-
-	scheme := runtime.NewScheme()
-	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
-	oscDecoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
-	osc := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(oscDecoder, oscFileContent, osc); err != nil {
-		return fmt.Errorf("unable to decode OperatingSystemConfig read from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
-	}
-
-	var errs []error
-	b.Logger.Info("Stopping systemd units")
-	for _, unit := range append(osc.Spec.Units, osc.Status.ExtensionUnits...) {
-		b.Logger.Info("Stopping systemd unit", "unit", unit.Name)
-		if err := b.DBus.Stop(ctx, nil, node, unit.Name); err != nil {
-			errs = append(errs, err)
-		}
-		b.Logger.Info("Disabling systemd unit", "unit", unit.Name)
-		if err := b.DBus.Disable(ctx, unit.Name); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	b.Logger.Info("Removing installed files")
-	for _, file := range append(osc.Spec.Files, osc.Status.ExtensionFiles...) {
-		b.Logger.Info("Removing file", "path", file.Path)
-		if err := b.FS.Remove(file.Path); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-			errs = append(errs, err)
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("failed cleaning up OperatingSystemConfig: %w", errors.Join(errs...))
-	}
-
-	return nil
-}
-
-// Failing to clean up the gardener-node-agent folder will block the node from joining the cluster again.
-func cleanUpNodeAgentFolder(b *botanist.GardenadmBotanist) error {
-	b.Logger.Info("Cleaning up gardener-node-agent folder")
-	entries, err := os.ReadDir(nodeagentconfigv1alpha1.BaseDir)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed listing garden-node-agent folder: %w", err)
-	}
-
-	for _, entry := range entries {
-		b.Logger.Info("Removing gardener-node-agent file", "file", entry.Name())
-		if err := b.FS.RemoveAll(nodeagentconfigv1alpha1.BaseDir + "/" + entry.Name()); err != nil {
-			return fmt.Errorf("failed removing %q in gardener-node-agent dir %q: %w", entry.Name(), nodeagentconfigv1alpha1.BaseDir, err)
-		}
-	}
-
-	return nil
-}
-
-func cleanUpKubeletFolder(b *botanist.GardenadmBotanist) error {
-	b.Logger.Info("Cleaning up kubelet folder")
-	entries, err := os.ReadDir(kubelet.PathKubeletDirectory)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed listing kubelet folder: %w", err)
-	}
-
-	if err := unmountKubeletSubFolders(b); err != nil {
-		return fmt.Errorf("failed unmounting kubelet sub folders: %w", err)
-	}
-
-	for _, entry := range entries {
-		b.Logger.Info("Removing kubelet file", "file", entry.Name())
-		if err := b.FS.RemoveAll(kubelet.PathKubeletDirectory + "/" + entry.Name()); err != nil {
-			return fmt.Errorf("failed removing %q in kubelet dir %q: %w", entry.Name(), kubelet.PathKubeletDirectory, err)
-		}
-	}
-
-	return nil
-}
-
-func unmountKubeletSubFolders(b *botanist.GardenadmBotanist) error {
-	// Add trailing '/' to prevent unmounting the actual directory.
-	kubletFolderPrefix := kubelet.PathKubeletDirectory + "/"
-
-	mounts, err := os.ReadFile("/proc/mounts")
-	if err != nil {
-		return fmt.Errorf("failed reading /proc/mounts: %w", err)
-	}
-
-	var errs []error
-	for _, mount := range strings.Split(string(mounts), "\n") {
-		// Looking for entries like "tmpfs /var/lib/kubelet/pods/..."
-		words := strings.Split(mount, " ")
-		if len(words) < 2 || !strings.HasPrefix(words[1], kubletFolderPrefix) {
-			continue
-		}
-
-		b.Logger.Info("Unmounting kubelet sub folder", "path", words[1])
-		if err := syscall.Unmount(words[1], 0); err != nil {
-			if err == syscall.EINVAL {
-				// Entry may have already been unmounted due to duplicate entries => ignore it
-				continue
-			}
-
-			errs = append(errs, err)
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("failed unmounting folders: %w", errors.Join(errs...))
 	}
 
 	return nil
