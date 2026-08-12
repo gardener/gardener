@@ -18,6 +18,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Use:   "discover",
 		Short: "Conveniently download Gardener configuration resources from an existing garden cluster",
 		Long:  "Conveniently download Gardener configuration resources from an existing garden cluster (CloudProfile, ControllerRegistrations, ControllerDeployments, etc.)",
+		Args:  cobra.NoArgs,
 	}
 
 	cmd.AddCommand(dnew.NewCommand(globalOpts))

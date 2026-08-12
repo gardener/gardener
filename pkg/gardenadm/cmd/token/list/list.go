@@ -39,7 +39,7 @@ gardenadm token list
 # To include additional sensitive details such as token secrets:
 gardenadm token list --with-token-secret`,
 
-		Args: cobra.ExactArgs(0),
+		Args: cobra.NoArgs,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {

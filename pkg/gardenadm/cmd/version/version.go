@@ -20,6 +20,8 @@ func NewCommand(opts *cmd.Options) *cobra.Command {
 		Short: "Print the client version information",
 		Long:  "Print the client version information",
 
+		Args: cobra.NoArgs,
+
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Fprintf(opts.Out, "gardenadm version %s\n", version.Get())
 		},

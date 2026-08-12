@@ -22,6 +22,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Use:   "token",
 		Short: "Manage bootstrap and discovery tokens for gardenadm join",
 		Long:  "Manage bootstrap and discovery tokens for gardenadm join",
+		Args:  cobra.NoArgs,
 	}
 
 	opts.addFlags(cmd.Flags())

@@ -187,6 +187,7 @@ build:
             - pkg/gardenadm/cmd/discover/new
             - pkg/gardenadm/cmd/init
             - pkg/gardenadm/cmd/join
+            - pkg/gardenadm/cmd/restore
             - pkg/gardenadm/cmd/token
             - pkg/gardenadm/cmd/token/create
             - pkg/gardenadm/cmd/token/delete

@@ -112,94 +112,17 @@ spec:`)
 			Expect(options.Validate()).To(MatchError(ContainSubstring("failed loading resources for zone validation")))
 		})
 
-		It("should fail when control plane worker pool is not found", func() {
+		It("should determine the zone against the control plane worker pool", func() {
+			createShootManifest("", []string{"zone-1"}, true)
+
+			Expect(options.Validate()).To(Succeed())
+			Expect(options.Zone).To(Equal("zone-1"))
+		})
+
+		It("should surface zone validation errors from the shared helper", func() {
 			createShootManifest("", nil, false)
 
 			Expect(options.Validate()).To(MatchError(ContainSubstring("shoot doesn't have a control plane worker pool configured")))
-		})
-
-		When("zone validation with managed infrastructure", func() {
-			BeforeEach(func() {
-				createShootManifest("test-credentials", []string{"us-east-1a"}, true)
-			})
-
-			It("should allow zone when provided for managed infrastructure", func() {
-				options.Zone = "us-east-1a"
-
-				Expect(options.Validate()).To(Succeed())
-			})
-		})
-
-		When("zone validation with unmanaged infrastructure", func() {
-			When("worker with no zones configured", func() {
-				BeforeEach(func() {
-					createShootManifest("", nil, true)
-				})
-
-				It("should reject zone when worker has no zones configured", func() {
-					options.Zone = "custom-zone"
-
-					Expect(options.Validate()).To(MatchError(ContainSubstring(`worker "control-plane" has no zones configured, but zone "custom-zone" was provided`)))
-				})
-
-				It("should allow empty zone when worker has no zones", func() {
-					options.Zone = ""
-
-					Expect(options.Validate()).To(Succeed())
-					Expect(options.Zone).To(BeEmpty())
-				})
-			})
-
-			When("worker with single zone configured", func() {
-				BeforeEach(func() {
-					createShootManifest("", []string{"zone-1"}, true)
-				})
-
-				It("should auto-apply the single zone when not provided", func() {
-					options.Zone = ""
-
-					Expect(options.Validate()).To(Succeed())
-					Expect(options.Zone).To(Equal("zone-1"))
-				})
-
-				It("should accept matching zone when provided", func() {
-					options.Zone = "zone-1"
-
-					Expect(options.Validate()).To(Succeed())
-					Expect(options.Zone).To(Equal("zone-1"))
-				})
-
-				It("should reject non-matching zone when provided", func() {
-					options.Zone = "zone-2"
-
-					Expect(options.Validate()).To(MatchError(ContainSubstring(`provided zone "zone-2" does not match the configured zones [zone-1] for worker "control-plane"`)))
-				})
-			})
-
-			When("worker with multiple zones configured", func() {
-				BeforeEach(func() {
-					createShootManifest("", []string{"zone-1", "zone-2", "zone-3"}, true)
-				})
-
-				It("should require zone flag when not provided", func() {
-					options.Zone = ""
-
-					Expect(options.Validate()).To(MatchError(ContainSubstring(`worker "control-plane" has multiple zones configured [zone-1 zone-2 zone-3], --zone flag is required`)))
-				})
-
-				It("should accept valid zone when provided", func() {
-					options.Zone = "zone-2"
-
-					Expect(options.Validate()).To(Succeed())
-					Expect(options.Zone).To(Equal("zone-2"))
-				})
-
-				It("should reject invalid zone when provided", func() {
-					options.Zone = "zone-4"
-
-					Expect(options.Validate()).To(MatchError(ContainSubstring(`provided zone "zone-4" does not match the configured zones [zone-1 zone-2 zone-3] for worker "control-plane"`)))
-				})
-			})
 		})
 	})
 

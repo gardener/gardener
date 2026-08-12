@@ -37,4 +37,14 @@ var _ = Describe("Version", func() {
 			Eventually(stdOut).Should(Say(regexp.QuoteMeta("gardenadm version v0.0.0-master+$Format:%H$")))
 		})
 	})
+
+	Describe("#Args", func() {
+		It("should accept no arguments", func() {
+			Expect(command.Args(command, nil)).To(Succeed())
+		})
+
+		It("should reject any positional arguments", func() {
+			Expect(command.Args(command, []string{"foo"})).To(HaveOccurred())
+		})
+	})
 })
