@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,6 +23,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
@@ -126,11 +128,16 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd bool, bootstrap
 // the OperatingSystemConfig, waits for it to be reconciled by the OS extension, and deploys the ManagedResource
 // containing the Secret with OperatingSystemConfig for gardener-node-agent.
 func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) error {
-	if err := b.DeployControlPlaneDeployments(ctx, useBootstrapEtcd, bootstrapEtcdBackupPath); err != nil {
+	useShootAccessTokens, err := b.useShootAccessTokensForSelfHostedShootControlPlane(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check whether static auth tokens for self-hosted shoot control plane components can be synced: %w", err)
+	}
+
+	if err := b.DeployControlPlaneDeployments(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, bootstrapEtcdBackupPath); err != nil {
+	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath); err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 
@@ -147,9 +154,9 @@ func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useB
 }
 
 // DeployControlPlaneDeployments runs the Deploy function of the control plane components.
-func (b *Botanist) DeployControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) error {
+func (b *Botanist) DeployControlPlaneDeployments(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) error {
 	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, bootstrapEtcdBackupPath) {
-		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
+		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name, useShootAccessTokens); err != nil {
 			return fmt.Errorf("failed deploying %q: %w", component.name, err)
 		}
 	}
@@ -157,13 +164,15 @@ func (b *Botanist) DeployControlPlaneDeployments(ctx context.Context, useBootstr
 	return nil
 }
 
-func (b *Botanist) deployControlPlaneComponent(ctx context.Context, deploy func(context.Context) error, targetObject client.Object, componentName string) error {
+func (b *Botanist) deployControlPlaneComponent(ctx context.Context, deploy func(context.Context) error, targetObject client.Object, componentName string, useShootAccessTokens bool) error {
 	if err := deploy(ctx); err != nil {
 		return fmt.Errorf("failed deploying component %q: %w", componentName, err)
 	}
 
-	if err := b.populateStaticAdminTokenToAccessTokenSecret(ctx, componentName); err != nil {
-		return fmt.Errorf("failed populating static admin token to access token secret for %q: %w", componentName, err)
+	if !useShootAccessTokens {
+		if err := b.populateStaticAdminTokenToAccessTokenSecret(ctx, componentName); err != nil {
+			return fmt.Errorf("failed populating static admin token to access token secret for %q: %w", componentName, err)
+		}
 	}
 
 	targetObject.SetName(componentName)
@@ -178,6 +187,10 @@ func (b *Botanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Conte
 			return nil
 		}
 		return fmt.Errorf("failed reading secret %s for %q: %w", client.ObjectKeyFromObject(secret), componentName, err)
+	}
+
+	if secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp] != "" {
+		return nil // Do not overwrite dynamic access token with static token.
 	}
 
 	secretStaticToken, found := b.SecretsManager.Get(kubeapiserver.SecretStaticTokenName)
@@ -205,8 +218,8 @@ func (b *Botanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Conte
 
 // DeployOperatingSystemConfigWithStaticPods deploys and waits for the OperatingSystemConfig containing the files for the control
 // plane components running as static pods.
-func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) (*operatingsystemconfig.Data, string, error) {
-	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd, bootstrapEtcdBackupPath)
+func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) (*operatingsystemconfig.Data, string, error) {
+	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
@@ -276,7 +289,7 @@ func (s staticPods) allFiles() []extensionsv1alpha1.File {
 	return files
 }
 
-func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) (staticPods, error) {
+func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) (staticPods, error) {
 	var pods staticPods
 
 	for _, component := range b.staticControlPlaneComponents(useBootstrapEtcd, bootstrapEtcdBackupPath) {
@@ -287,6 +300,21 @@ func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd 
 		files, _, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
+		}
+
+		if useShootAccessTokens {
+			// During bootstrapping we populate a static admin token to the shoot access token secrets used as volumes
+			// in the control plane component deployments. Later on, after bootstrapping is done, we don't need this
+			// anymore and can let gardener-resource-manager auto-rotate the shoot access tokens.
+			// We use the token-sync mechanism in gardener-node-agent which reads these shoot access token secrets from
+			// the cluster and writes them directly to the disk. Hence, we don't need another file in the
+			// OperatingSystemConfig containing the shoot access token (which just gets stale after GRM auto-rotates
+			// it).
+			// "Unfortunately", the static pod translator naively returns a file for the shoot access token secret
+			// volume in the pod spec. We drop this file here before returning it and persisting it in the OSC.
+			files = slices.DeleteFunc(files, func(file extensionsv1alpha1.File) bool {
+				return file.Path == staticpod.FilePathForProjectedVolumeItem(component.name, "kubeconfig", resourcesv1alpha1.DataKeyToken)
+			})
 		}
 
 		pods = append(pods, staticPod{
