@@ -643,12 +643,35 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 				return b.DeployStaticControlPlaneDeployments(ctx, useBootstrapEtcd, backupDataPath)
 			},
 		})
+		// 'gardenadm init' creates the OperatingSystemConfig and gardener-node-agent secrets based on the Shoot
+		// manifest on the local filesystem (manually crafted). However, after 'gardenadm connect', the Shoot gets
+		// registered with the gardener-apiserver, which runs additional mutations via admission plugins that might
+		// change the Shoot spec in a way that affects the computation of the OSC/GNA secret names. Hence, when
+		// gardenlet reconciles the first time after 'gardenadm init', we have to update the respective label on the
+		// nodes to make sure that gardener-node-agent uses the correct secrets going forward.
+		updateNodeAgentSecretNameLabels = g.Add(flow.Task{
+			Name: fmt.Sprintf("Updating %s label on nodes after 'gardenadm init' to reflect computations of gardenlet", v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName),
+			Fn: func(ctx context.Context) error {
+				if err := b.UpdateNodeAgentSecretNameLabelsOnNodes(ctx); err != nil {
+					return fmt.Errorf("error updating %s labels on node: %w", v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName, err)
+				}
+				if err := b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx); err != nil {
+					return fmt.Errorf("error deleting stale OperatingSystemConfig resources: %w", err)
+				}
+				if err := b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx); err != nil {
+					return fmt.Errorf("error waiting until stale OperatingSystemConfig resources have been deleted: %w", err)
+				}
+				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)
+			},
+			SkipIf:       !controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName),
+			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting until control plane components (static pods) are ready",
 			Fn: func(ctx context.Context) error {
 				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
 			},
-			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+			Dependencies: flow.NewTaskIDs(updateNodeAgentSecretNameLabels),
 		})
 	)
 
