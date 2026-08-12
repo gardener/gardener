@@ -14,6 +14,7 @@ import (
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	kubernetesinformers "k8s.io/client-go/informers"
 
@@ -75,6 +76,12 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("no node found for hostname %s", b.HostName)
 	}
 
+	if lastControlPlaneNode, err := isLastControlPlaneNodeWithWorkers(ctx, b, node); err != nil {
+		return fmt.Errorf("failed checking if node is last control plane node: %w", err)
+	} else if lastControlPlaneNode {
+		return fmt.Errorf("cannot reset last control plane node as long as worker nodes still exist; remove the worker nodes first")
+	}
+
 	var (
 		g        = flow.NewGraph("reset")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
@@ -131,30 +138,47 @@ command on any control plane node:
 	return nil
 }
 
+func isLastControlPlaneNodeWithWorkers(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) (bool, error) {
+	if _, exists := node.Labels["node-role.kubernetes.io/control-plane"]; exists {
+		// Only allow removing the last control plane node if there are no more worker nodes
+		nodeList := &corev1.NodeList{}
+		if err := b.SeedClientSet.Client().List(ctx, nodeList); err != nil {
+			return false, fmt.Errorf("failed retrieving node list: %w", err)
+		}
+
+		if controlPlaneNodes, err := b.ListControlPlaneNodes(ctx); err != nil {
+			return false, fmt.Errorf("failed listing control plane nodes: %w", err)
+		} else if len(controlPlaneNodes) == 1 && len(nodeList.Items) > len(controlPlaneNodes) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
 	var (
 		informerFactory = kubernetesinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
 		pdbLister       = informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
 		podLister       = informerFactory.Core().V1().Pods().Lister()
 		podsHaveSynced  = informerFactory.Core().V1().Pods().Informer().HasSynced
-		synced          = informerFactory.WaitForCacheSyncWithContext(ctx)
 		buf             = bytes.NewBuffer([]byte{})
 		errBuf          = bytes.NewBuffer([]byte{})
 	)
 
+	informerFactory.StartWithContext(ctx)
+	synced := informerFactory.WaitForCacheSyncWithContext(ctx)
 	if err := synced.AsError(); err != nil {
 		return fmt.Errorf("failed waiting for informer cache to sync: %w", err)
 	}
 	for k, v := range synced.Synced {
-		// Only if desired log some information similar to this.
 		b.Logger.Info(fmt.Sprintf("Cache synced: %s=>%t", k, v))
 	}
-	informerFactory.StartWithContext(ctx)
 
 	d := drain.NewDrainOptions(
 		b.ShootClientSet.Kubernetes(),
 		b.Shoot.KubernetesVersion,
-		opts.Timeout,
+		opts.DrainTimeout,
 		math.MaxInt32,
 		0,
 		0,

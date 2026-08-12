@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBootstrap(t *testing.T) {
+func TestReset(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "NodeAgent Reset Suite")
 }

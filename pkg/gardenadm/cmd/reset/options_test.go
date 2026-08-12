@@ -45,7 +45,7 @@ var _ = Describe("Options", func() {
 
 		It("should fail when a negative timeout is provided", func() {
 			options.Token = "some-token"
-			options.Timeout = -1
+			options.DrainTimeout = -1
 
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a timeout >= 0")))
 		})
