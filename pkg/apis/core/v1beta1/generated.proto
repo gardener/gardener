@@ -408,6 +408,14 @@ message CloudProfile {
   optional CloudProfileStatus status = 3;
 }
 
+// CloudProfileControlPlane holds control-plane-related settings for a CloudProfile.
+message CloudProfileControlPlane {
+  // AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin
+  // their control plane to specific seed zones. Only set to true for providers where
+  // zone names are globally consistent across all users of the provider.
+  optional bool allowZonePinning = 1;
+}
+
 // CloudProfileList is a collection of CloudProfiles.
 message CloudProfileList {
   // Standard list object metadata.
@@ -495,6 +503,11 @@ message CloudProfileSpec {
   // During maintenance upgrades, the image that matches most capabilities will be selected.
   // +optional
   repeated CapabilityDefinition machineCapabilities = 12;
+
+  // ControlPlane holds settings that control what control-plane-related features shoots
+  // using this CloudProfile may configure.
+  // +optional
+  optional CloudProfileControlPlane controlPlane = 13;
 }
 
 // CloudProfileStatus contains the status of the cloud profile.
@@ -683,6 +696,12 @@ message ControlPlane {
   // control plane of a shoot.
   // +optional
   optional HighAvailability highAvailability = 1;
+
+  // Zones is a list of availability zones in which the control plane components should be placed.
+  // Requires the referenced CloudProfile to have spec.controlPlane.allowZonePinning set to true.
+  // This field is immutable once set.
+  // +optional
+  repeated string zones = 2;
 }
 
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.

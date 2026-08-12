@@ -45,6 +45,7 @@
 * [Shoot Cluster Limits](usage/shoot/shoot_limits.md)
 * [Shoot Maintenance](usage/shoot/shoot_maintenance.md)
 * [Shoot Cluster Purposes](usage/shoot/shoot_purposes.md)
+* [Control Plane Zone Pinning](usage/shoot/shoot_control_plane_zone_pinning.md)
 * [Shoot Scheduling Profiles](usage/shoot/shoot_scheduling_profiles.md)
 * [Shoot Status](usage/shoot/shoot_status.md)
 * [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot/shoot_supported_architectures.md)
