@@ -61,12 +61,19 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 	return cmd
 }
 
+// run bootstraps the control plane and then runs the main init flow that deploys the shoot components.
 func run(ctx context.Context, opts *Options) error {
-	b, err := bootstrapControlPlane(ctx, opts)
+	b, err := BootstrapControlPlane(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
 	}
 
+	return RunInitFlow(ctx, b, opts)
+}
+
+// RunInitFlow runs the main init flow that deploys the shoot components on an already-bootstrapped control plane.
+// It is exported so that the `gardenadm restore` command can reuse the same graph.
+func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, opts *Options) error {
 	dir := filepath.Dir(cmd.ConfigDirLocation)
 	if err := b.FS.MkdirAll(dir, os.ModeDir); err != nil {
 		return fmt.Errorf("failed creating config directory location dir %s: %w", dir, err)
@@ -287,7 +294,9 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 	return nil
 }
 
-func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotanist.GardenadmBotanist, error) {
+// BootstrapControlPlane bootstraps the control plane node and returns a GardenadmBotanist connected to the API server.
+// It is exported so that the `gardenadm restore` command can reuse the same graph.
+func BootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotanist.GardenadmBotanist, error) {
 	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
