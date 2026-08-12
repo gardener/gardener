@@ -11,11 +11,14 @@ This document describes the steps needed to perform in order to confidently add 
 - Drop support for all but the greatest/latest 4 Kubernetes minor versions (the newly added plus three prior). Drop all lower/older versions and adapt accordingly ([example](https://github.com/gardener/gardener/pull/10664))
   - Removing support is only possible if the Kubernetes version to be dropped has been supported for at least 14 months. See [Supported Kubernetes Versions](../usage/shoot-operations/supported_k8s_versions.md) for details.
 
-Version | Expected Release Date | Release Responsibles                                                                         |
---------|-----------------------|----------------------------------------------------------------------------------------------|
-v1.36   | April 22, 2026        | [@tobschli](https://github.com/tobschli), [@ary1992](https://github.com/ary1992)             |
-v1.37   | August ?, 2026        | [@acumino](https://github.com/acumino), [@shafeeqes](https://github.com/shafeeqes)           |
-v1.38   | December ?, 2026      | [@ialidzhikov](https://github.com/ialidzhikov), TBD                                          |
+Version | Expected Release Date | Release Responsibles                                                                                               |
+--------|-----------------------|--------------------------------------------------------------------------------------------------------------------|
+v1.36   | April 22, 2026        | [@tobschli](https://github.com/tobschli), [@ary1992](https://github.com/ary1992)                                   |
+v1.37   | August 26, 2026       | [@acumino](https://github.com/acumino), [@shafeeqes](https://github.com/shafeeqes)                                 |
+v1.38   | December ?, 2026      | [@ialidzhikov](https://github.com/ialidzhikov), [@DobromirNPeev](https://github.com/DobromirNPeev)                 |
+v1.39   | April ?, 2027         | [@RadaBDimitrova](https://github.com/RadaBDimitrova), [@dimitar-kostadinov](https://github.com/dimitar-kostadinov) |
+v1.40   | August ?, 2027        | [@vitanovs](https://github.com/vitanovs), [@Velin-Todorov](https://github.com/Velin-Todorov)                       |
+v1.41   | December ?, 2027      | [@moritzfalke](https://github.com/moritzfalke), [@jan-meis](https://github.com/jan-meis)                           |
 
 <details>
   <summary>Click to expand the archived release responsible associations!</summary>
