@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	initcmd "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -51,6 +53,31 @@ gardenadm restore --config-dir /path/to/manifests --backup-data-path /path/to/et
 	return cmd
 }
 
-func run(_ context.Context, _ *Options) error {
-	return fmt.Errorf("the gardenadm restore command is not implemented yet, see https://github.com/gardener/gardener/issues/15279 for more details")
+func run(ctx context.Context, opts *Options) error {
+	initOpts := &initcmd.Options{
+		Options:         opts.Options,
+		ManifestOptions: opts.ManifestOptions,
+		// Restore requires an etcd backup, which only a control plane using etcd-druid (not the bootstrap etcd)
+		// produces. Hence, restore always transitions to etcd-druid and does not expose --use-bootstrap-etcd.
+		UseBootstrapEtcd: false,
+		UseHostNetwork:   false,
+		Zone:             opts.Zone,
+	}
+
+	b, err := initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath)
+	if err != nil {
+		return fmt.Errorf("failed bootstrapping control plane: %w", err)
+	}
+
+	if err := performRequiredCleanups(ctx, b, opts.PriorNodeName); err != nil {
+		return fmt.Errorf("failed performing required cleanups: %w", err)
+	}
+
+	return initcmd.RunInitFlow(ctx, b, initOpts)
+}
+
+func performRequiredCleanups(_ context.Context, _ *gardenadmbotanist.GardenadmBotanist, _ string) error {
+	// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
+	// For more details, see https://github.com/gardener/gardener/issues/15279.
+	return nil
 }
