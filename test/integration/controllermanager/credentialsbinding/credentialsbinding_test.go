@@ -5,8 +5,6 @@
 package credentialsbinding_test
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -117,7 +115,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 			// for the resource yet) and can reject the request with 503 ServiceUnavailable.
 			Eventually(func() error {
 				return testClient.Create(ctx, shoot)
-			}).WithTimeout(30 * time.Second).Should(Succeed())
+			}).Should(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 			By("Wait until manager has observed shoot")
@@ -134,14 +132,14 @@ var _ = Describe("CredentialsBinding controller test", func() {
 		// Quota is also served by the gardener API server, so retry it for the same reason.
 		Eventually(func() error {
 			return testClient.Create(ctx, quota)
-		}).WithTimeout(30 * time.Second).Should(Succeed())
+		}).Should(Succeed())
 		log.Info("Created Quota for test", "quota", client.ObjectKeyFromObject(quota))
 
 		By("Create CredentialsBinding")
 		// Retry the creation, see the comment above about the gardener API server warm-up.
 		Eventually(func() error {
 			return testClient.Create(ctx, credentialsBinding)
-		}).WithTimeout(30 * time.Second).Should(Succeed())
+		}).Should(Succeed())
 		log.Info("Created CredentialsBinding for test", "credentialsBinding", client.ObjectKeyFromObject(credentialsBinding))
 
 		DeferCleanup(func() {
