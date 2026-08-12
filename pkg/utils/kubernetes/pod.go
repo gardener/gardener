@@ -236,7 +236,7 @@ func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods
 // `.spec.ttlSecondsAfterFinished`).
 func isTerminalReplicaSetOwnedPod(pod *corev1.Pod) bool {
 	controller := metav1.GetControllerOf(pod)
-	return health.IsPodTerminal(pod.Status.Phase) && controller != nil && controller.Kind == "ReplicaSet"
+	return health.IsPodTerminal(pod.Status.Phase) && controller != nil && controller.Kind == "ReplicaSet" && controller.APIVersion == appsv1.SchemeGroupVersion.String()
 }
 
 // shouldObjectBeRemoved determines whether the given object should be gone now.

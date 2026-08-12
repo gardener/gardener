@@ -456,7 +456,7 @@ var _ = Describe("Pod Utils", func() {
 				preemptedPod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{Name: "preempted", Namespace: "default"},
 					Status: corev1.PodStatus{
-						Phase: "Succeeded",
+						Phase: corev1.PodSucceeded,
 						Conditions: []corev1.PodCondition{
 							{Type: "DisruptionTarget", Status: "True", Reason: "TerminationByKubelet"},
 						},
@@ -470,7 +470,7 @@ var _ = Describe("Pod Utils", func() {
 							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: new(true)},
 						},
 					},
-					Status: corev1.PodStatus{Phase: "Failed"},
+					Status: corev1.PodStatus{Phase: corev1.PodFailed},
 				}
 				succeededReplicaSetPod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -480,7 +480,7 @@ var _ = Describe("Pod Utils", func() {
 							{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "foo", Controller: new(true)},
 						},
 					},
-					Status: corev1.PodStatus{Phase: "Succeeded"},
+					Status: corev1.PodStatus{Phase: corev1.PodSucceeded},
 				}
 				failedJobPod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -490,7 +490,7 @@ var _ = Describe("Pod Utils", func() {
 							{APIVersion: "batch/v1", Kind: "Job", Name: "foo", Controller: new(true)},
 						},
 					},
-					Status: corev1.PodStatus{Phase: "Failed"},
+					Status: corev1.PodStatus{Phase: corev1.PodFailed},
 				}
 				pods = []corev1.Pod{*normalPod, *stalePod, *preemptedPod, *failedReplicaSetPod, *succeededReplicaSetPod, *failedJobPod}
 				// There is no good way with the fake client to test the deletion of the pods stuck in termination
