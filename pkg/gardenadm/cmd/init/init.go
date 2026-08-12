@@ -63,7 +63,7 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 
 // run bootstraps the control plane and then runs the main init flow that deploys the shoot components.
 func run(ctx context.Context, opts *Options) error {
-	b, err := BootstrapControlPlane(ctx, opts)
+	b, err := BootstrapControlPlane(ctx, opts, "")
 	if err != nil {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
 	}
@@ -193,7 +193,7 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
 				SkipIf(opts.UseBootstrapEtcd),
 		)
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd, opts.BackupDataPath))
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd, ""))
 
 		_ = g.Add(flow.Task{
 			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",
@@ -295,8 +295,9 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 }
 
 // BootstrapControlPlane bootstraps the control plane node and returns a GardenadmBotanist connected to the API server.
+// When backupDataPath is non-empty, the bootstrap etcd is initialized from that local snapshot for disaster recovery.
 // It is exported so that the `gardenadm restore` command can reuse the same graph.
-func BootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotanist.GardenadmBotanist, error) {
+func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath string) (*gardenadmbotanist.GardenadmBotanist, error) {
 	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
@@ -306,7 +307,7 @@ func BootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 		b.Zone = new(opts.Zone)
 	}
 
-	b.BackupDataPath = opts.BackupDataPath
+	b.BackupDataPath = backupDataPath
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
 	if err != nil {
