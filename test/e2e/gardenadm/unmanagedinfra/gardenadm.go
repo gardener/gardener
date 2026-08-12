@@ -299,10 +299,9 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				}
 			}, SpecTimeout(5*time.Minute))
 
-			// `gardenadm connect` deploys the shoot gardenlet and registers the `Shoot` in the garden cluster. However,
-			// after `gardenadm init`, the status indicates a successful reconciliation, and since the shoot gardenlet
-			// is configured to only proactively reconcile in the maintenance time window, we have to explicitly request
-			// a reconciliation from it. This is to test whether its `Shoot` controller works as expected.
+			// `gardenadm connect` deploys the shoot gardenlet and registers the `Shoot` in the garden cluster. The
+			// `gardenlet` reconciles immediately after it came up, and we should make sure that this (the `Shoot`
+			// controller) works as expected and finishes its operation successfully.
 			Context("shoot gardenlet reconciles self-hosted shoot", func() {
 				var s *e2egardener.ShootContext
 
@@ -314,17 +313,10 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					}).ForShoot(shoot)
 				})
 
-				It("should annotate the shoot to trigger reconciliation", func(ctx SpecContext) {
-					patch := client.MergeFrom(s.Shoot.DeepCopy())
-					metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-					Eventually(ctx, func() error {
-						return s.GardenClient.Patch(ctx, s.Shoot, patch)
-					}).Should(Succeed())
-				}, SpecTimeout(time.Minute))
-
 				It("should wait for the self-hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
 					Eventually(ctx, func(g Gomega) bool {
 						g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+						g.Expect(s.Shoot.Status.Gardener.Name).To(ContainSubstring("gardenlet"))
 						// TODO(rfranzke): Uncomment this code and remove the manual checks once the Shoot controller
 						//  has progressed and the .status.conditions properly reflect healthiness.
 						//
