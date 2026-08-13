@@ -1327,7 +1327,6 @@ func (r *resourceManager) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
-// Make sure to update disableControllersAndWebhooksForWorkerlessShoot when adding webhooks to this method which are not relevant for workerless shoots.
 func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
