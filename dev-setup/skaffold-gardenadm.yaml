@@ -187,6 +187,7 @@ build:
             - pkg/gardenadm/cmd/discover/new
             - pkg/gardenadm/cmd/init
             - pkg/gardenadm/cmd/join
+            - pkg/gardenadm/cmd/reset
             - pkg/gardenadm/cmd/restore
             - pkg/gardenadm/cmd/token
             - pkg/gardenadm/cmd/token/create
@@ -374,6 +375,7 @@ build:
             - pkg/nodeagent/features
             - pkg/nodeagent/files
             - pkg/nodeagent/registry
+            - pkg/nodeagent/reset
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
             - pkg/utils/chart

@@ -564,6 +564,7 @@ build:
             - pkg/nodeagent/features
             - pkg/nodeagent/files
             - pkg/nodeagent/registry
+            - pkg/nodeagent/reset
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
             - pkg/utils/chart

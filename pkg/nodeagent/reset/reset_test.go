@@ -21,7 +21,6 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
-	"github.com/gardener/gardener/pkg/nodeagent/reset"
 	. "github.com/gardener/gardener/pkg/nodeagent/reset"
 )
 
@@ -79,7 +78,7 @@ var _ = Describe("Reset", func() {
 
 			testEncoder = &jsonserializer.Serializer{}
 
-			reset.NewRemoteRuntimeService = func(_ context.Context, _ string, _ time.Duration, _p trace.TracerProvider, _ bool) (cri.RuntimeService, error) {
+			NewRemoteRuntimeService = func(_ context.Context, _ string, _ time.Duration, _ trace.TracerProvider, _ bool) (cri.RuntimeService, error) {
 				return fakecriclient.NewFakeRemoteRuntime().RuntimeService, nil
 			}
 

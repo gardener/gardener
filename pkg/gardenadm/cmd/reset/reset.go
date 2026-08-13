@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	kubernetesinformers "k8s.io/client-go/informers"
+	kubeinformers "k8s.io/client-go/informers"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -110,7 +110,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Executing 'gardener-node-agent reset'",
 			Fn: func(ctx context.Context) error {
 				out, err := exec.CommandContext(ctx, nodeagentconfigv1alpha1.BinaryDir+"/gardener-node-agent", "reset", "--config-dir", nodeagentconfigv1alpha1.BaseDir).CombinedOutput()
-				b.Logger.Info("gardener-node-agent reset")
+				b.Logger.Info("Executing gardener-node-agent reset:")
 				fmt.Fprintln(opts.ErrOut, string(out))
 				return err
 			},
@@ -158,7 +158,7 @@ func isLastControlPlaneNodeWithWorkers(ctx context.Context, b *botanist.Gardenad
 
 func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
 	var (
-		informerFactory = kubernetesinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
+		informerFactory = kubeinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
 		pdbLister       = informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
 		podLister       = informerFactory.Core().V1().Pods().Lister()
 		podsHaveSynced  = informerFactory.Core().V1().Pods().Informer().HasSynced
@@ -172,7 +172,7 @@ func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, node
 		return fmt.Errorf("failed waiting for informer cache to sync: %w", err)
 	}
 	for k, v := range synced.Synced {
-		b.Logger.Info(fmt.Sprintf("Cache synced: %s=>%t", k, v))
+		b.Logger.Info("Cache synced", "type", k, "initialized", v)
 	}
 
 	d := drain.NewDrainOptions(

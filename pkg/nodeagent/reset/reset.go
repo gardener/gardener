@@ -55,14 +55,14 @@ func Reset(ctx context.Context, log logr.Logger, fs afero.Afero, dbus dbus.DBus)
 		})
 		_ = g.Add(flow.Task{
 			Name: "Cleaning up gardener node agent folder",
-			Fn: func(ctx context.Context) error {
+			Fn: func(_ context.Context) error {
 				return cleanUpNodeAgentFolder(log, fs)
 			},
 			Dependencies: flow.NewTaskIDs(cleanedUpOSC),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Cleaning up kubelet folder",
-			Fn: func(ctx context.Context) error {
+			Fn: func(_ context.Context) error {
 				return cleanUpKubeletFolder(log, fs)
 			},
 			Dependencies: flow.NewTaskIDs(cleanedUpOSC),
