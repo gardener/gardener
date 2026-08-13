@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/node"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/secretnamechange"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/systemdunitcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
 )
@@ -42,6 +43,13 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 
 	if err := (&node.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
 		return fmt.Errorf("failed adding node controller: %w", err)
+	}
+
+	if err := (&secretnamechange.Reconciler{
+		ConfigDir:     configDir,
+		CancelContext: cancel,
+	}).AddToManager(mgr, nodePredicate); err != nil {
+		return fmt.Errorf("failed adding secret-name-change controller: %w", err)
 	}
 
 	containerdClient, err := containerd.NewClient()

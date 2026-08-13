@@ -558,6 +558,7 @@ build:
             - pkg/nodeagent/controller/lease
             - pkg/nodeagent/controller/node
             - pkg/nodeagent/controller/operatingsystemconfig
+            - pkg/nodeagent/controller/secretnamechange
             - pkg/nodeagent/controller/systemdunitcheck
             - pkg/nodeagent/controller/token
             - pkg/nodeagent/dbus
