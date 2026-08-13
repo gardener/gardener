@@ -37,7 +37,7 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 	}
 
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(nodeagent.OSCDecoder, oscRaw, osc); err != nil {
+	if err := runtime.DecodeInto(nodeagent.Codec, oscRaw, osc); err != nil {
 		return nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig, err)
 	}
 
@@ -139,7 +139,7 @@ func computeOperatingSystemConfigChanges(
 	}
 
 	oldOSC := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(nodeagent.OSCDecoder, oldOSCRaw, oldOSC); err != nil {
+	if err := runtime.DecodeInto(nodeagent.Codec, oldOSCRaw, oldOSC); err != nil {
 		return nil, fmt.Errorf("unable to decode the old OSC read from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 	}
 

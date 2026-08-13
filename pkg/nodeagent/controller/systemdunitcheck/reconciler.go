@@ -95,7 +95,7 @@ func (r *Reconciler) readManagedUnits() ([]unitInfo, error) {
 		return nil, fmt.Errorf("unable to read last-applied OSC: %w", err)
 	}
 
-	obj, _, err := nodeagent.OSCDecoder.Decode(data, nil, nil)
+	obj, _, err := nodeagent.Codec.Decode(data, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode last-applied OSC: %w", err)
 	}

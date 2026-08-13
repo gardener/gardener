@@ -27,16 +27,15 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, hostName, machineName, nodeName, cfgDir string) error {
+func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, hostName, machineName, nodeName, configDir string) error {
 	nodePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelHostname: hostName}})
 	if err != nil {
 		return fmt.Errorf("failed computing label selector predicate for node: %w", err)
 	}
 
 	if err := (&certificate.Reconciler{
-		Cancel:             cancel,
-		MachineName:        machineName,
-		NodeAgentConfigDir: cfgDir,
+		CancelContext: cancel,
+		MachineName:   machineName,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding certificate controller: %w", err)
 	}
@@ -54,7 +53,7 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 
 	if err := (&operatingsystemconfig.Reconciler{
 		Config:                 cfg.Controllers.OperatingSystemConfig,
-		ConfigDir:              cfgDir,
+		ConfigDir:              configDir,
 		TokenSecretSyncConfigs: cfg.Controllers.Token.SyncConfigs,
 		Channel:                channel,
 		HostName:               hostName,

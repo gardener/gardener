@@ -10,23 +10,14 @@ import (
 
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	nodeagenthelper "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/helper"
 	nodeagentvalidation "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/validation"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/nodeagent"
 )
-
-var configDecoder runtime.Decoder
-
-func init() {
-	configScheme := runtime.NewScheme()
-	utilruntime.Must(nodeagentconfigv1alpha1.AddToScheme(configScheme))
-	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
-}
 
 type options struct {
 	configDir string
@@ -50,7 +41,7 @@ func (o *options) Complete() error {
 	}
 
 	o.config = &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
-	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
+	if err = runtime.DecodeInto(nodeagent.Codec, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
 	}
 
