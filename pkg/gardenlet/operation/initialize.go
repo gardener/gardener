@@ -29,6 +29,7 @@ import (
 func Initialize(
 	ctx context.Context,
 	log logr.Logger,
+	gardenAPIReader client.Reader,
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
@@ -52,9 +53,6 @@ func Initialize(
 	)
 
 	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
-		// TODO(rfranzke): Enable shoot gardenlet to read the gardener.cloud/role=shoot-service-account-issuer secret from
-		//  garden namespace (adapt authorizer) --> requires virtual garden to be at least 1.34 (this promotes the selector
-		//  feature gate to GA, hence, we can enforce the needed label selectors)
 		gardenSecrets, err = gardenerutils.ReadGardenSecrets(
 			ctx,
 			log,
@@ -86,6 +84,22 @@ func Initialize(
 			return nil, err
 		}
 	} else {
+		// The self-hosted gardenlet only needs the shoot service account issuer secret. The shoot authorizer
+		// only permits list/watch with the gardener.cloud/role=shoot-service-account-issuer label selector
+		// (enforced via AuthorizeWithSelectors, GA in Kubernetes 1.34), so we scope the list to that role.
+		// We use the uncached API reader because the self-hosted gardenlet uses SingleObjectCacheFunc for
+		// secrets (Get-by-name only) and the label-selector list would bypass the cache anyway.
+		gardenSecrets, err = gardenerutils.ReadGardenSecrets(
+			ctx,
+			log,
+			gardenAPIReader,
+			v1beta1constants.GardenNamespace,
+			v1beta1constants.GardenRoleShootServiceAccountIssuer,
+		)
+		if err != nil {
+			return nil, err
+		}
+
 		// See https://github.com/gardener/gardener/pull/14352
 		if config.ETCDConfig.FeatureGates == nil {
 			config.ETCDConfig.FeatureGates = make(map[string]bool)

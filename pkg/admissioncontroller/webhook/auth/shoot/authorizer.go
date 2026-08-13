@@ -252,7 +252,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			)
 
 		case secretResource:
-			return a.authorizeSecret(ctx, requestAuthorizer, attrs)
+			return a.authorizeSecret(ctx, requestAuthorizer, userType, attrs)
 
 		case seedResource:
 			// The self-hosted shoot gardenlet needs read access for the Seed whose name matches its shoot name.
@@ -370,7 +370,19 @@ func (a *authorizer) authorizeServiceAccount(requestAuthorizer *authwebhook.Requ
 	)
 }
 
-func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *authwebhook.RequestAuthorizer, userType gardenletidentity.UserType, attrs auth.Attributes) (auth.Decision, string, error) {
+	// Allow the gardenlet (not extension service accounts) to list/watch secrets labeled
+	// gardener.cloud/role=shoot-service-account-issuer from the garden namespace.
+	if userType == gardenletidentity.UserTypeGardenlet &&
+		slices.Contains([]string{"list", "watch"}, attrs.GetVerb()) &&
+		attrs.GetNamespace() == v1beta1constants.GardenNamespace {
+		return requestAuthorizer.Check(graph.VertexTypeSecret, attrs,
+			authwebhook.WithAllowedVerbs("list", "watch"),
+			authwebhook.WithAllowedNamespaces(v1beta1constants.GardenNamespace),
+			authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer}),
+		)
+	}
+
 	if attrs.GetNamespace() == metav1.NamespaceSystem && strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix) {
 		switch attrs.GetVerb() {
 		case "get", "list", "watch":

@@ -18,6 +18,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
@@ -27,6 +28,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -2251,6 +2253,89 @@ var _ = Describe("Shoot", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
 						Expect(reason).To(BeEmpty())
+					})
+				})
+
+				When("list/watch of shoot-service-account-issuer secret from garden namespace is requested", func() {
+					var issuerLabelRequirements labels.Requirements
+
+					BeforeEach(func() {
+						selector, err := labels.Parse(v1beta1constants.GardenRole + "=" + v1beta1constants.GardenRoleShootServiceAccountIssuer)
+						Expect(err).NotTo(HaveOccurred())
+						var selectable bool
+						issuerLabelRequirements, selectable = selector.Requirements()
+						Expect(selectable).To(BeTrue())
+
+						attrs.Namespace = v1beta1constants.GardenNamespace
+						attrs.Name = ""
+						attrs.LabelSelectorRequirements = issuerLabelRequirements
+					})
+
+					DescribeTable("should allow for gardenlet user type with correct label selector",
+						func(verb string) {
+							attrs.Verb = verb
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
+
+					DescribeTable("should not allow for gardenlet user type without label selector",
+						func(verb string) {
+							attrs.Verb = verb
+							attrs.LabelSelectorRequirements = nil
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("must specify field or label selector"))
+						},
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
+
+					It("should fall through to graph-based authorization for extension user type", func() {
+						attrs.Verb = "list"
+						attrs.User = &user.DefaultInfo{
+							Name:   "system:serviceaccount:" + v1beta1constants.GardenNamespace + ":extension-shoot--" + shootName + "--foo",
+							Groups: []string{"system:serviceaccounts", "system:serviceaccounts:" + v1beta1constants.GardenNamespace},
+						}
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("must specify field or label selector"))
+					})
+
+					DescribeTable("should fall through to graph-based authorization for write verbs",
+						func(verb string) {
+							attrs.Verb = verb
+							attrs.Name = v1beta1constants.GardenRoleShootServiceAccountIssuer
+
+							graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecret, v1beta1constants.GardenNamespace, v1beta1constants.GardenRoleShootServiceAccountIssuer, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("no relationship found"))
+						},
+						Entry("patch", "patch"),
+						Entry("update", "update"),
+					)
+
+					It("should fall through to graph-based authorization for delete verb", func() {
+						attrs.Verb = "delete"
+						attrs.Name = v1beta1constants.GardenRoleShootServiceAccountIssuer
+
+						graph.EXPECT().HasVertex(graphutils.VertexTypeSecret, v1beta1constants.GardenNamespace, v1beta1constants.GardenRoleShootServiceAccountIssuer).Return(true)
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecret, v1beta1constants.GardenNamespace, v1beta1constants.GardenRoleShootServiceAccountIssuer, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
 					})
 				})
 

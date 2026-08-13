@@ -220,6 +220,7 @@ func newBotanist(
 		ctx,
 		log,
 		gardenClient,
+		gardenClient,
 		clientSet,
 		nil, // gardenadm has no ShootClientMap
 		gardenletConfig,
