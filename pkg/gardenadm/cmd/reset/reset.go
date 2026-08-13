@@ -15,10 +15,11 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	kubeinformers "k8s.io/client-go/informers"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -76,15 +77,14 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("no node found for hostname %s", b.HostName)
 	}
 
-	if lastControlPlaneNode, err := isLastControlPlaneNodeWithWorkers(ctx, b, node); err != nil {
+	if isLastControlPlaneNode, err := isLastControlPlaneNodeWithWorkers(ctx, b, node); err != nil {
 		return fmt.Errorf("failed checking if node is last control plane node: %w", err)
-	} else if lastControlPlaneNode {
+	} else if isLastControlPlaneNode {
 		return fmt.Errorf("cannot reset last control plane node as long as worker nodes still exist; remove the worker nodes first")
 	}
 
 	var (
-		g        = flow.NewGraph("reset")
-		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
+		g = flow.NewGraph("reset")
 
 		cordonAndDrainNodeComplete = g.Add(flow.Task{
 			Name: "Cordoning and draining node",
@@ -99,7 +99,7 @@ func run(ctx context.Context, opts *Options) error {
 		deletedNode = g.Add(flow.Task{
 			Name: "Deleting node from cluster",
 			Fn: func(ctx context.Context) error {
-				if err := b.ShootClientSet.Client().Delete(ctx, node); err != nil && !apierrors.IsNotFound(err) {
+				if err := b.ShootClientSet.Client().Delete(ctx, node); client.IgnoreNotFound(err) != nil {
 					return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
 				}
 				return nil
@@ -110,7 +110,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Executing 'gardener-node-agent reset'",
 			Fn: func(ctx context.Context) error {
 				out, err := exec.CommandContext(ctx, nodeagentconfigv1alpha1.BinaryDir+"/gardener-node-agent", "reset", "--config-dir", nodeagentconfigv1alpha1.BaseDir).CombinedOutput()
-				b.Logger.Info("Executing gardener-node-agent reset:")
+				b.Logger.Info("Executed gardener-node-agent reset:")
 				fmt.Fprintln(opts.ErrOut, string(out))
 				return err
 			},
@@ -120,7 +120,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              opts.Log,
-		ProgressReporter: reporter,
+		ProgressReporter: flow.NewCommandLineProgressReporter(opts.ErrOut),
 	}); err != nil {
 		return flow.Errors(err)
 	}
@@ -139,21 +139,24 @@ command on any control plane node:
 }
 
 func isLastControlPlaneNodeWithWorkers(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) (bool, error) {
-	if _, exists := node.Labels["node-role.kubernetes.io/control-plane"]; exists {
-		// Only allow removing the last control plane node if there are no more worker nodes
-		nodeList := &corev1.NodeList{}
-		if err := b.SeedClientSet.Client().List(ctx, nodeList); err != nil {
-			return false, fmt.Errorf("failed retrieving node list: %w", err)
-		}
+	if _, exists := node.Labels[v1beta1constants.LabelNodeRoleControlPlane]; !exists {
+		return false, nil
+	}
 
-		if controlPlaneNodes, err := b.ListControlPlaneNodes(ctx); err != nil {
-			return false, fmt.Errorf("failed listing control plane nodes: %w", err)
-		} else if len(controlPlaneNodes) == 1 && len(nodeList.Items) > len(controlPlaneNodes) {
-			return true, nil
+	// Only allow removing the last control plane node if there are no more worker nodes
+	nodeList := &corev1.NodeList{}
+	if err := b.SeedClientSet.Client().List(ctx, nodeList); err != nil {
+		return false, fmt.Errorf("failed retrieving node list: %w", err)
+	}
+
+	var controlPlaneCount int
+	for _, n := range nodeList.Items {
+		if _, ok := n.Labels[v1beta1constants.LabelNodeRoleControlPlane]; ok {
+			controlPlaneCount++
 		}
 	}
 
-	return false, nil
+	return controlPlaneCount == 1 && len(nodeList.Items) > 1, nil
 }
 
 func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
@@ -171,10 +174,9 @@ func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, node
 	if err := synced.AsError(); err != nil {
 		return fmt.Errorf("failed waiting for informer cache to sync: %w", err)
 	}
-	for k, v := range synced.Synced {
-		b.Logger.Info("Cache synced", "type", k, "initialized", v)
-	}
 
+	// TODO(scheererj): Currently, it is only possible to perform a forceful drain without a driver.
+	// Change to allow proper eviction according to pod disruption budgets and drain timeouts once it is possible.
 	d := drain.NewDrainOptions(
 		b.ShootClientSet.Kubernetes(),
 		b.Shoot.KubernetesVersion,

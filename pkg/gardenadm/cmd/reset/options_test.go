@@ -47,7 +47,7 @@ var _ = Describe("Options", func() {
 			options.Token = "some-token"
 			options.DrainTimeout = -1
 
-			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a timeout >= 0")))
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a drain timeout >= 0")))
 		})
 	})
 

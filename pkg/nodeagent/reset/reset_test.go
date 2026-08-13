@@ -119,12 +119,12 @@ var _ = Describe("Reset", func() {
 			for i, f := range folders {
 				exists, err := fakeFS.DirExists(f)
 				ExpectWithOffset(i, err).NotTo(HaveOccurred())
-				ExpectWithOffset(i, exists).NotTo(BeTrue())
+				ExpectWithOffset(i, exists).To(BeFalse())
 			}
 			for _, f := range files {
 				exists, err := fakeFS.Exists(f)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(exists).NotTo(BeTrue())
+				Expect(exists).To(BeFalse())
 			}
 
 			Expect(fakeDBus.Actions).To(Equal(expectedSystemdActions))
