@@ -172,7 +172,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			itShouldJoinNode()
 
-			itShouldSeeJoinedNodeAndCheckHealth(shootClientSet)
+			itShouldSeeJoinedNodeAndCheckHealth(func() kubernetes.Interface { return shootClientSet })
 		})
 
 		Context("gardenadm reset + join", Ordered, Label("resetjoin"), func() {
@@ -187,7 +187,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			itShouldJoinNode()
 
-			itShouldSeeJoinedNodeAndCheckHealth(shootClientSet)
+			itShouldSeeJoinedNodeAndCheckHealth(func() kubernetes.Interface { return shootClientSet })
 		})
 
 		Context("gardenadm connect", Ordered, Label("connect"), func() {
@@ -436,13 +436,13 @@ func itShouldResetOrJoinNode(command, message string) {
 	}, SpecTimeout(time.Minute))
 }
 
-func itShouldSeeJoinedNodeAndCheckHealth(shootClientSet kubernetes.Interface) {
+func itShouldSeeJoinedNodeAndCheckHealth(shootClientSet func() kubernetes.Interface) {
 	GinkgoHelper()
 
 	It("should see the joined node and observe its readiness", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
 			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(1)}}
-			g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			g.Expect(shootClientSet().Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 
 			g.Expect(node.Status.Conditions).To(ContainCondition(
 				MatchFields(IgnoreExtras, Fields{"Type": Equal(corev1.NodeReady)}),
