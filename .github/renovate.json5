@@ -492,6 +492,7 @@
       // Do not update etcd and etcd-backup-restore images since they have to be in sync with the etcd-druid version.
       matchDatasources: [
         'docker',
+        'github-releases',
       ],
       matchFileNames: [
         'imagevector/**',
