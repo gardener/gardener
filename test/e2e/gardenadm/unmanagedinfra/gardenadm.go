@@ -22,9 +22,12 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
@@ -38,7 +41,9 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2egardener "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/access"
@@ -199,7 +204,28 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			var (
 				gardenKomega                         Komega
 				gardenClusterKubeconfigPathOnMachine = "/tmp/virtual-garden-kubeconfig"
+
+				clusterAdminStaticToken string
 			)
+
+			It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
+				initShootClientSet(ctx)
+			}, SpecTimeout(time.Minute))
+
+			It("should store the cluster-admin static token for later assertions", func(ctx SpecContext) {
+				secret, err := kubernetesutils.NewestObject(ctx, shootClientSet.Client(), &corev1.SecretList{}, nil, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{
+					"managed-by": "secrets-manager",
+					"name":       "kube-apiserver-static-token",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(secret).NotTo(BeNil())
+
+				staticToken, err := secretsutils.LoadStaticTokenFromCSV("kube-apiserver-static-token", secret.(*corev1.Secret).Data[secretsutils.DataKeyStaticTokenCSV])
+				Expect(err).NotTo(HaveOccurred())
+				token, err := staticToken.GetTokenForUsername("system:cluster-admin")
+				Expect(err).NotTo(HaveOccurred())
+				clusterAdminStaticToken = token.Token
+			}, SpecTimeout(time.Minute))
 
 			It("should create a client for garden cluster", func(ctx SpecContext) {
 				initGardenClientSet(ctx)
@@ -310,8 +336,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			Context("shoot gardenlet reconciles self-hosted shoot", func() {
 				var s *e2egardener.ShootContext
 
-				BeforeAll(func(ctx SpecContext) {
-					initShootClientSet(ctx)
+				BeforeAll(func() {
 					s = (&e2egardener.TestContext{
 						GardenClientSet: gardenClientSet,
 						GardenClient:    gardenClientSet.Client(),
@@ -349,6 +374,57 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					By("Verifying ShootTaskUpdateGardenerNodeAgentSecretName task annotation has been removed")
 					Expect(controllerutils.HasTask(s.Shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)).To(BeFalse())
 				}, SpecTimeout(30*time.Minute))
+
+				It("should ensure the static token secret only contains the health-check token (cluster-admin token eliminated)", func(ctx SpecContext) {
+					newestSecret, err := kubernetesutils.NewestObject(ctx, shootClientSet.Client(), &corev1.SecretList{}, nil, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{
+						"managed-by": "secrets-manager",
+						"name":       "kube-apiserver-static-token",
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newestSecret).NotTo(BeNil())
+
+					secret := newestSecret.(*corev1.Secret)
+					staticToken, err := secretsutils.LoadStaticTokenFromCSV("kube-apiserver-static-token", secret.Data[secretsutils.DataKeyStaticTokenCSV])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(staticToken.Tokens).To(HaveLen(1))
+					Expect(staticToken.Tokens[0].Username).To(Equal("health-check"))
+
+					By("Verifying kube-apiserver no longer trusts the old cluster-admin static token")
+					unauthenticatedClient, err := client.New(&rest.Config{
+						Host:            shootClientSet.RESTConfig().Host,
+						TLSClientConfig: rest.TLSClientConfig{CAData: shootClientSet.RESTConfig().CAData},
+						BearerToken:     clusterAdminStaticToken,
+					}, client.Options{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(unauthenticatedClient.List(ctx, &corev1.NamespaceList{})).To(MatchError(apierrors.IsUnauthorized, "IsUnauthorized"))
+				}, SpecTimeout(time.Minute))
+
+				It("should ensure the new admin kubeconfig uses a dynamic token and the token files contain JWTs", func(ctx SpecContext) {
+					By("Verifying /etc/kubernetes/admin.conf uses tokenFile instead of an inline token")
+					stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
+					Expect(err).NotTo(HaveOccurred())
+
+					adminKubeconfig, err := clientcmd.Load(stdOut.Contents())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(adminKubeconfig.AuthInfos).To(HaveLen(1))
+					for _, authInfo := range adminKubeconfig.AuthInfos {
+						Expect(authInfo.Token).To(BeEmpty(), "admin.conf should not contain an inline token")
+						Expect(authInfo.TokenFile).To(Equal("/etc/kubernetes/admin-token"))
+					}
+
+					By("Verifying /etc/kubernetes/admin-token contains a JWT")
+					stdOut, _, err = execute(ctx, 0, "cat", "/etc/kubernetes/admin-token")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(strings.Split(strings.TrimSpace(string(stdOut.Contents())), ".")).To(HaveLen(3), "admin-token should be a JWT (3 dot-separated parts)")
+
+					for _, component := range []string{"kube-controller-manager", "kube-scheduler"} {
+						By("Verifying " + component + " token file contains a JWT")
+						tokenPath := "/var/lib/static-pods/" + component + "/kubeconfig/token"
+						stdOut, _, err = execute(ctx, 0, "cat", tokenPath)
+						Expect(err).NotTo(HaveOccurred(), "failed to read token file for %s", component)
+						Expect(strings.Split(strings.TrimSpace(string(stdOut.Contents())), ".")).To(HaveLen(3), "%s token should be a JWT (3 dot-separated parts)", component)
+					}
+				}, SpecTimeout(time.Minute))
 
 				It("should ensure node labels and gardener-node-agent config reflect the correct OSC secret name", func(ctx SpecContext) {
 					By("Build map of worker pool -> newest original OSC name (the newest OSC is the one desired by gardenlet)")
