@@ -5,7 +5,7 @@
 package event_test
 
 import (
-	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,183 +24,111 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("eventReconciler", func() {
+var _ = Describe("event reconciler", func() {
+	const ttl = time.Hour
+
 	var (
-		ctx        context.Context
-		fakeClient client.Client
 		fakeClock  *testclock.FakeClock
+		fakeClient client.Client
+		reconciler reconcile.Reconciler
 
-		shootEventName                  = "shootEvent-test"
-		nonShootEventName               = "nonShootEvent-test"
-		eventWithoutInvolvedObjectName  = "eventWithoutInvolvedObject-test"
-		nonGardenerAPIGroupEventName    = "nonGardenerAPIGroupEvent-test"
-		eventTimeEventName              = "eventTimeEvent-test"
-		seriesLastObservedTimeEventName = "seriesLastObservedTimeEvent-test"
-
-		ttl = &metav1.Duration{Duration: 1 * time.Hour}
-
-		reconciler                  reconcile.Reconciler
-		shootEvent                  *eventsv1.Event
-		nonShootEvent               *eventsv1.Event
-		nonGardenerAPIGroupEvent    *eventsv1.Event
-		eventWithoutInvolvedObject  *eventsv1.Event
-		eventTimeEvent              *eventsv1.Event
-		seriesLastObservedTimeEvent *eventsv1.Event
-		cfg                         controllermanagerconfigv1alpha1.EventControllerConfiguration
+		event   *eventsv1.Event
+		request reconcile.Request
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		fakeClock = testclock.NewFakeClock(time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC))
 
-		fakeNow := time.Date(2022, 0, 0, 0, 0, 0, 0, time.UTC)
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		fakeClock = testclock.NewFakeClock(fakeNow)
-
-		shootEvent = &eventsv1.Event{
-			ObjectMeta:              metav1.ObjectMeta{Name: shootEventName},
-			DeprecatedLastTimestamp: metav1.Time{Time: fakeNow},
-			Regarding:               corev1.ObjectReference{Kind: "Shoot", APIVersion: "core.gardener.cloud/v1beta1"},
-		}
-		nonShootEvent = &eventsv1.Event{
-			ObjectMeta:              metav1.ObjectMeta{Name: nonShootEventName},
-			DeprecatedLastTimestamp: metav1.Time{Time: fakeNow},
-			Regarding:               corev1.ObjectReference{Kind: "Project", APIVersion: "core.gardener.cloud/v1beta1"},
-		}
-		eventWithoutInvolvedObject = &eventsv1.Event{
-			ObjectMeta:              metav1.ObjectMeta{Name: eventWithoutInvolvedObjectName},
-			DeprecatedLastTimestamp: metav1.Time{Time: fakeNow},
-		}
-		nonGardenerAPIGroupEvent = &eventsv1.Event{
-			ObjectMeta:              metav1.ObjectMeta{Name: nonGardenerAPIGroupEventName},
-			DeprecatedLastTimestamp: metav1.Time{Time: fakeNow},
-			Regarding:               corev1.ObjectReference{Kind: "Shoot", APIVersion: "v1"},
-		}
-
-		eventTimeEvent = &eventsv1.Event{
-			ObjectMeta: metav1.ObjectMeta{Name: eventTimeEventName},
-			EventTime:  metav1.MicroTime{Time: fakeNow},
+		event = &eventsv1.Event{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			EventTime:  metav1.MicroTime{Time: fakeClock.Now()},
 			Regarding:  corev1.ObjectReference{Kind: "Project", APIVersion: "core.gardener.cloud/v1beta1"},
 		}
-		seriesLastObservedTimeEvent = &eventsv1.Event{
-			ObjectMeta: metav1.ObjectMeta{Name: seriesLastObservedTimeEventName},
-			EventTime:  metav1.MicroTime{Time: fakeNow.Add(-2 * ttl.Duration)},
-			Series: &eventsv1.EventSeries{
-				LastObservedTime: metav1.MicroTime{Time: fakeNow},
+		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(event)}
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		reconciler = &Reconciler{
+			Clock:  fakeClock,
+			Client: fakeClient,
+			Config: controllermanagerconfigv1alpha1.EventControllerConfiguration{
+				TTLNonShootEvents: &metav1.Duration{Duration: ttl},
 			},
-			Regarding: corev1.ObjectReference{Kind: "Project", APIVersion: "core.gardener.cloud/v1beta1"},
 		}
-
-		cfg = controllermanagerconfigv1alpha1.EventControllerConfiguration{
-			TTLNonShootEvents: ttl,
-		}
-
-		reconciler = &Reconciler{Clock: fakeClock, Client: fakeClient, Config: cfg}
 	})
 
-	It("should return nil because object not found", func() {
-		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(nonShootEvent), &eventsv1.Event{})).To(BeNotFoundError())
-
-		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: nonShootEventName}})
-		Expect(result).To(Equal(reconcile.Result{}))
-		Expect(err).NotTo(HaveOccurred())
+	JustBeforeEach(func(ctx SpecContext) {
+		Expect(fakeClient.Create(ctx, event)).To(Succeed())
 	})
 
-	Context("shoot events", func() {
-		It("should ignore them", func() {
-			Expect(fakeClient.Create(ctx, shootEvent)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootEvent), &eventsv1.Event{})).To(Succeed())
+	When("event is already gone", func() {
+		JustBeforeEach(func(ctx SpecContext) {
+			Expect(fakeClient.Delete(ctx, event)).To(Succeed())
+		})
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shootEventName}})
-			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).NotTo(HaveOccurred())
+		It("should ignore event", func(ctx SpecContext) {
+			Expect(reconciler.Reconcile(ctx, request)).To(BeZero())
 		})
 	})
 
-	Context("non-shoot events", func() {
-		Context("ttl is not yet reached", func() {
-			It("should requeue non-shoot events", func() {
-				Expect(fakeClient.Create(ctx, nonShootEvent)).To(Succeed())
-
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: nonShootEventName}})
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: ttl.Duration}))
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should requeue events with an empty involvedObject", func() {
-				Expect(fakeClient.Create(ctx, eventWithoutInvolvedObject)).To(Succeed())
-
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: eventWithoutInvolvedObjectName}})
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: ttl.Duration}))
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should requeue events with non Gardener APIGroup", func() {
-				Expect(fakeClient.Create(ctx, nonGardenerAPIGroupEvent)).To(Succeed())
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: nonGardenerAPIGroupEventName}})
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: ttl.Duration}))
-				Expect(err).NotTo(HaveOccurred())
-			})
+	When("event is for shoot", func() {
+		BeforeEach(func() {
+			event.Regarding.Kind = "Shoot"
 		})
 
-		Context("ttl is reached", func() {
+		It("should ignore event", func(ctx SpecContext) {
+			Expect(reconciler.Reconcile(ctx, request)).To(BeZero())
+			Expect(fakeClient.Get(ctx, request.NamespacedName, event)).To(Succeed())
+		})
+	})
+
+	DescribeTableSubtree("requeue and delete event",
+		func(fieldName string, mutate func()) {
 			BeforeEach(func() {
-				fakeClock.Step(ttl.Duration)
-				reconciler = &Reconciler{Clock: fakeClock, Client: fakeClient, Config: cfg}
-
-				Expect(fakeClient.Create(ctx, nonShootEvent)).To(Succeed())
+				if mutate != nil {
+					mutate()
+				}
 			})
 
-			It("should delete the event", func() {
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: nonShootEventName}})
-				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(nonShootEvent), &eventsv1.Event{})).To(BeNotFoundError())
+			It(fmt.Sprintf("should delete event after %s + TTL", fieldName), func(ctx SpecContext) {
+				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: ttl}))
+				Expect(fakeClient.Get(ctx, request.NamespacedName, event)).To(Succeed(), "event still exists")
+
+				fakeClock.Step(ttl)
+				Expect(reconciler.Reconcile(ctx, request)).To(BeZero())
+				Expect(fakeClient.Get(ctx, request.NamespacedName, event)).To(BeNotFoundError(), "event is deleted")
 			})
-		})
-	})
+		},
 
-	Context("events reported via events.k8s.io API", func() {
-		Context("ttl is not yet reached", func() {
-			It("should requeue events with EventTime", func() {
-				Expect(fakeClient.Create(ctx, eventTimeEvent)).To(Succeed())
+		Entry("the event occurred only once", "EventTime", nil),
 
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: eventTimeEventName}})
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: ttl.Duration}))
-				Expect(err).NotTo(HaveOccurred())
-			})
+		Entry("the event occurred multiple times", "Series.LastObservedTime", func() {
+			event.EventTime.Time = fakeClock.Now().Add(-2 * ttl)
+			event.Series = &eventsv1.EventSeries{
+				Count:            2,
+				LastObservedTime: metav1.MicroTime{Time: fakeClock.Now()},
+			}
+		}),
 
-			It("should requeue events with Series.LastObservedTime", func() {
-				Expect(fakeClient.Create(ctx, seriesLastObservedTimeEvent)).To(Succeed())
+		Entry("no object is referenced", "EventTime", func() {
+			event.Regarding = corev1.ObjectReference{}
+		}),
 
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seriesLastObservedTimeEventName}})
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: ttl.Duration}))
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
+		Entry("a non-Gardener object is referenced", "EventTime", func() {
+			event.Regarding.APIVersion = "v1"
+			event.Regarding.Kind = "Namespace"
+		}),
 
-		Context("ttl is reached", func() {
-			BeforeEach(func() {
-				fakeClock.Step(ttl.Duration)
-				reconciler = &Reconciler{Clock: fakeClock, Client: fakeClient, Config: cfg}
-			})
+		Entry("events reported via corev1.Event API", "LastTimestamp", func() {
+			event = &eventsv1.Event{
+				// common fields for both APIs
+				ObjectMeta: event.ObjectMeta,
+				Regarding:  event.Regarding,
 
-			It("should delete events with EventTime", func() {
-				Expect(fakeClient.Create(ctx, eventTimeEvent)).To(Succeed())
-
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: eventTimeEventName}})
-				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(eventTimeEvent), &eventsv1.Event{})).To(BeNotFoundError())
-			})
-
-			It("should delete events with Series.LastObservedTime", func() {
-				Expect(fakeClient.Create(ctx, seriesLastObservedTimeEvent)).To(Succeed())
-
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seriesLastObservedTimeEventName}})
-				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(seriesLastObservedTimeEvent), &eventsv1.Event{})).To(BeNotFoundError())
-			})
-		})
-	})
+				// fields for events reported via corev1
+				DeprecatedFirstTimestamp: metav1.Time{Time: fakeClock.Now().Add(-2 * ttl)},
+				DeprecatedLastTimestamp:  metav1.Time{Time: fakeClock.Now()},
+				DeprecatedCount:          2,
+			}
+		}),
+	)
 })
