@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/yaml"
 
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -132,6 +133,7 @@ var _ = Describe("ResourceManager", func() {
 		managedResourceSecret                                *corev1.Secret
 		managedResource                                      *resourcesv1alpha1.ManagedResource
 		matchLabelKeysInPodTopologySpreadFeatureGateDisabled bool
+		fetchAndValidateWebhookConfiguration                 func(actualConfigMap *corev1.ConfigMap, actualManagedResourceSecret *corev1.Secret)
 	)
 
 	BeforeEach(func() {
@@ -2093,6 +2095,116 @@ subjects:
 			},
 		}
 		utilruntime.Must(references.InjectAnnotations(managedResource))
+
+		validateWebhookConfiguration := func(
+			actualConfig *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration,
+			actualMutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration,
+			actualValidatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration) {
+
+			By("Verify that the mutating webhook configuration is consistent")
+
+			expectedNumEnabledMutatingWebhooks := 0
+			if actualConfig.Webhooks.HighAvailabilityConfig.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "high-availability-config.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.KubernetesServiceHost.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "kubernetes-service-host.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.SystemComponentsConfig.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "system-components-config.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.PodKubeAPIServerLoadBalancing.Enabled {
+				expectedNumEnabledMutatingWebhooks += len(cfg.PodKubeAPIServerLoadBalancingWebhook.Configs)
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", ContainSubstring("kube-apiserver-load-balancing.resources.gardener.cloud"))))
+			}
+			if actualConfig.Webhooks.PodSchedulerName.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "pod-scheduler-name.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.PodTopologySpreadConstraints.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "pod-topology-spread-constraints.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.ProjectedTokenMount.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "projected-token-mount.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.SeccompProfile.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "seccomp-profile.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.VPAInPlaceUpdates.Enabled {
+				expectedNumEnabledMutatingWebhooks++
+				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "vpa-in-place-updates.resources.gardener.cloud")))
+			}
+			Expect(len(actualMutatingWebhookConfiguration.Webhooks)).To(Equal(expectedNumEnabledMutatingWebhooks))
+
+			expectedNumEnabledValidatingWebhooks := 0
+			if actualConfig.Webhooks.CRDDeletionProtection.Enabled {
+				expectedNumEnabledValidatingWebhooks += 2 // crd and cr, see NewCRDDeletionProtectionValidatingWebhooks in pkg/component/gardener/resourcemanager/resource_manager.go
+
+				Expect(actualValidatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "crd-deletion-protection.resources.gardener.cloud")))
+				Expect(actualValidatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "cr-deletion-protection.resources.gardener.cloud")))
+			}
+			if actualConfig.Webhooks.ExtensionValidation.Enabled {
+				expectedNumEnabledValidatingWebhooks += 13 // the list of length 13 is hardcoded in NewExtensionValidationValidatingWebhooks, see pkg/component/gardener/resourcemanager/resource_manager.go
+				Expect(actualValidatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", ContainSubstring("validation.extensions."))))
+			}
+			Expect(len(actualValidatingWebhookConfiguration.Webhooks)).To(Equal(expectedNumEnabledValidatingWebhooks))
+
+			// actualConfig.Webhooks.NodeAgentAuthorizer is an authorization webhook, which works differently and is not tested here.
+		}
+
+		fetchAndValidateWebhookConfiguration = func(
+			actualConfigMap *corev1.ConfigMap,
+			actualManagedResourceSecret *corev1.Secret,
+		) {
+			actualConfig := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
+			Expect(runtime.DecodeInto(codec, []byte(actualConfigMap.Data["config.yaml"]), actualConfig)).To(Succeed())
+
+			actualMutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{}
+			actualValidatingWebhookConfiguration := &admissionregistrationv1.ValidatingWebhookConfiguration{}
+
+			switch cfg.ResponsibilityMode {
+			case ForRuntime:
+				{
+					if actualManagedResourceSecret != nil {
+						Fail("actualManagedResourceSecret should be nil for ForRuntime responsibility mode")
+					}
+					Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager"}, actualMutatingWebhookConfiguration)).To(Succeed())
+					Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager"}, actualValidatingWebhookConfiguration)).To(Succeed())
+
+					break
+				}
+			case ForShootOrVirtualGarden:
+				{
+					manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, manifest := range manifests {
+						typeMeta := &metav1.TypeMeta{}
+						if err := yaml.Unmarshal([]byte(manifest), typeMeta); err != nil {
+							continue
+						}
+						switch typeMeta.Kind {
+						case "MutatingWebhookConfiguration":
+							Expect(runtime.DecodeInto(codec, []byte(manifest), actualMutatingWebhookConfiguration)).To(Succeed())
+						case "ValidatingWebhookConfiguration":
+							Expect(runtime.DecodeInto(codec, []byte(manifest), actualValidatingWebhookConfiguration)).To(Succeed())
+						}
+					}
+					break
+				}
+			default:
+				{
+					Fail("unexpected responsibility mode: " + string(cfg.ResponsibilityMode))
+				}
+			}
+			validateWebhookConfiguration(actualConfig, actualMutatingWebhookConfiguration, actualValidatingWebhookConfiguration)
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -2157,6 +2269,11 @@ subjects:
 						actualConfigMap.ResourceVersion = ""
 						configMap.ResourceVersion = ""
 						Expect(actualConfigMap).To(DeepEqual(configMap))
+
+						actualManagedResourceSecret := &corev1.Secret{}
+						Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, actualManagedResourceSecret)).To(Succeed())
+
+						fetchAndValidateWebhookConfiguration(configMap, actualManagedResourceSecret)
 
 						actualRole := &rbacv1.Role{}
 						Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: watchedNamespace, Name: "gardener-resource-manager"}, actualRole)).To(Succeed())
@@ -2259,6 +2376,14 @@ subjects:
 						managedResourceSecret.ResourceVersion = ""
 						Expect(actualManagedResourceSecret).To(DeepEqual(managedResourceSecret))
 
+						actualConfigMap := &corev1.ConfigMap{}
+						Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: configMap.Name}, actualConfigMap)).To(Succeed())
+						actualConfigMap.ResourceVersion = ""
+						configMap.ResourceVersion = ""
+						Expect(actualConfigMap).To(DeepEqual(configMap))
+
+						fetchAndValidateWebhookConfiguration(actualConfigMap, actualManagedResourceSecret)
+
 						actualManagedResource := &resourcesv1alpha1.ManagedResource{}
 						Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, actualManagedResource)).To(Succeed())
 						actualManagedResource.ResourceVersion = ""
@@ -2345,6 +2470,8 @@ subjects:
 					actualManagedResourceSecret.ResourceVersion = ""
 					managedResourceSecret.ResourceVersion = ""
 					Expect(actualManagedResourceSecret).To(DeepEqual(managedResourceSecret))
+
+					fetchAndValidateWebhookConfiguration(actualConfigMap, actualManagedResourceSecret)
 
 					actualManagedResource := &resourcesv1alpha1.ManagedResource{}
 					Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, actualManagedResource)).To(Succeed())
@@ -2435,6 +2562,8 @@ subjects:
 				actualManagedResourceSecret.ResourceVersion = ""
 				managedResourceSecret.ResourceVersion = ""
 				Expect(actualManagedResourceSecret).To(DeepEqual(managedResourceSecret))
+
+				fetchAndValidateWebhookConfiguration(actualConfigMap, actualManagedResourceSecret)
 
 				actualManagedResource := &resourcesv1alpha1.ManagedResource{}
 				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, actualManagedResource)).To(Succeed())
@@ -2535,20 +2664,6 @@ subjects:
 				configMap.ResourceVersion = ""
 				Expect(actualConfigMap).To(DeepEqual(configMap))
 
-				By("verify that all workerless-disabled webhooks are turned off in the component config")
-				actualConfig := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
-				Expect(runtime.DecodeInto(codec, []byte(actualConfigMap.Data["config.yaml"]), actualConfig)).To(Succeed())
-				Expect(actualConfig.Webhooks.PodSchedulerName.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.SystemComponentsConfig.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.ProjectedTokenMount.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.HighAvailabilityConfig.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.PodTopologySpreadConstraints.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.SeccompProfile.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.KubernetesServiceHost.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.PodKubeAPIServerLoadBalancing.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.VPAInPlaceUpdates.Enabled).To(BeFalse())
-				Expect(actualConfig.Webhooks.NodeAgentAuthorizer.Enabled).To(BeFalse())
-
 				actualClusterRole := &rbacv1.ClusterRole{}
 				Expect(fakeClient.Get(ctx, client.ObjectKey{Name: clusterRoleName}, actualClusterRole)).To(Succeed())
 				actualClusterRole.ResourceVersion = ""
@@ -2595,6 +2710,8 @@ subjects:
 				actualManagedResourceSecret.ResourceVersion = ""
 				managedResourceSecret.ResourceVersion = ""
 				Expect(actualManagedResourceSecret).To(DeepEqual(managedResourceSecret))
+
+				fetchAndValidateWebhookConfiguration(actualConfigMap, actualManagedResourceSecret)
 
 				actualManagedResource := &resourcesv1alpha1.ManagedResource{}
 				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, actualManagedResource)).To(Succeed())
@@ -2711,6 +2828,8 @@ subjects:
 				actualValidatingWebhookConfiguration.ResourceVersion = ""
 				validatingWebhookConfiguration.ResourceVersion = ""
 				Expect(actualValidatingWebhookConfiguration).To(DeepEqual(validatingWebhookConfiguration))
+
+				fetchAndValidateWebhookConfiguration(actualConfigMap, nil)
 			})
 		})
 	})
