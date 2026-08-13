@@ -445,9 +445,8 @@ openapi_definitions() {
       "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
   )
 
-  # First generate the openapi definitions for Gardener APIs only.
-  # This step is mainly required to generate the model name file (zz_generated.model_name.go).
-  # TODO(timuthy): Remove this separate step once https://github.com/kubernetes/kube-openapi/issues/571 is resolved.
+  # Generate openapi definitions for Gardener APIs along with required Kubernetes APIs.
+  # kube_apis packages are marked read-only so model name files are only written for Gardener APIs.
   "openapi-gen" \
     -v 1 \
     --output-file openapi_generated.go \
@@ -456,17 +455,7 @@ openapi_definitions() {
     --output-pkg "github.com/gardener/gardener/pkg/apiserver/openapi" \
     --report-filename "${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report" \
     --output-model-name-file "zz_generated.model_name.go" \
-    "${gardener_apis[@]}"
-
-  # Now generate the openapi definitions for Gardener APIs along with required Kubernetes APIs.
-  # `output-model-name-file` must not be specified here, since it would lead to generation errors (see https://github.com/kubernetes/kube-openapi/issues/571).
-  "openapi-gen" \
-    -v 1 \
-    --output-file openapi_generated.go \
-    --go-header-file "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
-    --output-dir "${PROJECT_ROOT}/pkg/apiserver/openapi" \
-    --output-pkg "github.com/gardener/gardener/pkg/apiserver/openapi" \
-    --report-filename "${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report" \
+    --readonly-pkg "$(IFS=,; echo "${kube_apis[*]}")" \
     "${gardener_apis[@]}" \
     "${kube_apis[@]}"
 }
