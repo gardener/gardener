@@ -538,7 +538,7 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context, ownerNamespace *core
 		CertType:                    secretsutils.ClientCert,
 		SkipPublishingCACertificate: true,
 		Validity:                    new(time.Hour * 24 * 30),
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAFrontProxy), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAFrontProxy), secretsmanager.Rotate(secretsmanager.InPlace), secretsmanager.RenewAfterValidityPercentage(50))
 	if err != nil {
 		return fmt.Errorf("failed to generate kube-apiserver client certificate for istio: %w", err)
 	}
