@@ -36,12 +36,12 @@ import (
 
 // DeployOperatingSystemConfigSecretForBootstrap deploys the OperatingSystemConfig resource and adds its content into
 // a Secret so that gardener-node-agent can read it and reconcile its content.
-func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx context.Context) error {
-	if err := b.DeployControlPlaneDeployments(ctx, true, false, b.BackupDataPath); err != nil {
+func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx context.Context, backupDataPath string) error {
+	if err := b.DeployControlPlaneDeployments(ctx, true, false, backupDataPath); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	oscData, controlPlaneWorkerPoolName, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true, false, b.BackupDataPath)
+	oscData, controlPlaneWorkerPoolName, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true, false, backupDataPath)
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}

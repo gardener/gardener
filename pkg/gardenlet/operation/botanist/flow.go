@@ -628,7 +628,7 @@ const TaskGroupReconcileStaticPods flow.TaskID = "TaskGroupReconcileStaticPods"
 // deployments to the cluster (with replicas=0). It then translates them into static pod manifests, adds them to the
 // OperatingSystemConfig, updates the ManagedResource containing the gardener-node-agent OSC Secret, and waits for the
 // changes to be rolled out.
-func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd bool, backupDataPath string) flow.TaskGroup {
+func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileStaticPods).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
@@ -646,7 +646,7 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn: func(ctx context.Context) error {
-				return b.DeployStaticControlPlaneDeployments(ctx, useBootstrapEtcd, backupDataPath)
+				return b.DeployStaticControlPlaneDeployments(ctx, useBootstrapEtcd)
 			},
 		})
 		// 'gardenadm init' creates the OperatingSystemConfig and gardener-node-agent secrets based on the Shoot

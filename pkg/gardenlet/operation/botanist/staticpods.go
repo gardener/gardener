@@ -147,17 +147,17 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 // DeployStaticControlPlaneDeployments deploys the deployments for the static control plane components. It also updates
 // the OperatingSystemConfig, waits for it to be reconciled by the OS extension, and deploys the ManagedResource
 // containing the Secret with OperatingSystemConfig for gardener-node-agent.
-func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool, bootstrapEtcdBackupPath string) error {
+func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useBootstrapEtcd bool) error {
 	useShootAccessTokens, err := b.useShootAccessTokensForSelfHostedShootControlPlane(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to check whether static auth tokens for self-hosted shoot control plane components can be synced: %w", err)
 	}
 
-	if err := b.DeployControlPlaneDeployments(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath); err != nil {
+	if err := b.DeployControlPlaneDeployments(ctx, useBootstrapEtcd, useShootAccessTokens, ""); err != nil {
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath); err != nil {
+	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, useShootAccessTokens, ""); err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 

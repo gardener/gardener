@@ -193,7 +193,7 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
 				SkipIf(opts.UseBootstrapEtcd),
 		)
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd, ""))
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd))
 
 		_ = g.Add(flow.Task{
 			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",
@@ -307,8 +307,6 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath st
 		b.Zone = new(opts.Zone)
 	}
 
-	b.BackupDataPath = backupDataPath
-
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed checking whether kubeconfig file %s exists: %w", botanist.PathKubeconfig, err)
@@ -350,8 +348,10 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath st
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		deployOperatingSystemConfigSecretForNodeAgent = g.Add(flow.Task{
-			Name:         "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
-			Fn:           b.DeployOperatingSystemConfigSecretForBootstrap,
+			Name: "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
+			Fn: func(ctx context.Context) error {
+				return b.DeployOperatingSystemConfigSecretForBootstrap(ctx, backupDataPath)
+			},
 			SkipIf:       kubeconfigFileExists,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
