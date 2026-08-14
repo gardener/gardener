@@ -628,7 +628,16 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client, i
 			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster, "true")
 		}
 
+		defaultDNS := seed.Spec.DNS.Defaults
+
 		seed.Spec = g.config.SeedConfig.Spec
+
+		// TODO(dimityrmirchev): Remove this after 1.131 release
+		// Preserve current defaults dns settings
+		// as these could have been already explicitly set by gardenlet itself
+		if defaultDNS != nil && g.config.SeedConfig.Spec.DNS.Defaults == nil {
+			seed.Spec.DNS.Defaults = defaultDNS
+		}
 
 		return nil
 	}); err != nil {
