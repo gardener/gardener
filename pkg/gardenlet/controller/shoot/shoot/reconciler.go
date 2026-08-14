@@ -510,7 +510,9 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
+			updateErr := r.patchShootStatusOperationError(ctx, shoot, err.Error(), operationType, false, shoot.Status.LastErrors...)
+			r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
+			return errorsutils.WithSuppressed(fmt.Errorf("failed to remove finalizer: %w", err), updateErr)
 		}
 	}
 
