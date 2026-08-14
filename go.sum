@@ -274,8 +274,8 @@ github.com/gardener/machine-controller-manager v0.62.1 h1:TQ4Qs9aaYTqSkqFownIaEA
 github.com/gardener/machine-controller-manager v0.62.1/go.mod h1:ICsymXK4VHm7NVr8Mpl6USvYcTZjUNSk6+XaVu/dd74=
 github.com/gardener/pvc-autoscaler v0.3.0 h1:vneqFW7WESecbucng0Ravuz825BzKLI3jSKmiopccrs=
 github.com/gardener/pvc-autoscaler v0.3.0/go.mod h1:GVA7q8qiMi2UD/vcCBVbHEUijZvxVqZ1SGqiwKGHTE4=
-github.com/gardener/terminal-controller-manager v0.38.0 h1:RYrxtXVdJ8kLjwJEVGOGnIykm/zp05blx07k5HK9wMA=
-github.com/gardener/terminal-controller-manager v0.38.0/go.mod h1:BYpOPnU+E5YzngMCKR/M0lc420Helj4pb9zBmkuoFEo=
+github.com/gardener/terminal-controller-manager v0.39.0 h1:w+aKFvM5k5EobILX9vrxgs6VbA5gd88Gyx/3a5m7nVc=
+github.com/gardener/terminal-controller-manager v0.39.0/go.mod h1:O9D8QFXUMRNGbkgpicaiqKWHgq/KXv6IsNhoGLQVFu8=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gkampitakis/ciinfo v0.3.2 h1:JcuOPk8ZU7nZQjdUhctuhQofk7BGHuIy0c9Ez8BNhXs=
 github.com/gkampitakis/ciinfo v0.3.2/go.mod h1:1NIwaOcFChN4fa/B0hEBdAb6npDlFL8Bwx4dfRLRqAo=
