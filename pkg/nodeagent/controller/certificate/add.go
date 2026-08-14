@@ -32,7 +32,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
+		}).
 		WatchesRawSource(controllerutils.EnqueueOnce).
 		Complete(r)
 }

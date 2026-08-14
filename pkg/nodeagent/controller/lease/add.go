@@ -5,6 +5,8 @@
 package lease
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
@@ -38,6 +40,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&corev1.Node{}, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			ReconciliationTimeout:   time.Duration(r.LeaseDurationSeconds) * time.Second,
+		}).
 		Complete(r)
 }
