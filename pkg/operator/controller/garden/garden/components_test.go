@@ -13,6 +13,43 @@ import (
 )
 
 var _ = Describe("Components", func() {
+	Describe("#virtualGardenAPIServerHost", func() {
+		It("should return api.<domain> from the primary DNS domain", func() {
+			garden := &operatorv1alpha1.Garden{
+				Spec: operatorv1alpha1.GardenSpec{
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						DNS: operatorv1alpha1.DNS{
+							Domains: []operatorv1alpha1.DNSDomain{{Name: "garden.example.com"}},
+						},
+					},
+				},
+			}
+
+			Expect(virtualGardenAPIServerHost(garden)).To(Equal("api.garden.example.com"))
+		})
+
+		It("should prefer the first SNI domain pattern when configured", func() {
+			garden := &operatorv1alpha1.Garden{
+				Spec: operatorv1alpha1.GardenSpec{
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						DNS: operatorv1alpha1.DNS{
+							Domains: []operatorv1alpha1.DNSDomain{{Name: "garden.example.com"}},
+						},
+						Kubernetes: operatorv1alpha1.Kubernetes{
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								SNI: &operatorv1alpha1.SNI{
+									DomainPatterns: []string{"api.custom.example.com", "api.other.example.com"},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(virtualGardenAPIServerHost(garden)).To(Equal("api.custom.example.com"))
+		})
+	})
+
 	Describe("#getLoadBalancerServiceProxyProtocol", func() {
 		DescribeTable("should return the proxy protocol setting",
 			func(allowed bool) {

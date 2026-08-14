@@ -44,6 +44,8 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of terminal-controller-manager.
 	Image string
+	// AllowedAPIServerURLs is the exact-match allowlist for explicit API server URLs.
+	AllowedAPIServerURLs []string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended.
@@ -93,7 +95,10 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	configMap := t.configMap()
+	configMap, err := t.configMap()
+	if err != nil {
+		return err
+	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		t.service(),
