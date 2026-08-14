@@ -35,6 +35,8 @@ type Options struct {
 	PrintJoinCommand bool
 	// PrintConnectCommand specifies whether to print the full `gardenadm connect` command.
 	PrintConnectCommand bool
+	// PrintResetCommand specifies whether to print the full `gardenadm reset` command.
+	PrintResetCommand bool
 }
 
 // Token contains the token ID and secret.
@@ -120,6 +122,7 @@ func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.DurationVarP(&o.Validity, "validity", "", time.Hour, "Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h.")
 	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "j", false, "Instead of only printing the token, print the full machine-readable 'gardenadm join' command that can be copied and ran on a machine that should join the cluster")
 	fs.BoolVarP(&o.PrintConnectCommand, "print-connect-command", "c", false, "Instead of only printing the token, print the full machine-readable 'gardenadm connect' command that can be ran on a machine of a cluster that should be connected to Gardener")
+	fs.BoolVarP(&o.PrintResetCommand, "print-reset-command", "r", false, "Instead of only printing the token, print the full machine-readable 'gardenadm reset' command that can be copied and ran on a machine that should be removed from the cluster")
 	fs.StringVarP(&o.Shoot.Namespace, "shoot-namespace", "", "", "Namespace of the Shoot which should be connected to Gardener via 'gardenadm connect' with this bootstrap token")
 	fs.StringVarP(&o.Shoot.Name, "shoot-name", "", "", "Name of the Shoot which should be connected to Gardener via 'gardenadm connect' with this bootstrap token")
 }

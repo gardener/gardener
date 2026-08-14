@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrappers"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
+	"github.com/gardener/gardener/pkg/nodeagent/reset"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -75,6 +76,7 @@ func NewCommand() *cobra.Command {
 	opts.addFlags(flags)
 
 	cmd.AddCommand(getBootstrapCommand(opts))
+	cmd.AddCommand(getResetCommand(opts))
 	return cmd
 }
 
@@ -97,6 +99,27 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 	opts.addFlags(flags)
 
 	return bootstrapCmd
+}
+
+func getResetCommand(opts *options) *cobra.Command {
+	resetCmd := &cobra.Command{
+		Use:   "reset",
+		Short: "Reset the node",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			log, err := initrun.InitRun(cmd, opts, "gardener-node-reset")
+			if err != nil {
+				return err
+			}
+			return reset.Reset(cmd.Context(), log, afero.Afero{Fs: afero.NewOsFs()}, dbus.New(log))
+		},
+	}
+
+	flags := resetCmd.Flags()
+	verflag.AddFlags(flags)
+	opts.addFlags(flags)
+
+	return resetCmd
 }
 
 func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, cfgDir string) error {

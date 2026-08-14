@@ -24,14 +24,12 @@ import (
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
-	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -90,28 +88,10 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --zone zone-
 }
 
 func run(ctx context.Context, opts *Options) error {
-	b, err := botanist.NewGardenadmBotanistWithoutResources(opts.Log)
+	b, err := cmd.InitializeGardenadmWithTemporaryClientSet(ctx, opts.Log, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
 	if err != nil {
-		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
+		return fmt.Errorf("failed initializing gardenadm botanist with temporary client set: %w", err)
 	}
-
-	bootstrapClientSet, err := cmd.NewClientSetFromBootstrapToken(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken, kubernetes.SeedScheme)
-	if err != nil {
-		return fmt.Errorf("failed creating a new bootstrap client set: %w", err)
-	}
-	version, err := b.DiscoverKubernetesVersion(bootstrapClientSet)
-	if err != nil {
-		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
-	}
-	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version, ControlPlaneNamespace: metav1.NamespaceSystem}
-	b.Shoot.SetInfo(nil)
-
-	b.Logger.Info("Retrieving short-lived shoot cluster kubeconfig via bootstrap token")
-	b.ShootClientSet, err = cmd.InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
-	if err != nil {
-		return fmt.Errorf("failed retrieving short-lived kubeconfig: %w", err)
-	}
-	b.Logger.Info("Successfully retrieved short-lived bootstrap kubeconfig")
 
 	b.Logger.Info("Fetching Shoot manifest from Cluster object")
 	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)

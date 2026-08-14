@@ -16,6 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/discover"
 	initcmd "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/join"
+	"github.com/gardener/gardener/pkg/gardenadm/cmd/reset"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/restore"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/token"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/version"
@@ -53,6 +54,7 @@ func NewCommand() *cobra.Command {
 
 	prepareClusterBootstrapGroup(cmd, opts)
 	prepareGardenGroup(cmd, opts)
+	prepareCleanUpGroup(cmd, opts)
 	prepareAdditionalGroup(cmd, opts)
 
 	return cmd
@@ -87,6 +89,21 @@ func prepareGardenGroup(cmd *cobra.Command, opts *cmd.Options) {
 	for _, subcommand := range []*cobra.Command{
 		discover.NewCommand(opts),
 		connect.NewCommand(opts),
+	} {
+		subcommand.GroupID = group.ID
+		cmd.AddCommand(subcommand)
+	}
+}
+
+func prepareCleanUpGroup(cmd *cobra.Command, opts *cmd.Options) {
+	group := &cobra.Group{
+		ID:    "clean-up",
+		Title: "Self-Hosted Shoot Cluster Clean-up Commands:",
+	}
+	cmd.AddGroup(group)
+
+	for _, subcommand := range []*cobra.Command{
+		reset.NewCommand(opts),
 	} {
 		subcommand.GroupID = group.ID
 		cmd.AddCommand(subcommand)
