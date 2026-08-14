@@ -628,6 +628,8 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client, i
 			metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSelfHostedShootCluster, "true")
 		}
 
+		seed.Spec = g.config.SeedConfig.Spec
+
 		return nil
 	}); err != nil {
 		return fmt.Errorf("could not register seed %q: %w", seed.Name, err)
