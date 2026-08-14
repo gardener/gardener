@@ -6,23 +6,25 @@ package terminal
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const dataKeyConfig = "config.yaml"
 
-func (t *terminal) configMap() *corev1.ConfigMap {
+func (t *terminal) configMap() (*corev1.ConfigMap, error) {
 	// This is the name of ServiceAccounts when the Gardener Dashboard creates Terminal resources, see
 	// https://github.com/gardener/dashboard/blob/b99a6ef584eec26dee95028d755f5ebdf5973b2c/backend/lib/services/terminals/index.js#L45-L46
 	dashboardServiceAccountName := "dashboard-webterminal"
 	allowedAPIServerURLs, err := json.Marshal(append([]string{}, t.values.AllowedAPIServerURLs...))
-	utilruntime.Must(err)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshalling allowed API server URLs: %w", err)
+	}
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,6 +52,9 @@ server:
 `},
 	}
 
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	return configMap
+	if err := kubernetesutils.MakeUnique(configMap); err != nil {
+		return nil, fmt.Errorf("failed making ConfigMap unique: %w", err)
+	}
+
+	return configMap, nil
 }
