@@ -154,7 +154,7 @@ The `inPlaceUpdates` field in the Shoot status provides details about in-place u
 ⚠️ For worker pools using the `AutoInPlaceUpdate` or `ManualInPlaceUpdate` strategy, the following actions are not allowed (they are allowed with `AutoRollingUpdate`):
 
 * Skipping a minor version when upgrading the worker pool Kubernetes version (`.spec.provider.workers[].kubernetes.version`).
-* Downgrading the machine image version of the worker pool (`.spec.provider.workers[].machine.image.version`).
+* Downgrading the machine image version of the worker pool (`.spec.provider.workers[].machine.image.version`). If a downgrade is required, the only option is to create a new worker pool with the desired lower machine image version.
 
 #### Customize In-Place Update Behaviour of Shoot Worker Nodes
 
@@ -176,7 +176,21 @@ An in-place update of the shoot worker nodes is triggered for rolling update tri
 > There are validations which restricts changing the above mentioned exception fields when an `in-place` update strategy is configured.
 
 When a worker pool is undergoing an in-place update, applying subsequent updates to the same worker pool is restricted.
-If an in-place update fails and nodes are left in a problematic state, user intervention is required to manually fix the nodes. In cases where a subsequent update is necessary to resolve the issue, users can update the worker pool after adding the force update annotation `gardener.cloud/operation=force-in-place-update` on the Shoot. Refer to [Force-update a worker pool with InPlace update strategy](shoot_operations.md#force-update-a-worker-pool-with-inplace-update-strategy) for more details.
+If an in-place update fails and nodes are left in a problematic state, user intervention is required to manually fix the nodes. If the issue can be resolved by retrying the same update, refer to [Retrying a Failed In-Place Update](#retrying-a-failed-in-place-update). In cases where a subsequent update is necessary to resolve the issue, users can update the worker pool after adding the force update annotation `gardener.cloud/operation=force-in-place-update` on the Shoot. Refer to [Force-update a worker pool with InPlace update strategy](shoot_operations.md#force-update-a-worker-pool-with-inplace-update-strategy) for more details.
+
+#### Retrying a Failed In-Place Update
+
+When GNA marks a node update as failed (by setting the label `node.machine.sapcloud.io/update-result=failed`), it automatically retries the update on the next reconcile without any user intervention.
+
+The one exception is an OS update that rolls back to the previous version. In this case, GNA returns a terminal error and stops reconciling that node.
+This can be detected by checking the node's `InPlaceUpdate` condition (reason `UpdateFailed`) or the annotation `node.machine.sapcloud.io/update-failed-reason`.
+To unblock it, remove the OS update annotation and the failure label/annotation, then re-set the `InPlaceUpdate` node condition with reason `ReadyForUpdate` to trigger a new reconcile:
+
+```bash
+kubectl annotate node <node-name> node-agent.gardener.cloud/updating-operating-system-version- && \
+kubectl patch node <node-name> --subresource=status --type=json \
+  -p='[{"op":"add","path":"/status/conditions/-","value":{"type":"InPlaceUpdate","status":"True","reason":"ReadyForUpdate","message":"Retrying failed in-place update"}}]'
+```
 
 > ⚠️ Changing the update strategy from `AutoRollingUpdate` to `AutoInPlaceUpdate`/`ManualInPlaceUpdate` (and vice versa) is not allowed. However, switching between `AutoInPlaceUpdate` and `ManualInPlaceUpdate` is permitted.
 
