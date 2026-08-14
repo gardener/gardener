@@ -220,6 +220,35 @@ status: {}
 				Expect(Translate(ctx, fakeClient, deployment, nil)).Error().To(MatchError(ContainSubstring("failed reading Secret")))
 			})
 
+			It("should produce different hashes when Secret names change (same HostPath)", func() {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "secret-v1", Namespace: deployment.Namespace},
+					Data:       map[string][]byte{"token": []byte("old-token")},
+				}
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+				deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
+					{Name: "token", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "secret-v1"}}},
+				}
+
+				_, hash1, err := Translate(ctx, fakeClient, deployment, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Rename the secret (simulates secrets-manager rotating to a new secret name).
+				secret2 := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "secret-v2", Namespace: deployment.Namespace},
+					Data:       map[string][]byte{"token": []byte("new-token")},
+				}
+				Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+				deployment.Spec.Template.Spec.Volumes[0].VolumeSource = corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "secret-v2"}}
+
+				_, hash2, err := Translate(ctx, fakeClient, deployment, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(hash1).NotTo(Equal(hash2), "hash must change when referenced Secret name changes so GNA triggers a static pod rollout")
+			})
+
 			It("should successfully translate a deployment w/ volumes", func() {
 				var (
 					configMap1 = &corev1.ConfigMap{

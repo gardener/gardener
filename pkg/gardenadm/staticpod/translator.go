@@ -63,17 +63,19 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	translateSpec(&pod.Spec)
 
-	filesFromVolumes, err := translateVolumes(ctx, c, pod, objectMeta.Namespace)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
-	}
-
 	if mutate != nil {
 		mutate(pod)
 	}
 
+	// Compute the hash before rewriting volumes to HostPaths so that changes to referenced Secret/ConfigMap names
+	// (which affect the on-disk content) are reflected in the hash and trigger a static pod rollout via GNA.
 	hash := utils.ComputeChecksum(pod)
 	metav1.SetMetaDataAnnotation(&pod.ObjectMeta, AnnotationKeyHash, hash)
+
+	filesFromVolumes, err := translateVolumes(ctx, c, pod, objectMeta.Namespace)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
+	}
 
 	staticPodYAML, err := kubernetesutils.Serialize(pod, c.Scheme())
 	if err != nil {
