@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -52,9 +53,6 @@ server:
 `},
 	}
 
-	if err := kubernetesutils.MakeUnique(configMap); err != nil {
-		return nil, fmt.Errorf("failed making ConfigMap unique: %w", err)
-	}
-
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	return configMap, nil
 }
