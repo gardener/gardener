@@ -109,7 +109,7 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name: "Executing 'gardener-node-agent reset'",
 			Fn: func(ctx context.Context) error {
-				out, err := exec.CommandContext(ctx, nodeagentconfigv1alpha1.BinaryDir+"/gardener-node-agent", "reset", "--config-dir", nodeagentconfigv1alpha1.BaseDir).CombinedOutput()
+				out, err := exec.CommandContext(ctx, nodeagentconfigv1alpha1.BinaryDir+"/gardener-node-agent", "reset", "--config-dir", nodeagentconfigv1alpha1.BaseDir).CombinedOutput() // #nosec: G204 -- Static command and arguments.
 				b.Logger.Info("Executed gardener-node-agent reset:")
 				fmt.Fprintln(opts.ErrOut, string(out))
 				return err
