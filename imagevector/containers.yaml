@@ -709,7 +709,7 @@ images:
   - name: vali
     sourceRepository: github.com/credativ/vali
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/vali
-    tag: "v2.2.35"
+    tag: "v2.2.36"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
