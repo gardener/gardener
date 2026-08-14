@@ -134,6 +134,7 @@ var _ = Describe("ResourceManager", func() {
 		managedResource                                      *resourcesv1alpha1.ManagedResource
 		matchLabelKeysInPodTopologySpreadFeatureGateDisabled bool
 		fetchAndValidateWebhookConfiguration                 func(actualConfigMap *corev1.ConfigMap, actualManagedResourceSecret *corev1.Secret)
+		validateWebhookConfiguration                         func(actualConfig *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration, actualMutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration, actualValidatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration)
 	)
 
 	BeforeEach(func() {
@@ -2096,7 +2097,7 @@ subjects:
 		}
 		utilruntime.Must(references.InjectAnnotations(managedResource))
 
-		validateWebhookConfiguration := func(
+		validateWebhookConfiguration = func(
 			actualConfig *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration,
 			actualMutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration,
 			actualValidatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration) {
@@ -2162,47 +2163,30 @@ subjects:
 			actualConfigMap *corev1.ConfigMap,
 			actualManagedResourceSecret *corev1.Secret,
 		) {
+			if cfg.ResponsibilityMode != ForShootOrVirtualGarden {
+				Fail("unexpected responsibility mode: " + string(cfg.ResponsibilityMode))
+			}
+
 			actualConfig := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
 			Expect(runtime.DecodeInto(codec, []byte(actualConfigMap.Data["config.yaml"]), actualConfig)).To(Succeed())
 
 			actualMutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{}
 			actualValidatingWebhookConfiguration := &admissionregistrationv1.ValidatingWebhookConfiguration{}
-
-			switch cfg.ResponsibilityMode {
-			case ForRuntime:
-				{
-					if actualManagedResourceSecret != nil {
-						Fail("actualManagedResourceSecret should be nil for ForRuntime responsibility mode")
-					}
-					Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager"}, actualMutatingWebhookConfiguration)).To(Succeed())
-					Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager"}, actualValidatingWebhookConfiguration)).To(Succeed())
-
-					break
+			manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
+			Expect(err).NotTo(HaveOccurred())
+			for _, manifest := range manifests {
+				typeMeta := &metav1.TypeMeta{}
+				if err := yaml.Unmarshal([]byte(manifest), typeMeta); err != nil {
+					continue
 				}
-			case ForShootOrVirtualGarden:
-				{
-					manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
-					Expect(err).NotTo(HaveOccurred())
-
-					for _, manifest := range manifests {
-						typeMeta := &metav1.TypeMeta{}
-						if err := yaml.Unmarshal([]byte(manifest), typeMeta); err != nil {
-							continue
-						}
-						switch typeMeta.Kind {
-						case "MutatingWebhookConfiguration":
-							Expect(runtime.DecodeInto(codec, []byte(manifest), actualMutatingWebhookConfiguration)).To(Succeed())
-						case "ValidatingWebhookConfiguration":
-							Expect(runtime.DecodeInto(codec, []byte(manifest), actualValidatingWebhookConfiguration)).To(Succeed())
-						}
-					}
-					break
-				}
-			default:
-				{
-					Fail("unexpected responsibility mode: " + string(cfg.ResponsibilityMode))
+				switch typeMeta.Kind {
+				case "MutatingWebhookConfiguration":
+					Expect(runtime.DecodeInto(codec, []byte(manifest), actualMutatingWebhookConfiguration)).To(Succeed())
+				case "ValidatingWebhookConfiguration":
+					Expect(runtime.DecodeInto(codec, []byte(manifest), actualValidatingWebhookConfiguration)).To(Succeed())
 				}
 			}
+
 			validateWebhookConfiguration(actualConfig, actualMutatingWebhookConfiguration, actualValidatingWebhookConfiguration)
 		}
 	})
@@ -2829,7 +2813,10 @@ subjects:
 				validatingWebhookConfiguration.ResourceVersion = ""
 				Expect(actualValidatingWebhookConfiguration).To(DeepEqual(validatingWebhookConfiguration))
 
-				fetchAndValidateWebhookConfiguration(actualConfigMap, nil)
+				actualConfig := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
+				Expect(runtime.DecodeInto(codec, []byte(actualConfigMap.Data["config.yaml"]), actualConfig)).To(Succeed())
+
+				validateWebhookConfiguration(actualConfig, actualMutatingWebhookConfiguration, actualValidatingWebhookConfiguration)
 			})
 		})
 	})
