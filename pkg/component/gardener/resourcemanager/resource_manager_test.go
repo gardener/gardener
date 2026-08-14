@@ -2140,7 +2140,7 @@ subjects:
 				expectedNumEnabledMutatingWebhooks++
 				Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "vpa-in-place-updates.resources.gardener.cloud")))
 			}
-			Expect(len(actualMutatingWebhookConfiguration.Webhooks)).To(Equal(expectedNumEnabledMutatingWebhooks))
+			Expect(actualMutatingWebhookConfiguration.Webhooks).To(HaveLen(expectedNumEnabledMutatingWebhooks))
 
 			expectedNumEnabledValidatingWebhooks := 0
 			if actualConfig.Webhooks.CRDDeletionProtection.Enabled {
@@ -2153,7 +2153,7 @@ subjects:
 				expectedNumEnabledValidatingWebhooks += 13 // the list of length 13 is hardcoded in NewExtensionValidationValidatingWebhooks, see pkg/component/gardener/resourcemanager/resource_manager.go
 				Expect(actualValidatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", ContainSubstring("validation.extensions."))))
 			}
-			Expect(len(actualValidatingWebhookConfiguration.Webhooks)).To(Equal(expectedNumEnabledValidatingWebhooks))
+			Expect(actualValidatingWebhookConfiguration.Webhooks).To(HaveLen(expectedNumEnabledValidatingWebhooks))
 
 			// actualConfig.Webhooks.NodeAgentAuthorizer is an authorization webhook, which works differently and is not tested here.
 		}
