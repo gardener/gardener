@@ -381,6 +381,77 @@ var _ = Describe("Garden", func() {
 			}))
 		})
 
+		It("should return domain information from a labeled secret", func() {
+			secret.Labels = map[string]string{
+				constants.GardenRole: constants.GardenRoleInternalDomain,
+			}
+			secret.Annotations = map[string]string{
+				"dns.gardener.cloud/provider": providerType,
+				"dns.gardener.cloud/domain":   domain,
+				"dns.gardener.cloud/zone":     zone,
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&Domain{
+				Domain:      domain,
+				Provider:    providerType,
+				Zone:        zone,
+				Credentials: secret,
+			}))
+		})
+
+		It("should return nil if no secret and enforceSecret is false", func() {
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, false, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("should error if no secret and enforceSecret is true", func() {
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("need an internal domain secret")))
+		})
+
+		It("should error if more than one secret is found", func() {
+			secret.Labels = map[string]string{
+				constants.GardenRole: constants.GardenRoleInternalDomain,
+			}
+			secret.Annotations = map[string]string{
+				"dns.gardener.cloud/provider": providerType,
+				"dns.gardener.cloud/domain":   domain,
+				"dns.gardener.cloud/zone":     zone,
+			}
+
+			secret2 := secret.DeepCopy()
+			secret2.Name = "internal-domain-2"
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("more than one internal domain secret")))
+		})
+
+		It("should error if secret is malformed", func() {
+			secret.Labels = map[string]string{
+				constants.GardenRole: constants.GardenRoleInternalDomain,
+			}
+			secret.Annotations = map[string]string{
+				"dns.gardener.cloud/provider": providerType,
+				// Missing domain annotation
+			}
+
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ReadGardenInternalDomain(ctx, fakeClient, namespace, true, nil)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("error constructing internal domain from secret")))
+		})
+
 		It("should allow WorkloadIdentity credentials", func() {
 			workloadIdentity := &securityv1alpha1.WorkloadIdentity{
 				ObjectMeta: metav1.ObjectMeta{
@@ -416,6 +487,75 @@ var _ = Describe("Garden", func() {
 				Zone:        zone,
 				Credentials: workloadIdentity,
 			}))
+		})
+	})
+
+	Describe("#ReadInternalDomainSecret", func() {
+		var (
+			namespace    = "garden"
+			providerType = "route-53"
+			domain       = "internal.example.com"
+			zone         = "zone-1"
+			secret       *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "internal-domain",
+					Namespace: namespace,
+					Labels: map[string]string{
+						constants.GardenRole: constants.GardenRoleInternalDomain,
+					},
+					Annotations: map[string]string{
+						"dns.gardener.cloud/provider": providerType,
+						"dns.gardener.cloud/domain":   domain,
+						"dns.gardener.cloud/zone":     zone,
+					},
+				},
+				Data: map[string][]byte{"foo": []byte("bar")},
+			}
+		})
+
+		It("should return the internal domain secret", func() {
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(result.Name).To(Equal("internal-domain"))
+		})
+
+		It("should return nil if no secret and enforceSecret is false and no secret is found", func() {
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("should return the secret if enforceSecret is false but secret is found", func() {
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+		})
+
+		It("should error if no secret and enforceSecret is true", func() {
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, true)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("need an internal domain secret")))
+		})
+
+		It("should error if more than one secret is found", func() {
+			secret2 := secret.DeepCopy()
+			secret2.Name = "internal-domain-2"
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+			result, err := ReadInternalDomainSecret(ctx, fakeClient, namespace, true)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("more than one internal domain secret")))
 		})
 	})
 
