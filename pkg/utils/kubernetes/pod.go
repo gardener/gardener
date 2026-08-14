@@ -216,8 +216,8 @@ func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods
 			continue
 		}
 
-		if health.IsPodStale(pod.Status.Reason) || health.IsPodDisrupted(pod.Status.Conditions) {
-			logger.V(1).Info("Deleting stale or disrupted pod", "reason", pod.Status.Reason)
+		if health.IsPodStale(pod.Status.Reason) || health.IsPodDisrupted(pod.Status.Conditions) || isTerminalReplicaSetOwnedPod(&pod) {
+			logger.V(1).Info("Deleting stale, disrupted, or terminal pod", "phase", pod.Status.Phase, "reason", pod.Status.Reason)
 			if err := c.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
@@ -225,6 +225,18 @@ func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods
 	}
 
 	return result
+}
+
+// isTerminalReplicaSetOwnedPod returns true for pods in a terminal phase (Succeeded or Failed) which are controlled by
+// a ReplicaSet. Such pods have already been replaced by their ReplicaSet (the ReplicaSet controller only counts active
+// pods towards its desired replicas), but they are only garbage-collected by the kube-controller-manager once the
+// number of terminated pods exceeds `--terminated-pod-gc-threshold` (default `12500`) - in clusters with few terminated
+// pods, this threshold is never reached, so such pods linger indefinitely. Pods controlled by other owners (e.g., Jobs)
+// are not considered because their terminal pods are managed by their respective controllers (e.g., via the Job's
+// `.spec.ttlSecondsAfterFinished`).
+func isTerminalReplicaSetOwnedPod(pod *corev1.Pod) bool {
+	controller := metav1.GetControllerOf(pod)
+	return health.IsPodTerminal(pod.Status.Phase) && controller != nil && controller.Kind == "ReplicaSet" && controller.APIVersion == appsv1.SchemeGroupVersion.String()
 }
 
 // shouldObjectBeRemoved determines whether the given object should be gone now.
