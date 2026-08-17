@@ -368,9 +368,10 @@ var _ = Describe("#CheckEtcdObject", func() {
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 
-	It("should not return error if runtime component creation is disabled, even if AllMembersUpdated condition and readiness are not true", func() {
+	It("should not return error if pods are not managed by etcd-druid, even if AllMembersUpdated condition and readiness are not true", func() {
 		obj.SetGeneration(1)
-		obj.Annotations = map[string]string{"druid.gardener.cloud/disable-etcd-runtime-component-creation": ""}
+		obj.Spec.ExternallyManagedMemberAddresses = []string{"1.2.3.4"}
+		obj.Spec.Replicas = 1
 		obj.Status.ObservedGeneration = new(int64(1))
 		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
 		obj.Status.Ready = new(false)

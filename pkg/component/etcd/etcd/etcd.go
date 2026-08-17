@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -75,9 +76,7 @@ const (
 	portNameClient        = "client"
 	portNameBackupRestore = "backuprestore"
 
-	statefulSetNamePrefix      = "etcd"
-	containerNameEtcd          = "etcd"
-	containerNameBackupRestore = "backup-restore"
+	statefulSetNamePrefix = "etcd"
 )
 
 var (
@@ -433,8 +432,23 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		if e.values.StaticPodConfig != nil {
+			var replicas int32
+			if existingEtcd != nil {
+				e.etcd.Spec.ExternallyManagedMemberAddresses = slices.Clone(existingEtcd.Spec.ExternallyManagedMemberAddresses)
+				replicas = existingEtcd.Spec.Replicas
+			}
+			if controlPlaneNodeIP != nil {
+				if ip := controlPlaneNodeIP.String(); !slices.Contains(e.etcd.Spec.ExternallyManagedMemberAddresses, ip) {
+					e.etcd.Spec.ExternallyManagedMemberAddresses = append(e.etcd.Spec.ExternallyManagedMemberAddresses, ip)
+					replicas++
+				}
+			}
+			e.etcd.Spec.Replicas = replicas
 			e.etcd.Spec.RunAsRoot = new(true)
-			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, druidcorev1alpha1.DisableEtcdRuntimeComponentCreationAnnotation, "")
+			shootAccessSecret := gardenerutils.NewShootAccessSecret(e.etcd.Name, e.namespace)
+			if err := shootAccessSecret.Reconcile(ctx, e.client); err != nil {
+				return err
+			}
 		}
 
 		if existingEtcd == nil || existingEtcd.Spec.StorageCapacity == nil {
@@ -641,7 +655,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						},
 						{
 							Alert: "KubeEtcd3" + role + "HighMemoryConsumption",
-							Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + e.values.Role + `-0",container="` + containerNameEtcd + `"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="` + containerNameEtcd + `", targetName="etcd-` + e.values.Role + `", resource="memory"}) > .5`),
+							Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + e.values.Role + `-0",container="` + etcdconstants.ContainerNameEtcd + `"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="` + etcdconstants.ContainerNameEtcd + `", targetName="etcd-` + e.values.Role + `", resource="memory"}) > .5`),
 							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "etcd",
@@ -842,7 +856,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName:    containerNameEtcd,
+						ContainerName:    etcdconstants.ContainerNameEtcd,
 						MinAllowed:       minAllowedETCD,
 						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						Mode:             new(vpaautoscalingv1.ContainerScalingModeAuto),
