@@ -564,6 +564,13 @@ kind: VirtualService
 metadata:
   labels:
     component: plutono
+    reference.gardener.cloud/basic-auth-secret-managed: `
+				if values.IsGardenCluster || values.ClusterType == comp.ClusterTypeShoot {
+					out += `"true"`
+				} else {
+					out += `"false"`
+				}
+				out += `
     reference.gardener.cloud/basic-auth-secret-name: `
 				secretName := values.AuthSecretName
 				if values.IsGardenCluster {

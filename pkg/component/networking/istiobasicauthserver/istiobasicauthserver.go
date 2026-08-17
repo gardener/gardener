@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -203,7 +204,15 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 
 	for _, virtualService := range virtualServiceList.Items {
 		secretName := virtualService.Labels[v1beta1constants.LabelBasicAuthSecretName]
-		if secret, found := i.secretsManager.Get(secretName); found {
+		secretManaged, err := strconv.ParseBool(virtualService.Labels[v1beta1constants.LabelBasicAuthSecretManaged])
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to parse label %q of virtual service %q: %w", v1beta1constants.LabelBasicAuthSecretManaged, virtualService.Name, err)
+		}
+		if secretManaged {
+			secret, found := i.secretsManager.Get(secretName)
+			if !found {
+				return nil, nil, nil, fmt.Errorf("failed to find secret %q referenced by virtual service %q in the secrets manager", secretName, virtualService.Name)
+			}
 			secretName = secret.Name
 		}
 
@@ -317,15 +326,16 @@ func (i *istioBasicAuthServer) getPrefix() string {
 }
 
 // BasicAuthLabels returns the labels that associate a VirtualService with its configuring istio-basic-auth-server.
-func BasicAuthLabels(isGardenCluster bool, secretName string) map[string]string {
+func BasicAuthLabels(isGardenCluster bool, secretName string, secretManaged bool) map[string]string {
 	basicAuthServerName := v1beta1constants.DeploymentNameIstioBasicAuthServer
 	if isGardenCluster {
 		basicAuthServerName = operatorv1alpha1.VirtualGardenNamePrefix + basicAuthServerName
 	}
 
 	return map[string]string{
-		v1beta1constants.LabelBasicAuthSecretName: secretName,
-		v1beta1constants.LabelBasicAuthServerName: basicAuthServerName,
+		v1beta1constants.LabelBasicAuthSecretName:    secretName,
+		v1beta1constants.LabelBasicAuthServerName:    basicAuthServerName,
+		v1beta1constants.LabelBasicAuthSecretManaged: strconv.FormatBool(secretManaged),
 	}
 }
 

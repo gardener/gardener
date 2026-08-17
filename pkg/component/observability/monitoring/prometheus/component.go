@@ -64,8 +64,8 @@ func ServicePorts() struct {
 // Interface contains functions for a Prometheus deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetIngressAuthSecretName sets the ingress authentication secret name.
-	SetIngressAuthSecretName(string)
+	// SetIngressAuthSecret sets the ingress authentication secret name and whether it is managed by the secrets manager.
+	SetIngressAuthSecret(name string, managed bool)
 	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
@@ -183,6 +183,8 @@ type RemoteWriteValues struct {
 type IngressValues struct {
 	// AuthSecretName is the name of the auth secret.
 	AuthSecretName string
+	// AuthSecretManaged indicates whether the auth secret is managed by the secrets manager.
+	AuthSecretManaged bool
 	// Host is the hostname under which the Prometheus instance should be exposed.
 	Host string
 	// IsGardenCluster specifies whether the cluster is garden cluster.
@@ -349,9 +351,10 @@ func (p *prometheus) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.name())
 }
 
-func (p *prometheus) SetIngressAuthSecretName(name string) {
+func (p *prometheus) SetIngressAuthSecret(name string, managed bool) {
 	if p.values.Ingress != nil {
 		p.values.Ingress.AuthSecretName = name
+		p.values.Ingress.AuthSecretManaged = managed
 	}
 }
 

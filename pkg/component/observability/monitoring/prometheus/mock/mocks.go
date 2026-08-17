@@ -108,16 +108,16 @@ func (mr *MockInterfaceMockRecorder) SetCentralScrapeConfigs(arg0 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCentralScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).SetCentralScrapeConfigs), arg0)
 }
 
-// SetIngressAuthSecretName mocks base method.
-func (m *MockInterface) SetIngressAuthSecretName(arg0 string) {
+// SetIngressAuthSecret mocks base method.
+func (m *MockInterface) SetIngressAuthSecret(name string, managed bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetIngressAuthSecretName", arg0)
+	m.ctrl.Call(m, "SetIngressAuthSecret", name, managed)
 }
 
-// SetIngressAuthSecretName indicates an expected call of SetIngressAuthSecretName.
-func (mr *MockInterfaceMockRecorder) SetIngressAuthSecretName(arg0 any) *gomock.Call {
+// SetIngressAuthSecret indicates an expected call of SetIngressAuthSecret.
+func (mr *MockInterfaceMockRecorder) SetIngressAuthSecret(name, managed any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIngressAuthSecretName", reflect.TypeOf((*MockInterface)(nil).SetIngressAuthSecretName), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIngressAuthSecret", reflect.TypeOf((*MockInterface)(nil).SetIngressAuthSecret), name, managed)
 }
 
 // SetIngressWildcardCertSecret mocks base method.

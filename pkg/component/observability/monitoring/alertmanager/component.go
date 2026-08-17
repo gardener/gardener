@@ -30,8 +30,8 @@ const (
 // Interface contains functions for an alertmanager deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetIngressAuthSecretName sets the ingress authentication secret name.
-	SetIngressAuthSecretName(string)
+	// SetIngressAuthSecret sets the ingress authentication secret name and whether it is managed by the secrets manager.
+	SetIngressAuthSecret(name string, managed bool)
 	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 }
@@ -67,6 +67,8 @@ type Values struct {
 type ExposureValues struct {
 	// AuthSecretName is the name of the auth secret.
 	AuthSecretName string
+	// AuthSecretManaged indicates whether the auth secret is managed by the secrets manager.
+	AuthSecretManaged bool
 	// Host is the hostname under which the AlertManager instance should be exposed.
 	Host string
 	// IsGardenCluster specifies whether the cluster is garden cluster.
@@ -149,9 +151,10 @@ func (a *alertManager) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, a.client, a.namespace, a.name())
 }
 
-func (a *alertManager) SetIngressAuthSecretName(name string) {
+func (a *alertManager) SetIngressAuthSecret(name string, managed bool) {
 	if a.values.ExternalExposure != nil {
 		a.values.ExternalExposure.AuthSecretName = name
+		a.values.ExternalExposure.AuthSecretManaged = managed
 	}
 }
 

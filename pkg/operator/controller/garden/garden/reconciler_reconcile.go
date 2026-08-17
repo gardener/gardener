@@ -702,7 +702,7 @@ func (r *Reconciler) reconcile(
 		deployAlertmanager = g.Add(flow.Task{
 			Name: "Deploying Alertmanager",
 			Fn: func(ctx context.Context) error {
-				c.alertManager.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
+				c.alertManager.SetIngressAuthSecret(v1beta1constants.SecretNameObservabilityIngress, true)
 				return c.alertManager.Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
@@ -1197,7 +1197,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prom
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
 
-	prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
+	prometheus.SetIngressAuthSecret(v1beta1constants.SecretNameObservabilityIngress, true)
 
 	// fetch global monitoring secret for prometheus-aggregate scrape config
 	globalMonitoringSecretRuntime, err := r.getGlobalObservabilitySecret(ctx)
@@ -1361,7 +1361,7 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 }
 
 func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, prometheus prometheus.Interface) error {
-	prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngress)
+	prometheus.SetIngressAuthSecret(v1beta1constants.SecretNameObservabilityIngress, true)
 	return prometheus.Deploy(ctx)
 }
 

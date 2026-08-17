@@ -64,7 +64,7 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 		return b.Shoot.Components.ControlPlane.Alertmanager.Destroy(ctx)
 	}
 
-	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngressUsers)
+	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressAuthSecret(v1beta1constants.SecretNameObservabilityIngressUsers, true)
 	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 
 	return b.Shoot.Components.ControlPlane.Alertmanager.Deploy(ctx)
@@ -182,7 +182,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		return fmt.Errorf("failed reconciling access secret for prometheus: %w", err)
 	}
 
-	b.Shoot.Components.ControlPlane.Prometheus.SetIngressAuthSecretName(v1beta1constants.SecretNameObservabilityIngressUsers)
+	b.Shoot.Components.ControlPlane.Prometheus.SetIngressAuthSecret(v1beta1constants.SecretNameObservabilityIngressUsers, true)
 	b.Shoot.Components.ControlPlane.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 	b.Shoot.Components.ControlPlane.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
 

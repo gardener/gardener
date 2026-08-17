@@ -93,7 +93,7 @@ func (p *prometheus) istioResources(ctx context.Context) ([]client.Object, error
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(p.getLabels(), istiobasicauthserver.BasicAuthLabels(p.values.Ingress.IsGardenCluster, p.values.Ingress.AuthSecretName)),
+		utils.MergeStringMaps(p.getLabels(), istiobasicauthserver.BasicAuthLabels(p.values.Ingress.IsGardenCluster, p.values.Ingress.AuthSecretName, p.values.Ingress.AuthSecretManaged)),
 		[]string{p.values.Ingress.IstioIngressGatewayNamespace},
 		[]string{p.values.Ingress.Host},
 		gatewayName,

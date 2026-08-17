@@ -324,26 +324,28 @@ status: {}
 				Labels:    map[string]string{"app": "dummy"},
 			},
 		}
-		realVirtualService1 = &istionetworkingv1beta1.VirtualService{
+		virtualServiceWithManagedSecret = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "real-virtual-service-1",
+				Name:      "vs-with-managed-secret",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"app": "dummy",
-					"reference.gardener.cloud/basic-auth-secret-name": secret1,
+					"reference.gardener.cloud/basic-auth-secret-name":    secret1,
+					"reference.gardener.cloud/basic-auth-secret-managed": "true",
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
 				Hosts: []string{host1},
 			},
 		}
-		realVirtualService2 = &istionetworkingv1beta1.VirtualService{
+		virtualServiceWithVerbatimSecret = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "real-virtual-service-2",
+				Name:      "vs-with-verbatim-secret",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"app": "dummy",
-					"reference.gardener.cloud/basic-auth-secret-name": secret2,
+					"reference.gardener.cloud/basic-auth-secret-name":    secret2,
+					"reference.gardener.cloud/basic-auth-secret-managed": "false",
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
@@ -463,12 +465,13 @@ status: {}
 		Context("With secrets present", func() {
 			createVirtualServices := func(basicAuthServerName string) {
 				Expect(c.Create(ctx, dummyVirtualService.DeepCopy())).To(Succeed())
+				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret1, Namespace: namespace}})).To(Succeed())
 
-				vs1 := realVirtualService1.DeepCopy()
+				vs1 := virtualServiceWithManagedSecret.DeepCopy()
 				vs1.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
 				Expect(c.Create(ctx, vs1)).To(Succeed())
 
-				vs2 := realVirtualService2.DeepCopy()
+				vs2 := virtualServiceWithVerbatimSecret.DeepCopy()
 				vs2.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
 				Expect(c.Create(ctx, vs2)).To(Succeed())
 			}
@@ -504,6 +507,30 @@ status: {}
 					}, host1, host2, host3)
 				})
 			})
+		})
+	})
+
+	Context("When secret references are misconfigured", func() {
+		BeforeEach(func() {
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})).To(Succeed())
+		})
+
+		It("should fail when the managed label has a non-boolean value", func() {
+			vs := virtualServiceWithManagedSecret.DeepCopy()
+			vs.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+			vs.Labels["reference.gardener.cloud/basic-auth-secret-managed"] = "invalid"
+			Expect(c.Create(ctx, vs)).To(Succeed())
+
+			Expect(component.Deploy(ctx)).To(MatchError(`failed to calculate configuration for istio-basic-auth-server: failed to parse label "reference.gardener.cloud/basic-auth-secret-managed" of virtual service "vs-with-managed-secret": strconv.ParseBool: parsing "invalid": invalid syntax`))
+		})
+
+		It("should fail when the secret is managed but not found in the secrets manager", func() {
+			vs := virtualServiceWithManagedSecret.DeepCopy()
+			vs.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+			vs.Labels["reference.gardener.cloud/basic-auth-secret-name"] = "nonexistent-secret"
+			Expect(c.Create(ctx, vs)).To(Succeed())
+
+			Expect(component.Deploy(ctx)).To(MatchError(`failed to calculate configuration for istio-basic-auth-server: failed to find secret "nonexistent-secret" referenced by virtual service "vs-with-managed-secret" in the secrets manager`))
 		})
 	})
 

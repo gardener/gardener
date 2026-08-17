@@ -362,8 +362,9 @@ var _ = Describe("Alertmanager", func() {
 					"component":    "alertmanager",
 					"role":         "monitoring",
 					"alertmanager": name,
-					"reference.gardener.cloud/basic-auth-secret-name": "foo",
-					"reference.gardener.cloud/basic-auth-server-name": "istio-basic-auth-server",
+					"reference.gardener.cloud/basic-auth-secret-name":    "foo",
+					"reference.gardener.cloud/basic-auth-server-name":    "istio-basic-auth-server",
+					"reference.gardener.cloud/basic-auth-secret-managed": "true",
 				},
 			},
 			Spec: istionetworkingv1alpha3.VirtualService{
@@ -534,6 +535,7 @@ var _ = Describe("Alertmanager", func() {
 				BeforeEach(func() {
 					values.ExternalExposure = &ExposureValues{
 						AuthSecretName:               ingressAuthSecretName,
+						AuthSecretManaged:            true,
 						Host:                         ingressHost,
 						WildcardCertSecretName:       &ingressWildcardSecretName,
 						IstioIngressGatewayNamespace: ingressNamespace,
