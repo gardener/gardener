@@ -523,7 +523,7 @@ frontend:
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "gardener-dashboard-server",
-											DefaultMode: ptr.To[int32](0640),
+											DefaultMode: new(0640),
 										},
 									},
 								},
