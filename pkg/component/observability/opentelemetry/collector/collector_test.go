@@ -290,6 +290,9 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						DisablePrometheusAnnotations: true,
 					},
 				},
+				NetworkPolicy: otelv1beta1.NetworkPolicy{
+					Enabled: new(false),
+				},
 				Mode:            "deployment",
 				UpgradeStrategy: "none",
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
