@@ -407,8 +407,7 @@ func (b *Botanist) UpdateNodeAgentSecretNameLabelsOnNodes(ctx context.Context) e
 // instantiated the Botanist instance, it returns false, since only the shoot gardenlet is the only instance who should
 // take care to disable the static token after initialization of the cluster (gardenadm init).
 func (b *Botanist) useShootAccessTokensForSelfHostedShootControlPlane(ctx context.Context) (bool, error) {
-	if !b.Shoot.IsSelfHosted() ||
-		b.Shoot.GetInfo().Status.Gardener.Name == "gardenadm" {
+	if !b.Shoot.IsSelfHosted() || b.Shoot.GetInfo().Status.Gardener.Name == "gardenadm" {
 		return false, nil
 	}
 
