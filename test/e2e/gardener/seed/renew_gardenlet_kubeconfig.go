@@ -19,7 +19,7 @@ import (
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
-	Describe("Renew gardenlet kubeconfig", Ordered, func() {
+	Describe("Renew gardenlet kubeconfig", Ordered, PriorityFast, func() {
 		var (
 			s        *SeedContext
 			verifier rotation.GardenletKubeconfigRotationVerifier

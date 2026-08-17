@@ -14,6 +14,7 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
@@ -92,15 +93,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldWaitForShootToBeDeleted(s)
 	}
 
-	Context("Shoot with workers", Ordered, func() {
+	Context("Shoot with workers", Ordered, PriorityLonger, func() {
 		test(NewTestContext().ForShoot(DefaultShoot("e2e-migrate")))
 	})
 
-	Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+	Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
 		test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-migrate")))
 	})
 
-	Context("Hibernated Shoot", Label("hibernated"), Ordered, func() {
+	Context("Hibernated Shoot", Label("hibernated"), Ordered, PriorityLong, func() {
 		shoot := DefaultShoot("e2e-mgr-hib")
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: new(true),

@@ -433,7 +433,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), func() {
-			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
+			Context("with workers rollout", Label("with-workers-rollout"), Ordered, PriorityLonger, func() {
 				var s *ShootContext
 
 				BeforeTestSetup(func() {
@@ -455,7 +455,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				test(s, false, false, true)
 			})
 
-			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
+			Context("without workers rollout", Label("without-workers-rollout"), Ordered, PriorityLonger, func() {
 				var s *ShootContext
 
 				BeforeTestSetup(func() {
@@ -482,7 +482,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			})
 		})
 
-		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
 			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
 		})
 	})

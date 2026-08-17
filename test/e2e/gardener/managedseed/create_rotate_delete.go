@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/test/utils/rotation"
 )
 
-var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, func() {
+var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, PriorityLonger, func() {
 	var s *ManagedSeedContext
 
 	BeforeTestSetup(func() {

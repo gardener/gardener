@@ -23,7 +23,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
-var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
+var _ = Describe("Project Tests", Ordered, Label("Project", "default"), PriorityFast, func() {
 	var s *ProjectContext
 
 	var (

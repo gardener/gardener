@@ -16,7 +16,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	Describe("Create and Delete Failed Shoot", func() {
+	Describe("Create and Delete Failed Shoot", PriorityFast, func() {
 		Context("Shoot with invalid DNS configuration", Ordered, func() {
 			var s *ShootContext
 

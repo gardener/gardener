@@ -22,7 +22,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	Describe("Create and Delete Unprivileged Shoot. Test expected shoot logs", Ordered, Label("unprivileged", "basic", "observability"), func() {
+	Describe("Create and Delete Unprivileged Shoot. Test expected shoot logs", Ordered, Label("unprivileged", "basic", "observability"), PriorityLong, func() {
 		var s *ShootContext
 
 		BeforeTestSetup(func() {
