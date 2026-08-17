@@ -6,13 +6,13 @@ package restore
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
 	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	initcmd "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -64,20 +64,36 @@ func run(ctx context.Context, opts *Options) error {
 		Zone:             opts.Zone,
 	}
 
-	b, err := initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath)
-	if err != nil {
-		return fmt.Errorf("failed bootstrapping control plane: %w", err)
+	var (
+		b *gardenadmbotanist.GardenadmBotanist
+
+		g = flow.NewGraph("restore")
+
+		bootstrapControlPlane = g.Add(flow.Task{
+			Name: "Bootstrapping control plane",
+			Fn: func(ctx context.Context) error {
+				var err error
+				b, err = initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath)
+				return err
+			},
+		})
+		// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
+		// For more details, see https://github.com/gardener/gardener/issues/15279.
+		_ = g.Add(flow.Task{
+			Name: "Running init flow",
+			Fn: func(ctx context.Context) error {
+				return initcmd.RunInitFlow(ctx, b, initOpts)
+			},
+			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
+		})
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              opts.Log,
+		ProgressReporter: flow.NewCommandLineProgressReporter(opts.ErrOut),
+	}); err != nil {
+		return flow.Errors(err)
 	}
 
-	if err := performRequiredCleanups(ctx, b, opts.PriorNodeName); err != nil {
-		return fmt.Errorf("failed performing required cleanups: %w", err)
-	}
-
-	return initcmd.RunInitFlow(ctx, b, initOpts)
-}
-
-func performRequiredCleanups(_ context.Context, _ *gardenadmbotanist.GardenadmBotanist, _ string) error {
-	// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
-	// For more details, see https://github.com/gardener/gardener/issues/15279.
 	return nil
 }
