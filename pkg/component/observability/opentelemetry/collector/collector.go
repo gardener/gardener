@@ -595,6 +595,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 				"otlp",
 			},
 			Processors: []string{
+				"memory_limiter",
 				"batch",
 			},
 		}

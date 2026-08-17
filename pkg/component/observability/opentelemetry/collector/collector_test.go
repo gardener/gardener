@@ -755,7 +755,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
 				Exporters:  []string{"otlphttp/victorialogs"},
 				Receivers:  []string{"otlp"},
-				Processors: []string{"batch"},
+				Processors: []string{"memory_limiter", "batch"},
 			}
 
 			Expect(customResourcesManagedResource).To(consistOf(
