@@ -653,7 +653,7 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 			Name: fmt.Sprintf("Updating %s label on nodes after 'gardenadm init' to reflect computations of gardenlet", v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName),
 			Fn: func(ctx context.Context) error {
 				if err := b.UpdateNodeAgentSecretNameLabelsOnNodes(ctx); err != nil {
-					return fmt.Errorf("error updating %s labels on node: %w", v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName, err)
+					return fmt.Errorf("error updating %s labels on nodes: %w", v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName, err)
 				}
 				if err := b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx); err != nil {
 					return fmt.Errorf("error deleting stale OperatingSystemConfig resources: %w", err)

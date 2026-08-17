@@ -28,7 +28,7 @@ var _ = Describe("SecretNameChange controller tests", func() {
 	var node *corev1.Node
 
 	BeforeEach(func() {
-		cancelCalled = false
+		cancelCalled.Store(false)
 
 		By("Write initial config to fake filesystem")
 		config := &nodeagentconfigv1alpha1.NodeAgentConfiguration{
@@ -62,7 +62,7 @@ var _ = Describe("SecretNameChange controller tests", func() {
 
 	It("should do nothing when the secret name label matches the config", func() {
 		Consistently(func() bool {
-			return cancelCalled
+			return cancelCalled.Load()
 		}).Should(BeFalse())
 	})
 
@@ -74,7 +74,7 @@ var _ = Describe("SecretNameChange controller tests", func() {
 
 		By("Wait for cancel to be called")
 		Eventually(func() bool {
-			return cancelCalled
+			return cancelCalled.Load()
 		}).Should(BeTrue())
 
 		By("Verify the config on disk was updated")

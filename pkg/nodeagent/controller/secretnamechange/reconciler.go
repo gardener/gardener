@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	configRaw, err := r.FS.ReadFile(configPath)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reading gardener-node-agent config file: %w", err)
+		return reconcile.Result{}, fmt.Errorf("error reading gardener-node-agent config file %q: %w", configPath, err)
 	}
 
 	config := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}

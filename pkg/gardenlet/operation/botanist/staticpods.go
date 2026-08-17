@@ -14,6 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -304,7 +306,7 @@ func (b *Botanist) UpdateNodeAgentSecretNameLabelsOnNodes(ctx context.Context) e
 
 	nodeList := &metav1.PartialObjectMetadataList{}
 	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-	if err := b.SeedClientSet.Client().List(ctx, nodeList); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelWorkerPool, selection.Exists))}); err != nil {
 		return fmt.Errorf("failed listing all nodes: %w", err)
 	}
 

@@ -18,7 +18,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	operatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -89,8 +89,12 @@ var _ = Describe("StaticPods", func() {
 					v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: oscSecretName2,
 				},
 			}}
+			node3 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+				Name: "node3",
+			}}
 			Expect(seedClient.Create(ctx, node1)).To(Succeed())
 			Expect(seedClient.Create(ctx, node2)).To(Succeed())
+			Expect(seedClient.Create(ctx, node3)).To(Succeed())
 
 			operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(oscMap)
 

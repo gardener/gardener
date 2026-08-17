@@ -6,6 +6,7 @@ package secretnamechange_test
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -48,7 +49,7 @@ var (
 	testRunID = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 	testFS       afero.Afero
-	cancelCalled bool
+	cancelCalled atomic.Bool
 )
 
 var _ = BeforeSuite(func() {
@@ -90,7 +91,7 @@ var _ = BeforeSuite(func() {
 	Expect((&secretnamechangecontroller.Reconciler{
 		ConfigDir:     "/var/lib/gardener-node-agent",
 		FS:            testFS,
-		CancelContext: func() { cancelCalled = true },
+		CancelContext: func() { cancelCalled.Store(true) },
 	}).AddToManager(mgr, predicate.NewPredicateFuncs(func(client.Object) bool { return true }))).To(Succeed())
 
 	By("Start manager")
