@@ -21,13 +21,13 @@ require (
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management/pkg/apis v0.27.0
 	github.com/gardener/dependency-watchdog v1.8.0
-	github.com/gardener/etcd-druid/api v0.37.1
+	github.com/gardener/etcd-druid/api v0.38.1
 	github.com/gardener/gardener/pkg/apis v1.149.0
 	github.com/gardener/machine-controller-manager v0.62.1
 	github.com/gardener/pvc-autoscaler v0.3.0
 	github.com/gardener/terminal-controller-manager v0.39.0
 	github.com/go-jose/go-jose/v4 v4.1.4
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/go-test/deep v1.1.1
 	github.com/google/gnostic-models v0.7.1
 	github.com/google/go-cmp v0.7.0
