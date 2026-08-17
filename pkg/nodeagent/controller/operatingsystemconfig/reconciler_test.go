@@ -33,9 +33,11 @@ import (
 	nodeagenthelper "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	fakecontainerd "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	"github.com/gardener/gardener/pkg/utils"
@@ -804,6 +806,71 @@ users:
 			err := reconciler.rebootstrapKubelet(ctx, log, &nodeAgentConfig.APIServer, node)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to restart unit"))
+		})
+	})
+
+	Context("#executeUnitCommands", func() {
+		var (
+			oscChanges       *operatingSystemConfigChanges
+			fakeContainerd   *fakecontainerd.Client
+			containerdAction = fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{v1beta1constants.OperatingSystemConfigUnitNameContainerDService}}
+			kubeletAction    = fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{v1beta1constants.OperatingSystemConfigUnitNameKubeletService}}
+		)
+
+		BeforeEach(func() {
+			fakeContainerd = fakecontainerd.NewClient()
+			reconciler.ContainerdClient = fakeContainerd
+
+			oscChanges = &operatingSystemConfigChanges{fs: fs}
+
+			DeferCleanup(test.WithVars(
+				&ContainerdReadinessRetryInterval, 1*time.Millisecond,
+				&ContainerdReadinessRetryTimeout, 20*time.Millisecond,
+			))
+		})
+
+		It("should restart containerd before the other units when both need a restart", func(ctx context.Context) {
+			oscChanges.Units.Commands = []unitCommand{
+				{Name: v1beta1constants.OperatingSystemConfigUnitNameKubeletService, Command: extensionsv1alpha1.CommandRestart},
+				{Name: v1beta1constants.OperatingSystemConfigUnitNameContainerDService, Command: extensionsv1alpha1.CommandRestart},
+			}
+
+			Expect(reconciler.executeUnitCommands(ctx, log, node, oscChanges)).To(Succeed())
+
+			Expect(fakeDBus.Actions).To(Equal([]fakedbus.SystemdAction{containerdAction, kubeletAction}))
+		})
+
+		It("should restart containerd first when only the containerd config file changed", func(ctx context.Context) {
+			oscChanges.Containerd.ConfigFileChanged = true
+			oscChanges.Units.Commands = []unitCommand{
+				{Name: v1beta1constants.OperatingSystemConfigUnitNameKubeletService, Command: extensionsv1alpha1.CommandRestart},
+			}
+
+			Expect(reconciler.executeUnitCommands(ctx, log, node, oscChanges)).To(Succeed())
+
+			Expect(fakeDBus.Actions).To(Equal([]fakedbus.SystemdAction{containerdAction, kubeletAction}))
+		})
+
+		It("should not restart the other units if containerd does not become ready", func(ctx context.Context) {
+			fakeContainerd.SetReturnError(true)
+			oscChanges.Units.Commands = []unitCommand{
+				{Name: v1beta1constants.OperatingSystemConfigUnitNameKubeletService, Command: extensionsv1alpha1.CommandRestart},
+				{Name: v1beta1constants.OperatingSystemConfigUnitNameContainerDService, Command: extensionsv1alpha1.CommandRestart},
+			}
+
+			Expect(reconciler.executeUnitCommands(ctx, log, node, oscChanges)).NotTo(Succeed())
+
+			Expect(fakeDBus.Actions).To(Equal([]fakedbus.SystemdAction{containerdAction}))
+		})
+
+		It("should restart units in parallel when containerd is not involved", func(ctx context.Context) {
+			oscChanges.Units.Commands = []unitCommand{
+				{Name: v1beta1constants.OperatingSystemConfigUnitNameKubeletService, Command: extensionsv1alpha1.CommandRestart},
+			}
+
+			Expect(reconciler.executeUnitCommands(ctx, log, node, oscChanges)).To(Succeed())
+
+			Expect(fakeDBus.Actions).To(Equal([]fakedbus.SystemdAction{kubeletAction}))
 		})
 	})
 
