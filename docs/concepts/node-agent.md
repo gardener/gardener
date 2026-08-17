@@ -147,6 +147,17 @@ If a health check fails, the controller can restart the affected systemd service
 This controller periodically checks whether the hostname of the machine has changed.
 If a hostname change is detected, the controller triggers a restart of `gardener-node-agent` by calling its cancel function.
 
+### [Secret Name Change Controller](../../pkg/nodeagent/controller/secretnamechange)
+
+This controller watches the `Node` object and reacts to changes of the `worker.gardener.cloud/gardener-node-agent-secret-name` label.
+This label holds the name of the `Secret` in the `kube-system` namespace of the shoot cluster that contains the `OperatingSystemConfig` relevant for this node.
+The `gardener-node-agent`'s component config (read at startup) dictates which `Secret` to watch, so if the label value differs from the configured secret name, the `gardener-node-agent` must be restarted to pick up the new name.
+
+For regular (hosted) shoots this situation does not occur: the OSC secret name is fixed for the lifetime of a node.
+For self-hosted shoots, however, the secret name may change after the initial `gardenadm init` run: when the `Shoot` is registered with `gardener-apiserver`, admission plugins or webhooks may augment the spec, causing `gardenlet` to compute a different OSC secret name on its first reconciliation.
+
+When the controller detects a mismatch, it overwrites the `.controllers.operatingSystemConfig.secretName` field in the component config file on the host and then calls the context cancel function, which triggers a restart of `gardener-node-agent` so it re-reads the updated config and starts watching the correct `Secret`.
+
 ### [Systemd Unit Check Controller](../../pkg/nodeagent/controller/systemdunitcheck)
 
 This controller periodically checks the health of all systemd units managed by `gardener-node-agent` (i.e., those from the last applied `OperatingSystemConfig`).

@@ -17,6 +17,7 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -412,7 +413,7 @@ func (o *operatingSystemConfig) getWantedOSCNames(ctx context.Context) (sets.Set
 	}
 
 	machineList := &machinev1alpha1.MachineList{}
-	if err := o.client.List(ctx, machineList, client.InNamespace(o.values.Namespace)); err != nil {
+	if err := o.client.List(ctx, machineList, client.InNamespace(o.values.Namespace)); err != nil && !meta.IsNoMatchError(err) {
 		return nil, fmt.Errorf("failed to list Machines: %w", err)
 	}
 

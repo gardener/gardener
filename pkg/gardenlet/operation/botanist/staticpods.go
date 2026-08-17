@@ -14,6 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -27,6 +29,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -293,4 +296,30 @@ func (b *Botanist) staticControlPlanePods(ctx context.Context, useBootstrapEtcd 
 	}
 
 	return pods, nil
+}
+
+// UpdateNodeAgentSecretNameLabelsOnNodes updates the worker.gardener.cloud/gardener-node-agent-secret-name labels on
+// the nodes to the current computed names. This might be needed because 'gardenadm init' does not use the true/fully
+// defaulted Shoot spec (this is only decided after 'gardenadm connect' registers the Shoot with gardener-apiserver).
+func (b *Botanist) UpdateNodeAgentSecretNameLabelsOnNodes(ctx context.Context) error {
+	workerNameToOperatingSystemConfigMaps := b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerPoolNameToOperatingSystemConfigsMap()
+
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelWorkerPool, selection.Exists))}); err != nil {
+		return fmt.Errorf("failed listing all nodes: %w", err)
+	}
+
+	tasks := make([]flow.TaskFn, 0, len(nodeList.Items))
+	for _, node := range nodeList.Items {
+		if desiredGardenerNodeAgentSecretName := workerNameToOperatingSystemConfigMaps[node.Labels[v1beta1constants.LabelWorkerPool]].Original.GardenerNodeAgentSecretName; node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName] != desiredGardenerNodeAgentSecretName {
+			tasks = append(tasks, func(ctx context.Context) error {
+				patch := client.MergeFrom(node.DeepCopy())
+				node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName] = desiredGardenerNodeAgentSecretName
+				return b.SeedClientSet.Client().Patch(ctx, &node, patch)
+			})
+		}
+	}
+
+	return flow.Parallel(tasks...)(ctx)
 }

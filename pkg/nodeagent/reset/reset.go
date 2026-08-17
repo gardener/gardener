@@ -149,7 +149,7 @@ func cleanUpOperatingSystemConfig(ctx context.Context, log logr.Logger, fs afero
 	}
 
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(nodeagent.OSCDecoder, oscFileContent, osc); err != nil {
+	if err := runtime.DecodeInto(nodeagent.Codec, oscFileContent, osc); err != nil {
 		return fmt.Errorf("unable to decode OperatingSystemConfig read from file path %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath, err)
 	}
 

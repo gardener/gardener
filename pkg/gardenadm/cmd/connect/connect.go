@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
@@ -291,7 +292,11 @@ func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist
 	}
 
 	shoot := b.Shoot.GetInfo().DeepCopy()
-	shoot.Status = gardencorev1beta1.ShootStatus{} // we don't want to copy the in-memory status, otherwise we cannot compute a patch further below
+	if shoot.Annotations == nil {
+		shoot.Annotations = make(map[string]string)
+	}
+	controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName) // instruct gardenlet to update GNA secret names on nodes
+	shoot.Status = gardencorev1beta1.ShootStatus{}                                                           // we don't want to copy the in-memory status, otherwise we cannot compute a patch further below
 	if err := b.GardenClient.Create(ctx, shoot); client.IgnoreAlreadyExists(err) != nil {
 		return fmt.Errorf("failed creating Shoot resource %s in garden cluster: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
 	}

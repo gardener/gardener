@@ -23,15 +23,20 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -299,14 +304,14 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				}
 			}, SpecTimeout(5*time.Minute))
 
-			// `gardenadm connect` deploys the shoot gardenlet and registers the `Shoot` in the garden cluster. However,
-			// after `gardenadm init`, the status indicates a successful reconciliation, and since the shoot gardenlet
-			// is configured to only proactively reconcile in the maintenance time window, we have to explicitly request
-			// a reconciliation from it. This is to test whether its `Shoot` controller works as expected.
+			// `gardenadm connect` deploys the shoot gardenlet and registers the `Shoot` in the garden cluster. The
+			// `gardenlet` reconciles immediately after it came up, and we should make sure that this (the `Shoot`
+			// controller) works as expected and finishes its operation successfully.
 			Context("shoot gardenlet reconciles self-hosted shoot", func() {
 				var s *e2egardener.ShootContext
 
-				BeforeAll(func() {
+				BeforeAll(func(ctx SpecContext) {
+					initShootClientSet(ctx)
 					s = (&e2egardener.TestContext{
 						GardenClientSet: gardenClientSet,
 						GardenClient:    gardenClientSet.Client(),
@@ -314,17 +319,10 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					}).ForShoot(shoot)
 				})
 
-				It("should annotate the shoot to trigger reconciliation", func(ctx SpecContext) {
-					patch := client.MergeFrom(s.Shoot.DeepCopy())
-					metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-					Eventually(ctx, func() error {
-						return s.GardenClient.Patch(ctx, s.Shoot, patch)
-					}).Should(Succeed())
-				}, SpecTimeout(time.Minute))
-
 				It("should wait for the self-hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
 					Eventually(ctx, func(g Gomega) bool {
 						g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+						g.Expect(s.Shoot.Status.Gardener.Name).To(ContainSubstring("gardenlet"))
 						// TODO(rfranzke): Uncomment this code and remove the manual checks once the Shoot controller
 						//  has progressed and the .status.conditions properly reflect healthiness.
 						//
@@ -347,7 +345,58 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 						}
 						return true
 					}).WithPolling(30 * time.Second).Should(BeTrue())
+
+					By("Verifying ShootTaskUpdateGardenerNodeAgentSecretName task annotation has been removed")
+					Expect(controllerutils.HasTask(s.Shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)).To(BeFalse())
 				}, SpecTimeout(30*time.Minute))
+
+				It("should ensure node labels and gardener-node-agent config reflect the correct OSC secret name", func(ctx SpecContext) {
+					By("Build map of worker pool -> newest original OSC name (the newest OSC is the one desired by gardenlet)")
+					oscList := &extensionsv1alpha1.OperatingSystemConfigList{}
+					Expect(shootClientSet.Client().List(ctx, oscList, client.InNamespace(controlPlaneNamespace))).To(Succeed())
+
+					poolToNewestOSC := make(map[string]*extensionsv1alpha1.OperatingSystemConfig)
+					for _, osc := range oscList.Items {
+						if osc.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+							continue
+						}
+						poolName := osc.Labels[v1beta1constants.LabelWorkerPool]
+						existing, ok := poolToNewestOSC[poolName]
+						if !ok || osc.CreationTimestamp.After(existing.CreationTimestamp.Time) {
+							poolToNewestOSC[poolName] = &osc
+						}
+					}
+
+					By("List nodes and verify labels and GNA config")
+					nodeList := &corev1.NodeList{}
+					Expect(shootClientSet.Client().List(ctx, nodeList)).To(Succeed())
+
+					for _, node := range nodeList.Items {
+						poolName := node.Labels[v1beta1constants.LabelWorkerPool]
+						newestOSC, ok := poolToNewestOSC[poolName]
+						Expect(ok).To(BeTrue(), "no original OSC found for worker pool %q (node %s)", poolName, node.Name)
+
+						// The GNA secret name is the OSC name without the "-original" suffix.
+						expectedSecretName := strings.TrimSuffix(newestOSC.Name, "-original")
+
+						By("Verifying node label for node " + node.Name)
+						Expect(node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]).To(Equal(expectedSecretName), "node %s has wrong %s label", node.Name, v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName)
+
+						By("Verifying GNA config on machine " + node.Name)
+						// Use find to locate the config file instead of constructing the path from the test binary's
+						// version string, which may differ from the GNA binary's version string on the node.
+						stdOut, _, err := execute(ctx, machineOrdinalFromNodeName(node.Name), "find", nodeagentconfigv1alpha1.BaseDir, "-maxdepth", "1", "-name", "config-*.yaml")
+						Expect(err).NotTo(HaveOccurred(), "failed to list GNA config files on node %s", node.Name)
+						configPath := strings.TrimSpace(string(stdOut.Contents()))
+						Expect(configPath).NotTo(BeEmpty(), "no GNA config file found in %s on node %s", nodeagentconfigv1alpha1.BaseDir, node.Name)
+						stdOut, _, err = execute(ctx, machineOrdinalFromNodeName(node.Name), "cat", configPath)
+						Expect(err).NotTo(HaveOccurred(), "failed to read GNA config from node %s at path %s", node.Name, configPath)
+
+						gnaConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
+						Expect(runtime.DecodeInto(nodeagent.Codec, stdOut.Contents(), gnaConfig)).To(Succeed(), "failed to decode GNA config on node %s", node.Name)
+						Expect(gnaConfig.Controllers.OperatingSystemConfig.SecretName).To(Equal(expectedSecretName), "GNA config on node %s has wrong secret name", node.Name)
+					}
+				}, SpecTimeout(time.Minute))
 			})
 		})
 
@@ -458,6 +507,12 @@ func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffe
 
 func machineContainerName(ordinal int) string {
 	return "gind-machine-" + strconv.Itoa(ordinal)
+}
+
+func machineOrdinalFromNodeName(nodeName string) int {
+	ordinal, err := strconv.Atoi(strings.TrimPrefix(nodeName, "gind-machine-"))
+	Expect(err).NotTo(HaveOccurred(), "failed to parse ordinal from node name %s", nodeName)
+	return ordinal
 }
 
 func itShouldJoinNode() {

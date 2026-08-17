@@ -29,9 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -73,7 +70,6 @@ const (
 )
 
 var (
-	codec                         runtime.Codec
 	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
 	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
 
@@ -96,14 +92,6 @@ var (
 	// Exposed for testing.
 	RequeueAfterWaitForStaticPods = 5 * time.Second
 )
-
-func init() {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
-	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-	versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
-	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
-}
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
@@ -363,7 +351,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if !r.SkipWritingStateFiles {
 		log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigFilePath)
-		oscRaw, err := runtime.Encode(codec, osc)
+		oscRaw, err := runtime.Encode(nodeagent.Codec, osc)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
 		}

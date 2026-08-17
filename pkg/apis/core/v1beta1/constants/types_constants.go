@@ -407,6 +407,10 @@ const (
 	ShootTaskRestartControlPlanePods = "restartControlPlanePods"
 	// ShootTaskRestartCoreAddons is a name for a Shoot task which is dedicated to restart some core addons.
 	ShootTaskRestartCoreAddons = "restartCoreAddons"
+	// ShootTaskUpdateGardenerNodeAgentSecretName is a name for a Shoot task which is dedicated to updating the secret
+	// name labels on nodes for self-hosted shoot clusters after the shoot gardenlet takes over reconciliation from
+	// gardenadm init.
+	ShootTaskUpdateGardenerNodeAgentSecretName = "updateGardenerNodeAgentSecretName"
 	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be
 	// executed as soon as possible.
 	ShootOperationMaintain = "maintain"
