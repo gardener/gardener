@@ -4729,6 +4729,140 @@ spec:
                     description: Enabled indicates whether to enable mTLS between
                       the target allocator and the collector.
                     type: boolean
+                  tls:
+                    description: |-
+                      TLS references user-provided certificates used for mTLS. It allows managing
+                      the certificates outside of the operator (e.g. without cert-manager) and
+                      is only consulted when UseCertManager is set to false.
+                    properties:
+                      certificateAuthorityCertificate:
+                        description: |-
+                          CertificateAuthorityCertificate references the CA certificate used to verify the peer's
+                          certificate. Exactly one of secret or configMap must be set. It is required when
+                          UseCertManager is false.
+                        properties:
+                          configMap:
+                            description: ConfigMap sources the CA certificate from
+                              a ConfigMap.
+                            properties:
+                              key:
+                                default: ca.crt
+                                description: Key within the ConfigMap's data. Defaults
+                                  to ca.crt when omitted.
+                                type: string
+                              name:
+                                description: Name of the ConfigMap, in the same namespace
+                                  as the workload.
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          secret:
+                            description: Secret sources the CA certificate from a
+                              Secret.
+                            properties:
+                              key:
+                                description: |-
+                                  Key within the Secret's data. When omitted, a role-specific default is applied: tls.crt for a
+                                  certificate, tls.key for a private key.
+                                type: string
+                              name:
+                                description: Name of the Secret, in the same namespace
+                                  as the workload.
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        type: object
+                      clientCertificate:
+                        description: |-
+                          ClientCertificate references the client certificate and key used by the collector when talking
+                          to the target allocator's HTTPS server.
+                        properties:
+                          certificateSecret:
+                            description: CertificateSecret selects the certificate.
+                              Its key defaults to tls.crt.
+                            properties:
+                              key:
+                                description: |-
+                                  Key within the Secret's data. When omitted, a role-specific default is applied: tls.crt for a
+                                  certificate, tls.key for a private key.
+                                type: string
+                              name:
+                                description: Name of the Secret, in the same namespace
+                                  as the workload.
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          keySecret:
+                            description: KeySecret selects the private key. Its key
+                              defaults to tls.key.
+                            properties:
+                              key:
+                                description: |-
+                                  Key within the Secret's data. When omitted, a role-specific default is applied: tls.crt for a
+                                  certificate, tls.key for a private key.
+                                type: string
+                              name:
+                                description: Name of the Secret, in the same namespace
+                                  as the workload.
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        required:
+                        - certificateSecret
+                        - keySecret
+                        type: object
+                      serverCertificate:
+                        description: |-
+                          ServerCertificate references the server certificate and key used by the target allocator when
+                          exposing its HTTPS server.
+                        properties:
+                          certificateSecret:
+                            description: CertificateSecret selects the certificate.
+                              Its key defaults to tls.crt.
+                            properties:
+                              key:
+                                description: |-
+                                  Key within the Secret's data. When omitted, a role-specific default is applied: tls.crt for a
+                                  certificate, tls.key for a private key.
+                                type: string
+                              name:
+                                description: Name of the Secret, in the same namespace
+                                  as the workload.
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          keySecret:
+                            description: KeySecret selects the private key. Its key
+                              defaults to tls.key.
+                            properties:
+                              key:
+                                description: |-
+                                  Key within the Secret's data. When omitted, a role-specific default is applied: tls.crt for a
+                                  certificate, tls.key for a private key.
+                                type: string
+                              name:
+                                description: Name of the Secret, in the same namespace
+                                  as the workload.
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        required:
+                        - certificateSecret
+                        - keySecret
+                        type: object
+                    type: object
                   useCertManager:
                     default: true
                     description: |-
@@ -6091,6 +6225,29 @@ spec:
                   ServiceAccount indicates the name of an existing service account to use with this instance. When set,
                   the operator will not automatically Create a ServiceAccount.
                 type: string
+              sessionAffinity:
+                description: |-
+                  SessionAffinity specifies the session affinity type for the Service.
+                  This is only applicable to Service resources.
+                type: string
+              sessionAffinityConfig:
+                description: |-
+                  SessionAffinityConfig specifies the session affinity configurations for the Service.
+                  This is only applicable to Service resources.
+                properties:
+                  clientIP:
+                    description: clientIP contains the configurations of Client IP
+                      based session affinity.
+                    properties:
+                      timeoutSeconds:
+                        description: |-
+                          timeoutSeconds specifies the seconds of ClientIP type session sticky time.
+                          The value must be >0 && <=86400(for 1 day) if ServiceAffinity == "ClientIP".
+                          Default value is 10800(for 3 hours).
+                        format: int32
+                        type: integer
+                    type: object
+                type: object
               shareProcessNamespace:
                 description: ShareProcessNamespace indicates if the pod's containers
                   should share process namespace.
