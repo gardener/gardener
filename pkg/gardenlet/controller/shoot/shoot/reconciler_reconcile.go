@@ -267,7 +267,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring advertised addresses for the Shoot",
 			Fn:           b.UpdateAdvertisedAddresses,
-			SkipIf:       b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
 		})
 		reconcileDNSRecords      = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(waitUntilKubeAPIServerServiceIsReady))
@@ -330,6 +329,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(scaleEtcdAfterRestore),
 		})
 		waitUntilGardenerResourceManagerReady = g.AddGroup(b.ReconcileGardenerResourceManagerTaskGroup(true, flowCtx.skipReadiness).WithDependencies(waitUntilKubeAPIServerIsReady))
+		reconcileStaticControlPlanePods       = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false))
+		waitUntilControlPlaneReady            = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
 		_                                     = g.Add(flow.Task{
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -341,13 +342,10 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf: !sets.New(
 				gardencorev1beta1.RotationPreparing,
 				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
-			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)) || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)),
+			Dependencies: flow.NewTaskIDs(reconcileStaticControlPlanePods, waitUntilGardenerResourceManagerReady),
 		})
-		waitUntilControlPlaneReady    = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
-		_                             = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false))
-		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
-		deployGardenerAccess          = g.Add(flow.Task{
+		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
 			Fn:           flow.TaskFn(b.Shoot.Components.GardenerAccess.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsSelfHosted(),
@@ -356,13 +354,12 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(b.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(reconcileDNSRecords, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(reconcileDNSRecords, deployGardenerAccess, reconcileStaticControlPlanePods),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Sync public service account signing keys to Garden cluster",
 			Fn:           b.SyncPublicServiceAccountKeys,
-			SkipIf:       b.Shoot.HibernationEnabled || !v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()) || b.Shoot.IsSelfHosted(),
+			SkipIf:       b.Shoot.HibernationEnabled || !v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		rewriteResourcesAddLabel = g.Add(flow.Task{
@@ -370,7 +367,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, b.Logger, b.SeedClientSet.Client(), b.ShootClientSet, b.SecretsManager, b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.ResourcesToEncrypt, b.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption())
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf: b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted() ||
+			SkipIf: b.Shoot.HibernationEnabled ||
 				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 					sets.New(b.Shoot.ResourcesToEncrypt...).Equal(sets.New(b.Shoot.EncryptedResources...)) && (b.Shoot.EncryptionProviderToUse == b.Shoot.UsedEncryptionProvider ||
 					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting)),
@@ -381,7 +378,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn: func(ctx context.Context) error {
 				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, b.SeedClientSet.Client(), b.SnapshotEtcd, b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
 			},
-			SkipIf: !flowCtx.allowBackup || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted() ||
+			SkipIf: !flowCtx.allowBackup || b.Shoot.HibernationEnabled ||
 				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 					sets.New(b.Shoot.ResourcesToEncrypt...).Equal(sets.New(b.Shoot.EncryptedResources...)) && (b.Shoot.EncryptionProviderToUse == b.Shoot.UsedEncryptionProvider ||
 					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting)),
@@ -429,7 +426,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 
 				return nil
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf: b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted() ||
+			SkipIf: b.Shoot.HibernationEnabled ||
 				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting &&
 					sets.New(b.Shoot.ResourcesToEncrypt...).Equal(sets.New(b.Shoot.EncryptedResources...)) && (b.Shoot.EncryptionProviderToUse == b.Shoot.UsedEncryptionProvider ||
 					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing ||
@@ -447,7 +444,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(b.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted(),
+			SkipIf:       b.Shoot.IsWorkerless || shootIsGarden,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady),
 		})
 		_ = g.Add(flow.Task{
@@ -473,7 +470,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CreateNewServiceAccountSecrets(ctx, b.Logger, b.ShootClientSet.Client(), b.SecretsManager)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf:       !saKeyRotationPreparing || b.Shoot.IsSelfHosted(),
+			SkipIf:       !saKeyRotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		_ = g.Add(flow.Task{
@@ -481,7 +478,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.DeleteOldServiceAccountSecrets(ctx, b.Logger, b.ShootClientSet.Client(), b.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting || b.Shoot.IsSelfHosted(),
+			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting,
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		waitUntilKubeRootCAConfigMapsUpdated = g.Add(flow.Task{
@@ -493,7 +490,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		deleteBastions = g.Add(flow.Task{
 			Name:         "Deleting Bastions",
 			Fn:           b.DeleteBastions,
-			SkipIf:       flowCtx.shootSSHAccessEnabled || b.Shoot.IsSelfHosted(),
+			SkipIf:       flowCtx.shootSSHAccessEnabled,
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})
 		waitUntilExtensionResourcesAfterKAPIReady = g.AddGroup(b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(flowCtx.skipReadiness).WithDependencies(initializeShootClients))
@@ -506,12 +503,17 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
 			waitUntilGardenerResourceManagerReady,
 		)
-
-		deployShootSystemResources = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(syncPointReadyForSystemComponents))
-		_                          = g.Add(flow.Task{
+		deployManagedResourceForGardenerNodeAgent = g.Add(flow.Task{
+			Name:         "Deploying gardener-node-agent's OperatingSystemConfig secrets and RBAC resources",
+			Fn:           flow.TaskFn(b.DeployManagedResourceForGardenerNodeAgent).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
+		deployShootSystemResources    = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(syncPointReadyForSystemComponents))
+		_                             = g.Add(flow.Task{
 			Name:         "Populating static manifests from seed to shoot",
 			Fn:           flow.TaskFn(b.PopulateStaticManifestsFromSeedToShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady),
 		})
 		reconcileVPNComponents    = g.AddGroup(b.ReconcileVPNComponentsTaskGroup(flowCtx.skipReadiness).WithDependencies(syncPointReadyForSystemComponents))
@@ -519,12 +521,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			initializeShootClients,
 			deployKubeScheduler,
 		))
-		deployManagedResourceForGardenerNodeAgent = g.Add(flow.Task{
-			Name:         "Deploying managed resources for the gardener-node-agent",
-			Fn:           flow.TaskFn(b.DeployManagedResourceForGardenerNodeAgent).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
-		})
 		syncPointAllSystemComponentsDeployed = flow.NewTaskIDs(
 			reconcileSystemComponents,
 			deployShootSystemResources,
@@ -550,7 +546,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		_ = g.Add(flow.Task{
 			Name:         "Checking if we have dual-stack pod CIDRs in nodes",
 			Fn:           b.CheckPodCIDRsInNodes,
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{

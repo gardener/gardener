@@ -1114,8 +1114,7 @@ var _ = Describe("Seed controller tests", func() {
 						"prometheus-aggregate",
 						"kube-state-metrics-seed",
 						"referenced-resources-" + seedName,
-						// Components not skipped for self-hosted shoots (only for garden):
-						"vpa",
+						// Components skipped only for garden (not for self-hosted shoots):
 						"plutono",
 						"vali",
 						"fluent-bit",
