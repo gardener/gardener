@@ -29,6 +29,11 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+const (
+	defaultTimeout  = 30 * time.Second
+	defaultInterval = 5 * time.Second
+)
+
 // TaskGroupDeployNamespaces is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupDeployNamespaces flow.TaskID = "TaskGroupDeployNamespaces"
 
@@ -129,6 +134,18 @@ func (b *Botanist) ReconcileClusterResourceTaskGroup() flow.TaskGroup {
 	}).WithDependencies(TaskGroupReconcileCustomResourceDefinitions).SkipIf(!b.Shoot.IsSelfHosted())
 }
 
+// TaskGroupReconcileReferencedResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileReferencedResources flow.TaskID = "TaskGroupReconcileReferencedResources"
+
+// ReconcileReferencedResourcesTaskGroup returns the flow.TaskGroup for reconciling the resources referenced in the
+// Shoot specification.
+func (b *Botanist) ReconcileReferencedResourcesTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(TaskGroupReconcileReferencedResources, flow.Task{
+		Name: "Reconciling referenced resources",
+		Fn:   flow.TaskFn(b.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+	}).WithDependencies(TaskGroupDeployNamespaces, TaskGroupReconcileRuntimeGardenerResourceManager)
+}
+
 // TaskGroupInitializeSecretsManagement is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupInitializeSecretsManagement flow.TaskID = "TaskGroupInitializeSecretsManagement"
 
@@ -217,7 +234,10 @@ const TaskGroupReconcileSystemResources flow.TaskID = "TaskGroupReconcileSystemR
 // ReconcileSystemResourcesTaskGroup returns the flow.TaskGroup for deploying the system resources.
 func (b *Botanist) ReconcileSystemResourcesTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileSystemResources).WithDependencies(TaskGroupReconcileGardenerResourceManager)
+		g = flow.NewTaskGroup(TaskGroupReconcileSystemResources).WithDependencies(
+			TaskGroupReconcileGardenerResourceManager,
+			TaskGroupReconcileReferencedResources,
+		)
 
 		_ = g.Add(flow.Task{
 			Name: "Deploying seed system resources",
@@ -262,6 +282,7 @@ func (b *Botanist) ReconcileInfrastructureTaskGroup(skipReadiness bool) flow.Tas
 		g = flow.NewTaskGroup(TaskGroupReconcileInfrastructure).WithDependencies(
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileReferencedResources,
 		)
 
 		deployInfrastructure = g.Add(flow.Task{
@@ -299,6 +320,7 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 			TaskGroupDeployCloudProviderSecret,
 			TaskGroupReconcileGardenerResourceManager,
 			TaskGroupReconcileInfrastructure,
+			TaskGroupReconcileReferencedResources,
 		)
 
 		deployControlPlane = g.Add(flow.Task{
@@ -330,6 +352,7 @@ func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup(skipReadiness bool) f
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupDeployCloudProviderSecret,
 			TaskGroupReconcileGardenerResourceManager,
+			TaskGroupReconcileReferencedResources,
 		).SkipIf(b.Shoot.IsSelfHosted() && !b.isGardenadmBootstrap())
 
 		deployOperatingSystemConfig = g.Add(flow.Task{

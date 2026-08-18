@@ -255,24 +255,16 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			b.InitializeSecretsManagementTaskGroup().
 				WithDependencies(reconcileIstioInternalLoadbalancingConfigMap),
 		)
-		waitUntilRuntimeGardenerResourceManagerReady = g.AddGroup(b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, shootIsGarden, flowCtx.skipReadiness))
-		initialValiDeployment                        = g.Add(flow.Task{
+		_                     = g.AddGroup(b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, shootIsGarden, flowCtx.skipReadiness))
+		initialValiDeployment = g.Add(flow.Task{
 			Name:         "Deploying initial shoot logging stack in Seed",
 			Fn:           flow.TaskFn(b.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       flowCtx.isHibernatingShootWithWorkers || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
 		})
-		deployReferencedResources = g.Add(flow.Task{
-			Name:         "Deploying referenced resources",
-			Fn:           flow.TaskFn(b.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployNamespace, waitUntilRuntimeGardenerResourceManagerReady),
-		})
-		waitUntilInfrastructureReady = g.AddGroup(
-			b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness).
-				WithDependencies(deployReferencedResources),
-		)
-		deployKubeAPIServerService = g.Add(flow.Task{
+		deployReferencedResources    = g.AddGroup(b.ReconcileReferencedResourcesTaskGroup())
+		waitUntilInfrastructureReady = g.AddGroup(b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness))
+		deployKubeAPIServerService   = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service in the Seed cluster",
 			Fn:           flow.TaskFn(b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsSelfHosted(),
@@ -459,9 +451,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)) || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
-		waitUntilControlPlaneReady = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness).WithDependencies(
-			deployReferencedResources,
-		))
+		waitUntilControlPlaneReady    = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
 		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
 		deployVPNSeedServer           = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
@@ -632,14 +622,12 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
 		})
 		waitUntilOperatingSystemConfigReady = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(
-			deployReferencedResources,
 			waitUntilInfrastructureReady,
 			waitUntilControlPlaneReady,
 			deleteBastions,
 			waitUntilExtensionResourcesAfterKAPIReady,
 		))
 		deployShootSystemResources = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(
-			deployReferencedResources,
 			waitUntilOperatingSystemConfigReady,
 			waitUntilControlPlaneReady,
 			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components

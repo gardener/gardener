@@ -122,6 +122,7 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, false).
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
+		_                             = g.AddGroup(b.ReconcileReferencedResourcesTaskGroup())
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
 		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
 		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
