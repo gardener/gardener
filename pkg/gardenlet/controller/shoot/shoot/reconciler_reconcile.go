@@ -275,28 +275,9 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
 		})
-		deployInternalDomainDNSRecord = g.Add(flow.Task{
-			Name: "Deploying internal domain DNS record",
-			Fn: func(ctx context.Context) error {
-				if err := b.DeployOrDestroyInternalDNSRecord(ctx); err != nil {
-					return err
-				}
-				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordInternal)
-			},
-			SkipIf:       b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying external domain DNS record",
-			Fn: func(ctx context.Context) error {
-				if err := b.DeployOrDestroyExternalDNSRecord(ctx); err != nil {
-					return err
-				}
-				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordExternal)
-			},
-			SkipIf:       b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
-		})
+		reconcileDNSRecords = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(
+			waitUntilKubeAPIServerServiceIsReady,
+		))
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying source backup entry",
 			Fn:           b.DeploySourceBackupEntry,
@@ -454,7 +435,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(b.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(reconcileDNSRecords, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Sync public service account signing keys to Garden cluster",
