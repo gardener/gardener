@@ -687,45 +687,13 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReconciled, waitUntilPrometheusReconciled, waitUntilPlutonoReconciled),
 		})
 
-		hibernateControlPlane = g.Add(flow.Task{
-			Name:         "Hibernating control plane",
-			Fn:           flow.TaskFn(b.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployPrometheus, deployAlertmanager, deploySeedLogging, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady, waitUntilEtcdScaledAfterRestore),
-		})
-
-		// logic is inverted here
-		// extensions that are deployed before the kube-apiserver are hibernated after it
-		hibernateExtensionResourcesAfterKAPIHibernation = g.Add(flow.Task{
-			Name:         "Hibernating extension resources after kube-apiserver hibernation",
-			Fn:           flow.TaskFn(b.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until extension resources hibernated after kube-apiserver hibernation are ready",
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer,
-			SkipIf:       flowCtx.skipReadiness || !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(hibernateExtensionResourcesAfterKAPIHibernation),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying ingress domain DNS record if hibernated",
-			Fn:           b.DestroyIngressDNSRecord,
-			SkipIf:       !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying external domain DNS record if hibernated",
-			Fn:           b.DestroyExternalDNSRecord,
-			SkipIf:       !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying internal domain DNS record if hibernated",
-			Fn:           b.DestroyInternalDNSRecord,
-			SkipIf:       !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
-		})
+		_ = g.AddGroup(b.HibernateControlPlaneTaskGroup(flowCtx.skipReadiness).WithDependencies(
+			initializeShootClients,
+			deployPrometheus,
+			deployAlertmanager,
+			deploySeedLogging,
+			waitUntilEtcdScaledAfterRestore,
+		))
 		_ = g.Add(flow.Task{
 			Name: "Restarting control plane pods",
 			Fn: func(ctx context.Context) error {
