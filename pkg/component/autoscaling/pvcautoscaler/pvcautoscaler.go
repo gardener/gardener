@@ -26,7 +26,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	seedprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -34,13 +35,12 @@ import (
 )
 
 const (
-	// PVCAutoscalerManagedResourceName is the name of the PVCAutoscaler managed resource.
-	PVCAutoscalerManagedResourceName = name
+	// GardenAutoscalerName is the value of the --autoscaler-name flag for the PVCAutoscaler instance running in the garden cluster.
+	GardenAutoscalerName = "garden"
 
-	name               = "pvc-autoscaler"
-	serviceAccountName = name
-	metricsPortName    = "metrics"
-	metricsPort        = int32(8080)
+	name            = "pvc-autoscaler"
+	metricsPortName = "metrics"
+	metricsPort     = int32(8080)
 )
 
 // Values keeps values for the PVCAutoscaler.
@@ -49,6 +49,8 @@ type Values struct {
 	Image string
 	// PriorityClassName is the name of the priority class of the PVCAutoscaler.
 	PriorityClassName string
+	// IsGardenCluster specifies if PVCAutoscaler is being deployed in a cluster registered as a Garden.
+	IsGardenCluster bool
 }
 
 type pvcAutoscaler struct {
@@ -85,10 +87,15 @@ func (p *pvcAutoscaler) Deploy(ctx context.Context) error {
 		serviceMonitor     = p.serviceMonitor()
 	)
 
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
+	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
 		Port:     new(intstr.FromInt32(metricsPort)),
 		Protocol: new(corev1.ProtocolTCP),
-	}))
+	}
+	if p.values.IsGardenCluster {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, metricsNetworkPolicyPort))
+	} else {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsNetworkPolicyPort))
+	}
 
 	serializedResources, err := registry.AddAllAndSerialize(
 		serviceAccount,
@@ -105,11 +112,11 @@ func (p *pvcAutoscaler) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return managedresources.CreateForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName, false, serializedResources)
+	return managedresources.CreateForSeed(ctx, p.client, p.namespace, p.name(), false, serializedResources)
 }
 
 func (p *pvcAutoscaler) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.name())
 }
 
 const timeoutWaitForManagedResources = 2 * time.Minute
@@ -118,28 +125,65 @@ func (p *pvcAutoscaler) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, p.name())
 }
 
 func (p *pvcAutoscaler) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, PVCAutoscalerManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.name())
 }
 
-func getLabels() map[string]string {
+func (p *pvcAutoscaler) getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: name,
+		v1beta1constants.LabelApp: p.name(),
 	}
+}
+
+// name returns the base name used for the ManagedResource and all deployed resources. It depends on whether the
+// PVCAutoscaler is deployed in the garden or in the seed cluster.
+func (p *pvcAutoscaler) name() string {
+	if p.values.IsGardenCluster {
+		return name + "-garden"
+	}
+	return name
+}
+
+// autoscalerName returns the value for the --autoscaler-name flag. It matches the AutoscalerName configured on the
+// PersistentVolumeClaimAutoscaler resources that this instance manages. The empty string denotes the default (unnamed)
+// seed instance.
+func (p *pvcAutoscaler) autoscalerName() string {
+	if p.values.IsGardenCluster {
+		return GardenAutoscalerName
+	}
+	return ""
+}
+
+// prometheusServiceName returns the name of the Prometheus service the controller connects to, depending on whether it
+// is deployed in the garden or in the seed cluster.
+func (p *pvcAutoscaler) prometheusServiceName() string {
+	if p.values.IsGardenCluster {
+		return "prometheus-garden"
+	}
+	return "prometheus-cache"
+}
+
+// serviceMonitorLabel returns the Prometheus instance label for the ServiceMonitor, depending on whether the
+// PVCAutoscaler is deployed in the garden or in the seed cluster.
+func (p *pvcAutoscaler) serviceMonitorLabel() string {
+	if p.values.IsGardenCluster {
+		return gardenprometheus.Label
+	}
+	return seedprometheus.Label
 }
 
 func (p *pvcAutoscaler) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
+			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		AutomountServiceAccountToken: new(false),
 	}
@@ -148,8 +192,8 @@ func (p *pvcAutoscaler) serviceAccount() *corev1.ServiceAccount {
 func (p *pvcAutoscaler) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
-			Labels: getLabels(),
+			Name:   "gardener.cloud:autoscaling:" + p.name(),
+			Labels: p.getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -204,17 +248,17 @@ func (p *pvcAutoscaler) clusterRole() *rbacv1.ClusterRole {
 func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gardener.cloud:autoscaling:pvc-autoscaler",
-			Labels: getLabels(),
+			Name:   "gardener.cloud:autoscaling:" + p.name(),
+			Labels: p.getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:     "gardener.cloud:autoscaling:" + p.name(),
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccountName,
+			Name:      p.name(),
 			Namespace: p.namespace,
 		}},
 	}
@@ -223,9 +267,9 @@ func (p *pvcAutoscaler) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func (p *pvcAutoscaler) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:      "gardener.cloud:autoscaling:" + p.name(),
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -245,21 +289,21 @@ func (p *pvcAutoscaler) role() *rbacv1.Role {
 func (p *pvcAutoscaler) roleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:      "gardener.cloud:autoscaling:" + p.name(),
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
+				Name:      p.name(),
 				Namespace: p.namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
-			Name:     "gardener.cloud:autoscaling:pvc-autoscaler",
+			Name:     "gardener.cloud:autoscaling:" + p.name(),
 		},
 	}
 }
@@ -267,9 +311,9 @@ func (p *pvcAutoscaler) roleBinding() *rbacv1.RoleBinding {
 func (p *pvcAutoscaler) service() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -280,7 +324,7 @@ func (p *pvcAutoscaler) service() *corev1.Service {
 					TargetPort: intstr.FromString(metricsPortName),
 				},
 			},
-			Selector: getLabels(),
+			Selector: p.getLabels(),
 		},
 	}
 }
@@ -288,9 +332,9 @@ func (p *pvcAutoscaler) service() *corev1.Service {
 func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.DeploymentNamePVCAutoscaler,
+			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+			Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 			}),
 		},
@@ -298,18 +342,18 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 			RevisionHistoryLimit: new(int32(2)),
 			Replicas:             new(int32(1)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: p.getLabels(),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                   v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("prometheus-cache", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+					Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
+						v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:             v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(p.prometheusServiceName(), 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: serviceAccountName,
+					ServiceAccountName: p.name(),
 					PriorityClassName:  p.values.PriorityClassName,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: new(true),
@@ -326,8 +370,10 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 								"--health-probe-bind-address=:8081",
 								"--metrics-bind-address=:8080",
 								"--leader-elect",
+								"--leader-election-id=" + p.name(),
+								"--autoscaler-name=" + p.autoscalerName(),
 								"--interval=60s",
-								"--prometheus-address=http://prometheus-cache.garden.svc.cluster.local:80",
+								"--prometheus-address=http://" + p.prometheusServiceName() + "." + p.namespace + ".svc.cluster.local:80",
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -389,14 +435,14 @@ func (p *pvcAutoscaler) deployment() *appsv1.Deployment {
 func (p *pvcAutoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: new(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: p.getLabels(),
 			},
 			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
@@ -406,15 +452,15 @@ func (p *pvcAutoscaler) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 func (p *pvcAutoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    p.getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       v1beta1constants.DeploymentNamePVCAutoscaler,
+				Name:       p.name(),
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
@@ -440,9 +486,9 @@ func (p *pvcAutoscaler) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAut
 
 func (p *pvcAutoscaler) serviceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(name, p.namespace, seed.Label),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(p.name(), p.namespace, p.serviceMonitorLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Selector: metav1.LabelSelector{MatchLabels: p.getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: metricsPortName,
 				RelabelConfigs: []monitoringv1.RelabelConfig{

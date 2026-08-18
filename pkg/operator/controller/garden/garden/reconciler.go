@@ -797,6 +797,12 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 	return false
 }
 
+func pvcAutoscalerEnabled(settings *operatorv1alpha1.Settings) bool {
+	return settings != nil &&
+		settings.PersistentVolumeClaimAutoscaler != nil &&
+		settings.PersistentVolumeClaimAutoscaler.Enabled
+}
+
 func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {
 	if volume == nil || volume.MinimumSize == nil {
 		return size

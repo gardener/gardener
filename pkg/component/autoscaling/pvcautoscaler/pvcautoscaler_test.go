@@ -261,8 +261,10 @@ var _ = Describe("PVCAutoscaler", func() {
 									"--health-probe-bind-address=:8081",
 									"--metrics-bind-address=:8080",
 									"--leader-elect",
+									"--leader-election-id=pvc-autoscaler",
+									"--autoscaler-name=",
 									"--interval=60s",
-									"--prometheus-address=http://prometheus-cache.garden.svc.cluster.local:80",
+									"--prometheus-address=http://prometheus-cache." + namespace + ".svc.cluster.local:80",
 								},
 								Env: []corev1.EnvVar{
 									{
@@ -393,7 +395,7 @@ var _ = Describe("PVCAutoscaler", func() {
 	JustBeforeEach(func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      PVCAutoscalerManagedResourceName,
+				Name:      "pvc-autoscaler",
 				Namespace: namespace,
 			},
 		}
@@ -414,7 +416,7 @@ var _ = Describe("PVCAutoscaler", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            PVCAutoscalerManagedResourceName,
+					Name:            "pvc-autoscaler",
 					Namespace:       namespace,
 					Labels:          map[string]string{v1beta1constants.GardenRole: "seed-system-component"},
 					ResourceVersion: "1",
@@ -486,7 +488,7 @@ var _ = Describe("PVCAutoscaler", func() {
 			It("should fail because the ManagedResource doesn't become healthy", func() {
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       PVCAutoscalerManagedResourceName,
+						Name:       "pvc-autoscaler",
 						Namespace:  namespace,
 						Generation: 1,
 					},
@@ -513,7 +515,7 @@ var _ = Describe("PVCAutoscaler", func() {
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       PVCAutoscalerManagedResourceName,
+						Name:       "pvc-autoscaler",
 						Namespace:  namespace,
 						Generation: 1,
 					},
@@ -542,7 +544,7 @@ var _ = Describe("PVCAutoscaler", func() {
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      PVCAutoscalerManagedResourceName,
+						Name:      "pvc-autoscaler",
 						Namespace: namespace,
 					},
 				})).To(Succeed())

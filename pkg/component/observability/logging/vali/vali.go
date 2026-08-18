@@ -35,6 +35,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
@@ -359,6 +360,7 @@ func (v *vali) getPVCA(pvcAutoscaling PVCAutoscalingConfig) *pvcautoscalerv1alph
 			Labels:    getLabels(),
 		},
 		Spec: pvcautoscalerv1alpha1.PersistentVolumeClaimAutoscalerSpec{
+			AutoscalerName: v.getAutoscalerName(),
 			TargetRef: autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "StatefulSet",
@@ -920,6 +922,16 @@ func (v *vali) getPrometheusLabel() string {
 		return shoot.Label
 	}
 	return aggregate.Label
+}
+
+// getAutoscalerName returns the name of the pvc-autoscaler instance that manages the Vali PVCA. It must match the
+// --autoscaler-name flag of the pvc-autoscaler instance running in the cluster where Vali is deployed. The empty string
+// denotes the default (unnamed) instance running in seeds.
+func (v *vali) getAutoscalerName() string {
+	if v.values.IsGardenCluster {
+		return pvcautoscaler.GardenAutoscalerName
+	}
+	return ""
 }
 
 func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
