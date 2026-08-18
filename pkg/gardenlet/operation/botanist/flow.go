@@ -341,6 +341,40 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 	return g
 }
 
+// TaskGroupReconcileDNSRecords is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileDNSRecords flow.TaskID = "TaskGroupReconcileDNSRecords"
+
+// ReconcileDNSRecordsTaskGroup returns the flow.TaskGroup for deploying the DNSRecords extension resources
+// and waiting for their readiness.
+func (b *Botanist) ReconcileDNSRecordsTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileDNSRecords).WithDependencies(
+			TaskGroupReconcileReferencedResources,
+		).SkipIf(b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted())
+
+		_ = g.Add(flow.Task{
+			Name: "Deploying internal domain DNS record",
+			Fn: func(ctx context.Context) error {
+				if err := b.DeployOrDestroyInternalDNSRecord(ctx); err != nil {
+					return err
+				}
+				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordInternal)
+			},
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying external domain DNS record",
+			Fn: func(ctx context.Context) error {
+				if err := b.DeployOrDestroyExternalDNSRecord(ctx); err != nil {
+					return err
+				}
+				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordExternal)
+			},
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileExtensionsBeforeKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupReconcileExtensionsBeforeKubeAPIServer"
 
