@@ -1057,6 +1057,55 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 	return g
 }
 
+// TaskGroupHibernateControlPlane is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupHibernateControlPlane flow.TaskID = "TaskGroupHibernateControlPlane"
+
+// HibernateControlPlaneTaskGroup hibernates the control plane of a hosted shoot.
+func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupHibernateControlPlane).WithDependencies(
+			TaskGroupReconcileWorker,
+			TaskGroupReconcileExtensionsAfterKubeAPIServer,
+		).SkipIf(!b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted())
+
+		hibernateControlPlane = g.Add(flow.Task{
+			Name: "Hibernating control plane",
+			Fn:   flow.TaskFn(b.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+		})
+
+		// logic is inverted here
+		// extensions that are deployed before the kube-apiserver are hibernated after it
+		hibernateExtensionResourcesAfterKAPIHibernation = g.Add(flow.Task{
+			Name:         "Hibernating extension resources after kube-apiserver hibernation",
+			Fn:           flow.TaskFn(b.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources hibernated after kube-apiserver hibernation are ready",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer,
+			SkipIf:       skipReadiness,
+			Dependencies: flow.NewTaskIDs(hibernateExtensionResourcesAfterKAPIHibernation),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying ingress domain DNS record if hibernated",
+			Fn:           b.DestroyIngressDNSRecord,
+			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying external domain DNS record if hibernated",
+			Fn:           b.DestroyExternalDNSRecord,
+			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying internal domain DNS record if hibernated",
+			Fn:           b.DestroyInternalDNSRecord,
+			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+	)
+
+	return g
+}
+
 func (b *Botanist) isGardenadmBootstrap() bool {
 	return b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
 }
