@@ -278,67 +278,9 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		reconcileDNSRecords = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(
 			waitUntilKubeAPIServerServiceIsReady,
 		))
-		deploySourceBackupEntry = g.Add(flow.Task{
-			Name:         "Deploying source backup entry",
-			Fn:           b.DeploySourceBackupEntry,
-			SkipIf:       !flowCtx.isCopyOfBackupsRequired || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
-			Name:         "Waiting until the source backup entry has been reconciled",
-			Fn:           b.Shoot.Components.SourceBackupEntry.Wait,
-			SkipIf:       flowCtx.skipReadiness || !flowCtx.isCopyOfBackupsRequired || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deploySourceBackupEntry),
-		})
-		deployBackupBucketInGarden = g.Add(flow.Task{
-			Name: "Deploying BackupBucket for ETCD data",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.BackupBucket.Deploy(ctx)
-			},
-			SkipIf:       !flowCtx.allowBackup || !b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		waitUntilBackupBucketInGardenReconciled = g.Add(flow.Task{
-			Name: "Waiting until the BackupBucket for ETCD data has been reconciled",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.BackupBucket.Wait(ctx)
-			},
-			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup || !b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployBackupBucketInGarden),
-		})
-		deployBackupEntryInGarden = g.Add(flow.Task{
-			Name:         "Deploying BackupEntry for ETCD data",
-			Fn:           b.DeployBackupEntry,
-			SkipIf:       !flowCtx.allowBackup,
-			Dependencies: flow.NewTaskIDs(deployNamespace, waitUntilSourceBackupEntryInGardenReconciled, waitUntilBackupBucketInGardenReconciled),
-		})
-		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
-			Name:         "Waiting until the BackupEntry for ETCD data has been reconciled",
-			Fn:           b.Shoot.Components.BackupEntry.Wait,
-			SkipIf:       flowCtx.skipReadiness || !flowCtx.allowBackup,
-			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
-		})
-		copyEtcdBackups = g.Add(flow.Task{
-			Name:         "Copying etcd backups to new seed's backup bucket",
-			Fn:           b.DeployEtcdCopyBackupsTask,
-			SkipIf:       !flowCtx.isCopyOfBackupsRequired,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilSourceBackupEntryInGardenReconciled),
-		})
-		waitUntilEtcdBackupsCopied = g.Add(flow.Task{
-			Name:         "Waiting until etcd backups are copied",
-			Fn:           b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Wait,
-			SkipIf:       flowCtx.skipReadiness || !flowCtx.isCopyOfBackupsRequired,
-			Dependencies: flow.NewTaskIDs(copyEtcdBackups),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying copy etcd backups task resource",
-			Fn:           b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Destroy,
-			SkipIf:       !flowCtx.isCopyOfBackupsRequired,
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdBackupsCopied),
-		})
-		waitUntilEtcdReady = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness).WithDependencies(
-			waitUntilBackupEntryInGardenReconciled,
-			waitUntilEtcdBackupsCopied,
+		reconcileBackupResources = g.AddGroup(b.ReconcileBackupResourcesTaskGroup(flowCtx.allowBackup, flowCtx.isCopyOfBackupsRequired, flowCtx.skipReadiness))
+		waitUntilEtcdReady       = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness).WithDependencies(
+			reconcileBackupResources,
 		))
 		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
