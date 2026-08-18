@@ -160,8 +160,8 @@ The `inPlaceUpdates` field in the Shoot status provides details about in-place u
 
 In addition to customisable fields mentioned in [](#customize-rolling-update-behaviour-of-shoot-worker-nodes) section, you can configure the following fields in `.spec.provider.worker[].machineControllerManager`:
 
-* `MachineInPlaceUpdateTimeout`:  Timeout (in duration) after which an in-place update is declared as failed.
-* `DisableHealthTimeout`: A boolean value that, when set to `true`, ignores the health timeout. As a result, machines are never marked as failed, and unhealthy machines are not deleted. The default value is `true` for in-place updates.
+* `inPlaceUpdateTimeout`:  Timeout (in duration) after which an in-place update is declared as failed.
+* `disableHealthTimeout`: A boolean value that, when set to `true`, ignores the health timeout. As a result, machines are never marked as failed, and unhealthy machines are not deleted. The default value is `true` for in-place updates.
 
 #### In-Place Update Triggers
 
