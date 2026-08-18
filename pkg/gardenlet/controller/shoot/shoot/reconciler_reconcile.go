@@ -222,17 +222,10 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 	}
 
 	var (
-		deployExtensionAfterKAPIMsg = "Deploying extension resources after kube-apiserver"
-		waitExtensionAfterKAPIMsg   = "Waiting until extension resources handled after kube-apiserver are ready"
-
 		rotationPreparingPhases = sets.New(gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPreparingWithoutWorkersRollout)
 		caRotationPreparing     = rotationPreparingPhases.Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials))
 		saKeyRotationPreparing  = rotationPreparingPhases.Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials))
 	)
-	if b.Shoot.HibernationEnabled {
-		deployExtensionAfterKAPIMsg = "Hibernating extension resources before kube-apiserver hibernation"
-		waitExtensionAfterKAPIMsg = "Waiting until extension resources hibernated before kube-apiserver hibernation are ready"
-	}
 
 	var (
 		deployNamespace            = g.AddGroup(b.DeployNamespacesTaskGroup())
@@ -601,18 +594,9 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       flowCtx.shootSSHAccessEnabled || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})
-		deployExtensionResourcesAfterKAPI = g.Add(flow.Task{
-			Name:         deployExtensionAfterKAPIMsg,
-			Fn:           flow.TaskFn(b.DeployExtensionsAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
-		})
-		waitUntilExtensionResourcesAfterKAPIReady = g.Add(flow.Task{
-			Name:         waitExtensionAfterKAPIMsg,
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer,
-			SkipIf:       flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
-		})
+		waitUntilExtensionResourcesAfterKAPIReady = g.AddGroup(b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(flowCtx.skipReadiness).WithDependencies(
+			initializeShootClients,
+		))
 		_                                   = g.AddGroup(b.ReconcileContainerRuntimeTaskGroup(flowCtx.skipReadiness))
 		waitUntilOperatingSystemConfigReady = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(
 			waitUntilInfrastructureReady,
@@ -905,18 +889,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn:           b.DestroyInternalDNSRecord,
 			SkipIf:       !b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
-		})
-		deleteStaleExtensionResources = g.Add(flow.Task{
-			Name:         "Deleting stale extension resources",
-			Fn:           flow.TaskFn(b.Shoot.Components.Extensions.Extension.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until stale extension resources are deleted",
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
-			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Restarting control plane pods",

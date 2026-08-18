@@ -355,7 +355,7 @@ func (b *Botanist) ReconcileExtensionsBeforeKubeAPIServerTaskGroup(skipReadiness
 			TaskGroupReconcileInfrastructure,
 		).SkipIf(b.Shoot.HibernationEnabled)
 
-		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
+		deployExtensionResources = g.Add(flow.Task{
 			Name: "Deploying extension resources before kube-apiserver",
 			Fn:   flow.TaskFn(b.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
@@ -363,9 +363,61 @@ func (b *Botanist) ReconcileExtensionsBeforeKubeAPIServerTaskGroup(skipReadiness
 			Name:         "Waiting until extension resources handled before kube-apiserver are ready",
 			Fn:           b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer,
 			SkipIf:       skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployExtensionResourcesBeforeKAPI),
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
 		})
 	)
+
+	return g
+}
+
+// TaskGroupReconcileExtensionsAfterKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileExtensionsAfterKubeAPIServer flow.TaskID = "TaskGroupReconcileExtensionsAfterKubeAPIServer"
+
+// ReconcileExtensionsAfterKubeAPIServerTaskGroup returns the flow.TaskGroup for deploying the Extensions resources
+// after kube-apiserver and waiting for their readiness.
+func (b *Botanist) ReconcileExtensionsAfterKubeAPIServerTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		deployExtensionAfterKAPIMsg = "Deploying extension resources after kube-apiserver"
+		waitExtensionAfterKAPIMsg   = "Waiting until extension resources handled after kube-apiserver are ready"
+	)
+	if b.Shoot.HibernationEnabled {
+		deployExtensionAfterKAPIMsg = "Hibernating extension resources before kube-apiserver hibernation"
+		waitExtensionAfterKAPIMsg = "Waiting until extension resources hibernated before kube-apiserver hibernation are ready"
+	}
+
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsAfterKubeAPIServer).WithDependencies(
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileReferencedResources,
+			TaskGroupReconcileInfrastructure,
+		)
+
+		deployExtensionResources = g.Add(flow.Task{
+			Name: deployExtensionAfterKAPIMsg,
+			Fn:   flow.TaskFn(b.DeployExtensionsAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		_ = g.Add(flow.Task{
+			Name:         waitExtensionAfterKAPIMsg,
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer,
+			SkipIf:       skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name: "Deleting stale extension resources",
+			Fn:   flow.TaskFn(b.Shoot.Components.Extensions.Extension.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale extension resources are deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
+	)
+
+	if b.Shoot.IsSelfHosted() {
+		g = g.WithDependencies(TaskGroupReconcileStaticPods)
+	}
 
 	return g
 }
