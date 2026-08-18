@@ -122,7 +122,9 @@ version_gomod = $(shell $(SET_GOWORK) go list $(MODFILE_TOOL_MOD) -f '{{ .Versio
 
 # Use this function to copy the tool binary built by Go to the location passed as arg.
 #   E.g., `$(call go_tool_copy,./path/to/tool)` will copy the tool binary built by Go to ./path/to/tool.
-go_tool_copy = $(shell cp $$( $(SET_GOWORK) go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
+# Set GOCACHEPROG to empty, this is required as `go tool -n` returns a wrong path when GOCACHEPROG is set.
+# https://github.com/golang/go/issues/72824
+go_tool_copy = $(shell cp $$( GOCACHEPROG= $(SET_GOWORK) go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
 
 # This target cleans up any previous version files for the given tool and creates the given version file.
 # This way, we can generically determine, which version was installed without calling each and every binary explicitly.
