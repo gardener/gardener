@@ -899,6 +899,47 @@ func (b *Botanist) ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, skipRead
 	return g
 }
 
+// TaskGroupReconcileVPNComponents is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileVPNComponents flow.TaskID = "TaskGroupReconcileVPNComponents"
+
+// ReconcileVPNComponentsTaskGroup returns the flow.TaskGroup for reconciling VPN components.
+func (b *Botanist) ReconcileVPNComponentsTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileVPNComponents).WithDependencies(
+			TaskGroupDeployNamespaces,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileGardenerResourceManager,
+		).SkipIf(b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted())
+
+		deployVPNSeedServer = g.Add(flow.Task{
+			Name: "Deploying vpn-seed-server",
+			Fn:   flow.TaskFn(b.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+
+		_ = g.Add(flow.Task{
+			Name: "Deploying apiserver-proxy",
+			Fn:   flow.TaskFn(b.DeployAPIServerProxy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+
+		deployVPNShoot = g.Add(flow.Task{
+			Name:         "Deploying vpn-shoot system component",
+			Fn:           flow.TaskFn(b.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(deployVPNSeedServer),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until vpn-shoot system component is ready",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.SystemComponents.VPNShoot.Wait(ctx)
+			},
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployVPNShoot),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileETCDs is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileETCDs flow.TaskID = "TaskGroupReconcileETCDs"
 
