@@ -93,6 +93,15 @@ func (g TaskGroup) WithDependencies(dependencies ...TaskIDer) TaskGroup {
 	return g
 }
 
+// WithDependenciesIf inserts the TaskIDs of all TaskIDers into the dependencies of this group if the given condition
+// evaluates to true.
+func (g TaskGroup) WithDependenciesIf(condition bool, dependencies ...TaskIDer) TaskGroup {
+	for _, dependency := range dependencies {
+		g.dependencies.InsertIf(condition, dependency)
+	}
+	return g
+}
+
 // SkipIf marks every task in the group as skipped when the given condition evaluates to true.
 // Multiple calls OR the conditions together, and per-task `Task.SkipIf` values are preserved:
 // a task already flagged skipped stays skipped regardless of the group condition.

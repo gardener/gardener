@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -164,11 +165,13 @@ const TaskGroupReconcileRuntimeGardenerResourceManager flow.TaskID = "TaskGroupR
 // gardener-resource-manager instances.
 func (b *Botanist) ReconcileRuntimeGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileRuntimeGardenerResourceManager).WithDependencies(
-			TaskGroupDeployNamespaces,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileCustomResourceDefinitions,
-		).SkipIf(!b.Shoot.IsSelfHosted() || shootIsGarden || b.isGardenadmBootstrap())
+		g = flow.NewTaskGroup(TaskGroupReconcileRuntimeGardenerResourceManager).
+			SkipIf(!b.Shoot.IsSelfHosted() || shootIsGarden || b.isGardenadmBootstrap()).
+			WithDependencies(
+				TaskGroupDeployNamespaces,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileCustomResourceDefinitions,
+			)
 
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying runtime gardener-resource-manager",
@@ -199,12 +202,13 @@ const TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcil
 // instances.
 func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileGardenerResourceManager).WithDependencies(
-			TaskGroupDeployNamespaces,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileCustomResourceDefinitions,
-			TaskGroupReconcileRuntimeGardenerResourceManager,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileGardenerResourceManager).
+			WithDependencies(
+				TaskGroupDeployNamespaces,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileCustomResourceDefinitions,
+				TaskGroupReconcileRuntimeGardenerResourceManager,
+			)
 
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
@@ -234,10 +238,11 @@ const TaskGroupReconcileSystemResources flow.TaskID = "TaskGroupReconcileSystemR
 // ReconcileSystemResourcesTaskGroup returns the flow.TaskGroup for deploying the system resources.
 func (b *Botanist) ReconcileSystemResourcesTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileSystemResources).WithDependencies(
-			TaskGroupReconcileGardenerResourceManager,
-			TaskGroupReconcileReferencedResources,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileSystemResources).
+			WithDependencies(
+				TaskGroupReconcileGardenerResourceManager,
+				TaskGroupReconcileReferencedResources,
+			)
 
 		_ = g.Add(flow.Task{
 			Name: "Deploying seed system resources",
@@ -261,15 +266,22 @@ const TaskGroupReconcileMachineControllerManager flow.TaskID = "TaskGroupReconci
 
 // ReconcileMachineControllerManagerTaskGroup returns the flow.TaskGroup for deploying the machine-controller-manager.
 func (b *Botanist) ReconcileMachineControllerManagerTaskGroup() flow.TaskGroup {
-	return flow.NewTaskGroup(TaskGroupReconcileMachineControllerManager, flow.Task{
-		Name:   "Deploying machine-controller-manager",
-		Fn:     flow.TaskFn(b.DeployMachineControllerManager).RetryUntilTimeout(time.Second, time.Minute),
-		SkipIf: !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
-	}).WithDependencies(
-		TaskGroupInitializeSecretsManagement,
-		TaskGroupDeployCloudProviderSecret,
-		TaskGroupReconcileGardenerResourceManager,
-	)
+	return flow.
+		NewTaskGroup(TaskGroupReconcileMachineControllerManager, flow.Task{
+			Name:   "Deploying machine-controller-manager",
+			Fn:     flow.TaskFn(b.DeployMachineControllerManager).RetryUntilTimeout(time.Second, time.Minute),
+			SkipIf: !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
+		}).
+		WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupReconcileGardenerResourceManager,
+		).
+		WithDependenciesIf(b.isGardenlet(),
+			TaskGroupReconcileInfrastructure,
+			TaskGroupReconcileOperatingSystemConfig,
+			TaskGroupReconcileStaticPods,
+		)
 }
 
 // TaskGroupReconcileBackupResources is a flow.TaskID for a logical flow.TaskGroup.
@@ -279,12 +291,13 @@ const TaskGroupReconcileBackupResources flow.TaskID = "TaskGroupReconcileBackupR
 // resources and waiting for their readiness.
 func (b *Botanist) ReconcileBackupResourcesTaskGroup(allowBackup, isCopyOfBackupsRequired, skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileBackupResources).WithDependencies(
-			TaskGroupDeployNamespaces,
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileReferencedResources,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileBackupResources).
+			WithDependencies(
+				TaskGroupDeployNamespaces,
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileReferencedResources,
+			)
 
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:   "Deploying source backup entry",
@@ -357,11 +370,12 @@ const TaskGroupReconcileInfrastructure flow.TaskID = "TaskGroupReconcileInfrastr
 // waiting for its readiness.
 func (b *Botanist) ReconcileInfrastructureTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileInfrastructure).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupReconcileReferencedResources,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileInfrastructure).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupReconcileReferencedResources,
+			)
 
 		deployInfrastructure = g.Add(flow.Task{
 			Name:   "Deploying Shoot infrastructure",
@@ -393,13 +407,14 @@ const TaskGroupReconcileControlPlane flow.TaskID = "TaskGroupReconcileControlPla
 // waiting for its readiness.
 func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileControlPlane).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupReconcileGardenerResourceManager,
-			TaskGroupReconcileInfrastructure,
-			TaskGroupReconcileReferencedResources,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileControlPlane).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupReconcileGardenerResourceManager,
+				TaskGroupReconcileInfrastructure,
+				TaskGroupReconcileReferencedResources,
+			)
 
 		deployControlPlane = g.Add(flow.Task{
 			Name:   "Deploying shoot control plane components",
@@ -426,9 +441,11 @@ const TaskGroupReconcileDNSRecords flow.TaskID = "TaskGroupReconcileDNSRecords"
 // and waiting for their readiness.
 func (b *Botanist) ReconcileDNSRecordsTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileDNSRecords).WithDependencies(
-			TaskGroupReconcileReferencedResources,
-		).SkipIf(b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted())
+		g = flow.NewTaskGroup(TaskGroupReconcileDNSRecords).
+			SkipIf(b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted()).
+			WithDependencies(
+				TaskGroupReconcileReferencedResources,
+			)
 
 		_ = g.Add(flow.Task{
 			Name: "Deploying internal domain DNS record",
@@ -460,12 +477,14 @@ const TaskGroupReconcileExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupRe
 // before kube-apiserver and waiting for their readiness.
 func (b *Botanist) ReconcileExtensionsBeforeKubeAPIServerTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsBeforeKubeAPIServer).WithDependencies(
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileReferencedResources,
-			TaskGroupReconcileInfrastructure,
-		).SkipIf(b.Shoot.HibernationEnabled)
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsBeforeKubeAPIServer).
+			SkipIf(b.Shoot.HibernationEnabled).
+			WithDependencies(
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileReferencedResources,
+				TaskGroupReconcileInfrastructure,
+			)
 
 		deployExtensionResources = g.Add(flow.Task{
 			Name: "Deploying extension resources before kube-apiserver",
@@ -498,12 +517,16 @@ func (b *Botanist) ReconcileExtensionsAfterKubeAPIServerTaskGroup(skipReadiness 
 	}
 
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsAfterKubeAPIServer).WithDependencies(
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileReferencedResources,
-			TaskGroupReconcileInfrastructure,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsAfterKubeAPIServer).
+			WithDependencies(
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileReferencedResources,
+				TaskGroupReconcileInfrastructure,
+			).
+			WithDependenciesIf(b.Shoot.IsSelfHosted(),
+				TaskGroupReconcileStaticPods,
+			)
 
 		deployExtensionResources = g.Add(flow.Task{
 			Name: deployExtensionAfterKAPIMsg,
@@ -527,10 +550,6 @@ func (b *Botanist) ReconcileExtensionsAfterKubeAPIServerTaskGroup(skipReadiness 
 		})
 	)
 
-	if b.Shoot.IsSelfHosted() {
-		g = g.WithDependencies(TaskGroupReconcileStaticPods)
-	}
-
 	return g
 }
 
@@ -541,12 +560,14 @@ const TaskGroupReconcileExtensionsAfterWorker flow.TaskID = "TaskGroupReconcileE
 // after the Worker resource and waiting for their readiness.
 func (b *Botanist) ReconcileExtensionsAfterWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsAfterWorker).WithDependencies(
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileReferencedResources,
-			TaskGroupReconcileWorker,
-		).SkipIf(b.Shoot.IsWorkerless)
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsAfterWorker).
+			SkipIf(b.Shoot.IsWorkerless).
+			WithDependencies(
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileReferencedResources,
+				TaskGroupReconcileWorker,
+			)
 
 		deployExtensionResources = g.Add(flow.Task{
 			Name: "Deploying extension resources after workers",
@@ -570,11 +591,13 @@ const TaskGroupReconcileContainerRuntime flow.TaskID = "TaskGroupReconcileContai
 // and waiting for its readiness.
 func (b *Botanist) ReconcileContainerRuntimeTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileContainerRuntime).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileReferencedResources,
-			TaskGroupReconcileGardenerResourceManager,
-		).SkipIf(b.Shoot.IsWorkerless)
+		g = flow.NewTaskGroup(TaskGroupReconcileContainerRuntime).
+			SkipIf(b.Shoot.IsWorkerless).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileReferencedResources,
+				TaskGroupReconcileGardenerResourceManager,
+			)
 
 		deployContainerRuntimeResources = g.Add(flow.Task{
 			Name: "Deploying container runtime resources",
@@ -614,12 +637,20 @@ const TaskGroupReconcileOperatingSystemConfig flow.TaskID = "TaskGroupReconcileO
 // resource and waiting for its readiness.
 func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileOperatingSystemConfig).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupReconcileGardenerResourceManager,
-			TaskGroupReconcileReferencedResources,
-		).SkipIf(b.Shoot.IsSelfHosted() && !b.isGardenadmBootstrap())
+		g = flow.
+			NewTaskGroup(TaskGroupReconcileOperatingSystemConfig).
+			SkipIf(b.Shoot.IsSelfHosted() && !b.isGardenadmBootstrap()).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupReconcileGardenerResourceManager,
+				TaskGroupReconcileReferencedResources,
+			).
+			WithDependenciesIf(b.isGardenlet(),
+				TaskGroupReconcileInfrastructure,
+				TaskGroupReconcileControlPlane,
+				TaskGroupReconcileExtensionsAfterKubeAPIServer,
+			)
 
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name: "Deploying OperatingSystemConfig resources for worker pools",
@@ -668,14 +699,18 @@ const TaskGroupReconcileWorker flow.TaskID = "TaskGroupReconcileWorker"
 // to get reconciled.
 func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileWorker).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupDeployCloudProviderSecret,
-			TaskGroupReconcileGardenerResourceManager,
-			TaskGroupReconcileInfrastructure,
-			TaskGroupReconcileMachineControllerManager,
-			TaskGroupReconcileSystemResources,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileWorker).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupDeployCloudProviderSecret,
+				TaskGroupReconcileGardenerResourceManager,
+				TaskGroupReconcileInfrastructure,
+				TaskGroupReconcileMachineControllerManager,
+				TaskGroupReconcileSystemResources,
+			).
+			WithDependenciesIf(b.isGardenlet(),
+				TaskGroupReconcileOperatingSystemConfig,
+			)
 
 		shootHasPendingInPlaceUpdateWorkers = func(shoot *gardencorev1beta1.Shoot) bool {
 			return shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
@@ -754,7 +789,10 @@ const TaskGroupReconcileShootNamespaces flow.TaskID = "TaskGroupReconcileShootNa
 // readiness.
 func (b *Botanist) ReconcileShootNamespacesTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileShootNamespaces).WithDependencies(TaskGroupReconcileGardenerResourceManager)
+		g = flow.NewTaskGroup(TaskGroupReconcileShootNamespaces).
+			WithDependencies(
+				TaskGroupReconcileGardenerResourceManager,
+			)
 
 		deployShootNamespaces = g.Add(flow.Task{
 			Name: "Deploying shoot namespaces system component",
@@ -777,11 +815,16 @@ const TaskGroupReconcileSystemComponents flow.TaskID = "TaskGroupReconcileSystem
 // ReconcileSystemComponentsTaskGroup returns the flow.TaskGroup for reconciling shoot system components.
 func (b *Botanist) ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileSystemComponents).WithDependencies(
-			TaskGroupReconcileInfrastructure,
-			TaskGroupReconcileGardenerResourceManager,
-			TaskGroupReconcileShootNamespaces,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileSystemComponents).
+			WithDependencies(
+				TaskGroupReconcileInfrastructure,
+				TaskGroupReconcileGardenerResourceManager,
+				TaskGroupReconcileShootNamespaces,
+			).
+			WithDependenciesIf(b.isGardenlet(),
+				TaskGroupReconcileControlPlane,
+				TaskGroupReconcileExtensionsAfterKubeAPIServer, // Extensions might deploy webhooks for system components
+			)
 
 		deployNetwork = g.Add(flow.Task{
 			Name:   "Deploying shoot network plugin",
@@ -905,11 +948,13 @@ const TaskGroupReconcileVPNComponents flow.TaskID = "TaskGroupReconcileVPNCompon
 // ReconcileVPNComponentsTaskGroup returns the flow.TaskGroup for reconciling VPN components.
 func (b *Botanist) ReconcileVPNComponentsTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileVPNComponents).WithDependencies(
-			TaskGroupDeployNamespaces,
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileGardenerResourceManager,
-		).SkipIf(b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted())
+		g = flow.NewTaskGroup(TaskGroupReconcileVPNComponents).
+			SkipIf(b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted()).
+			WithDependencies(
+				TaskGroupDeployNamespaces,
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileGardenerResourceManager,
+			)
 
 		deployVPNSeedServer = g.Add(flow.Task{
 			Name: "Deploying vpn-seed-server",
@@ -947,10 +992,14 @@ const TaskGroupReconcileETCDs flow.TaskID = "TaskGroupReconcileETCDs"
 // their readiness.
 func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden, isRestoringHAControlPlane, skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileETCDs).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupDeployCloudProviderSecret,
-		)
+		g = flow.NewTaskGroup(TaskGroupReconcileETCDs).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupDeployCloudProviderSecret,
+			).
+			WithDependenciesIf(b.isGardenlet(),
+				TaskGroupReconcileBackupResources,
+			)
 
 		deployEtcdDruid = g.Add(flow.Task{
 			Name: "Deploying ETCD Druid",
@@ -1003,12 +1052,17 @@ const TaskGroupReconcileStaticPods flow.TaskID = "TaskGroupReconcileStaticPods"
 // changes to be rolled out.
 func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileStaticPods).WithDependencies(
-			TaskGroupInitializeSecretsManagement,
-			TaskGroupReconcileGardenerResourceManager,
-			TaskGroupReconcileControlPlane,
-			TaskGroupReconcileETCDs,
-		).SkipIf(!b.Shoot.IsSelfHosted())
+		g = flow.NewTaskGroup(TaskGroupReconcileStaticPods).
+			SkipIf(!b.Shoot.IsSelfHosted()).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileGardenerResourceManager,
+				TaskGroupReconcileControlPlane,
+				TaskGroupReconcileETCDs,
+			).
+			WithDependenciesIf(b.isGardenlet(),
+				TaskGroupReconcileExtensionsBeforeKubeAPIServer,
+			)
 
 		_ = g.Add(flow.Task{
 			Name: "Reconciling cluster-admin access resources for kubeconfig on control plane nodes",
@@ -1063,10 +1117,12 @@ const TaskGroupHibernateControlPlane flow.TaskID = "TaskGroupHibernateControlPla
 // HibernateControlPlaneTaskGroup hibernates the control plane of a hosted shoot.
 func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupHibernateControlPlane).WithDependencies(
-			TaskGroupReconcileWorker,
-			TaskGroupReconcileExtensionsAfterKubeAPIServer,
-		).SkipIf(!b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted())
+		g = flow.NewTaskGroup(TaskGroupHibernateControlPlane).
+			SkipIf(!b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted()).
+			WithDependencies(
+				TaskGroupReconcileWorker,
+				TaskGroupReconcileExtensionsAfterKubeAPIServer,
+			)
 
 		hibernateControlPlane = g.Add(flow.Task{
 			Name: "Hibernating control plane",
@@ -1108,4 +1164,8 @@ func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 
 func (b *Botanist) isGardenadmBootstrap() bool {
 	return b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
+}
+
+func (b *Botanist) isGardenlet() bool {
+	return strings.HasPrefix(b.Shoot.GetInfo().Status.Gardener.Name, v1beta1constants.DeploymentNameGardenlet)
 }
