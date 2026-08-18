@@ -19,6 +19,10 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 	ginkgo.Describe("#CentralPrometheusRules", func() {
 		rules := []monitoringv1.Rule{
 			{
+				Record: "seed:nwpd_aggregated_observations_failing:count",
+				Expr:   intstr.FromString(`count(rate(nwpd_aggregated_observations{status="failed", jobid=~"tcp-[np]2[np]"}[5m]) > 0)`),
+			},
+			{
 				Alert: "PodStuckInPending",
 				Expr:  intstr.FromString(`sum_over_time(kube_pod_status_phase{phase="Pending"}[5m]) > 0`),
 				For:   new(monitoringv1.Duration("10m")),

@@ -38,6 +38,7 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 							`{__name__="kubeproxy_sync_proxy:quantile"}`,
 							`{__name__="kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu",container="kube-apiserver"}`,
 							`{__name__="container_cpu_usage_seconds_total",container="kube-apiserver"}`,
+							`{__name__="nwpd_aggregated_observations"}`,
 						},
 					},
 					Port: prometheus.ServicePorts().Web.Name,

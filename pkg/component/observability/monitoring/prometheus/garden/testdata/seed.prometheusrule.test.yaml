@@ -213,3 +213,35 @@ tests:
 
 
               ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed"}
+
+  - name: NWPDTCPConnectivityFailure:fires
+    interval: 1m
+    input_series:
+      - series: 'seed:nwpd_aggregated_observations_failing:count{seed="seed-a"}'
+        values: "3x35"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: NWPDTCPConnectivityFailure
+        eval_time: 31m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              topology: seed
+              seed: seed-a
+            exp_annotations:
+              summary: "Nodes with persistent TCP connectivity failure for 30+ minutes"
+              description: >-
+                Seed seed-a in landscape-unit-tests has more than 2 nodes
+                experiencing TCP connectivity failures between pods and nodes for over 30 minutes.
+                To identify affected nodes: count by (src) (rate(nwpd_aggregated_observations{status="failed", jobid=~"tcp-[np]2[np]"}[5m]) > 0)
+
+  - name: NWPDTCPConnectivityFailure:does_not_fire_with_two_nodes
+    interval: 1m
+    input_series:
+      - series: 'seed:nwpd_aggregated_observations_failing:count{seed="seed-a"}'
+        values: "2x35"
+    alert_rule_test:
+      - alertname: NWPDTCPConnectivityFailure
+        eval_time: 35m
+        exp_alerts: []
