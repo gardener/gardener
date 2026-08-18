@@ -621,6 +621,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
 		})
+		_                                   = g.AddGroup(b.ReconcileContainerRuntimeTaskGroup(flowCtx.skipReadiness))
 		waitUntilOperatingSystemConfigReady = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(
 			waitUntilInfrastructureReady,
 			waitUntilControlPlaneReady,
@@ -925,36 +926,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
 			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
-		})
-		deployContainerRuntimeResources = g.Add(flow.Task{
-			Name:         "Deploying container runtime resources",
-			Fn:           flow.TaskFn(b.DeployContainerRuntime).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until container runtime resources are ready",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.ContainerRuntime.Wait(ctx)
-			}),
-			SkipIf:       b.Shoot.IsWorkerless || flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
-		})
-		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
-			Name: "Deleting stale container runtime resources",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.ContainerRuntime.DeleteStaleResources(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until stale container runtime resources are deleted",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.ContainerRuntime.WaitCleanupStaleResources(ctx)
-			},
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Restarting control plane pods",

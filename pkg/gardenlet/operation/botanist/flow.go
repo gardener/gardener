@@ -341,6 +341,50 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 	return g
 }
 
+// TaskGroupReconcileContainerRuntime is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileContainerRuntime flow.TaskID = "TaskGroupReconcileContainerRuntime"
+
+// ReconcileContainerRuntimeTaskGroup returns the flow.TaskGroup for deploying the ContainerRuntime extension resource
+// and waiting for its readiness.
+func (b *Botanist) ReconcileContainerRuntimeTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileContainerRuntime).WithDependencies(
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileReferencedResources,
+			TaskGroupReconcileGardenerResourceManager,
+		).SkipIf(b.Shoot.IsWorkerless)
+
+		deployContainerRuntimeResources = g.Add(flow.Task{
+			Name: "Deploying container runtime resources",
+			Fn:   flow.TaskFn(b.DeployContainerRuntime).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until container runtime resources are ready",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ContainerRuntime.Wait(ctx)
+			},
+			SkipIf:       skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
+		})
+		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
+			Name: "Deleting stale container runtime resources",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ContainerRuntime.DeleteStaleResources(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until stale container runtime resources are deleted",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ContainerRuntime.WaitCleanupStaleResources(ctx)
+			},
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileOperatingSystemConfig is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileOperatingSystemConfig flow.TaskID = "TaskGroupReconcileOperatingSystemConfig"
 
