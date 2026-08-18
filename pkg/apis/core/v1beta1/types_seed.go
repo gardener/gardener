@@ -100,7 +100,7 @@ type SeedStatus struct {
 	// KubernetesVersion is the Kubernetes version of the seed cluster.
 	// +optional
 	KubernetesVersion *string `json:"kubernetesVersion,omitempty" protobuf:"bytes,2,opt,name=kubernetesVersion"`
-	// Conditions represents the latest available observations of a Seed's current state.
+	// Conditions represents the latest available observations of a Seed's current state based on health checks.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional

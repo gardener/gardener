@@ -124,9 +124,9 @@ type ShootSpec struct {
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
-	// Conditions represents the latest available observations of a Shoot's current state.
+	// Conditions represents the latest available observations of a Shoot's current state based on health checks.
 	Conditions []Condition
-	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
+	// Constraints represents conditions of a Shoot's current state that constraint or are relevant for some operations.
 	Constraints []Condition
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener

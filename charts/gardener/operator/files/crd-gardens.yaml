@@ -2110,10 +2110,10 @@ spec:
                   type: object
                 type: array
               conditions:
-                description: Conditions is a list of conditions.
+                description: Conditions is a list of conditions based on health checks.
                 items:
                   description: Condition holds the information about the state of
-                    a resource.
+                    a resource based on health checks.
                   properties:
                     codes:
                       description: Well-defined error codes in case the condition
@@ -2158,7 +2158,7 @@ spec:
                   state that constraint some operations on it.
                 items:
                   description: Condition holds the information about the state of
-                    a resource.
+                    a resource based on health checks.
                   properties:
                     codes:
                       description: Well-defined error codes in case the condition

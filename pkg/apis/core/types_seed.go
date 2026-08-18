@@ -83,7 +83,7 @@ type SeedStatus struct {
 	Gardener *Gardener
 	// KubernetesVersion is the Kubernetes version of the seed cluster.
 	KubernetesVersion *string
-	// Conditions represents the latest available observations of a Seed's current state.
+	// Conditions represents the latest available observations of a Seed's current state based on health checks.
 	Conditions []Condition
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.

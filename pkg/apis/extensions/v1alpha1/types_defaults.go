@@ -63,7 +63,7 @@ type DefaultStatus struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
-	// Conditions represents the latest available observations of a Seed's current state.
+	// Conditions represents the latest available observations of a Seed's current state based on health checks.
 	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// LastError holds information about the last occurred error during an operation.

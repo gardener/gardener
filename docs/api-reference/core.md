@@ -2388,7 +2388,7 @@ ClusterType defines the type of cluster.
 </p>
 
 <p>
-Condition holds the information about the state of a resource.
+Condition holds the information about the state of a resource based on health checks.
 </p>
 
 <table>
@@ -11684,7 +11684,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -13038,7 +13038,7 @@ ShootStatus holds the most recently observed status of the Shoot cluster.
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Shoots's current state.</p>
+<p>Conditions represents the latest available observations of a Shoots's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -13050,7 +13050,7 @@ ShootStatus holds the most recently observed status of the Shoot cluster.
 </td>
 <td>
 <em>(Optional)</em>
-<p>Constraints represents conditions of a Shoot's current state that constraint some operations on it.</p>
+<p>Constraints represents conditions of a Shoot's current state that constraint or are relevant for some operations.</p>
 </td>
 </tr>
 <tr>
