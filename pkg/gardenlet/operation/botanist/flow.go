@@ -414,6 +414,9 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 				TaskGroupReconcileGardenerResourceManager,
 				TaskGroupReconcileInfrastructure,
 				TaskGroupReconcileReferencedResources,
+			).
+			WithDependenciesIf(b.isGardenlet(),
+				TaskGroupReconcileStaticPods,
 			)
 
 		deployControlPlane = g.Add(flow.Task{
@@ -700,6 +703,7 @@ const TaskGroupReconcileWorker flow.TaskID = "TaskGroupReconcileWorker"
 func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileWorker).
+			SkipIf(b.Shoot.IsWorkerless || !b.Shoot.HasManagedInfrastructure()).
 			WithDependencies(
 				TaskGroupInitializeSecretsManagement,
 				TaskGroupDeployCloudProviderSecret,
@@ -718,22 +722,21 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 		}
 
 		deployWorker = g.Add(flow.Task{
-			Name:   "Configuring worker pools",
-			Fn:     b.DeployWorker,
-			SkipIf: !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless,
+			Name: "Configuring worker pools",
+			Fn:   b.DeployWorker,
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name: "Waiting until worker resource status is updated with latest machine deployments",
 			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
 			},
-			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
+			SkipIf:       b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",
 			Fn:           b.DeployClusterAutoscaler,
-			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
+			SkipIf:       b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 		_ = g.Add(flow.Task{
@@ -774,7 +777,7 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 
 				return nil
 			},
-			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || skipReadiness,
+			SkipIf:       skipReadiness,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 	)
@@ -1057,7 +1060,6 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 			WithDependencies(
 				TaskGroupInitializeSecretsManagement,
 				TaskGroupReconcileGardenerResourceManager,
-				TaskGroupReconcileControlPlane,
 				TaskGroupReconcileETCDs,
 			).
 			WithDependenciesIf(b.isGardenlet(),

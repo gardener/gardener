@@ -103,7 +103,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
 	if !vpaEnabled(seed.GetInfo().Spec.Settings) {
 		if _, err := r.SeedClientSet.Client().RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
-			return fmt.Errorf("VPA is required for seed cluster: %s", err)
+			return fmt.Errorf("VPA is required for seed cluster — if the seed is a self-hosted shoot, activate the VPA in the ShootSpec: %s", err)
 		}
 	}
 
@@ -440,7 +440,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Reconciling Kubernetes vertical pod autoscaler",
 			Fn:           c.verticalPodAutoscaler.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-			SkipIf:       seedIsGarden,
+			SkipIf:       seedIsGarden || seedIsSelfHostedShoot,
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying PVC Autoscaler",
