@@ -255,7 +255,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			b.InitializeSecretsManagementTaskGroup().
 				WithDependencies(reconcileIstioInternalLoadbalancingConfigMap),
 		)
-		initialValiDeployment = g.Add(flow.Task{
+		waitUntilRuntimeGardenerResourceManagerReady = g.AddGroup(b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, shootIsGarden, flowCtx.skipReadiness))
+		initialValiDeployment                        = g.Add(flow.Task{
 			Name:         "Deploying initial shoot logging stack in Seed",
 			Fn:           flow.TaskFn(b.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       flowCtx.isHibernatingShootWithWorkers || b.Shoot.IsSelfHosted(),
@@ -265,7 +266,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Name:         "Deploying referenced resources",
 			Fn:           flow.TaskFn(b.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespace, waitUntilRuntimeGardenerResourceManagerReady),
 		})
 		waitUntilInfrastructureReady = g.AddGroup(
 			b.ReconcileInfrastructureTaskGroup(flowCtx.skipReadiness).
@@ -441,7 +442,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(scaleEtcdAfterRestore),
 		})
 		waitUntilGardenerResourceManagerReady = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden, flowCtx.skipReadiness).
+			b.ReconcileGardenerResourceManagerTaskGroup(true, flowCtx.skipReadiness).
 				WithDependencies(waitUntilKubeAPIServerIsReady),
 		)
 		_ = g.Add(flow.Task{

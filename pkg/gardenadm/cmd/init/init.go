@@ -114,8 +114,12 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
+		reconcileRuntimeGardenerResourceManager = g.AddGroup(
+			b.ReconcileRuntimeGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, false).
+				WithDependencies(approveGardenerNodeAgentCSR),
+		)
 		reconcileGardenerResourceManager = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, false).
+			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, false).
 				WithDependencies(approveGardenerNodeAgentCSR),
 		)
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
@@ -131,8 +135,14 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileNetworkPolicies),
 		)
 
+		reconcileRuntimeGardenerResourceManagerInPodNetwork = g.AddGroup(
+			b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, shootIsGarden, false).
+				WithID(botanist.TaskGroupReconcileRuntimeGardenerResourceManager + "InPodNetwork").
+				WithDependencies(reconcileSystemComponents).
+				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
+		)
 		reconcileGardenerResourceManagerInPodNetwork = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, shootIsGarden, false).
+			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
 				WithID(botanist.TaskGroupReconcileGardenerResourceManager + "InPodNetwork").
 				WithDependencies(reconcileSystemComponents).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
@@ -149,6 +159,8 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 		)
 		syncPointBootstrapped = flow.NewTaskIDs(
 			reconcileNetworkPolicies,
+			reconcileRuntimeGardenerResourceManager,
+			reconcileRuntimeGardenerResourceManagerInPodNetwork,
 			reconcileGardenerResourceManager,
 			reconcileGardenerResourceManagerInPodNetwork,
 			reconcileExtensionControllers,
