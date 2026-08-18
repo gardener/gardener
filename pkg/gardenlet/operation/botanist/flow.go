@@ -422,6 +422,35 @@ func (b *Botanist) ReconcileExtensionsAfterKubeAPIServerTaskGroup(skipReadiness 
 	return g
 }
 
+// TaskGroupReconcileExtensionsAfterWorker is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileExtensionsAfterWorker flow.TaskID = "TaskGroupReconcileExtensionsAfterWorker"
+
+// ReconcileExtensionsAfterWorkerTaskGroup returns the flow.TaskGroup for deploying the Extensions resources
+// after the Worker resource and waiting for their readiness.
+func (b *Botanist) ReconcileExtensionsAfterWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsAfterWorker).WithDependencies(
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileReferencedResources,
+			TaskGroupReconcileWorker,
+		).SkipIf(b.Shoot.IsWorkerless)
+
+		deployExtensionResources = g.Add(flow.Task{
+			Name: "Deploying extension resources after workers",
+			Fn:   b.DeployExtensionsAfterWorker,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources handled after workers are ready",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitAfterWorker,
+			SkipIf:       skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileContainerRuntime is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileContainerRuntime flow.TaskID = "TaskGroupReconcileContainerRuntime"
 
@@ -553,18 +582,6 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 			},
 			SkipIf:       !b.Shoot.HasManagedInfrastructure() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployWorker),
-		})
-		deployExtensionResourcesAfterWorker = g.Add(flow.Task{
-			Name:         "Deploying extension resources after workers",
-			Fn:           b.DeployExtensionsAfterWorker,
-			SkipIf:       b.isGardenadmBootstrap() || b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until extension resources handled after workers are ready",
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitAfterWorker,
-			SkipIf:       b.isGardenadmBootstrap() || b.Shoot.IsWorkerless || skipReadiness,
-			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterWorker),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",

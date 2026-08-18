@@ -740,6 +740,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			waitUntilKubeRootCAConfigMapsUpdated,
 			waitUntilOperatingSystemConfigReady,
 		))
+		_ = g.AddGroup(b.ReconcileExtensionsAfterWorkerTaskGroup(flowCtx.skipReadiness))
 		_ = g.Add(flow.Task{
 			Name:         "Checking if we have dual-stack pod CIDRs in nodes",
 			Fn:           b.CheckPodCIDRsInNodes,
