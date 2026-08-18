@@ -378,19 +378,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       !flowCtx.allowBackup || flowCtx.skipReadiness || !b.Shoot.IsRestorePhase() || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(destroySourceBackupEntry),
 		})
-		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
-			Name:         "Deploying extension resources before kube-apiserver",
-			Fn:           flow.TaskFn(b.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady),
-		})
-		waitUntilExtensionResourcesBeforeKAPIReady = g.Add(flow.Task{
-			Name:         "Waiting until extension resources handled before kube-apiserver are ready",
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer,
-			SkipIf:       b.Shoot.HibernationEnabled || flowCtx.skipReadiness || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployExtensionResourcesBeforeKAPI),
-		})
-		deployKubeAPIServer = g.Add(flow.Task{
+		waitUntilExtensionResourcesBeforeKAPIReady = g.AddGroup(b.ReconcileExtensionsBeforeKubeAPIServerTaskGroup(flowCtx.skipReadiness))
+		deployKubeAPIServer                        = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return b.DeployKubeAPIServer(ctx)
@@ -451,7 +440,10 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)) || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
-		waitUntilControlPlaneReady    = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
+		waitUntilControlPlaneReady      = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false).WithDependencies(
+			waitUntilExtensionResourcesBeforeKAPIReady,
+		))
 		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
 		deployVPNSeedServer           = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
@@ -744,7 +736,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			deployKubernetesDashboard,
 			deployNginxIngressAddon,
 		)
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false))
 
 		scaleClusterAutoscalerToZero = g.Add(flow.Task{
 			Name:         "Scaling down cluster autoscaler",
