@@ -341,6 +341,35 @@ func (b *Botanist) ReconcileControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 	return g
 }
 
+// TaskGroupReconcileExtensionsBeforeKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupReconcileExtensionsBeforeKubeAPIServer"
+
+// ReconcileExtensionsBeforeKubeAPIServerTaskGroup returns the flow.TaskGroup for deploying the Extensions resources
+// before kube-apiserver and waiting for their readiness.
+func (b *Botanist) ReconcileExtensionsBeforeKubeAPIServerTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileExtensionsBeforeKubeAPIServer).WithDependencies(
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileReferencedResources,
+			TaskGroupReconcileInfrastructure,
+		).SkipIf(b.Shoot.HibernationEnabled)
+
+		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
+			Name: "Deploying extension resources before kube-apiserver",
+			Fn:   flow.TaskFn(b.DeployExtensionsBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources handled before kube-apiserver are ready",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer,
+			SkipIf:       skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployExtensionResourcesBeforeKAPI),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileContainerRuntime is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileContainerRuntime flow.TaskID = "TaskGroupReconcileContainerRuntime"
 
