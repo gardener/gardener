@@ -536,27 +536,10 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			waitUntilOperatingSystemConfigReady,
 		))
 		_ = g.Add(flow.Task{
-			Name: "Deploying shoot cluster identity",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.DeployClusterIdentity(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
-		})
-		_ = g.Add(flow.Task{
 			Name:         "Populating static manifests from seed to shoot",
 			Fn:           flow.TaskFn(b.PopulateStaticManifestsFromSeedToShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady),
-		})
-		deployMetricsServer = g.Add(flow.Task{
-			Name: "Deploying metrics-server system component",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.SystemComponents.MetricsServer.Deploy(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady),
 		})
 		deployVPNShoot = g.Add(flow.Task{
 			Name:   "Deploying vpn-shoot system component",
@@ -573,15 +556,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted() || flowCtx.skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployVPNShoot),
 		})
-		deployNodeProblemDetector = g.Add(flow.Task{
-			Name: "Deploying node-problem-detector system component",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return b.Shoot.Components.SystemComponents.NodeProblemDetector.Deploy(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
-		})
 		reconcileSystemComponents = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness).WithDependencies(
 			waitUntilControlPlaneReady,
 			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
@@ -596,34 +570,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
 				waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
 		})
-		deployBlackboxExporter = g.Add(flow.Task{
-			Name:   "Deploying blackbox-exporter",
-			Fn:     flow.TaskFn(b.ReconcileBlackboxExporterCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
-		deployNodeExporter = g.Add(flow.Task{
-			Name:   "Deploying node-exporter",
-			Fn:     flow.TaskFn(b.ReconcileNodeExporter).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
-		deployKubernetesDashboard = g.Add(flow.Task{
-			Name:   "Deploying addon Kubernetes Dashboard",
-			Fn:     flow.TaskFn(b.DeployKubernetesDashboard).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
-		deployNginxIngressAddon = g.Add(flow.Task{
-			Name:   "Deploying addon Nginx Ingress Controller",
-			Fn:     flow.TaskFn(b.DeployNginxIngressAddon).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
-				waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
-		})
 		deployManagedResourceForGardenerNodeAgent = g.Add(flow.Task{
 			Name:         "Deploying managed resources for the gardener-node-agent",
 			Fn:           flow.TaskFn(b.DeployManagedResourceForGardenerNodeAgent).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -635,13 +581,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			reconcileSystemComponents,
 			deployAPIServerProxy,
 			deployShootSystemResources,
-			deployNodeExporter,
-			deployMetricsServer,
 			waitUntilVPNShootReady,
-			deployNodeProblemDetector,
-			deployBlackboxExporter,
-			deployKubernetesDashboard,
-			deployNginxIngressAddon,
 		)
 
 		scaleClusterAutoscalerToZero = g.Add(flow.Task{
