@@ -140,54 +140,68 @@ func (b *Botanist) InitializeSecretsManagementTaskGroup() flow.TaskGroup {
 	}).WithDependencies(TaskGroupReconcileClusterResource)
 }
 
+// TaskGroupReconcileRuntimeGardenerResourceManager is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileRuntimeGardenerResourceManager flow.TaskID = "TaskGroupReconcileRuntimeGardenerResourceManager"
+
+// ReconcileRuntimeGardenerResourceManagerTaskGroup returns the flow.TaskGroup for deploying the runtime
+// gardener-resource-manager instances.
+func (b *Botanist) ReconcileRuntimeGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileRuntimeGardenerResourceManager).WithDependencies(
+			TaskGroupDeployNamespaces,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileCustomResourceDefinitions,
+		).SkipIf(!b.Shoot.IsSelfHosted() || shootIsGarden || b.isGardenadmBootstrap())
+
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name: "Deploying runtime gardener-resource-manager",
+			Fn: func(ctx context.Context) error {
+				if b.Shoot.IsSelfHosted() {
+					b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
+				}
+				return b.DeployRuntimeGardenerResourceManager(ctx)
+			},
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until runtime gardener-resource-manager reports readiness",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait(ctx)
+			},
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileGardenerResourceManager is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcileGardenerResourceManager"
 
 // ReconcileGardenerResourceManagerTaskGroup returns the flow.TaskGroup for deploying the gardener-resource-manager
-// instances. It waits for their readiness and also deploys the seed and shoot system resources afterwards.
-func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, skipReadiness bool) flow.TaskGroup {
+// instances.
+func (b *Botanist) ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileGardenerResourceManager).WithDependencies(
 			TaskGroupDeployNamespaces,
 			TaskGroupInitializeSecretsManagement,
 			TaskGroupReconcileCustomResourceDefinitions,
+			TaskGroupReconcileRuntimeGardenerResourceManager,
 		)
-
-		skipRuntimeResourceManager = !b.Shoot.IsSelfHosted() || shootIsGarden || b.isGardenadmBootstrap()
 
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
 			Fn: func(ctx context.Context) error {
 				if b.Shoot.IsSelfHosted() {
 					b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
-					if !skipRuntimeResourceManager {
-						b.Shoot.Components.ControlPlane.RuntimeResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
-					}
 				}
-
-				if skipRuntimeResourceManager {
-					return b.DeployGardenerResourceManager(ctx)
-				}
-
-				// Deploy sequentially: only `RuntimeResourceManager` installs the `ManagedResource` CRD, and
-				// `ResourceManager.Deploy` creates a `ManagedResource` object on the same client.
-				return flow.Sequential(
-					b.DeployRuntimeGardenerResourceManager,
-					b.DeployGardenerResourceManager,
-				)(ctx)
+				return b.DeployGardenerResourceManager(ctx)
 			},
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting until gardener-resource-manager reports readiness",
 			Fn: func(ctx context.Context) error {
-				if skipRuntimeResourceManager {
-					return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
-				}
-
-				return flow.Parallel(
-					b.Shoot.Components.ControlPlane.RuntimeResourceManager.Wait,
-					b.Shoot.Components.ControlPlane.ResourceManager.Wait,
-				)(ctx)
+				return b.Shoot.Components.ControlPlane.ResourceManager.Wait(ctx)
 			},
 			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
