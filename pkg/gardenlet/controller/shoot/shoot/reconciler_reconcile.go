@@ -271,8 +271,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
 		})
 		reconcileDNSRecords      = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(waitUntilKubeAPIServerServiceIsReady))
-		reconcileBackupResources = g.AddGroup(b.ReconcileBackupResourcesTaskGroup(flowCtx.allowBackup, flowCtx.isCopyOfBackupsRequired, flowCtx.skipReadiness))
-		waitUntilEtcdReady       = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness).WithDependencies(reconcileBackupResources))
+		_                        = g.AddGroup(b.ReconcileBackupResourcesTaskGroup(flowCtx.allowBackup, flowCtx.isCopyOfBackupsRequired, flowCtx.skipReadiness))
+		waitUntilEtcdReady       = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness))
 		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           b.DestroySourceBackupEntry,
@@ -344,10 +344,10 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)) || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
-		waitUntilControlPlaneReady      = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false).WithDependencies(waitUntilExtensionResourcesBeforeKAPIReady))
-		waitUntilShootNamespacesReady   = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
-		deployGardenerAccess            = g.Add(flow.Task{
+		waitUntilControlPlaneReady    = g.AddGroup(b.ReconcileControlPlaneTaskGroup(flowCtx.skipReadiness))
+		_                             = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false))
+		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
+		deployGardenerAccess          = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
 			Fn:           flow.TaskFn(b.Shoot.Components.GardenerAccess.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsSelfHosted(),
@@ -498,13 +498,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		})
 		waitUntilExtensionResourcesAfterKAPIReady = g.AddGroup(b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(flowCtx.skipReadiness).WithDependencies(initializeShootClients))
 		_                                         = g.AddGroup(b.ReconcileContainerRuntimeTaskGroup(flowCtx.skipReadiness))
-		waitUntilOperatingSystemConfigReady       = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(
-			waitUntilInfrastructureReady,
-			waitUntilControlPlaneReady,
-			deleteBastions,
-			waitUntilExtensionResourcesAfterKAPIReady,
-		))
-		syncPointReadyForSystemComponents = flow.NewTaskIDs(
+		waitUntilOperatingSystemConfigReady       = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(deleteBastions))
+		syncPointReadyForSystemComponents         = flow.NewTaskIDs(
 			initializeShootClients,
 			waitUntilOperatingSystemConfigReady,
 			waitUntilControlPlaneReady,
@@ -521,10 +516,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		})
 		reconcileVPNComponents    = g.AddGroup(b.ReconcileVPNComponentsTaskGroup(flowCtx.skipReadiness).WithDependencies(syncPointReadyForSystemComponents))
 		reconcileSystemComponents = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness).WithDependencies(
-			waitUntilControlPlaneReady,
-			waitUntilExtensionResourcesAfterKAPIReady, // Extensions might deploy webhooks for system components
 			initializeShootClients,
-			ensureShootClusterIdentity,
 			deployKubeScheduler,
 		))
 		deployManagedResourceForGardenerNodeAgent = g.Add(flow.Task{
@@ -546,17 +538,13 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(deployManagedResourceForGardenerNodeAgent),
 		})
 		_ = g.AddGroup(b.ReconcileMachineControllerManagerTaskGroup().WithDependencies(
-			waitUntilInfrastructureReady,
 			initializeShootClients,
-			waitUntilOperatingSystemConfigReady,
 			createNewServiceAccountSecrets,
 			scaleClusterAutoscalerToZero,
-			reconcileStaticControlPlanePods,
 		))
 		waitUntilWorkerReady = g.AddGroup(b.ReconcileWorkerTaskGroup(flowCtx.skipReadiness).WithDependencies(
 			deployManagedResourceForGardenerNodeAgent,
 			waitUntilKubeRootCAConfigMapsUpdated,
-			waitUntilOperatingSystemConfigReady,
 		))
 		_ = g.AddGroup(b.ReconcileExtensionsAfterWorkerTaskGroup(flowCtx.skipReadiness))
 		_ = g.Add(flow.Task{
