@@ -440,6 +440,7 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 			clientObjects = append(clientObjects, vpa)
 		}
 	}
+
 	return clientObjects
 }
 

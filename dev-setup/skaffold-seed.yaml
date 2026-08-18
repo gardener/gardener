@@ -247,6 +247,7 @@ build:
             - pkg/gardenlet/controller/networkpolicy
             - pkg/gardenlet/controller/seed
             - pkg/gardenlet/controller/seed/care
+            - pkg/gardenlet/controller/seed/imagepullsecret
             - pkg/gardenlet/controller/seed/lease
             - pkg/gardenlet/controller/seed/seed
             - pkg/gardenlet/controller/shoot
@@ -274,6 +275,7 @@ build:
             - pkg/resourcemanager/webhook/crddeletionprotection
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/webhook/imagepullsecret
             - pkg/resourcemanager/webhook/kubernetesservicehost
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
@@ -357,6 +359,7 @@ build:
             - cmd/gardener-resource-manager/app
             - cmd/utils
             - cmd/utils/initrun
+            - imagevector
             - pkg/api
             - pkg/api/config/resourcemanager/v1alpha1/validation
             - pkg/api/core/helper
@@ -433,6 +436,7 @@ build:
             - pkg/resourcemanager/webhook/crddeletionprotection
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/webhook/imagepullsecret
             - pkg/resourcemanager/webhook/kubernetesservicehost
             - pkg/resourcemanager/webhook/nodeagentauthorizer
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
@@ -447,6 +451,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client

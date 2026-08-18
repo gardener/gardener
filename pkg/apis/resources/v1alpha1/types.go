@@ -151,6 +151,10 @@ const (
 	// environment variable.
 	KubernetesServiceHostInject = "apiserver-proxy.networking.gardener.cloud/inject"
 
+	// ImagePullSecretSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
+	// injection of image pull secrets.
+	ImagePullSecretSkip = "image-pull-secret.resources.gardener.cloud/skip"
+
 	// SystemComponentsConfigConsider is a constant for a label on a Namespace which indicates that all Pods in this
 	// Namespace should be considered for adding default node selector and tolerations for system components.
 	SystemComponentsConfigConsider = "system-components-config.resources.gardener.cloud/consider"

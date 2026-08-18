@@ -394,9 +394,17 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
+	// Propagate the image vector overwrite so GRM's image-pull-secret webhook can inject pull secrets into the
+	// garden runtime pods it admits.
+	imageVectorOverwrite, err := imagevector.OverwriteForImagePullSecretWebhook()
+	if err != nil {
+		return nil, err
+	}
+
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		HighAvailabilityConfigWebhookEnabled:      true,
+		ImageVectorOverwrite:                      imageVectorOverwrite,
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
 		LogLevel:                                  r.Config.LogLevel,
