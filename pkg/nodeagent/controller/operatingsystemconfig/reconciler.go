@@ -551,12 +551,21 @@ func (r *Reconciler) removeDeletedFiles(log logr.Logger, changes *operatingSyste
 		}
 
 		log.Info("Successfully removed no longer needed file", "path", file.Path)
+		r.triggerTokenResyncForDeletedFile(log, file.Path)
 		if err := changes.completedFileDeleted(file.Path); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (r *Reconciler) triggerTokenResyncForDeletedFile(log logr.Logger, path string) {
+	for _, config := range r.TokenSecretSyncConfigs {
+		if config.Path == path {
+			r.triggerTokenResync(log, config.SecretName)
+		}
+	}
 }
 
 func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) error {
@@ -916,12 +925,16 @@ func (r *Reconciler) completeKubeletInPlaceUpdate(ctx context.Context, log logr.
 	return nil
 }
 
+func (r *Reconciler) triggerTokenResync(log logr.Logger, secretName string) {
+	r.Channel <- event.TypedGenericEvent[*corev1.Secret]{Object: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: metav1.NamespaceSystem}}}
+	log.Info("Triggered an event for the token controller", "secret", secretName)
+}
+
 func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log logr.Logger, oscChanges *operatingSystemConfigChanges, node *corev1.Node) error {
 	if oscChanges.InPlaceUpdates.ServiceAccountKeyRotation {
 		// Generate events for the token sync controller to update the SA tokens.
-		for _, tokenSyncConfig := range r.TokenSecretSyncConfigs {
-			r.Channel <- event.TypedGenericEvent[*corev1.Secret]{Object: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tokenSyncConfig.SecretName, Namespace: metav1.NamespaceSystem}}}
-			log.Info("Triggered an event for the token controller", "secret", tokenSyncConfig.SecretName)
+		for _, config := range r.TokenSecretSyncConfigs {
+			r.triggerTokenResync(log, config.SecretName)
 		}
 
 		if err := oscChanges.completeSAKeyRotation(); err != nil {

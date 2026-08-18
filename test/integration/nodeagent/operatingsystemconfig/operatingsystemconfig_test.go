@@ -159,7 +159,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Expect(testClient.Delete(ctx, node)).To(Succeed())
 		})
 
-		channel = make(chan event.TypedGenericEvent[*corev1.Secret])
+		channel = make(chan event.TypedGenericEvent[*corev1.Secret], 10)
 		secretName1 = "test-secret-1"
 		secretName2 = "test-secret-2"
 
@@ -178,8 +178,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Extractor: fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
 			Channel:   channel,
 			TokenSecretSyncConfigs: []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
-				{SecretName: secretName1},
-				{SecretName: secretName2},
+				{SecretName: secretName1, Path: "/another/file"},
+				{SecretName: secretName2, Path: "/no/such/file"},
 			},
 			CancelContext:    cancelFunc.cancel,
 			ContainerdClient: fakecontainerdclient.NewClient(),
@@ -711,6 +711,38 @@ units: {}
 
 		By("Assert that cancel func has not been called")
 		Expect(cancelFunc.called).To(BeFalse())
+	})
+
+	It("should trigger token resync for configs whose path matches a deleted file", func() {
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
+
+		// Drain any events from the initial reconciliation.
+		for len(channel) > 0 {
+			<-channel
+		}
+
+		By("Update Operating System Config, removing file2 (/another/file)")
+		operatingSystemConfig.Status.ExtensionFiles = []extensionsv1alpha1.File{file4, file6, file7}
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Update Secret containing the operating system config")
+		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
+		oscSecret.Data["osc.yaml"] = oscRaw
+		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
+
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
+
+		By("Assert that only the token sync config whose path matches the deleted file received an event")
+		var received event.TypedGenericEvent[*corev1.Secret]
+		Eventually(channel).Should(Receive(&received))
+		Expect(received.Object.GetName()).To(Equal(secretName1))
+		Expect(received.Object.GetNamespace()).To(Equal("kube-system"))
+		Consistently(channel).ShouldNot(Receive())
 	})
 
 	It("should reconcile the configuration when the containerd registries change", func() {

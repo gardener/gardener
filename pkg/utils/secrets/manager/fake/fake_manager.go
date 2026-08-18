@@ -35,6 +35,10 @@ func New(client client.Client, namespace string) *fakeManager {
 	}
 }
 
+func (m *fakeManager) Identity() string {
+	return ManagerIdentity
+}
+
 func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev1.Secret, bool) {
 	options := &secretsmanager.GetOptions{}
 	options.ApplyOptions(opts)

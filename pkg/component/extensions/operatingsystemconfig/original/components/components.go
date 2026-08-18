@@ -48,4 +48,5 @@ type Context struct {
 	Sysctls                                 map[string]string
 	PreferIPv6                              bool
 	Taints                                  []corev1.Taint
+	SyncControlPlaneAuthTokens              bool
 }

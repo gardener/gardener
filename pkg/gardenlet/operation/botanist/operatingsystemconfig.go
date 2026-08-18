@@ -173,6 +173,12 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	}
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetClusterDNSAddresses(clusterDNSAddresses)
 
+	readyForStaticAuthTokenSync, err := b.useShootAccessTokensForSelfHostedShootControlPlane(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check whether static auth tokens for self-hosted shoot control plane components can be synced: %w", err)
+	}
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSyncControlPlaneAuthTokens(readyForStaticAuthTokenSync)
+
 	if b.Shoot.IsRestorePhase() {
 		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.Shoot.GetShootState())
 	}

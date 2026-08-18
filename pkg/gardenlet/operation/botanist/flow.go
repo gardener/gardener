@@ -637,6 +637,12 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 			TaskGroupReconcileETCDs,
 		).SkipIf(!b.Shoot.IsSelfHosted())
 
+		_ = g.Add(flow.Task{
+			Name: "Reconciling cluster-admin access resources for kubeconfig on control plane nodes",
+			Fn: func(ctx context.Context) error {
+				return component.OpWait(b.Shoot.Components.AdminAccess).Deploy(ctx)
+			},
+		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret",
 			Fn: func(ctx context.Context) error {

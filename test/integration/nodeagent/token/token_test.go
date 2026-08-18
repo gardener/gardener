@@ -6,6 +6,7 @@ package token_test
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -126,6 +127,18 @@ var _ = Describe("Token controller tests", func() {
 				token2OnDisk, err := afero.ReadFile(testFS, path2)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(token2OnDisk).To(Equal(accessToken2))
+			}).Should(Succeed())
+		})
+
+		It("should write the token files with 0640 permissions", func() {
+			Eventually(func(g Gomega) {
+				info1, err := testFS.Stat(path1)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(info1.Mode().Perm()).To(Equal(os.FileMode(0640)))
+
+				info2, err := testFS.Stat(path2)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(info2.Mode().Perm()).To(Equal(os.FileMode(0640)))
 			}).Should(Succeed())
 		})
 

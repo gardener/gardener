@@ -217,6 +217,10 @@ func (b *Botanist) instantiateComponentsMisc() {
 	b.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	b.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 	b.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
+
+	if b.Shoot.IsSelfHosted() {
+		b.Shoot.Components.AdminAccess = b.DefaultAdminAccess()
+	}
 }
 
 func (b *Botanist) instantiateComponentsAddons() (err error) {

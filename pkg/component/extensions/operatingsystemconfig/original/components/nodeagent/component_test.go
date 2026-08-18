@@ -98,6 +98,42 @@ WantedBy=multi-user.target`),
 				},
 			})))
 		})
+
+		It("should include control plane auth token sync configs when SyncControlPlaneAuthTokens is true", func() {
+			var (
+				key                  = "key"
+				expectedTokenConfigs = []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+					{
+						SecretName: "shoot-access-kube-controller-manager",
+						Path:       "/var/lib/static-pods/kube-controller-manager/kubeconfig/token",
+					},
+					{
+						SecretName: "shoot-access-kube-scheduler",
+						Path:       "/var/lib/static-pods/kube-scheduler/kubeconfig/token",
+					},
+					{
+						SecretName: "shoot-access-cluster-admin",
+						Path:       "/etc/kubernetes/admin-token",
+					},
+				}
+			)
+
+			_, files, err := component.Config(components.Context{
+				Key:                        key,
+				KubernetesVersion:          kubernetesVersion,
+				APIServerURL:               apiServerURL,
+				CABundle:                   string(caBundle),
+				SyncControlPlaneAuthTokens: true,
+				Images:                     map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: new("gardener-node-agent"), Tag: new("v1")}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedConfigFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, expectedTokenConfigs))
+			Expect(err).NotTo(HaveOccurred())
+			for _, expected := range expectedConfigFiles {
+				Expect(files).To(ContainElement(expected), "Expected file to be included: "+expected.Path)
+			}
+		})
 	})
 
 	Describe("#UnitContent", func() {

@@ -128,6 +128,7 @@ type Components struct {
 	Extensions               *Extensions
 	SystemComponents         *SystemComponents
 	Addons                   *Addons
+	AdminAccess              component.Deployer
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
 	Bastion                  *bastion.Bastion

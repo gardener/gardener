@@ -22,13 +22,17 @@ import (
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/opentelemetrycollector"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
+	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	collectorconstants "github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector/constants"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // PathBinary is a constant for the path to the gardener-node-agent binary file on the VMs.
@@ -70,6 +74,20 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 			SecretName: valiconstants.ValitailTokenSecretName,
 			Path:       valitail.PathAuthToken,
+		})
+	}
+
+	if ctx.SyncControlPlaneAuthTokens {
+		for _, componentName := range []string{v1beta1constants.DeploymentNameKubeControllerManager, v1beta1constants.DeploymentNameKubeScheduler} {
+			additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+				SecretName: gardenerutils.SecretNamePrefixShootAccess + componentName,
+				Path:       staticpod.FilePathForProjectedVolumeItem(componentName, "kubeconfig", resourcesv1alpha1.DataKeyToken),
+			})
+		}
+
+		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+			SecretName: gardenerutils.SecretNamePrefixShootAccess + adminaccess.ShootAccessSecretNameSuffix,
+			Path:       adminaccess.PathOnControlPlaneNodes,
 		})
 	}
 

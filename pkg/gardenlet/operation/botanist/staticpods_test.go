@@ -10,11 +10,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -166,6 +168,79 @@ var _ = Describe("StaticPods", func() {
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(node2), node2)).To(Succeed())
 			Expect(node2.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]).To(Equal(oscSecretName2))
+		})
+	})
+
+	Describe("#useShootAccessTokensForSelfHostedShootControlPlane", func() {
+		var controlPlaneNamespace = "kube-system"
+
+		selfHostedShoot := func(gardenerName string) *gardencorev1beta1.Shoot {
+			return &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						}},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Gardener: gardencorev1beta1.Gardener{Name: gardenerName},
+				},
+			}
+		}
+
+		BeforeEach(func() {
+			botanist.Shoot.ControlPlaneNamespace = controlPlaneNamespace
+		})
+
+		It("should return false for a non-self-hosted shoot", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+
+			result, err := UseShootAccessTokensForSelfHostedShootControlPlane(botanist, ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return false when the shoot status indicates gardenadm", func() {
+			botanist.Shoot.SetInfo(selfHostedShoot("gardenadm"))
+
+			result, err := UseShootAccessTokensForSelfHostedShootControlPlane(botanist, ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return false when gardener-resource-manager deployment does not exist", func() {
+			botanist.Shoot.SetInfo(selfHostedShoot("gardenlet"))
+
+			result, err := UseShootAccessTokensForSelfHostedShootControlPlane(botanist, ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return false when gardener-resource-manager runs with host network (bootstrap phase)", func() {
+			botanist.Shoot.SetInfo(selfHostedShoot("gardenlet"))
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: controlPlaneNamespace},
+				Spec:       appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{HostNetwork: true}}},
+			}
+			Expect(seedClient.Create(ctx, deployment)).To(Succeed())
+
+			result, err := UseShootAccessTokensForSelfHostedShootControlPlane(botanist, ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return true when gardener-resource-manager runs in the pod network", func() {
+			botanist.Shoot.SetInfo(selfHostedShoot("gardenlet"))
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: controlPlaneNamespace},
+				Spec:       appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{HostNetwork: false}}},
+			}
+			Expect(seedClient.Create(ctx, deployment)).To(Succeed())
+
+			result, err := UseShootAccessTokensForSelfHostedShootControlPlane(botanist, ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
 		})
 	})
 })

@@ -172,6 +172,18 @@ func (mr *MockInterfaceMockRecorder) SetSSHPublicKeys(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKeys", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKeys), arg0)
 }
 
+// SetSyncControlPlaneAuthTokens mocks base method.
+func (m *MockInterface) SetSyncControlPlaneAuthTokens(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSyncControlPlaneAuthTokens", arg0)
+}
+
+// SetSyncControlPlaneAuthTokens indicates an expected call of SetSyncControlPlaneAuthTokens.
+func (mr *MockInterfaceMockRecorder) SetSyncControlPlaneAuthTokens(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSyncControlPlaneAuthTokens", reflect.TypeOf((*MockInterface)(nil).SetSyncControlPlaneAuthTokens), arg0)
+}
+
 // Wait mocks base method.
 func (m *MockInterface) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()

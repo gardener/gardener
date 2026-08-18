@@ -29,6 +29,10 @@ type Interface interface {
 
 	Reader
 
+	// Identity returns the identity of this secrets manager instance. The identity is used as value for the
+	// LabelKeyManagerIdentity label on all managed secrets.
+	Identity() string
+
 	// Cleanup deletes no longer required secrets. No longer required secrets are those still existing in the system
 	// which weren't detected by prior Generate calls. Consequently, only call Cleanup after you have executed Generate
 	// calls for all desired secrets.

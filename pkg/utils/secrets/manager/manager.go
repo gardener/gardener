@@ -144,6 +144,10 @@ func WithoutAutomaticSecretRenewal() NewOption {
 
 var _ Interface = &manager{}
 
+func (m *manager) Identity() string {
+	return m.identity
+}
+
 type secretClass string
 
 const (

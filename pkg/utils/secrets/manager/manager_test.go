@@ -328,6 +328,14 @@ var _ = Describe("Manager", func() {
 				Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": "-100"}))
 			})
 		})
+
+		Describe("#Identity", func() {
+			It("should return the identity the manager was created with", func() {
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, identity, WithNamespaces(namespace))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mgr.Identity()).To(Equal(identity))
+			})
+		})
 	})
 
 	Describe("#ObjectMeta", func() {

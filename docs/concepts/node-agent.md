@@ -125,11 +125,16 @@ When serial reconciliation is enabled:
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 
 This controller watches the access token `Secret`s in the `kube-system` namespace configured via the `gardener-node-agent`'s component configuration (`.controllers.token.syncConfigs[]` field).
-Whenever the `.data.token` field changes, it writes the new content to a file on the configured path on the host file system.
-This mechanism is used to download its own access token for the shoot cluster, but also the access tokens of other `systemd` components (e.g., `valitail`).
+Whenever the `.data.token` field changes, it writes the new content to a file on the configured path on the host file system with `0640` permissions.
+Token files are written with `0640` permissions (rather than `0600`) because static pods running as the control plane components use `FSGroup=0`, which adds group `0` as a supplemental group to the container process — making `root:root 0640` files readable by the container, while `0600` would break this since group membership does not help with owner-only files.
+This mechanism is used to download its own access token for the shoot cluster, but also the access tokens of other `systemd` components (e.g., `valitail`) and of control plane components running as static pods on self-hosted shoot nodes (e.g., `kube-apiserver`, `kube-controller-manager`, `kube-scheduler`).
 Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without the necessity of explicit configuration or code changes.
 This procedure ensures that the most up-to-date tokens are always present on the host and used by the `gardener-node-agent` and the other `systemd` components.
-The controller is also triggered via a source channel, which is done by the `Operating System Config` controller during an in-place service account key rotation.
+
+The controller is also triggered via a source channel by the `Operating System Config` controller in two situations:
+
+- **In-place service account key rotation**: all configured token sync secrets receive an event so their tokens are re-fetched with the new key.
+- **File deletion**: when the OSC reconciler deletes a file whose path matches a `syncConfigs[].path` entry, it immediately sends an event for the corresponding secret. This covers the race where a file is moved from the `OperatingSystemConfig` spec into a `TokenSecretSyncConfig`: the token controller may write the file before the OSC reconciler deletes it, so the resync ensures the file is restored after deletion.
 
 ### [Certificate Controller](../../pkg/nodeagent/controller/certificate)
 

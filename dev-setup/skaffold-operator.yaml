@@ -307,6 +307,8 @@ build:
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
+            - pkg/component
+            - pkg/component/kubernetes/adminaccess
             - pkg/controller/tokenrequestor
             - pkg/controllerutils
             - pkg/controllerutils/predicate
@@ -348,15 +350,19 @@ build:
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/utils
+            - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/unstructured
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
