@@ -272,6 +272,84 @@ func (b *Botanist) ReconcileMachineControllerManagerTaskGroup() flow.TaskGroup {
 	)
 }
 
+// TaskGroupReconcileBackupResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileBackupResources flow.TaskID = "TaskGroupReconcileBackupResources"
+
+// ReconcileBackupResourcesTaskGroup returns the flow.TaskGroup for deploying the BackupBucket or BackupEntry extension
+// resources and waiting for their readiness.
+func (b *Botanist) ReconcileBackupResourcesTaskGroup(allowBackup, isCopyOfBackupsRequired, skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileBackupResources).WithDependencies(
+			TaskGroupDeployNamespaces,
+			TaskGroupDeployCloudProviderSecret,
+			TaskGroupInitializeSecretsManagement,
+			TaskGroupReconcileReferencedResources,
+		)
+
+		deploySourceBackupEntry = g.Add(flow.Task{
+			Name:   "Deploying source backup entry",
+			Fn:     b.DeploySourceBackupEntry,
+			SkipIf: !isCopyOfBackupsRequired || b.Shoot.IsSelfHosted(),
+		})
+		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the source backup entry has been reconciled",
+			Fn:           b.Shoot.Components.SourceBackupEntry.Wait,
+			SkipIf:       skipReadiness || !isCopyOfBackupsRequired || b.Shoot.IsSelfHosted(),
+			Dependencies: flow.NewTaskIDs(deploySourceBackupEntry),
+		})
+
+		deployBackupBucketInGarden = g.Add(flow.Task{
+			Name: "Deploying BackupBucket for ETCD data",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.BackupBucket.Deploy(ctx)
+			},
+			SkipIf: !allowBackup || !b.Shoot.IsSelfHosted(),
+		})
+		waitUntilBackupBucketInGardenReconciled = g.Add(flow.Task{
+			Name: "Waiting until the BackupBucket for ETCD data has been reconciled",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.BackupBucket.Wait(ctx)
+			},
+			SkipIf:       skipReadiness || !allowBackup || !b.Shoot.IsSelfHosted(),
+			Dependencies: flow.NewTaskIDs(deployBackupBucketInGarden),
+		})
+
+		deployBackupEntryInGarden = g.Add(flow.Task{
+			Name:         "Deploying BackupEntry for ETCD data",
+			Fn:           b.DeployBackupEntry,
+			SkipIf:       !allowBackup,
+			Dependencies: flow.NewTaskIDs(waitUntilSourceBackupEntryInGardenReconciled, waitUntilBackupBucketInGardenReconciled),
+		})
+		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the BackupEntry for ETCD data has been reconciled",
+			Fn:           b.Shoot.Components.BackupEntry.Wait,
+			SkipIf:       skipReadiness || !allowBackup,
+			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
+		})
+
+		copyEtcdBackups = g.Add(flow.Task{
+			Name:         "Copying etcd backups to new seed's backup bucket",
+			Fn:           b.DeployEtcdCopyBackupsTask,
+			SkipIf:       !isCopyOfBackupsRequired,
+			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenReconciled, waitUntilSourceBackupEntryInGardenReconciled),
+		})
+		waitUntilEtcdBackupsCopied = g.Add(flow.Task{
+			Name:         "Waiting until etcd backups are copied",
+			Fn:           b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Wait,
+			SkipIf:       skipReadiness || !isCopyOfBackupsRequired,
+			Dependencies: flow.NewTaskIDs(copyEtcdBackups),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying copy etcd backups task resource",
+			Fn:           b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Destroy,
+			SkipIf:       !isCopyOfBackupsRequired,
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdBackupsCopied),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileInfrastructure is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileInfrastructure flow.TaskID = "TaskGroupReconcileInfrastructure"
 
