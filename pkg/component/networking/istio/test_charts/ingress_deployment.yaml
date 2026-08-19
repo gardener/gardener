@@ -30,7 +30,6 @@ spec:
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.29"
       annotations:
-        checksum/bootstrap-override: <CHECKSUM>
         sidecar.istio.io/inject: "false"
         # Evict stale metrics (e.g. for old kube-apiserver pods) after inactivity to prevent unbounded metric growth.
         # Replaces the deprecated METRIC_ROTATION_INTERVAL env var removed in Istio v1.28.
@@ -43,9 +42,6 @@ spec:
             # See also https://github.com/envoyproxy/envoy/security/advisories/GHSA-jhv4-f7mr-xx76
             "overload.premature_reset_total_stream_count": "100"
             "overload.premature_reset_min_stream_lifetime_seconds": "1"
-          proxyStatsMatcher:
-            inclusionRegexps:
-              - ".*goaway.*"
     spec:
       serviceAccountName: istio-ingressgateway-service-account
       securityContext:
@@ -92,8 +88,6 @@ spec:
           env:
           - name: PILOT_CERT_PROVIDER
             value: istiod
-          - name: ISTIO_BOOTSTRAP_OVERRIDE
-            value: /etc/istio/bootstrap-override/bootstrap.yaml
           - name: CA_ADDR
             value: istiod.istio-test-system.svc:15012
           - name: NODE_NAME
@@ -158,9 +152,6 @@ spec:
             mountPath: /etc/istio/proxy
           - name: config-volume
             mountPath: /etc/istio/config
-          - name: bootstrap-override-volume
-            mountPath: /etc/istio/bootstrap-override
-            readOnly: true
           - mountPath: /var/run/secrets/istio
             name: istiod-ca-cert
           - name: istio-token
@@ -210,9 +201,6 @@ spec:
         configMap:
           name: istio
           optional: true
-      - name: bootstrap-override-volume
-        configMap:
-          name: istio-ingressgateway-bootstrap-override
       - name: ingressgateway-certs
         secret:
           secretName: "istio-ingressgateway-certs"
