@@ -880,9 +880,15 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
 
-	url := fmt.Sprintf("https://%s%s.%s:%d/snapshot/full?final=true", e.values.NamePrefix, etcdconstants.ServiceName(e.values.Role), e.namespace, etcdconstants.PortBackupRestore)
+	address := fmt.Sprintf("%s%s.%s", e.values.NamePrefix, etcdconstants.ServiceName(e.values.Role), e.namespace)
+	if e.values.StaticPodConfig != nil {
+		if len(e.values.StaticPodConfig.ControlPlaneNodesIPAddresses) < 1 {
+			return fmt.Errorf("no static pod nodes IP addresses are configured for this etcd")
+		}
+		address = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0].String()
+	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://%s:%d/snapshot/full?final=true", address, etcdconstants.PortBackupRestore), nil)
 	if err != nil {
 		return err
 	}
