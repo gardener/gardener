@@ -798,9 +798,7 @@ func (r *Reconciler) newAggregatePrometheus(
 	}
 
 	if globalMonitoringSecret != nil {
-		// The global monitoring secret is a verbatim replica and not managed by the secrets manager.
 		values.Ingress.AuthSecretName = globalMonitoringSecret.Name
-		values.Ingress.AuthSecretManaged = false
 	}
 
 	if wildcardCertSecret != nil {
