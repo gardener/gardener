@@ -32,7 +32,7 @@ jobs:
       id-token: write
 
   tests:
-    runs-on: ${{ github.repository_owner == 'gardener' && 'ubuntu-latest-large' || 'ubuntu-latest' }}
+    runs-on: 'ubuntu-latest'
     if: github.event_name != 'pull_request'
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
