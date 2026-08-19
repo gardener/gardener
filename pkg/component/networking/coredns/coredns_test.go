@@ -6,6 +6,7 @@ package coredns_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -414,7 +415,8 @@ status:
   expectedPods: 0
 `
 
-		hpaYAML = `apiVersion: autoscaling/v2
+		hpaYAML = func(zones int) string {
+			return `apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   labels:
@@ -422,7 +424,7 @@ metadata:
   name: coredns
   namespace: kube-system
 spec:
-  maxReplicas: 5
+  maxReplicas: ` + fmt.Sprintf("%d", max(5, 2*zones)) + `
   metrics:
   - resource:
       name: cpu
@@ -439,6 +441,7 @@ status:
   currentMetrics: null
   desiredReplicas: 0
 `
+		}
 
 		cpasaYAML = `apiVersion: v1
 automountServiceAccountToken: false
@@ -801,7 +804,7 @@ status: {}
 				))
 			}
 			if !cpaEnabled {
-				Expect(manifests).To(ContainElement(hpaYAML))
+				Expect(manifests).To(ContainElement(hpaYAML(int(values.Zones))))
 			}
 
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
@@ -905,6 +908,26 @@ status: {}
 				It("should successfully deploy all resources", func() {
 					Expect(manifests).To(ContainElement(serviceYAML(string(GetIPFamilyPolicy(values.IPFamilies, values.ClusterIPs)))))
 				})
+			})
+		})
+
+		Context("with single availability zone", func() {
+			BeforeEach(func() {
+				values.Zones = 1
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(manifests).To(ContainElement(hpaYAML(int(values.Zones))))
+			})
+		})
+
+		Context("with three availability zones", func() {
+			BeforeEach(func() {
+				values.Zones = 3
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(manifests).To(ContainElement(hpaYAML(int(values.Zones))))
 			})
 		})
 	})
