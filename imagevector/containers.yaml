@@ -69,7 +69,8 @@ images:
         value:
           policy: skip
           comment: >
-            pause-container is not accessible from outside k8s clusters and not interacted with from other containers or other systems
+            pause-container is not accessible from outside k8s clusters and not interacted
+            with from other containers or other systems
 
   - name: etcd-druid
     sourceRepository: github.com/gardener/etcd-druid
@@ -615,7 +616,8 @@ images:
         value:
           policy: skip
           comment: >
-            not deployed as part of gardener infrastructure. Offered to users for development purposes only, accompanied w/ warning that no support be provided.
+            not deployed as part of gardener infrastructure. Offered to users for
+            development purposes only, accompanied w/ warning that no support be provided.
 
   - name: kubernetes-dashboard-metrics-scraper
     sourceRepository: github.com/kubernetes/dashboard
@@ -772,7 +774,9 @@ images:
           confidentiality_requirement: 'high'
           integrity_requirement: 'high'
           availability_requirement: 'low'
-          comment: valitail is running as a client (not as a server) and as such is not publicly exposed to the internet. Vulnerabilities with Attack Vector:Network are not exploitable.
+          comment: valitail is running as a client (not as a server) and as such is
+            not publicly exposed to the internet. Vulnerabilities with Attack Vector:Network
+            are not exploitable.
       - name: 'cloud.gardener.cnudie/responsibles'
         value:
           - type: 'githubTeam'
@@ -793,7 +797,8 @@ images:
           integrity_requirement: 'none'
           availability_requirement: 'none'
           comment: >
-            telegraf is not accessible from outside the seed cluster and does not interact with confidential data
+            telegraf is not accessible from outside the seed cluster and does not
+            interact with confidential data
 
       - name: 'cloud.gardener.cnudie/responsibles'
         value:
