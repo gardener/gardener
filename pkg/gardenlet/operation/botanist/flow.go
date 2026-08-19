@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -22,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
+	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
@@ -1101,8 +1104,8 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 			SkipIf:       !controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName),
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
 		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until control plane components (static pods) are ready",
+		waitUntilControlPlaneComponentsRolledOut = g.Add(flow.Task{
+			Name: "Waiting until control plane components (static pods) are rolled out and ready",
 			Fn: func(ctx context.Context) error {
 				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
 			},
@@ -1110,7 +1113,40 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 		})
 	)
 
+	b.handleCredentialsRotationForStaticPods(&g, waitUntilControlPlaneComponentsRolledOut)
 	return g
+}
+
+func (b *Botanist) handleCredentialsRotationForStaticPods(g *flow.TaskGroup, readyForSecondRollout flow.TaskIDer) {
+	var (
+		rotationPreparingPhases            = sets.New(gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPreparingWithoutWorkersRollout)
+		etcdEncryptionKeyRotationPreparing = rotationPreparingPhases.Has(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials))
+
+		patchKubeAPIServerDeployment = g.Add(flow.Task{
+			Name: "Marking kube-apiserver deployment as ready for encryption key switch",
+			Fn: func(ctx context.Context) error {
+				return shared.MarkAPIServerDeploymentAsReadyForEncryptionKeySwitch(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
+			},
+			SkipIf:       !etcdEncryptionKeyRotationPreparing,
+			Dependencies: flow.NewTaskIDs(readyForSecondRollout),
+		})
+		deployControlPlaneDeployments = g.Add(flow.Task{
+			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret (second rollout)",
+			Fn: func(ctx context.Context) error {
+				return b.DeployStaticControlPlaneDeployments(ctx, false)
+			},
+			SkipIf:       !etcdEncryptionKeyRotationPreparing,
+			Dependencies: flow.NewTaskIDs(patchKubeAPIServerDeployment),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until control plane components (static pods) are rolled out and ready (second rollout)",
+			Fn: func(ctx context.Context) error {
+				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
+			},
+			SkipIf:       !etcdEncryptionKeyRotationPreparing,
+			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
+	)
 }
 
 // TaskGroupHibernateControlPlane is a flow.TaskID for a logical flow.TaskGroup.
