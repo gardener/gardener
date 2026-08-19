@@ -3192,7 +3192,7 @@ kind: AuthorizationConfiguration
 						"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
 						"--etcd-keyfile=/srv/kubernetes/etcd/client/tls.key",
 						"--etcd-servers=https://etcd-main-client:2379",
-						"--etcd-servers-overrides=/events#https://etcd-events-client:2379",
+						"--etcd-servers-overrides=/events#https://etcd-events-client:2379,events.k8s.io/events#https://etcd-events-client:2379",
 						"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
 						"--event-ttl="+eventTTL.String(),
 						"--tls-min-version="+tlsMinVersion,
@@ -3707,7 +3707,7 @@ anonymous:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--etcd-servers-overrides=networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
+						"--etcd-servers-overrides=events.k8s.io/events#https://etcd-events-client:2379,networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
 					))
 				})
 
@@ -3724,7 +3724,7 @@ anonymous:
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--etcd-servers=https://localhost:2379",
-						"--etcd-servers-overrides=/events#https://localhost:2382",
+						"--etcd-servers-overrides=/events#https://localhost:2382,events.k8s.io/events#https://localhost:2382",
 					))
 				})
 
