@@ -3,6 +3,8 @@ kind: Shoot
 metadata:
   name: root
   namespace: garden
+  annotations:
+    shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
 spec:
   cloudProfile:
     kind: CloudProfile
