@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -291,6 +292,16 @@ func handleETCDEncryptionKeyRotation(
 ) error {
 	switch etcdEncryptionKeyRotationPhase {
 	case gardencorev1beta1.RotationPreparing:
+		if isSelfHostedKubeAPIServer := runtimeNamespace == metav1.NamespaceSystem && deploymentName == v1beta1constants.DeploymentNameKubeAPIServer; isSelfHostedKubeAPIServer {
+			// For hosted shoots, changing the Deployment of the API server leads to a rollout of the pods. This is not
+			// true for self-hosted shoots: Here, we first have to translate the Deployment into a static pod, populate
+			// it via OperatingSystemConfig to the node, and wait for kubelet to restart it.
+			// Since all this is a bit more involved, we are performing these steps in the
+			// botanist.ReconcileStaticControlPlanePodsTaskGroup function as part of the flow (instead of doing it here
+			// like for hosted shoots).
+			return nil
+		}
+
 		if !etcdEncryptionConfig.EncryptWithCurrentKey {
 			if err := apiServer.Wait(ctx); err != nil {
 				return err
@@ -300,9 +311,7 @@ func handleETCDEncryptionKeyRotation(
 			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
 			// annotation) and redeploy it with the option to use the current/new key for encryption, see
 			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
-			if err := secretsrotation.PatchAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, deploymentName, func(meta *metav1.PartialObjectMetadata) {
-				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
-			}); err != nil {
+			if err := MarkAPIServerDeploymentAsReadyForEncryptionKeySwitch(ctx, runtimeClient, runtimeNamespace, deploymentName); err != nil {
 				return err
 			}
 
@@ -323,6 +332,15 @@ func handleETCDEncryptionKeyRotation(
 	}
 
 	return nil
+}
+
+// MarkAPIServerDeploymentAsReadyForEncryptionKeySwitch adds the credentials.gardener.cloud/new-encryption-key-populated
+// annotation to the deployment. This states that the new encryption key has been populated to all API server replicas
+// and that we are now ready to make switch it so that it's getting used for encrypting data.
+func MarkAPIServerDeploymentAsReadyForEncryptionKeySwitch(ctx context.Context, runtimeClient client.Client, runtimeNamespace string, deploymentName string) error {
+	return secretsrotation.PatchAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, deploymentName, func(meta *metav1.PartialObjectMetadata) {
+		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
+	})
 }
 
 // GetResourcesForEncryptionFromConfig returns the list of [schema.GroupResource] requiring encryption from the EncryptionConfig.
