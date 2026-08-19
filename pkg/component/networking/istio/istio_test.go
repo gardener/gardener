@@ -41,8 +41,6 @@ var _ = Describe("istiod", func() {
 	const (
 		deployNS        = "test"
 		deployNSIngress = "test-ingress"
-
-		ingressBootstrapOverrideChecksum = "7da3338166d3dcdbab977651cf2e809b70b20c8a6d8cab00f1521fc4172b6939"
 	)
 
 	var (
@@ -235,16 +233,10 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioIngressDeployment = func(replicas *int, checksum string) string {
+		istioIngressDeployment = func(replicas *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_deployment.yaml")
 			str := strings.ReplaceAll(string(data), "<REPLICAS>", strconv.Itoa(ptr.Deref(replicas, 2)))
-			str = strings.ReplaceAll(str, "<CPU_REQUESTS>", expectedCPURequests)
-			return strings.ReplaceAll(str, "<CHECKSUM>", checksum)
-		}
-
-		istioIngressBootstrapOverride = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_bootstrap_override.yaml")
-			return string(data)
+			return strings.ReplaceAll(str, "<CPU_REQUESTS>", expectedCPURequests)
 		}
 
 		istioIngressServiceMonitor = func() string {
@@ -421,8 +413,7 @@ var _ = Describe("istiod", func() {
 				istioIngressRoleBinding(),
 				istioIngressServiceInternal(),
 				istioIngressServiceAccount(),
-				istioIngressDeployment(minReplicas, ingressBootstrapOverrideChecksum),
-				istioIngressBootstrapOverride(),
+				istioIngressDeployment(minReplicas),
 				istioIngressEnvoyFilter(),
 				istioIngressMisdirectedRequestsEnvoyFilter(),
 				istioIngressHSTSEnvoyFilter(),

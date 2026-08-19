@@ -295,7 +295,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 						"envoy_cluster_upstream_cx_rx_bytes_total",
 						"envoy_cluster_upstream_cx_total",
 						"envoy_cluster_upstream_cx_tx_bytes_total",
-						"envoy_http2_goaway_sent",
 						"envoy_server_hot_restart_epoch",
 						"istio_build",
 						"istio_request_bytes_count",
