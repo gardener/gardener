@@ -231,6 +231,12 @@ In order to properly follow-up with such TODOs and to prevent them from piling u
   ```
   The associated person should actively drive the implementation of the referenced issue (unless it cannot be done because of third-party dependencies or conditions) so that the TODO statement does not get stale.
 - TODO statements without actionable tasks or those that are unlikely to ever be implemented (maybe because of very low priorities) should not be specified in the first place. If a TODO is specified, the associated person should make sure to actively follow-up.
+- Some TODO statements accompany code that performs a one-time migration of resources deployed inside a `Shoot` cluster (for example, changing an immutable field of a workload managed by `gardener-resource-manager`).
+  Extra care is needed before following up on such TODOs, because a `Shoot` can stay hibernated for the entire planned timeframe of the TODO.
+  While a `Shoot` is hibernated, its `gardener-resource-manager` is scaled down to `0`, so the migration code never runs for that `Shoot`.
+  If the migration code is removed before the `Shoot` wakes up, the migration will never be performed, and the `Shoot`'s wake up can fail.
+  Therefore, before removing such a TODO and its associated code, or before deploying the gardener version where the code is removed, make sure that the migration has actually taken place for all `Shoot`s.
+  A common approach is to prepare a script that checks (and, if needed, enforces) that all `Shoot`s have adopted the migration, and to reference the required check as a prerequisite in the (breaking) release note so that operators can run it before updating to the gardener version in which the TODO is resolved.
 
 ### Deprecations and Backwards-Compatibility
 
