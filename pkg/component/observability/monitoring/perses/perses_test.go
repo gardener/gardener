@@ -366,6 +366,36 @@ var _ = Describe("Perses", func() {
 							Hosts:    []string{"perses-seed.example.com"},
 							Http: []*istionetworkingv1alpha3.HTTPRoute{
 								{
+									Name: "block-debug",
+									Match: []*istionetworkingv1alpha3.HTTPMatchRequest{{
+										Uri: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/debug/"},
+										},
+									}},
+									DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{Status: 403},
+								},
+								{
+									Name: "block-unsaved-proxy",
+									Match: []*istionetworkingv1alpha3.HTTPMatchRequest{{
+										Uri: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/proxy/unsaved"},
+										},
+									}},
+									DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{Status: 403},
+								},
+								{
+									Name: "block-api-writes",
+									Match: []*istionetworkingv1alpha3.HTTPMatchRequest{{
+										Uri: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/api/v1/"},
+										},
+										Method: &istionetworkingv1alpha3.StringMatch{
+											MatchType: &istionetworkingv1alpha3.StringMatch_Regex{Regex: "POST|PUT|PATCH|DELETE"},
+										},
+									}},
+									DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{Status: 403},
+								},
+								{
 									Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
 										Destination: &istionetworkingv1alpha3.Destination{
 											Host: "perses-seed." + namespace + ".svc.cluster.local",
