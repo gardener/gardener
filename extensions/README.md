@@ -15,7 +15,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 ### Infrastructure Provider
 
-- [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
+- [Alibaba Cloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
 - [Equinix Metal](https://github.com/gardener/gardener-extension-provider-equinix-metal)
@@ -23,8 +23,8 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [Hetzner Cloud](https://github.com/23technologies/gardener-extension-provider-hcloud)
 - [IronCore](https://github.com/ironcore-dev/gardener-extension-provider-ironcore)
 - [IronCore Metal](https://github.com/ironcore-dev/gardener-extension-provider-ironcore-metal)
-- [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
-- [MetalStack](https://github.com/metal-stack/gardener-extension-provider-metal)
+- [KubeVirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
+- [metal-stack](https://github.com/metal-stack/gardener-extension-provider-metal)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [STACKIT](https://github.com/stackitcloud/gardener-extension-provider-stackit)
 - [vSphere](https://github.com/gardener/gardener-extension-provider-vsphere)
@@ -33,10 +33,10 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener related DNS records)
 
-- [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
+- [Alibaba Cloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
-- [CloudFlare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
+- [Cloudflare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [PowerDNS](https://github.com/metal-stack/gardener-extension-dns-powerdns)
@@ -44,11 +44,11 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 
 ### Operating System
 
-- [CoreOS/FlatCar](https://github.com/gardener/gardener-extension-os-coreos)
-- [Debian/Ubuntu (MetalStack)](https://github.com/metal-stack/os-metal-extension)
-- [GardenLinux](https://github.com/gardener/gardener-extension-os-gardenlinux)
+- [CoreOS/Flatcar](https://github.com/gardener/gardener-extension-os-coreos)
+- [Debian/Ubuntu (metal-stack)](https://github.com/metal-stack/os-metal-extension)
+- [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux)
 - [k3os](https://github.com/23technologies/gardener-extension-os-k3os)
-- [SuSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
+- [SUSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
 - [Ubuntu](https://github.com/gardener/gardener-extension-os-ubuntu)
 
 ### Container Runtime
