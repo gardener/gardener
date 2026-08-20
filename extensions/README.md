@@ -22,9 +22,11 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [Hetzner Cloud](https://github.com/23technologies/gardener-extension-provider-hcloud)
 - [IronCore](https://github.com/ironcore-dev/gardener-extension-provider-ironcore)
+- [IronCore Metal](https://github.com/ironcore-dev/gardener-extension-provider-ironcore-metal)
 - [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
 - [MetalStack](https://github.com/metal-stack/gardener-extension-provider-metal)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
+- [STACKIT](https://github.com/stackitcloud/gardener-extension-provider-stackit)
 - [vSphere](https://github.com/gardener/gardener-extension-provider-vsphere)
 
 ### Primary DNS Provider
@@ -63,8 +65,12 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 
 - [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [ACL](https://github.com/stackitcloud/gardener-extension-acl)
+- [Audit (`metal-stack/gardener-extension-audit`)](https://github.com/metal-stack/gardener-extension-audit)
+- [Auditing (`gardener/gardener-extension-auditing`)](https://github.com/gardener/gardener-extension-auditing)
+- [csi-driver-lvm](https://github.com/metal-stack/gardener-extension-csi-driver-lvm)
 - [Image Rewriter](https://github.com/gardener/gardener-extension-image-rewriter)
 - [Registry Cache](https://github.com/gardener/gardener-extension-registry-cache)
+- [S3 Compatible Storage](https://github.com/metal-stack/gardener-extension-backup-s3)
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
 - [Shoot Falco Service](https://github.com/gardener/gardener-extension-shoot-falco-service)
@@ -74,6 +80,7 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 - [Shoot Networking Problem Detector](https://github.com/gardener/gardener-extension-shoot-networking-problemdetector)
 - [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
 - [Shoot Rsyslog Relp](https://github.com/gardener/gardener-extension-shoot-rsyslog-relp)
+- [Shoot Traefik](https://github.com/gardener/gardener-extension-shoot-traefik)
 
 ### Others
 
