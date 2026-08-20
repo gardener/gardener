@@ -135,6 +135,7 @@ var _ = Describe("Etcd", func() {
 			topologyAwareRoutingEnabled bool,
 			runtimeKubernetesVersion *semver.Version,
 			staticPodConfig *StaticPodConfig,
+			controlPlaneNodeIP net.IP,
 		) *druidcorev1alpha1.Etcd {
 			defragSchedule := defragmentationSchedule
 			if existingDefragmentationSchedule != "" {
@@ -370,8 +371,12 @@ var _ = Describe("Etcd", func() {
 			}
 
 			if staticPodConfig != nil {
-				obj.Annotations["druid.gardener.cloud/disable-etcd-runtime-component-creation"] = ""
 				obj.Spec.RunAsRoot = new(true)
+
+				if controlPlaneNodeIP != nil {
+					obj.Spec.ExternallyManagedMemberAddresses = []string{controlPlaneNodeIP.String()}
+				}
+				obj.Spec.Replicas = int32(len(obj.Spec.ExternallyManagedMemberAddresses))
 
 				if role == "events" {
 					obj.Spec.Backup.Port = new(int32(8081))
@@ -410,7 +415,7 @@ var _ = Describe("Etcd", func() {
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
-								ContainerName:    "etcd",
+								ContainerName:    constants.ContainerNameEtcd,
 								MinAllowed:       minAllowedConfig,
 								ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 								Mode:             new(vpaautoscalingv1.ContainerScalingModeAuto),
@@ -825,7 +830,7 @@ var _ = Describe("Etcd", func() {
 			etcd := &druidcorev1alpha1.Etcd{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 			etcd.ResourceVersion = ""
-			Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)))
+			Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)))
 
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -868,7 +873,7 @@ var _ = Describe("Etcd", func() {
 			etcd := &druidcorev1alpha1.Etcd{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 			etcd.ResourceVersion = ""
-			Expect(etcd).To(DeepEqual(etcdObjFor(class, role, existingReplicas, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)))
+			Expect(etcd).To(DeepEqual(etcdObjFor(class, role, existingReplicas, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)))
 
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -915,7 +920,7 @@ var _ = Describe("Etcd", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 			etcd.ResourceVersion = ""
 
-			expectedEtcd := etcdObjFor(class, role, existingReplicas, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)
+			expectedEtcd := etcdObjFor(class, role, existingReplicas, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)
 			expectedEtcd.Status = druidcorev1alpha1.EtcdStatus{
 				Etcd: &druidcorev1alpha1.CrossVersionObjectReference{Name: etcdName},
 			}
@@ -1126,7 +1131,7 @@ var _ = Describe("Etcd", func() {
 				etcd := &druidcorev1alpha1.Etcd{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 				etcd.ResourceVersion = ""
-				Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)))
+				Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)))
 
 				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -1165,7 +1170,7 @@ var _ = Describe("Etcd", func() {
 				etcd := &druidcorev1alpha1.Etcd{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 				etcd.ResourceVersion = ""
-				Expect(etcd).To(Equal(etcdObjFor(class, role, 1, backupConfig, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)))
+				Expect(etcd).To(Equal(etcdObjFor(class, role, 1, backupConfig, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)))
 
 				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -1214,7 +1219,7 @@ var _ = Describe("Etcd", func() {
 					etcd := &druidcorev1alpha1.Etcd{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 					etcd.ResourceVersion = ""
-					Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, backupConfig, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)))
+					Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, backupConfig, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)))
 
 					vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -1230,6 +1235,68 @@ var _ = Describe("Etcd", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, pr)).To(Succeed())
 					pr.ResourceVersion = ""
 					Expect(pr).To(DeepEqual(prometheusRule("shoot", class, *replicas, false)))
+				})
+
+				It("should reconcile the shoot access secret", func() {
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+
+					accessSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-access-" + etcdName}, accessSecret)).To(Succeed())
+					Expect(accessSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", etcdName))
+					Expect(accessSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
+				})
+
+				It("should set ExternallyManagedMemberAddresses and derive Replicas from controlPlaneNodeIP", func() {
+					nodeIP := net.ParseIP("1.2.3.4")
+					etcd.SetStaticPodControlPlaneNodesIPAddresses(nodeIP)
+
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+
+					etcdObj := &druidcorev1alpha1.Etcd{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+					Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("1.2.3.4"))
+					Expect(etcdObj.Spec.Replicas).To(Equal(int32(1)))
+				})
+
+				It("should not duplicate an address when the same IP is deployed twice", func() {
+					nodeIP := net.ParseIP("1.2.3.4")
+					etcd.SetStaticPodControlPlaneNodesIPAddresses(nodeIP)
+
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+
+					etcdObj := &druidcorev1alpha1.Etcd{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+					Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("1.2.3.4"))
+					Expect(etcdObj.Spec.Replicas).To(Equal(int32(1)))
+				})
+
+				It("should preserve existing addresses and append a new IP on subsequent deploy", func() {
+					firstIP := net.ParseIP("1.2.3.4")
+					etcd.SetStaticPodControlPlaneNodesIPAddresses(firstIP)
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+
+					etcd2 := New(log, c, testNamespace, sm, Values{
+						Role:                    role,
+						Class:                   class,
+						Replicas:                replicas,
+						Autoscaling:             autoscalingConfig,
+						StorageCapacity:         storageCapacity,
+						StorageClassName:        &storageClassName,
+						DefragmentationSchedule: &defragmentationSchedule,
+						CARotationPhase:         caRotationPhase,
+						PriorityClassName:       priorityClassName,
+						MaintenanceTimeWindow:   maintenanceTimeWindow,
+						StaticPodConfig:         &StaticPodConfig{},
+					})
+					secondIP := net.ParseIP("5.6.7.8")
+					etcd2.SetStaticPodControlPlaneNodesIPAddresses(secondIP)
+					Expect(etcd2.Deploy(ctx)).To(Succeed())
+
+					etcdObj := &druidcorev1alpha1.Etcd{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+					Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("1.2.3.4", "5.6.7.8"))
+					Expect(etcdObj.Spec.Replicas).To(Equal(int32(2)))
 				})
 			})
 
@@ -1247,7 +1314,7 @@ var _ = Describe("Etcd", func() {
 					etcd := &druidcorev1alpha1.Etcd{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 					etcd.ResourceVersion = ""
-					Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, backupConfig, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)))
+					Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, backupConfig, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)))
 
 					vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -1285,7 +1352,7 @@ var _ = Describe("Etcd", func() {
 				etcd := &druidcorev1alpha1.Etcd{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 				etcd.ResourceVersion = ""
-				Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 3, nil, "", "", nil, nil, caSecretName, clientSecretName, serverSecretName, &peerCASecretName, &peerServerSecretName, false, nil, staticPodConfig)))
+				Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 3, nil, "", "", nil, nil, caSecretName, clientSecretName, serverSecretName, &peerCASecretName, &peerServerSecretName, false, nil, staticPodConfig, nil)))
 
 				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, vpa)).To(Succeed())
@@ -1538,7 +1605,7 @@ var _ = Describe("Etcd", func() {
 					etcd := &druidcorev1alpha1.Etcd{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcd)).To(Succeed())
 					etcd.ResourceVersion = ""
-					Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, true, runtimeKubernetesVersion, staticPodConfig)))
+					Expect(etcd).To(DeepEqual(etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, true, runtimeKubernetesVersion, staticPodConfig, nil)))
 				},
 
 				Entry("when runtime Kubernetes version is >= 1.34", semver.MustParse("1.34.0")),
@@ -1571,7 +1638,7 @@ var _ = Describe("Etcd", func() {
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
 
-				expected := etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig)
+				expected := etcdObjFor(class, role, 1, nil, "", "", nil, nil, secretNameCA, secretNameClient, secretNameServer, nil, nil, false, nil, staticPodConfig, nil)
 				expected.Name = etcdName
 				expected.Spec.VolumeClaimTemplate = new(testRole + "-virtual-garden-etcd")
 				delete(expected.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports")

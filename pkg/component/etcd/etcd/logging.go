@@ -14,6 +14,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the etcd and backup-restore sidecar logs.
@@ -25,16 +26,16 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, containerNameEtcd),
+				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, etcdconstants.ContainerNameEtcd),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, containerNameEtcd),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, etcdconstants.ContainerNameEtcd),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      containerNameEtcd + "-parser",
+							Parser:      etcdconstants.ContainerNameEtcd + "-parser",
 							ReserveData: new(true),
 						},
 					},
@@ -43,16 +44,16 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, containerNameBackupRestore),
+				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, etcdconstants.ContainerNameBackupRestore),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, containerNameBackupRestore),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, etcdconstants.ContainerNameBackupRestore),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      containerNameBackupRestore + "-parser",
+							Parser:      etcdconstants.ContainerNameBackupRestore + "-parser",
 							ReserveData: new(true),
 						},
 					},
@@ -66,7 +67,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 	return []*fluentbitv1alpha2.ClusterParser{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   containerNameEtcd + "-parser",
+				Name:   etcdconstants.ContainerNameEtcd + "-parser",
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{
@@ -79,7 +80,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   containerNameBackupRestore + "-parser",
+				Name:   etcdconstants.ContainerNameBackupRestore + "-parser",
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{

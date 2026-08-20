@@ -13,6 +13,13 @@ func ServiceName(role string) string {
 	return fmt.Sprintf("etcd-%s-client", role)
 }
 
+const (
+	// ContainerNameEtcd is the name of the etcd container in the etcd pod.
+	ContainerNameEtcd = "etcd"
+	// ContainerNameBackupRestore is the name of the backup-restore sidecar container in the etcd pod.
+	ContainerNameBackupRestore = "backup-restore"
+)
+
 var (
 	// PortEtcdClient is the port exposed by etcd for client communication.
 	PortEtcdClient int32 = 2379

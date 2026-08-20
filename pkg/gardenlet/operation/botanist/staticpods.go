@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -115,13 +116,17 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 		components []staticControlPlaneComponent
 
 		mutateETCDPodFn = func(pod *corev1.Pod) {
-			// The pod name of the etcd pod must match `etcd-<role>-0`. However, when running as static pod, its pod name is
-			// `etcd-<role>-<node-name>`. Hence, let's mutate it here for now (this might not be the final solution
-			// depending on how support for highly-available etcd clusters will be implemented in the future).
-			pod.Spec.Hostname = pod.Name + "-0"
-			for i := range pod.Spec.Containers {
-				kubernetesutils.AddEnvVar(&pod.Spec.Containers[i], corev1.EnvVar{Name: "POD_NAME", Value: pod.Spec.Hostname}, true)
-			}
+			// TODO(CaptainIRS): Remove this mutation once https://github.com/gardener/etcd-druid/issues/1317 is resolved,
+			// as the kubeconfig volume and env var can then be specified directly via the Etcd CR API.
+			genericTokenKubeconfigSecret, _ := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(pod, genericTokenKubeconfigSecret.Name, gardenerutils.NewShootAccessSecret(pod.Name, pod.Namespace).Secret.Name, etcdconstants.ContainerNameBackupRestore))
+			utilruntime.Must(kubernetesutils.VisitPodSpec(pod, func(podSpec *corev1.PodSpec) {
+				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+					if container.Name == etcdconstants.ContainerNameBackupRestore {
+						kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "KUBECONFIG", Value: gardenerutils.PathGenericKubeconfig}, true)
+					}
+				})
+			}))
 		}
 	)
 
