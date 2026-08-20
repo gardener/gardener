@@ -411,6 +411,7 @@ const (
 	// name labels on nodes for self-hosted shoot clusters after the shoot gardenlet takes over reconciliation from
 	// gardenadm init.
 	ShootTaskUpdateGardenerNodeAgentSecretName = "updateGardenerNodeAgentSecretName"
+
 	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be
 	// executed as soon as possible.
 	ShootOperationMaintain = "maintain"
