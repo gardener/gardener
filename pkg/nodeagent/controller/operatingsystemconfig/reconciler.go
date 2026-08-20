@@ -84,12 +84,6 @@ var (
 	OSUpdateRetryInterval = 30 * time.Second
 	// OSUpdateRetryTimeout is the timeout for OS update retries. Exported for testing.
 	OSUpdateRetryTimeout = 5 * time.Minute
-	// ContainerdReadinessRetryInterval is the interval at which the containerd readiness check is retried after a
-	// restart. Exposed for testing.
-	ContainerdReadinessRetryInterval = 1 * time.Second
-	// ContainerdReadinessRetryTimeout is the timeout after which the containerd readiness check is considered failed.
-	// Exposed for testing.
-	ContainerdReadinessRetryTimeout = 1 * time.Minute
 	// RequeueAfterRestart defines whether RequeueAfter is supposed to be triggered on restart of gardener-node-agent.
 	// Exposed for testing.
 	RequeueAfterRestart time.Duration
@@ -745,6 +739,8 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 
 func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, oscChanges *operatingSystemConfigChanges) error {
 	var (
+		fns []flow.TaskFn
+
 		restart = func(ctx context.Context, unitName string) error {
 			if err := r.DBus.Restart(ctx, r.Recorder, node, unitName); err != nil {
 				return fmt.Errorf("unable to restart unit %q: %w", unitName, err)
@@ -769,14 +765,13 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		}
 	)
 
-	var (
-		containerdFns []flow.TaskFn
-		otherFns      []flow.TaskFn
-	)
-
 	var containerdChanged bool
 	for _, unit := range slices.Clone(oscChanges.Units.Commands) {
-		fn := func(ctx context.Context) error {
+		if unit.Name == v1beta1constants.OperatingSystemConfigUnitNameContainerDService {
+			containerdChanged = true
+		}
+
+		fns = append(fns, func(ctx context.Context) error {
 			switch unit.Command {
 			case extensionsv1alpha1.CommandStop:
 				return stop(ctx, unit.Name)
@@ -786,48 +781,16 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 				return oscChanges.completedUnitCommand(unit.Name)
 			}
 			return fmt.Errorf("unknown unit command %q", unit.Command)
-		}
-
-		if unit.Name == v1beta1constants.OperatingSystemConfigUnitNameContainerDService {
-			containerdChanged = true
-			containerdFns = append(containerdFns, fn)
-		} else {
-			otherFns = append(otherFns, fn)
-		}
+		})
 	}
 
 	if oscChanges.Containerd.ConfigFileChanged && !containerdChanged {
-		containerdFns = append(containerdFns, func(ctx context.Context) error {
+		fns = append(fns, func(ctx context.Context) error {
 			return restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
 		})
 	}
 
-	// If containerd is (re)started, do so before restarting the other units (e.g. kubelet) and wait for its socket to
-	// become available again. Otherwise, units depending on containerd (like kubelet) might probe the containerd socket
-	// while it is still tearing down, which can lead to fatal "connection reset by peer" errors (e.g. kubelet's cAdvisor
-	// failing to register the containerd factory, resulting in missing container metrics for the process lifetime).
-	if len(containerdFns) > 0 {
-		if err := flow.Parallel(containerdFns...)(ctx); err != nil {
-			return err
-		}
-
-		if err := r.waitForContainerdReadiness(ctx, log); err != nil {
-			return err
-		}
-	}
-
-	return flow.Parallel(otherFns...)(ctx)
-}
-
-func (r *Reconciler) waitForContainerdReadiness(ctx context.Context, log logr.Logger) error {
-	return retryutils.UntilTimeout(ctx, ContainerdReadinessRetryInterval, ContainerdReadinessRetryTimeout, func(ctx context.Context) (bool, error) {
-		if _, err := r.ContainerdClient.Version(ctx); err != nil {
-			log.V(1).Info("Waiting for containerd to become ready after restart", "error", err.Error())
-			return retryutils.MinorError(fmt.Errorf("containerd is not ready yet: %w", err))
-		}
-		log.Info("Containerd is ready after restart")
-		return retryutils.Ok()
-	})
+	return flow.Parallel(fns...)(ctx)
 }
 
 func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {
