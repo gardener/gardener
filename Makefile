@@ -139,13 +139,18 @@ check-plutono-dashboards:
 	@hack/check-plutono-dashboards.sh
 
 .PHONY: check
-check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(YQ) $(TYPOS) logcheck-symlinks
-	@sed ./.golangci.yaml.in -e "s#<<LOGCHECK_PLUGIN_PATH>>#$(TOOLS_BIN_DIR)#g" > ./.golangci.yaml
+check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(KUBE_API_LINTER) $(LOGCHECK) $(YQ) $(TYPOS) logcheck-symlinks
+	@sed ./.golangci.yaml.in \
+		-e "s#<<LOGCHECK_PLUGIN_PATH>>#$(TOOLS_BIN_DIR)#g" \
+		> ./.golangci.yaml
+	@sed ./pkg/apis/.golangci.yaml.in \
+		-e "s#<<KUBE_API_LINTER_PLUGIN_PATH>>#$(abspath $(TOOLS_BIN_DIR))#g" \
+		> ./pkg/apis/.golangci.yaml
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 
 	@echo "> Check $(PKG_APIS_DIR)"
-	@cd $(PKG_APIS_DIR); ../../hack/check.sh --golangci-lint-config=../../.golangci.yaml ./...
+	@cd $(PKG_APIS_DIR); ../../hack/check.sh --golangci-lint-config=.golangci.yaml ./authentication/v1alpha1/... ./config/... ./core/v1/... ./core/v1beta1/... ./extensions/v1alpha1/... ./operations/v1alpha1/... ./operator/v1alpha1/... ./resources/v1alpha1/... ./security/v1alpha1/... ./seedmanagement/v1alpha1/...
 	@cd $(PKG_APIS_DIR); ../../hack/check-imports.sh ./...
 
 	@echo "> Check $(LOGCHECK_DIR)"
