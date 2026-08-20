@@ -63,12 +63,12 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 
 ### Generic Extensions
 
-- [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [ACL](https://github.com/stackitcloud/gardener-extension-acl)
 - [Audit (`metal-stack/gardener-extension-audit`)](https://github.com/metal-stack/gardener-extension-audit)
 - [Auditing (`gardener/gardener-extension-auditing`)](https://github.com/gardener/gardener-extension-auditing)
 - [csi-driver-lvm](https://github.com/metal-stack/gardener-extension-csi-driver-lvm)
 - [Image Rewriter](https://github.com/gardener/gardener-extension-image-rewriter)
+- [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [Registry Cache](https://github.com/gardener/gardener-extension-registry-cache)
 - [S3 Compatible Storage](https://github.com/metal-stack/gardener-extension-backup-s3)
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
