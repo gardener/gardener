@@ -61,12 +61,19 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 	return cmd
 }
 
+// run bootstraps the control plane and then runs the main init flow that deploys the shoot components.
 func run(ctx context.Context, opts *Options) error {
-	b, err := bootstrapControlPlane(ctx, opts)
+	b, err := BootstrapControlPlane(ctx, opts, "")
 	if err != nil {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
 	}
 
+	return RunInitFlow(ctx, b, opts)
+}
+
+// RunInitFlow runs the main init flow that deploys the shoot components on an already-bootstrapped control plane.
+// It is exported so that the `gardenadm restore` command can reuse the same graph.
+func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, opts *Options) error {
 	dir := filepath.Dir(cmd.ConfigDirLocation)
 	if err := b.FS.MkdirAll(dir, os.ModeDir); err != nil {
 		return fmt.Errorf("failed creating config directory location dir %s: %w", dir, err)
@@ -186,7 +193,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
 				SkipIf(opts.UseBootstrapEtcd),
 		)
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd, opts.BackupDataPath))
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd))
 
 		_ = g.Add(flow.Task{
 			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",
@@ -287,7 +294,10 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 	return nil
 }
 
-func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotanist.GardenadmBotanist, error) {
+// BootstrapControlPlane bootstraps the control plane node and returns a GardenadmBotanist connected to the API server.
+// When backupDataPath is non-empty, the bootstrap etcd is initialized from that local snapshot for disaster recovery.
+// It is exported so that the `gardenadm restore` command can reuse the same graph.
+func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath string) (*gardenadmbotanist.GardenadmBotanist, error) {
 	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
@@ -296,8 +306,6 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 	if opts.Zone != "" {
 		b.Zone = new(opts.Zone)
 	}
-
-	b.BackupDataPath = opts.BackupDataPath
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
 	if err != nil {
@@ -340,8 +348,10 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*gardenadmbotani
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		deployOperatingSystemConfigSecretForNodeAgent = g.Add(flow.Task{
-			Name:         "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
-			Fn:           b.DeployOperatingSystemConfigSecretForBootstrap,
+			Name: "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
+			Fn: func(ctx context.Context) error {
+				return b.DeployOperatingSystemConfigSecretForBootstrap(ctx, backupDataPath)
+			},
 			SkipIf:       kubeconfigFileExists,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})

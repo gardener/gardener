@@ -754,7 +754,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			deployKubernetesDashboard,
 			deployNginxIngressAddon,
 		)
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false, ""))
+		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(false))
 
 		scaleClusterAutoscalerToZero = g.Add(flow.Task{
 			Name:         "Scaling down cluster autoscaler",

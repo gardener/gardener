@@ -6,11 +6,13 @@ package restore
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	initcmd "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -51,6 +53,47 @@ gardenadm restore --config-dir /path/to/manifests --backup-data-path /path/to/et
 	return cmd
 }
 
-func run(_ context.Context, _ *Options) error {
-	return fmt.Errorf("the gardenadm restore command is not implemented yet, see https://github.com/gardener/gardener/issues/15279 for more details")
+func run(ctx context.Context, opts *Options) error {
+	initOpts := &initcmd.Options{
+		Options:         opts.Options,
+		ManifestOptions: opts.ManifestOptions,
+		// Restore requires an etcd backup, which only a control plane using etcd-druid (not the bootstrap etcd)
+		// produces. Hence, restore always transitions to etcd-druid and does not expose --use-bootstrap-etcd.
+		UseBootstrapEtcd: false,
+		UseHostNetwork:   false,
+		Zone:             opts.Zone,
+	}
+
+	var (
+		b *gardenadmbotanist.GardenadmBotanist
+
+		g = flow.NewGraph("restore")
+
+		bootstrapControlPlane = g.Add(flow.Task{
+			Name: "Bootstrapping control plane",
+			Fn: func(ctx context.Context) error {
+				var err error
+				b, err = initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath)
+				return err
+			},
+		})
+		// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
+		// For more details, see https://github.com/gardener/gardener/issues/15279.
+		_ = g.Add(flow.Task{
+			Name: "Running init flow",
+			Fn: func(ctx context.Context) error {
+				return initcmd.RunInitFlow(ctx, b, initOpts)
+			},
+			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
+		})
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              opts.Log,
+		ProgressReporter: flow.NewCommandLineProgressReporter(opts.ErrOut),
+	}); err != nil {
+		return flow.Errors(err)
+	}
+
+	return nil
 }
