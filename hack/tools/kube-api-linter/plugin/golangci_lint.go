@@ -6,7 +6,6 @@ package main
 
 import (
 	"golang.org/x/tools/go/analysis"
-
 	pluginbase "sigs.k8s.io/kube-api-linter/pkg/plugin/base"
 	_ "sigs.k8s.io/kube-api-linter/pkg/registration"
 )
