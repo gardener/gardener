@@ -169,13 +169,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
-	// TODO(rfranzke): Remove this if-condition once the Shoot controller flow has progressed.
-	if !b.Shoot.IsSelfHosted() {
-		b.Logger.Info("Cleaning no longer required secrets")
-		if err := b.SecretsManager.Cleanup(ctx); err != nil {
-			err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
-			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
-		}
+	b.Logger.Info("Cleaning no longer required secrets")
+	if err := b.SecretsManager.Cleanup(ctx); err != nil {
+		err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	if !r.ShootStateControllerEnabled && b.Shoot.IsRestorePhase() {
