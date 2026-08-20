@@ -112,6 +112,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 			"node_scrape_collector_success",
 			"process_max_fds",
 			"process_open_fds",
+			"node_netstat_Tcp_CurrEstab",
 		)
 		return nil
 	}); err != nil {
@@ -387,6 +388,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									"--collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)",
 									"--collector.loadavg",
 									"--collector.meminfo",
+									"--collector.netstat",
 									"--collector.uname",
 									"--collector.stat",
 									"--collector.pressure",
