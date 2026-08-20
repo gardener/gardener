@@ -21,7 +21,6 @@ func NewFluentBit(
 	c client.Client,
 	gardenNamespaceName string,
 	enabled bool,
-	valiEnabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
@@ -43,7 +42,6 @@ func NewFluentBit(
 		fluentbit.Values{
 			Image:              fluentBitImage.String(),
 			InitContainerImage: fluentBitInitImageName,
-			ValiEnabled:        valiEnabled,
 			PriorityClassName:  priorityClassName,
 		},
 	)
