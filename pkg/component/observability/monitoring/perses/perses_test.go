@@ -169,6 +169,36 @@ var _ = Describe("Perses", func() {
 		}
 
 		newExpectedDatasource = func(dsName, pluginKind, url string, isDefault bool, instanceName string) *persesv1alpha2.PersesDatasource {
+			var allowedEndpoints []any
+			switch pluginKind {
+			case "PrometheusDatasource":
+				for _, pattern := range []string{
+					"/api/v1/query",
+					"/api/v1/query_range",
+					"/api/v1/labels",
+					"/api/v1/label/[a-zA-Z0-9_]+/values",
+					"/api/v1/series",
+					"/api/v1/metadata",
+					"/api/v1/parse_query",
+				} {
+					allowedEndpoints = append(allowedEndpoints,
+						map[string]any{"endpointPattern": pattern, "method": "GET"},
+						map[string]any{"endpointPattern": pattern, "method": "POST"},
+					)
+				}
+			case "VictoriaLogsDatasource":
+				for _, pattern := range []string{
+					"/select/logsql/query",
+					"/select/logsql/stats_query_range",
+					"/select/logsql/field_names",
+					"/select/logsql/field_values",
+				} {
+					allowedEndpoints = append(allowedEndpoints,
+						map[string]any{"endpointPattern": pattern, "method": "POST"},
+					)
+				}
+			}
+
 			return &persesv1alpha2.PersesDatasource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      dsName,
@@ -191,7 +221,8 @@ var _ = Describe("Perses", func() {
 									"proxy": map[string]any{
 										"kind": "HTTPProxy",
 										"spec": map[string]any{
-											"url": url,
+											"url":              url,
+											"allowedEndpoints": allowedEndpoints,
 										},
 									},
 								},

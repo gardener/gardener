@@ -6,6 +6,7 @@ package perses
 
 import (
 	"fmt"
+	"net/http"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persescommon "github.com/perses/spec/go/common"
@@ -18,24 +19,29 @@ import (
 	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 )
 
+const (
+	pluginKindPrometheus   = "PrometheusDatasource"
+	pluginKindVictoriaLogs = "VictoriaLogsDatasource"
+)
+
 func (p *perses) datasources() []client.Object {
 	var datasources []client.Object
 
 	if p.values.IsGardenCluster {
 		datasources = append(datasources,
-			p.newDatasource("prometheus-garden", "PrometheusDatasource", "http://prometheus-garden:80", true),
-			p.newDatasource("prometheus-longterm", "PrometheusDatasource", "http://prometheus-longterm:81", false),
+			p.newDatasource("prometheus-garden", pluginKindPrometheus, "http://prometheus-garden:80", true),
+			p.newDatasource("prometheus-longterm", pluginKindPrometheus, "http://prometheus-longterm:81", false),
 		)
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		datasources = append(datasources,
-			p.newDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", !p.values.OnlyDeployDatasourcesAndDashboards),
-			p.newDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false),
+			p.newDatasource("prometheus-aggregate", pluginKindPrometheus, "http://prometheus-aggregate:80", !p.values.OnlyDeployDatasourcesAndDashboards),
+			p.newDatasource("prometheus-seed", pluginKindPrometheus, "http://prometheus-seed:80", false),
 		)
 	}
 
 	if p.values.VictoriaLogsEnabled {
 		datasources = append(datasources,
-			p.newDatasource("victorialogs", "VictoriaLogsDatasource", fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsPort), false),
+			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsPort), false),
 		)
 	}
 
@@ -82,6 +88,13 @@ func (p *perses) newDatasource(dsName, pluginKind, url string, isDefault bool) *
 								"kind": "HTTPProxy",
 								"spec": map[string]any{
 									"url": url,
+									// Restrict what can be proxied to the datasource. The Perses proxy forwards any
+									// request under the datasource path (with any method, and attaching the
+									// datasource's stored credentials) to the upstream. Without an allow-list, a user
+									// reaching the un-authenticated Perses API could use the proxy to send writes
+									// (e.g. Prometheus remote-write) or reach other upstream endpoints. The allow-list
+									// is limited to the read-only query endpoints the corresponding Perses plugin uses.
+									"allowedEndpoints": allowedEndpointsForPlugin(pluginKind),
 								},
 							},
 						},
@@ -91,4 +104,49 @@ func (p *perses) newDatasource(dsName, pluginKind, url string, isDefault bool) *
 			InstanceSelector: p.instanceSelector(),
 		},
 	}
+}
+
+// allowedEndpointsForPlugin returns the read-only upstream endpoints the given datasource plugin needs to be able to
+// proxy to. Each entry pairs an endpoint pattern (regular expression) with a single HTTP method, so endpoints served
+// via both GET and POST are listed twice.
+func allowedEndpointsForPlugin(pluginKind string) []map[string]any {
+	endpoint := func(pattern string, methods ...string) []map[string]any {
+		entries := make([]map[string]any, 0, len(methods))
+		for _, method := range methods {
+			entries = append(entries, map[string]any{"endpointPattern": pattern, "method": method})
+		}
+		return entries
+	}
+
+	switch pluginKind {
+	case pluginKindPrometheus:
+		var endpoints []map[string]any
+		// The Prometheus plugin queries via GET and POST (POST is used for large requests).
+		for _, pattern := range []string{
+			"/api/v1/query",
+			"/api/v1/query_range",
+			"/api/v1/labels",
+			"/api/v1/label/[a-zA-Z0-9_]+/values",
+			"/api/v1/series",
+			"/api/v1/metadata",
+			"/api/v1/parse_query",
+		} {
+			endpoints = append(endpoints, endpoint(pattern, http.MethodGet, http.MethodPost)...)
+		}
+		return endpoints
+	case pluginKindVictoriaLogs:
+		var endpoints []map[string]any
+		// The VictoriaLogs plugin queries exclusively via POST.
+		for _, pattern := range []string{
+			"/select/logsql/query",
+			"/select/logsql/stats_query_range",
+			"/select/logsql/field_names",
+			"/select/logsql/field_values",
+		} {
+			endpoints = append(endpoints, endpoint(pattern, http.MethodPost)...)
+		}
+		return endpoints
+	}
+
+	return nil
 }
