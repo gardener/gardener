@@ -6,10 +6,13 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
@@ -19,6 +22,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
@@ -27,6 +31,7 @@ import (
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/managedresources/builder"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -212,7 +217,7 @@ const GardenerNodeAgentManagedResourceName = "shoot-gardener-node-agent"
 // DeployManagedResourceForGardenerNodeAgent creates the ManagedResource that contains:
 // - A secret containing the raw original OperatingSystemConfig for each worker pool.
 // - A secret containing some shared RBAC resources for downloading the OSC secrets + bootstrapping the node.
-func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context) error {
+func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context, forControlPlanePoolOnly bool) error {
 	var (
 		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, GardenerNodeAgentManagedResourceName, managedresources.LabelValueGardener, false)
 		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
@@ -225,8 +230,13 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 		fns = make([]flow.TaskFn, 0, managedResourceSecretsCount)
 	)
 
-	// Generate operating system config secrets for all worker pools.
-	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+	workerPools, err := b.relevantWorkerPools(forControlPlanePoolOnly)
+	if err != nil {
+		return err
+	}
+
+	// Generate operating system config secrets for the relevant worker pools.
+	for _, worker := range workerPools {
 		oscData, ok := workerNameToOperatingSystemConfigMaps[worker.Name]
 		if !ok {
 			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)
@@ -269,6 +279,16 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 		})
 	}
 
+	// If we want to update the configuration for the control plane worker pool only, we don't want to override/touch
+	// the ManagedResource secrets for other worker pools. In addition, we also don't want to remove their references
+	// from the ManagedResource's `.spec.secretRefs[]` - otherwise, they would be deleted.
+	// To prevent this, we check if the ManagedResource already exists, and if so, we collect all existing references
+	if forControlPlanePoolOnly {
+		if err := b.mergeExistingSecretRefsIntoNodeAgentManagedResource(ctx, managedResource, managedResourceSecretNamesWanted); err != nil {
+			return fmt.Errorf("failed to merge existing ManagedResource secret references into the gardener-node-agent ManagedResource: %w", err)
+		}
+	}
+
 	if err := flow.Parallel(fns...)(ctx); err != nil {
 		return err
 	}
@@ -290,6 +310,38 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 		}
 		return !managedResourceSecretNamesWanted.Has(acc.GetName())
 	})
+}
+
+func (b *Botanist) relevantWorkerPools(controlPlanePoolOnly bool) ([]gardencorev1beta1.Worker, error) {
+	workerPools := b.Shoot.GetInfo().Spec.Provider.Workers
+	if !controlPlanePoolOnly {
+		return workerPools, nil
+	}
+
+	controlPlanePool := v1beta1helper.ControlPlaneWorkerPoolForShoot(workerPools)
+	if controlPlanePool == nil {
+		return nil, errors.New("failed to find control plane worker pool for shoot")
+	}
+	return []gardencorev1beta1.Worker{*controlPlanePool}, nil
+}
+
+func (b *Botanist) mergeExistingSecretRefsIntoNodeAgentManagedResource(ctx context.Context, managedResource *builder.ManagedResource, managedResourceSecretNamesWanted sets.Set[string]) error {
+	existingManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: GardenerNodeAgentManagedResourceName, Namespace: b.Shoot.ControlPlaneNamespace}}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(existingManagedResource), existingManagedResource); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to read ManagedResource %s: %w", client.ObjectKeyFromObject(existingManagedResource), err)
+		}
+		return nil
+	}
+
+	for _, secretRef := range existingManagedResource.Spec.SecretRefs {
+		if managedResourceSecretName := secretRef.Name; !managedResourceSecretNamesWanted.Has(secretRef.Name) {
+			managedResource.WithSecretRef(managedResourceSecretName)
+			managedResourceSecretNamesWanted.Insert(managedResourceSecretName)
+		}
+	}
+
+	return nil
 }
 
 func (b *Botanist) generateOperatingSystemConfigSecretForWorker(

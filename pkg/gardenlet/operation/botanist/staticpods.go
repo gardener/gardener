@@ -171,7 +171,7 @@ func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useB
 		return fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
 	}
 
-	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
+	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx, b.isGardenlet()); err != nil {
 		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
 	}
 

@@ -204,13 +204,13 @@ var _ = Describe("Worker", func() {
 				},
 			}).Build()
 
-			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c)
 			Expect(workerPoolToCloudConfigSecretMeta).To(BeNil())
 			Expect(err).To(MatchError(fakeErr))
 		})
 
 		It("should return an empty map when there are no secrets", func() {
-			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c)
 			Expect(workerPoolToCloudConfigSecretMeta).To(BeEmpty())
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -269,7 +269,7 @@ var _ = Describe("Worker", func() {
 			Expect(c.Create(ctx, &secret3WithoutWorkerPoolLabel)).To(Succeed())
 			Expect(c.Create(ctx, &secret4WithoutAnnotations)).To(Succeed())
 
-			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(workerPoolToCloudConfigSecretMeta).To(Equal(map[string]metav1.ObjectMeta{
 				pool1: {
@@ -558,6 +558,8 @@ var _ = Describe("Worker", func() {
 				&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return 5 * time.Millisecond },
 			))
 
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+
 			// Create ManagedResource with Generation != ObservedGeneration (not populated yet)
 			mr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -568,7 +570,7 @@ var _ = Describe("Worker", func() {
 			}
 			Expect(seedFakeClient.Create(ctx, mr)).To(Succeed())
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(MatchError(ContainSubstring("the operating system configs for the worker nodes were not populated yet")))
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false, false)).To(MatchError(ContainSubstring("the operating system configs for the worker nodes were not populated yet")))
 		})
 
 		It("should fail when the operating system config was not updated for all worker pools", func() {
@@ -633,7 +635,7 @@ var _ = Describe("Worker", func() {
 				},
 			})).To(Succeed())
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(MatchError(ContainSubstring("is outdated")))
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false, false)).To(MatchError(ContainSubstring("is outdated")))
 		})
 
 		It("should succeed when the operating system config was updated for all worker pools", func() {
@@ -698,7 +700,7 @@ var _ = Describe("Worker", func() {
 				},
 			})).To(Succeed())
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)).To(Succeed())
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false, false)).To(Succeed())
 		})
 
 		It("should succeed when tolerating errors and the managed resource becomes healthy after a transient error", func() {
@@ -778,7 +780,110 @@ var _ = Describe("Worker", func() {
 				},
 			})).To(Succeed())
 
-			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)).To(Succeed())
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false, true)).To(Succeed())
+		})
+
+		When("forControlPlanePoolOnly is true", func() {
+			It("should fail when no control plane worker pool exists", func() {
+				DeferCleanup(test.WithVar(
+					&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return 5 * time.Millisecond },
+				))
+
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{
+								{Name: "pool1"},
+							},
+						},
+					},
+				})
+
+				Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true, false)).To(MatchError(ContainSubstring("failed to find control plane worker pool for shoot")))
+			})
+
+			It("should succeed when only the control plane pool node is up-to-date, ignoring other pools", func() {
+				DeferCleanup(test.WithVars(
+					&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
+					&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
+				))
+
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{
+								{
+									Name:         "cp-pool",
+									ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+								},
+								{
+									Name: "worker-pool",
+								},
+							},
+						},
+					},
+				})
+
+				mr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "shoot-gardener-node-agent",
+						Namespace:  controlPlaneNamespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue},
+							{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue},
+						},
+					},
+				}
+				Expect(seedFakeClient.Create(ctx, mr)).To(Succeed())
+
+				// Control plane pool node: up-to-date
+				Expect(shootFakeClient.Create(ctx, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cp-node",
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool":                            "cp-pool",
+							"worker.gardener.cloud/kubernetes-version":              "1.26.0",
+							"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent-cp-pool-abc12",
+						},
+						Annotations: map[string]string{"checksum/cloud-config-data": "match"},
+					},
+				})).To(Succeed())
+				Expect(shootFakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "gardener-node-agent-cp-pool-abc12",
+						Namespace:   metav1.NamespaceSystem,
+						Labels:      map[string]string{"worker.gardener.cloud/pool": "cp-pool", "gardener.cloud/role": "operating-system-config"},
+						Annotations: map[string]string{"checksum/data-script": "match"},
+					},
+				})).To(Succeed())
+
+				// Worker pool node: outdated — should be ignored with forControlPlanePoolOnly=true
+				Expect(shootFakeClient.Create(ctx, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "worker-node",
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool":                            "worker-pool",
+							"worker.gardener.cloud/kubernetes-version":              "1.26.0",
+							"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent-worker-pool-def34",
+						},
+						Annotations: map[string]string{"checksum/cloud-config-data": "old"},
+					},
+				})).To(Succeed())
+				Expect(shootFakeClient.Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "gardener-node-agent-worker-pool-def34",
+						Namespace:   metav1.NamespaceSystem,
+						Labels:      map[string]string{"worker.gardener.cloud/pool": "worker-pool", "gardener.cloud/role": "operating-system-config"},
+						Annotations: map[string]string{"checksum/data-script": "new"},
+					},
+				})).To(Succeed())
+
+				Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true, false)).To(Succeed())
+			})
 		})
 	})
 })

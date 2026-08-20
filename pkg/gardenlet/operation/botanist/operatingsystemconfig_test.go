@@ -302,7 +302,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			It("should fail because the operating system config maps for a worker pool are not available", func() {
 				operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(nil)
 
-				Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(MatchError(ContainSubstring("did not find osc data for worker pool")))
+				Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(MatchError(ContainSubstring("did not find osc data for worker pool")))
 			})
 
 			When("operating system config maps are available", func() {
@@ -315,7 +315,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						return nil, fakeErr
 					}))
 
-					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(MatchError(fakeErr))
+					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(MatchError(fakeErr))
 				})
 
 				It("should fail because the RBAC resources data generation function fails", func() {
@@ -323,7 +323,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						return nil, fakeErr
 					}))
 
-					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(MatchError(fakeErr))
+					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(MatchError(fakeErr))
 				})
 
 				It("should successfully generate the resources and cleanup stale resources", func() {
@@ -340,7 +340,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					Expect(fakeClient.Create(ctx, oldSecret2)).To(Succeed())
 
 					By("Execute DeployManagedResourceForGardenerNodeAgent function")
-					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(Succeed())
+					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(Succeed())
 
 					expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true)
 					Expect(err).NotTo(HaveOccurred())
@@ -436,6 +436,143 @@ var _ = Describe("operatingsystemconfig", func() {
 					By("Assert expected deletion of no longer required ManagedResource secrets")
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(oldSecret1), oldSecret1)).To(BeNotFoundError())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(oldSecret2), oldSecret2)).To(BeNotFoundError())
+				})
+			})
+
+			When("forControlPlanePoolOnly is true", func() {
+				BeforeEach(func() {
+					botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+				})
+
+				It("should fail because no control plane worker pool exists", func() {
+					operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+
+					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, true)).To(MatchError(ContainSubstring("failed to find control plane worker pool for shoot")))
+				})
+
+				When("a control plane worker pool exists", func() {
+					BeforeEach(func() {
+						operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+					})
+
+					JustBeforeEach(func() {
+						shoot := botanist.Shoot.GetInfo().DeepCopy()
+						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+							{
+								Name:         worker1Name,
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							},
+							{
+								Name:                  worker2Name,
+								KubeletDataVolumeName: &worker2KubeletDataVolumeName,
+								DataVolumes: []gardencorev1beta1.DataVolume{
+									{Name: worker2KubeletDataVolumeName},
+								},
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Version: &worker2KubernetesVersion,
+								},
+							},
+						}
+						botanist.Shoot.SetInfo(shoot)
+					})
+
+					It("should only generate resources for the control plane worker pool when no ManagedResource exists yet", func() {
+						By("Execute DeployManagedResourceForGardenerNodeAgent function")
+						Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, true)).To(Succeed())
+
+						expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true)
+						Expect(err).NotTo(HaveOccurred())
+
+						versions := schema.GroupVersions([]schema.GroupVersion{corev1.SchemeGroupVersion})
+						codec := kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+						expectedOSCSecretWorker1Raw, err := runtime.Encode(codec, expectedOSCSecretWorker1)
+						Expect(err).NotTo(HaveOccurred())
+						compressedOSCSecretWorker1Raw, err := test.BrotliCompression(expectedOSCSecretWorker1Raw)
+						Expect(err).NotTo(HaveOccurred())
+
+						expectedMRSecretWorker1 := &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            "managedresource-shoot-gardener-node-agent-" + worker1Name,
+								Namespace:       namespace,
+								Labels:          map[string]string{"managed-resource": "shoot-gardener-node-agent"},
+								ResourceVersion: "1",
+							},
+							Type: corev1.SecretTypeOpaque,
+							Data: map[string][]byte{"data.yaml.br": compressedOSCSecretWorker1Raw},
+						}
+						utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker1))
+
+						nodeAgentRBACResourcesData, err := NodeAgentRBACResourcesDataFn()
+						Expect(err).NotTo(HaveOccurred())
+						expectedMRSecretRBAC := &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            "managedresource-shoot-gardener-node-agent-rbac",
+								Namespace:       namespace,
+								Labels:          map[string]string{"managed-resource": "shoot-gardener-node-agent"},
+								ResourceVersion: "1",
+							},
+							Type: corev1.SecretTypeOpaque,
+							Data: nodeAgentRBACResourcesData,
+						}
+						utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretRBAC))
+
+						By("Assert only the control plane pool secret and RBAC secret were created")
+						mrSecretWorker1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: expectedMRSecretWorker1.Name, Namespace: namespace}}
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mrSecretWorker1), mrSecretWorker1)).To(Succeed())
+						Expect(mrSecretWorker1).To(Equal(expectedMRSecretWorker1))
+
+						mrSecretRBAC := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: expectedMRSecretRBAC.Name, Namespace: namespace}}
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mrSecretRBAC), mrSecretRBAC)).To(Succeed())
+						Expect(mrSecretRBAC).To(Equal(expectedMRSecretRBAC))
+
+						By("Assert ManagedResource references only the control plane pool and RBAC secrets")
+						managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-gardener-node-agent", Namespace: namespace}}
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+						Expect(managedResource.Spec.SecretRefs).To(ConsistOf(
+							corev1.LocalObjectReference{Name: expectedMRSecretWorker1.Name},
+							corev1.LocalObjectReference{Name: expectedMRSecretRBAC.Name},
+						))
+
+						By("Assert no secret was created for the non-control-plane worker pool")
+						secretList := &corev1.SecretList{}
+						Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"managed-resource": "shoot-gardener-node-agent"})).To(Succeed())
+						for _, s := range secretList.Items {
+							Expect(s.Name).NotTo(ContainSubstring(worker2Name))
+						}
+					})
+
+					It("should merge existing secret refs from other worker pools when a ManagedResource already exists", func() {
+						existingWorker2SecretName := "managedresource-shoot-gardener-node-agent-" + worker2Name + "-existing"
+
+						By("Create existing ManagedResource referencing both pools")
+						existingMR := &resourcesv1alpha1.ManagedResource{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot-gardener-node-agent",
+								Namespace: namespace,
+							},
+							Spec: resourcesv1alpha1.ManagedResourceSpec{
+								SecretRefs: []corev1.LocalObjectReference{
+									{Name: existingWorker2SecretName},
+								},
+							},
+						}
+						Expect(fakeClient.Create(ctx, existingMR)).To(Succeed())
+
+						By("Execute DeployManagedResourceForGardenerNodeAgent function")
+						Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, true)).To(Succeed())
+
+						By("Assert ManagedResource references both the new control plane pool secrets and the preserved worker2 ref")
+						managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-gardener-node-agent", Namespace: namespace}}
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+
+						secretRefNames := make([]string, 0, len(managedResource.Spec.SecretRefs))
+						for _, ref := range managedResource.Spec.SecretRefs {
+							secretRefNames = append(secretRefNames, ref.Name)
+						}
+						Expect(secretRefNames).To(ContainElement(existingWorker2SecretName))
+						Expect(secretRefNames).To(ContainElement(ContainSubstring(worker1Name)))
+						Expect(secretRefNames).To(ContainElement(ContainSubstring("rbac")))
+					})
 				})
 			})
 		})

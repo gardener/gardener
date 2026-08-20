@@ -504,9 +504,11 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			waitUntilGardenerResourceManagerReady,
 		)
 		deployManagedResourceForGardenerNodeAgent = g.Add(flow.Task{
-			Name:         "Deploying gardener-node-agent's OperatingSystemConfig secrets and RBAC resources",
-			Fn:           flow.TaskFn(b.DeployManagedResourceForGardenerNodeAgent).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
+			Name: "Deploying gardener-node-agent's OperatingSystemConfig secrets and RBAC resources",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.DeployManagedResourceForGardenerNodeAgent(ctx, false)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
@@ -594,9 +596,9 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		_ = g.Add(flow.Task{
 			Name: "Waiting until all shoot worker nodes have updated the operating system config",
 			Fn: func(ctx context.Context) error {
-				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false)
+				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false, false)
 			},
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
+			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
 		deployAlertmanager = g.Add(flow.Task{

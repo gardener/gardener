@@ -1107,7 +1107,7 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 		waitUntilControlPlaneComponentsRolledOut = g.Add(flow.Task{
 			Name: "Waiting until control plane components (static pods) are rolled out and ready",
 			Fn: func(ctx context.Context) error {
-				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
+				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, b.isGardenlet(), true)
 			},
 			Dependencies: flow.NewTaskIDs(updateNodeAgentSecretNameLabels),
 		})
@@ -1165,7 +1165,7 @@ func (b *Botanist) handleCredentialsRotationForStaticPods(g *flow.TaskGroup, rea
 		_ = g.Add(flow.Task{
 			Name: "Waiting until control plane components (static pods) are rolled out and ready (second rollout)",
 			Fn: func(ctx context.Context) error {
-				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
+				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true, true)
 			},
 			SkipIf:       !etcdEncryptionKeyRotationPreparing && !caRotationPreparing,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
