@@ -86,7 +86,8 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 
 - [OIDC Apps Controller](https://github.com/gardener/oidc-apps-controller)
 
-If you implemented a new extension, please feel free to add it to this list!
+> [!NOTE]
+> If you implemented a new extension, please feel free to add it to this list!
 
 ## Feedback and Support
 
