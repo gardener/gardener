@@ -287,10 +287,6 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 		prometheusRule,
 	}
 
-	if f.values.ValiEnabled {
-		resources = append(resources, fluentcustomresources.GetDefaultClusterOutput(getCustomResourcesLabels()))
-	}
-
 	for _, clusterInput := range fluentcustomresources.GetClusterInputs(getCustomResourcesLabels()) {
 		resources = append(resources, clusterInput)
 	}
