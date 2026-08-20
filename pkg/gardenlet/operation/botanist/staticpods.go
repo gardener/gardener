@@ -53,7 +53,7 @@ type staticControlPlaneComponent struct {
 	mutate       func(*corev1.Pod)
 }
 
-func (b *Botanist) deployETCD(role string, bootstrapEtcdBackupPath string) func(context.Context) error {
+func (b *Botanist) deployBootstrapETCD(role string, bootstrapEtcdBackupPath string) func(context.Context) error {
 	var portClient, portPeer, portMetrics int32 = 2379, 2380, 2381
 	if role == v1beta1constants.ETCDRoleEvents {
 		portClient, portPeer, portMetrics = etcdconstants.StaticPodPortEtcdEventsClient, 2383, 2384
@@ -132,8 +132,8 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 
 	if useBootstrapEtcd {
 		components = append(components,
-			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleMain, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
-			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleMain, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
 		)
 	} else {
 		components = append(components,

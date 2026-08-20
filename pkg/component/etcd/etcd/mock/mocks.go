@@ -115,6 +115,35 @@ func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
+// IsPeerCARolledOut mocks base method.
+func (m *MockInterface) IsPeerCARolledOut(arg0 context.Context) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsPeerCARolledOut", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsPeerCARolledOut indicates an expected call of IsPeerCARolledOut.
+func (mr *MockInterfaceMockRecorder) IsPeerCARolledOut(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPeerCARolledOut", reflect.TypeOf((*MockInterface)(nil).IsPeerCARolledOut), arg0)
+}
+
+// MarkAsPeerCARolloutCompleted mocks base method.
+func (m *MockInterface) MarkAsPeerCARolloutCompleted(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAsPeerCARolloutCompleted", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkAsPeerCARolloutCompleted indicates an expected call of MarkAsPeerCARolloutCompleted.
+func (mr *MockInterfaceMockRecorder) MarkAsPeerCARolloutCompleted(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAsPeerCARolloutCompleted", reflect.TypeOf((*MockInterface)(nil).MarkAsPeerCARolloutCompleted), arg0)
+}
+
 // RolloutPeerCA mocks base method.
 func (m *MockInterface) RolloutPeerCA(arg0 context.Context) error {
 	m.ctrl.T.Helper()

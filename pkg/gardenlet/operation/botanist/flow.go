@@ -1120,6 +1120,7 @@ func (b *Botanist) ReconcileStaticControlPlanePodsTaskGroup(useBootstrapEtcd boo
 func (b *Botanist) handleCredentialsRotationForStaticPods(g *flow.TaskGroup, readyForSecondRollout flow.TaskIDer) {
 	var (
 		rotationPreparingPhases            = sets.New(gardencorev1beta1.RotationPreparing, gardencorev1beta1.RotationPreparingWithoutWorkersRollout)
+		caRotationPreparing                = rotationPreparingPhases.Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials))
 		etcdEncryptionKeyRotationPreparing = rotationPreparingPhases.Has(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials))
 
 		patchKubeAPIServerDeployment = g.Add(flow.Task{
@@ -1130,20 +1131,43 @@ func (b *Botanist) handleCredentialsRotationForStaticPods(g *flow.TaskGroup, rea
 			SkipIf:       !etcdEncryptionKeyRotationPreparing,
 			Dependencies: flow.NewTaskIDs(readyForSecondRollout),
 		})
+		patchETCDs = g.Add(flow.Task{
+			Name: "Marking Etcd resources as peer CA rotation completed",
+			Fn: flow.Parallel(
+				b.Shoot.Components.ControlPlane.EtcdMain.MarkAsPeerCARolloutCompleted,
+				b.Shoot.Components.ControlPlane.EtcdEvents.MarkAsPeerCARolloutCompleted,
+			),
+			SkipIf:       !caRotationPreparing,
+			Dependencies: flow.NewTaskIDs(readyForSecondRollout),
+		})
+
+		deployEtcds = g.Add(flow.Task{
+			Name:         "Deploying main and events ETCDs (second rollout)",
+			Fn:           flow.TaskFn(b.DeployEtcd).RetryUntilTimeout(5*time.Second, helper.GetEtcdDeployTimeout(b.Shoot, 30*time.Second)),
+			SkipIf:       !caRotationPreparing,
+			Dependencies: flow.NewTaskIDs(patchETCDs),
+		})
+		waitUntilEtcdsReady = g.Add(flow.Task{
+			Name:         "Waiting until main and event ETCDs have been reconciled (second rollout)",
+			Fn:           b.WaitUntilEtcdsReady,
+			SkipIf:       !caRotationPreparing,
+			Dependencies: flow.NewTaskIDs(deployEtcds),
+		})
+
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name: "Deploying control plane components as Deployments/StatefulSets and updating gardener-node-agent Secret (second rollout)",
 			Fn: func(ctx context.Context) error {
 				return b.DeployStaticControlPlaneDeployments(ctx, false)
 			},
-			SkipIf:       !etcdEncryptionKeyRotationPreparing,
-			Dependencies: flow.NewTaskIDs(patchKubeAPIServerDeployment),
+			SkipIf:       !etcdEncryptionKeyRotationPreparing && !caRotationPreparing,
+			Dependencies: flow.NewTaskIDs(patchKubeAPIServerDeployment, waitUntilEtcdsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting until control plane components (static pods) are rolled out and ready (second rollout)",
 			Fn: func(ctx context.Context) error {
 				return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, true)
 			},
-			SkipIf:       !etcdEncryptionKeyRotationPreparing,
+			SkipIf:       !etcdEncryptionKeyRotationPreparing && !caRotationPreparing,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
 		})
 	)
