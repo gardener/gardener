@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -132,11 +133,46 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		gardencorev1beta1.RotationPreparing,
 		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
 	).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)) {
-		if err := flow.Parallel(
-			b.Shoot.Components.ControlPlane.EtcdMain.RolloutPeerCA,
-			b.Shoot.Components.ControlPlane.EtcdEvents.RolloutPeerCA,
-		)(ctx); err != nil {
-			return err
+		var taskFns []flow.TaskFn
+
+		for name, component := range map[string]etcd.Interface{
+			"etcd-main":   b.Shoot.Components.ControlPlane.EtcdMain,
+			"etcd-events": b.Shoot.Components.ControlPlane.EtcdEvents,
+		} {
+			if peerCARolloutCompleted, err := component.IsPeerCARolledOut(ctx); err != nil {
+				return fmt.Errorf("failed to check if peer CA rollout is completed for %s: %w", name, err)
+			} else if !peerCARolloutCompleted {
+				taskFns = append(taskFns, func(ctx context.Context) error {
+					if err := component.RolloutPeerCA(ctx); err != nil {
+						return err
+					}
+
+					// For hosted shoots, changing the Etcd resources leads to a rollout of the pods. This is not true
+					// for self-hosted shoots: Here, we first have to translate the created StatefulSet into static
+					// pods, populate them via OperatingSystemConfig to the node, and wait for kubelet to restart them.
+					// Since all this is a bit more involved, we are performing these steps in the
+					// `ReconcileStaticControlPlanePodsTaskGroup` function as part of the flow (instead of doing
+					// it here like for hosted shoots).
+					if b.Shoot.IsSelfHosted() {
+						return nil
+					}
+
+					return component.MarkAsPeerCARolloutCompleted(ctx)
+				})
+			}
+		}
+
+		if len(taskFns) > 0 {
+			if err := flow.Parallel(taskFns...)(ctx); err != nil {
+				return err
+			}
+
+			// For self-hosted shoots, we have to first translate the Etcd StatefulSet into static pods and roll them
+			// out before we can continue and modify the change the Etcd resource again. Hence, we stop here and call
+			// the `DeployEtcd` function again in the `ReconcileStaticControlPlanePodsTaskGroup` function.
+			if b.Shoot.IsSelfHosted() {
+				return nil
+			}
 		}
 	}
 

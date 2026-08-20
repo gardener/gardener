@@ -43,6 +43,7 @@ import (
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -2031,6 +2032,104 @@ var _ = Describe("Etcd", func() {
 			It("should fail because CA cannot be found", func() {
 				Expect(etcd.RolloutPeerCA(ctx)).To(MatchError("secret \"ca-etcd-peer\" not found"))
 			})
+		})
+	})
+
+	Describe("#IsPeerCARolledOut", func() {
+		It("should return false when the etcd resource does not exist", func() {
+			rolledOut, err := etcd.IsPeerCARolledOut(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rolledOut).To(BeFalse())
+		})
+
+		It("should return false when the annotation is absent", func() {
+			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}})).To(Succeed())
+
+			rolledOut, err := etcd.IsPeerCARolledOut(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rolledOut).To(BeFalse())
+		})
+
+		It("should return false when the annotation is set to a value other than \"true\"", func() {
+			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:        etcdName,
+				Namespace:   testNamespace,
+				Annotations: map[string]string{secretsrotation.AnnotationKeyPeerCARolledOut: "false"},
+			}})).To(Succeed())
+
+			rolledOut, err := etcd.IsPeerCARolledOut(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rolledOut).To(BeFalse())
+		})
+
+		It("should return true when the annotation is set to \"true\"", func() {
+			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:        etcdName,
+				Namespace:   testNamespace,
+				Annotations: map[string]string{secretsrotation.AnnotationKeyPeerCARolledOut: "true"},
+			}})).To(Succeed())
+
+			rolledOut, err := etcd.IsPeerCARolledOut(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rolledOut).To(BeTrue())
+		})
+
+		It("should return an error when the client Get fails", func() {
+			c = fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+					return fakeErr
+				},
+			}).Build()
+			etcd = New(log, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
+
+			_, err := etcd.IsPeerCARolledOut(ctx)
+			Expect(err).To(MatchError(fakeErr))
+		})
+	})
+
+	Describe("#MarkAsPeerCARolloutCompleted", func() {
+		It("should return a not-found error when the etcd resource does not exist", func() {
+			Expect(etcd.MarkAsPeerCARolloutCompleted(ctx)).To(BeNotFoundError())
+		})
+
+		It("should patch the annotation when the etcd resource exists and annotation is absent", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			Expect(etcd.MarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
+
+			updated := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
+			Expect(updated.Annotations).To(HaveKeyWithValue(secretsrotation.AnnotationKeyPeerCARolledOut, "true"))
+		})
+
+		It("should be idempotent when annotation is already set to \"true\"", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:        etcdName,
+				Namespace:   testNamespace,
+				Annotations: map[string]string{secretsrotation.AnnotationKeyPeerCARolledOut: "true"},
+			}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			Expect(etcd.MarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
+
+			updated := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
+			Expect(updated.Annotations).To(HaveKeyWithValue(secretsrotation.AnnotationKeyPeerCARolledOut, "true"))
+		})
+
+		It("should return an error when the client Patch fails", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			c = fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithObjects(existingEtcd).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+					return fakeErr
+				},
+			}).Build()
+			etcd = New(log, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
+
+			Expect(etcd.MarkAsPeerCARolloutCompleted(ctx)).To(MatchError(fakeErr))
 		})
 	})
 
