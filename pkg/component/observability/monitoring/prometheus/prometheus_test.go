@@ -488,8 +488,9 @@ honor_labels: true`
 					"app":  "prometheus",
 					"role": "monitoring",
 					"name": name,
-					"reference.gardener.cloud/basic-auth-secret-name": "foo",
-					"reference.gardener.cloud/basic-auth-server-name": "istio-basic-auth-server",
+					"reference.gardener.cloud/basic-auth-secret-name":    "foo",
+					"reference.gardener.cloud/basic-auth-server-name":    "istio-basic-auth-server",
+					"reference.gardener.cloud/basic-auth-secret-managed": "true",
 				},
 			},
 			Spec: istionetworkingv1alpha3.VirtualService{
@@ -884,6 +885,7 @@ honor_labels: true`
 					BeforeEach(func() {
 						values.Ingress = &IngressValues{
 							AuthSecretName:               ingressAuthSecretName,
+							AuthSecretManaged:            true,
 							Host:                         ingressHost,
 							WildcardCertSecretName:       &ingressWildcardSecretName,
 							IstioIngressGatewayNamespace: ingressNamespace,
@@ -956,7 +958,7 @@ honor_labels: true`
 					BeforeEach(func() {
 						values.Ingress = &IngressValues{Host: ingressHost, IstioIngressGatewayNamespace: ingressNamespace}
 						deployer = New(logr.Discard(), fakeClient, namespace, values)
-						deployer.SetIngressAuthSecretName(ingressAuthSecretName)
+						deployer.SetIngressAuthSecret(ingressAuthSecretName, true)
 						deployer.SetIngressWildcardCertSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressWildcardSecretName}})
 					})
 

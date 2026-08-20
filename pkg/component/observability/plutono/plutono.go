@@ -791,19 +791,22 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 
 func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error) {
 	var (
-		credentialsSecretName = p.values.AuthSecretName
-		caName                = v1beta1constants.SecretNameCASeed
-		gatewayName           = name
+		credentialsSecretName    = p.values.AuthSecretName
+		credentialsSecretManaged = false
+		caName                   = v1beta1constants.SecretNameCASeed
+		gatewayName              = name
 	)
 
 	if p.values.IsGardenCluster {
 		credentialsSecretName = v1beta1constants.SecretNameObservabilityIngress
+		credentialsSecretManaged = true
 		caName = operatorv1alpha1.SecretNameCARuntime
 		gatewayName = fmt.Sprintf("%s%s-%s", operatorv1alpha1.VirtualGardenNamePrefix, gatewayName, v1beta1constants.GardenNamespace)
 	}
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
 		credentialsSecretName = v1beta1constants.SecretNameObservabilityIngressUsers
+		credentialsSecretManaged = true
 		caName = v1beta1constants.SecretNameCACluster
 		gatewayName = fmt.Sprintf("%s-%s", gatewayName, p.namespace)
 	}
@@ -862,7 +865,7 @@ func (p *plutono) getIstioResources(ctx context.Context) ([]client.Object, error
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(getLabels(), istiobasicauthserver.BasicAuthLabels(p.values.IsGardenCluster, credentialsSecretName)),
+		utils.MergeStringMaps(getLabels(), istiobasicauthserver.BasicAuthLabels(p.values.IsGardenCluster, credentialsSecretName, credentialsSecretManaged)),
 		[]string{p.values.IstioIngressGatewayNamespace},
 		[]string{p.values.IngressHost},
 		gatewayName,

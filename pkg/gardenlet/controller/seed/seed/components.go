@@ -546,6 +546,7 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 func (r *Reconciler) newIstioBasicAuthServer(secretsManager secretsmanager.Interface, istioDefaultNamespace string) (component.DeployWaiter, error) {
 	return sharedcomponent.NewIstioBasicAuthServer(
 		r.SeedClientSet.Client(),
+		r.SeedClientSet.APIReader(),
 		r.GardenNamespace,
 		secretsManager,
 		gardenlethelper.IsMonitoringEnabled(&r.Config),

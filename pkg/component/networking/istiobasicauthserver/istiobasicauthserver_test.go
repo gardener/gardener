@@ -51,6 +51,7 @@ var _ = Describe("IstioBasicAuthServer", func() {
 		host3               = prefix3 + ".domain.name"
 
 		c                 client.Client
+		apiReader         client.Client
 		component         comp.DeployWaiter
 		fakeSecretManager secretsmanager.Interface
 		values            Values
@@ -324,26 +325,28 @@ status: {}
 				Labels:    map[string]string{"app": "dummy"},
 			},
 		}
-		realVirtualService1 = &istionetworkingv1beta1.VirtualService{
+		virtualServiceWithManagedSecret = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "real-virtual-service-1",
+				Name:      "vs-with-managed-secret",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"app": "dummy",
-					"reference.gardener.cloud/basic-auth-secret-name": secret1,
+					"reference.gardener.cloud/basic-auth-secret-name":    secret1,
+					"reference.gardener.cloud/basic-auth-secret-managed": "true",
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
 				Hosts: []string{host1},
 			},
 		}
-		realVirtualService2 = &istionetworkingv1beta1.VirtualService{
+		virtualServiceWithVerbatimSecret = &istionetworkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "real-virtual-service-2",
+				Name:      "vs-with-verbatim-secret",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"app": "dummy",
-					"reference.gardener.cloud/basic-auth-secret-name": secret2,
+					"reference.gardener.cloud/basic-auth-secret-name":    secret2,
+					"reference.gardener.cloud/basic-auth-secret-managed": "false",
 				},
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
@@ -358,6 +361,8 @@ status: {}
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-istio-basic-auth-server", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-virtual-garden-istio-basic-auth-server", Namespace: namespace}})).To(Succeed())
 
+		apiReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
 		values = Values{
 			Image:                        image,
 			PriorityClassName:            priorityClassName,
@@ -365,7 +370,7 @@ status: {}
 			SigningCA:                    "ca-istio-basic-auth-server",
 			IstioIngressGatewayNamespace: "istio-ingress",
 		}
-		component = New(c, namespace, fakeSecretManager, values)
+		component = New(c, apiReader, namespace, fakeSecretManager, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -451,7 +456,7 @@ status: {}
 					values.IsGardenCluster = true
 					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
 					values.IstioIngressGatewayNamespace = "virtual-garden-istio-ingress"
-					component = New(c, namespace, fakeSecretManager, values)
+					component = New(c, apiReader, namespace, fakeSecretManager, values)
 				})
 
 				It("should successfully deploy the resources", func() {
@@ -462,15 +467,17 @@ status: {}
 
 		Context("With secrets present", func() {
 			createVirtualServices := func(basicAuthServerName string) {
+				create := func(vs *istionetworkingv1beta1.VirtualService) {
+					vs.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
+					Expect(c.Create(ctx, vs.DeepCopy())).To(Succeed())
+					Expect(apiReader.Create(ctx, vs.DeepCopy())).To(Succeed())
+				}
+
 				Expect(c.Create(ctx, dummyVirtualService.DeepCopy())).To(Succeed())
+				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret1, Namespace: namespace}})).To(Succeed())
 
-				vs1 := realVirtualService1.DeepCopy()
-				vs1.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
-				Expect(c.Create(ctx, vs1)).To(Succeed())
-
-				vs2 := realVirtualService2.DeepCopy()
-				vs2.Labels["reference.gardener.cloud/basic-auth-server-name"] = basicAuthServerName
-				Expect(c.Create(ctx, vs2)).To(Succeed())
+				create(virtualServiceWithManagedSecret.DeepCopy())
+				create(virtualServiceWithVerbatimSecret.DeepCopy())
 			}
 
 			Context("Shoot or Seed", func() {
@@ -493,7 +500,7 @@ status: {}
 					values.IsGardenCluster = true
 					values.SigningCA = "ca-virtual-garden-istio-basic-auth-server"
 					values.IstioIngressGatewayNamespace = "virtual-garden-istio-ingress"
-					component = New(c, namespace, fakeSecretManager, values)
+					component = New(c, apiReader, namespace, fakeSecretManager, values)
 				})
 
 				It("should successfully deploy the resources", func() {
@@ -504,6 +511,86 @@ status: {}
 					}, host1, host2, host3)
 				})
 			})
+		})
+
+		Context("With stale secret references", func() {
+			Context("unmanaged secret", func() {
+				BeforeEach(func() {
+					staleVS := virtualServiceWithVerbatimSecret.DeepCopy()
+					staleVS.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+					staleVS.Labels["reference.gardener.cloud/basic-auth-secret-name"] = "stale-secret"
+					Expect(c.Create(ctx, staleVS)).To(Succeed())
+
+					updatedVS := virtualServiceWithVerbatimSecret.DeepCopy()
+					updatedVS.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+					updatedVS.Labels["reference.gardener.cloud/basic-auth-secret-name"] = "correct-secret-from-api-reader"
+					Expect(apiReader.Create(ctx, updatedVS)).To(Succeed())
+
+					component = New(c, apiReader, namespace, fakeSecretManager, values)
+				})
+
+				It("should resolve the secret name from the api reader instead of the stale cached label", func() {
+					testManifests(false, []prefixToSecretMapping{
+						{prefix2, "correct-secret-from-api-reader"},
+						{prefix3, "correct-secret-from-api-reader"},
+					}, host2, host3)
+				})
+			})
+
+			Context("managed secret", func() {
+				BeforeEach(func() {
+					Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret1, Namespace: namespace}})).To(Succeed())
+
+					managedVS := virtualServiceWithManagedSecret.DeepCopy()
+					managedVS.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+					Expect(c.Create(ctx, managedVS)).To(Succeed())
+
+					unmanagedVS := virtualServiceWithManagedSecret.DeepCopy()
+					unmanagedVS.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+					unmanagedVS.Labels["reference.gardener.cloud/basic-auth-secret-name"] = "wrong-secret-from-api-reader"
+					Expect(apiReader.Create(ctx, unmanagedVS)).To(Succeed())
+
+					component = New(c, apiReader, namespace, fakeSecretManager, values)
+				})
+
+				It("should resolve the secret name from the secrets manager and ignore the api reader", func() {
+					testManifests(false, []prefixToSecretMapping{
+						{prefix1, secret1},
+					}, host1)
+				})
+			})
+		})
+	})
+
+	Context("When secret references are misconfigured", func() {
+		BeforeEach(func() {
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})).To(Succeed())
+		})
+
+		It("should fail when the managed label has a non-boolean value", func() {
+			vs := virtualServiceWithManagedSecret.DeepCopy()
+			vs.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+			vs.Labels["reference.gardener.cloud/basic-auth-secret-managed"] = "invalid"
+			Expect(c.Create(ctx, vs)).To(Succeed())
+
+			Expect(component.Deploy(ctx)).To(MatchError(`failed to calculate configuration for istio-basic-auth-server: failed to parse label "reference.gardener.cloud/basic-auth-secret-managed" of virtual service "vs-with-managed-secret": strconv.ParseBool: parsing "invalid": invalid syntax`))
+		})
+
+		It("should fail when the secret is managed but not found in the secrets manager", func() {
+			vs := virtualServiceWithManagedSecret.DeepCopy()
+			vs.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+			vs.Labels["reference.gardener.cloud/basic-auth-secret-name"] = "nonexistent-secret"
+			Expect(c.Create(ctx, vs)).To(Succeed())
+
+			Expect(component.Deploy(ctx)).To(MatchError(`failed to calculate configuration for istio-basic-auth-server: failed to find secret "nonexistent-secret" referenced by virtual service "vs-with-managed-secret" in the secrets manager`))
+		})
+
+		It("should fail when the secret is unmanaged but the virtual service is not found by the api reader", func() {
+			vs := virtualServiceWithVerbatimSecret.DeepCopy()
+			vs.Labels["reference.gardener.cloud/basic-auth-server-name"] = "istio-basic-auth-server"
+			Expect(c.Create(ctx, vs)).To(Succeed())
+
+			Expect(component.Deploy(ctx)).To(MatchError(`failed to calculate configuration for istio-basic-auth-server: failed to get virtual service "vs-with-verbatim-secret": virtualservices.networking.istio.io "vs-with-verbatim-secret" not found`))
 		})
 	})
 
@@ -526,7 +613,7 @@ status: {}
 		var fakeOps *retryfake.Ops
 
 		BeforeEach(func() {
-			component = New(c, namespace, fakeSecretManager, values)
+			component = New(c, apiReader, namespace, fakeSecretManager, values)
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			DeferCleanup(test.WithVars(
 				&retry.Until, fakeOps.Until,

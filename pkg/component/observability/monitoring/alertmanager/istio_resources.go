@@ -88,7 +88,7 @@ func (a *alertManager) istioResources(ctx context.Context) ([]client.Object, err
 	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: a.namespace}}
 	if err := istio.VirtualServiceForTLSTermination(
 		virtualService,
-		utils.MergeStringMaps(a.getLabels(), istiobasicauthserver.BasicAuthLabels(a.values.ExternalExposure.IsGardenCluster, a.values.ExternalExposure.AuthSecretName)),
+		utils.MergeStringMaps(a.getLabels(), istiobasicauthserver.BasicAuthLabels(a.values.ExternalExposure.IsGardenCluster, a.values.ExternalExposure.AuthSecretName, a.values.ExternalExposure.AuthSecretManaged)),
 		[]string{a.values.ExternalExposure.IstioIngressGatewayNamespace},
 		[]string{a.values.ExternalExposure.Host},
 		gatewayName,

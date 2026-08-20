@@ -16,6 +16,7 @@ import (
 // NewIstioBasicAuthServer instantiates a new `istio-basic-auth-server` component.
 func NewIstioBasicAuthServer(
 	c client.Client,
+	apiReader client.Reader,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	enabled bool,
@@ -35,6 +36,7 @@ func NewIstioBasicAuthServer(
 
 	deployer = istiobasicauthserver.New(
 		c,
+		apiReader,
 		namespace,
 		secretsManager,
 		istiobasicauthserver.Values{

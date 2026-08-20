@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,6 +66,7 @@ type Values struct {
 
 type istioBasicAuthServer struct {
 	client         client.Client
+	apiReader      client.Reader
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
@@ -73,12 +75,14 @@ type istioBasicAuthServer struct {
 // New creates a new instance of an istio-basic-auth-server deployer.
 func New(
 	client client.Client,
+	apiReader client.Reader,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) component.DeployWaiter {
 	return &istioBasicAuthServer{
 		client:         client,
+		apiReader:      apiReader,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
@@ -203,8 +207,25 @@ func (i *istioBasicAuthServer) calculateConfiguration(
 
 	for _, virtualService := range virtualServiceList.Items {
 		secretName := virtualService.Labels[v1beta1constants.LabelBasicAuthSecretName]
-		if secret, found := i.secretsManager.Get(secretName); found {
+		secretManaged, err := strconv.ParseBool(virtualService.Labels[v1beta1constants.LabelBasicAuthSecretManaged])
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to parse label %q of virtual service %q: %w", v1beta1constants.LabelBasicAuthSecretManaged, virtualService.Name, err)
+		}
+		if secretManaged {
+			secret, found := i.secretsManager.Get(secretName)
+			if !found {
+				return nil, nil, nil, fmt.Errorf("failed to find secret %q referenced by virtual service %q in the secrets manager", secretName, virtualService.Name)
+			}
 			secretName = secret.Name
+		} else {
+			// Use an uncached client to prevent race conditions between VirtualService updates by the GRM that reference
+			// secrets not managed by the secrets manager, and the istio-basic-auth-server deployer.
+			virtualServiceMetadata := &metav1.PartialObjectMetadata{}
+			virtualServiceMetadata.SetGroupVersionKind(istionetworkingv1beta1.SchemeGroupVersion.WithKind("VirtualService"))
+			if err := i.apiReader.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualServiceMetadata); err != nil {
+				return nil, nil, nil, fmt.Errorf("failed to get virtual service %q: %w", virtualService.Name, err)
+			}
+			secretName = virtualServiceMetadata.Labels[v1beta1constants.LabelBasicAuthSecretName]
 		}
 
 		for _, host := range virtualService.Spec.Hosts {
@@ -317,15 +338,16 @@ func (i *istioBasicAuthServer) getPrefix() string {
 }
 
 // BasicAuthLabels returns the labels that associate a VirtualService with its configuring istio-basic-auth-server.
-func BasicAuthLabels(isGardenCluster bool, secretName string) map[string]string {
+func BasicAuthLabels(isGardenCluster bool, secretName string, secretManaged bool) map[string]string {
 	basicAuthServerName := v1beta1constants.DeploymentNameIstioBasicAuthServer
 	if isGardenCluster {
 		basicAuthServerName = operatorv1alpha1.VirtualGardenNamePrefix + basicAuthServerName
 	}
 
 	return map[string]string{
-		v1beta1constants.LabelBasicAuthSecretName: secretName,
-		v1beta1constants.LabelBasicAuthServerName: basicAuthServerName,
+		v1beta1constants.LabelBasicAuthSecretName:    secretName,
+		v1beta1constants.LabelBasicAuthServerName:    basicAuthServerName,
+		v1beta1constants.LabelBasicAuthSecretManaged: strconv.FormatBool(secretManaged),
 	}
 }
 
