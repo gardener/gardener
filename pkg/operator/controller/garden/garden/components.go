@@ -31,6 +31,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/api/operator/v1alpha1/conversion"
@@ -1443,10 +1444,14 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 
-	output := fluentcustomresources.GetStaticClusterOutput(customResourcesLabels)
+	var outputs []*fluentbitv1alpha2.ClusterOutput
+
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
+		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels))
+	} else {
+		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels))
 	}
+	outputs = append(outputs, fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels))
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
@@ -1454,7 +1459,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 		true,
 		"-garden",
 		logging.GardenCentralLoggingConfigurations,
-		output,
+		outputs,
 	)
 }
 
