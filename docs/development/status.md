@@ -57,7 +57,7 @@ Seed conditions:
 
 ### Introducing New Condition Types
 
-Condition types are deliberately stable. Before introducing a new `ConditionType`, check whether an existing type can be reused — many health checks naturally fit under `SystemComponentsHealthy` or `ControlPlaneHealthy`. Fragmenting health checks into many narrow types makes the overall status harder to read.
+Condition types are deliberately stable. Before introducing a new `ConditionType`, check whether an existing type can be reused — many health checks naturally fit under `SystemComponentsHealthy` or `ControlPlaneHealthy`. Fragmenting health checks into many narrow types makes the overall status harder to read. Also, the Gardener dashboard always displays all conditions, whereas constraints are only shown when relevant (`Status: False`).
 
 ## Constraints
 
@@ -90,7 +90,7 @@ Even with this polarity rule, **avoid negating the `Type` name**. A type like `H
 
 Never construct or compare `Condition` values by hand. Use the helpers in `pkg/api/core/v1beta1/helper/` to ensure timestamps are set correctly and updates are idempotent.
 
-### Functional helpers (`condition.go`)
+### Functional Helpers (`condition.go`)
 
 `GetOrInitConditionWithClock`, `UpdatedConditionWithClock`, and `MergeConditions` are the most direct way to update a single condition. `UpdatedConditionWithClock` only advances `LastTransitionTime` when `Status` changes and `LastUpdateTime` when `Reason`, `Message`, or `Codes` change — stable inputs produce stable outputs.
 
