@@ -385,3 +385,17 @@ spec:
           The seed {{$labels.name}} in {{$externalLabels.landscape}} has
           been in an Error state for its Reconcile operation for more than
           30 minutes. Gardenlet will keep retrying.
+
+    - alert: NWPDTCPConnectivityFailure
+      expr: |
+        seed:nwpd_aggregated_observations_failing:count > 2
+      for: 30m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: "Nodes with persistent TCP connectivity failure for 30+ minutes"
+        description: >-
+          Seed {{$labels.seed}} in {{$externalLabels.landscape}} has more than 2 nodes
+          experiencing TCP connectivity failures between pods and nodes for over 30 minutes.
+          To identify affected nodes: count by (src) (rate(nwpd_aggregated_observations{status="failed", jobid=~"tcp-[np]2[np]"}[5m]) > 0)
