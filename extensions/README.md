@@ -67,6 +67,7 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 - [Audit (`metal-stack/gardener-extension-audit`)](https://github.com/metal-stack/gardener-extension-audit)
 - [Auditing (`gardener/gardener-extension-auditing`)](https://github.com/gardener/gardener-extension-auditing)
 - [csi-driver-lvm](https://github.com/metal-stack/gardener-extension-csi-driver-lvm)
+- [Envoy Gateway](https://github.com/gardener/gardener-extension-envoy-gateway)
 - [Image Rewriter](https://github.com/gardener/gardener-extension-image-rewriter)
 - [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [Registry Cache](https://github.com/gardener/gardener-extension-registry-cache)
