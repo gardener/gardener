@@ -49,6 +49,13 @@ var (
 	}
 )
 
+// ManagedResourceLabelSelector returns the label selector for all kube-proxy ManagedResources.
+func ManagedResourceLabelSelector() client.MatchingLabels {
+	return client.MatchingLabels{
+		labelKeyManagedResourceName: labelValueManagedResourceName,
+	}
+}
+
 // New creates a new instance of DeployWaiter for kube-proxy.
 func New(
 	client client.Client,
