@@ -81,7 +81,12 @@ var _ = Describe("WorkloadIdentity TokenRequestor tests", func() {
 	It("should behave correctly when: create w/o label, update w/ label, delete w/ label", func() {
 		secret.Labels = nil
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
-		Expect(testClient.Create(ctx, workloadIdentity)).To(Succeed())
+		// Retry the creation: when the first spec of the suite runs, the gardener API server might
+		// still be warming up (e.g., the quota admission plugin has not registered its evaluator
+		// for the resource yet) and can reject the request with 503 ServiceUnavailable.
+		Eventually(func() error {
+			return testClient.Create(ctx, workloadIdentity)
+		}).Should(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Succeed())
 
 		Consistently(func(g Gomega) {
