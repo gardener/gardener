@@ -342,6 +342,28 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials)),
 			Dependencies: flow.NewTaskIDs(reconcileStaticControlPlanePods, waitUntilGardenerResourceManagerReady),
 		})
+		_ = g.Add(flow.Task{
+			Name: "Renewing garden access secrets after creation of new ServiceAccount signing key in garden cluster",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := tokenrequest.RenewAccessSecrets(ctx, b.SeedClientSet.Client(), client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden}); err != nil {
+					return err
+				}
+				return removeShootOperationAnnotation(ctx, b.GardenClient, b.Shoot, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !b.Shoot.IsSelfHosted() || b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Renewing workload identity tokens after rotation of workload identity key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := tokenrequest.RenewWorkloadIdentityTokens(ctx, b.SeedClientSet.Client()); err != nil {
+					return err
+				}
+				return removeShootOperationAnnotation(ctx, b.GardenClient, b.Shoot, v1beta1constants.SeedOperationRenewWorkloadIdentityTokens)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !b.Shoot.IsSelfHosted() || b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewWorkloadIdentityTokens,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
 		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
 			Fn:           flow.TaskFn(b.Shoot.Components.GardenerAccess.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -674,4 +696,13 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 	)
 
 	return nil
+}
+
+func removeShootOperationAnnotation(ctx context.Context, gardenClient client.Client, shootObj *shoot.Shoot, operationAnnotation string) error {
+	return shootObj.UpdateInfo(ctx, gardenClient, false, func(s *gardencorev1beta1.Shoot) error {
+		if s.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
+			delete(s.Annotations, v1beta1constants.GardenerOperation)
+		}
+		return nil
+	})
 }
