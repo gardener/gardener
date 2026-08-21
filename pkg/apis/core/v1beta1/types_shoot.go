@@ -154,12 +154,12 @@ type ShootSpec struct {
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
-	// Conditions represents the latest available observations of a Shoots's current state.
+	// Conditions represents the latest available observations of a Shoots's current state based on health checks.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
 	Conditions []Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
-	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
+	// Constraints represents conditions of a Shoot's current state that constraint or are relevant for some operations.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional

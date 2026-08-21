@@ -135,7 +135,7 @@ type ExtensionStatus struct {
 	// ObservedGeneration is the most recent generation observed for this resource.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Conditions represents the latest available observations of an Extension's current state.
+	// Conditions represents the latest available observations of an Extension's current state based on health checks.
 	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// ProviderStatus contains type-specific status.

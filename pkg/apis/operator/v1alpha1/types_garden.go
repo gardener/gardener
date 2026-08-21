@@ -847,7 +847,7 @@ type GardenStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Garden.
 	// +optional
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
-	// Conditions is a list of conditions.
+	// Conditions is a list of conditions based on health checks.
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// LastOperation holds information about the last operation on the Garden.
 	// +optional

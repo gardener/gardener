@@ -1688,7 +1688,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of an Extension's current state.</p>
+<p>Conditions represents the latest available observations of an Extension's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -1937,7 +1937,7 @@ Condition array
 </em>
 </td>
 <td>
-<p>Conditions is a list of conditions.</p>
+<p>Conditions is a list of conditions based on health checks.</p>
 </td>
 </tr>
 <tr>

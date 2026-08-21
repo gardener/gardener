@@ -233,7 +233,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -516,7 +516,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -802,7 +802,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -1417,7 +1417,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -1834,7 +1834,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -2190,7 +2190,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -2458,7 +2458,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -2746,7 +2746,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -3457,7 +3457,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -3948,7 +3948,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -4331,7 +4331,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -4869,7 +4869,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>
@@ -5723,7 +5723,7 @@ Condition array
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state.</p>
+<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
 </td>
 </tr>
 <tr>

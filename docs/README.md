@@ -141,6 +141,7 @@
 * [Validation Guidelines](development/validation-guidelines.md)
 * [Logging Guidelines in Gardener Components](development/logging-guidelines.md)
 * [Changing the API](development/changing-the-api.md)
+* [Status Subresource in Gardener APIs](development/status.md)
 * [Secrets Management for Seed and Shoot Clusters](development/secrets_management.md)
 * [IPv6 in Gardener Clusters](development/ipv6.md)
 * [Releases, Features, Hotfixes](development/process.md)
