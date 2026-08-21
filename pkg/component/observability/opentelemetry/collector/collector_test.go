@@ -429,7 +429,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 							"otlphttp/victorialogs": map[string]any{
 								"logs_endpoint": "http://logging-vl:9428/insert/opentelemetry/v1/logs",
 								"headers": map[string]any{
-									"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin",
+									"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
 								},
 							},
 						},
@@ -755,7 +755,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			openTelemetryCollector.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
 				Exporters:  []string{"otlphttp/victorialogs"},
 				Receivers:  []string{"otlp"},
-				Processors: []string{"batch"},
+				Processors: []string{"memory_limiter", "batch"},
 			}
 
 			Expect(customResourcesManagedResource).To(consistOf(
