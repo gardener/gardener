@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -29,6 +30,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -303,6 +305,18 @@ func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist
 
 	patch := client.MergeFrom(shoot.DeepCopy())
 	shoot.Status = b.Shoot.GetInfo().Status
+	// Initialize status.credentials.encryptionAtRest from the spec so that the gardenlet's first
+	// reconciliation correctly identifies the encryption state and skips the unnecessary rewrite tasks.
+	// gardenadm init already set up etcd with the provider configured in the spec, so spec == reality.
+	if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
+	}
+	shoot.Status.Credentials.EncryptionAtRest = &gardencorev1beta1.EncryptionAtRest{
+		Provider: gardencorev1beta1.EncryptionProviderStatus{
+			Type: v1beta1helper.GetEncryptionProviderType(shoot.Spec.Kubernetes.KubeAPIServer),
+		},
+		Resources: sharedcomponent.StringifyGroupResources(sharedcomponent.GetResourcesForEncryptionFromConfig(shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig)),
+	}
 	if err := b.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
 		return fmt.Errorf("failed patching Shoot %s status in garden cluster: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
 	}

@@ -268,10 +268,18 @@ func (c *mutationContext) addMetadataAnnotations(a admission.Attributes) {
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
+	if helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) && !helper.HasManagedInfrastructure(shoot) {
+		return
+	}
+
 	addDeploymentTasks(shoot, v1beta1constants.ShootTaskDeployInfrastructure)
 }
 
 func addDNSRecordDeploymentTasks(shoot *core.Shoot) {
+	if helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		return
+	}
+
 	addDeploymentTasks(shoot,
 		v1beta1constants.ShootTaskDeployDNSRecordInternal,
 		v1beta1constants.ShootTaskDeployDNSRecordExternal,

@@ -116,9 +116,9 @@ func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[s
 // WorkerPoolToOperatingSystemConfigSecretMetaMap lists all the cloud-config secrets with the given client in the shoot cluster.
 // It returns a map whose key is the name of a worker pool and whose values are the corresponding metadata of the
 // cloud-config script stored inside the secret's data.
-func WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx context.Context, shootClient client.Client, roleValue string) (map[string]metav1.ObjectMeta, error) {
+func WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx context.Context, shootClient client.Client) (map[string]metav1.ObjectMeta, error) {
 	secretList := &corev1.SecretList{}
-	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: roleValue}); err != nil {
+	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleOperatingSystemConfig}); err != nil {
 		return nil, err
 	}
 
@@ -224,13 +224,18 @@ func getTimeoutWaitOperatingSystemConfigUpdated(shoot *shootpkg.Shoot) time.Dura
 // WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools waits for a maximum of 2*GetTimeoutWaitOperatingSystemConfigUpdated
 // until all the non-preserved nodes for all the worker pools in the Shoot have successfully applied the desired version of their
 // operating system config.
-func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx context.Context, tolerateErrors bool) error {
+func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx context.Context, forControlPlanePoolOnly, tolerateErrors bool) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel()
 
 	retryFn := retry.SevereError
 	if tolerateErrors {
 		retryFn = retry.MinorError
+	}
+
+	workerPools, err := b.relevantWorkerPools(forControlPlanePoolOnly)
+	if err != nil {
+		return err
 	}
 
 	// managedresources.WaitUntilHealthy internally treats transient errors while getting the ManagedResource (e.g., "connection refused")
@@ -256,12 +261,12 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 			return retryFn(err)
 		}
 
-		workerPoolToOperatingSystemConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, b.ShootClientSet.Client(), v1beta1constants.GardenRoleOperatingSystemConfig)
+		workerPoolToOperatingSystemConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, b.ShootClientSet.Client())
 		if err != nil {
 			return retryFn(err)
 		}
 
-		if err := OperatingSystemConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToOperatingSystemConfigSecretMeta); err != nil {
+		if err := OperatingSystemConfigUpdatedForAllWorkerPools(workerPools, workerPoolToNodes, workerPoolToOperatingSystemConfigSecretMeta); err != nil {
 			return retry.MinorError(err)
 		}
 

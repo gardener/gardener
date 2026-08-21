@@ -536,15 +536,19 @@ func maintainAddons(shoot *gardencorev1beta1.Shoot) []string {
 }
 
 func maintainTasks(shoot *gardencorev1beta1.Shoot, config controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration) {
-	controllerutils.AddTasks(shoot.Annotations,
-		v1beta1constants.ShootTaskDeployInfrastructure,
-		v1beta1constants.ShootTaskDeployDNSRecordInternal,
-		v1beta1constants.ShootTaskDeployDNSRecordExternal,
-		v1beta1constants.ShootTaskDeployDNSRecordIngress,
-	)
+	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		controllerutils.AddTasks(shoot.Annotations,
+			v1beta1constants.ShootTaskDeployInfrastructure,
+			v1beta1constants.ShootTaskDeployDNSRecordInternal,
+			v1beta1constants.ShootTaskDeployDNSRecordExternal,
+			v1beta1constants.ShootTaskDeployDNSRecordIngress,
+		)
 
-	if ptr.Deref(config.EnableShootControlPlaneRestarter, false) {
-		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+		if ptr.Deref(config.EnableShootControlPlaneRestarter, false) {
+			controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+		}
+	} else if v1beta1helper.HasManagedInfrastructure(shoot) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
 	}
 
 	if ptr.Deref(config.EnableShootCoreAddonRestarter, false) {

@@ -40,7 +40,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // PathKubeconfig is the path to a file on the control plane node containing an admin kubeconfig.
@@ -53,7 +52,7 @@ type staticControlPlaneComponent struct {
 	mutate       func(*corev1.Pod)
 }
 
-func (b *Botanist) deployETCD(role string, bootstrapEtcdBackupPath string) func(context.Context) error {
+func (b *Botanist) deployBootstrapETCD(role string, bootstrapEtcdBackupPath string) func(context.Context) error {
 	var portClient, portPeer, portMetrics int32 = 2379, 2380, 2381
 	if role == v1beta1constants.ETCDRoleEvents {
 		portClient, portPeer, portMetrics = etcdconstants.StaticPodPortEtcdEventsClient, 2383, 2384
@@ -93,18 +92,6 @@ func (b *Botanist) deployETCD(role string, bootstrapEtcdBackupPath string) func(
 func (b *Botanist) deployKubeAPIServer(ctx context.Context, useShootAccessTokens bool) error {
 	if !useShootAccessTokens {
 		b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
-	} else {
-		// Usually, these secrets would be deleted by a `b.SecretsManager.Cleanup()` call. However, we don't run this
-		// call in gardenlet yet. Hence, for now, let's explicitly delete them.
-		// TODO(rfranzke): Remove this in favor of the `b.SecretsManager.Cleanup()` call at the end of the shoot
-		//  reconciliation (see TODO statement there).
-		if err := b.SeedClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(
-			utils.MustNewRequirement(secretsmanager.LabelKeyManagedBy, selection.Equals, secretsmanager.LabelValueSecretsManager),
-			utils.MustNewRequirement(secretsmanager.LabelKeyManagerIdentity, selection.Equals, b.SecretsManager.Identity()),
-			utils.MustNewRequirement(secretsmanager.LabelKeyName, selection.In, kubeapiserver.SecretNameUserKubeconfig),
-		)}); err != nil {
-			return fmt.Errorf("failed to cleanup static token kubeconfig and user kubeconfig secrets: %w", err)
-		}
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(new(int32(0)))
@@ -132,8 +119,8 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 
 	if useBootstrapEtcd {
 		components = append(components,
-			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleMain, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
-			staticControlPlaneComponent{b.deployETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleMain, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
+			staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
 		)
 	} else {
 		components = append(components,
@@ -171,7 +158,7 @@ func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useB
 		return fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
 	}
 
-	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
+	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx, b.isGardenlet()); err != nil {
 		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
 	}
 

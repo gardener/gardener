@@ -730,7 +730,7 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClient.Client(), v1beta1constants.GardenRoleOperatingSystemConfig)
+	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClient.Client())
 	if err != nil {
 		return nil, err
 	}

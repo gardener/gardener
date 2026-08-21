@@ -104,6 +104,36 @@ var _ = Describe("TaskGroup", func() {
 		})
 	})
 
+	Describe("#WithDependenciesIf", func() {
+		It("should not add dependencies when the condition is false", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+			)
+
+			pre := graph.Add(rec.task("pre"))
+			graph.AddGroup(flow.NewTaskGroup("group", rec.task("a"), rec.task("b")).WithDependenciesIf(false, pre))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			Expect(rec.executed()).To(ConsistOf("pre", "a", "b"))
+		})
+
+		It("should add dependencies when the condition is true", func() {
+			var (
+				rec   = &recorder{}
+				graph = flow.NewGraph("foo")
+			)
+
+			pre := graph.Add(rec.task("pre"))
+			graph.AddGroup(flow.NewTaskGroup("group", rec.task("a"), rec.task("b")).WithDependenciesIf(true, pre))
+
+			Expect(graph.Compile().Run(context.Background(), flow.Opts{})).To(Succeed())
+			executed := rec.executed()
+			Expect(executed[0]).To(Equal("pre"))
+			Expect(executed[1:]).To(ConsistOf("a", "b"))
+		})
+	})
+
 	Describe("#SkipIf", func() {
 		It("should not skip tasks when the condition is false", func() {
 			var (
