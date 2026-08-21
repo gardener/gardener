@@ -849,6 +849,11 @@ type GardenStatus struct {
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
 	// Conditions is a list of conditions.
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
+	// Constraints represents conditions of a Garden's current state that constraint some operations on it.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +optional
+	Constraints []gardencorev1beta1.Condition `json:"constraints,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 	// LastOperation holds information about the last operation on the Garden.
 	// +optional
 	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
@@ -946,6 +951,9 @@ const (
 	VirtualGardenAPIServerAvailable gardencorev1beta1.ConditionType = "VirtualGardenAPIServerAvailable"
 	// ObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
 	ObservabilityComponentsHealthy gardencorev1beta1.ConditionType = v1beta1constants.ObservabilityComponentsHealthy
+	// GardenManagedResourcesHonored is a constant for a constraint type indicating that no ManagedResources
+	// in the garden's namespaces have been annotated with resources.gardener.cloud/ignore=true.
+	GardenManagedResourcesHonored gardencorev1beta1.ConditionType = "ManagedResourcesHonored"
 )
 
 // AvailableOperationAnnotations is the set of available operation annotations for Garden resources.

@@ -2153,6 +2153,51 @@ spec:
                   - type
                   type: object
                 type: array
+              constraints:
+                description: Constraints represents conditions of a Garden's current
+                  state that constraint some operations on it.
+                items:
+                  description: Condition holds the information about the state of
+                    a resource.
+                  properties:
+                    codes:
+                      description: Well-defined error codes in case the condition
+                        reports a problem.
+                      items:
+                        description: ErrorCode is a string alias.
+                        type: string
+                      type: array
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: Last time the condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - lastUpdateTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               credentials:
                 description: Credentials contains information about the virtual garden
                   cluster credentials.

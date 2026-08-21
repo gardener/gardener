@@ -99,7 +99,9 @@ var _ = Describe("Garden Care Control", func() {
 			Context("when no conditions are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(&NewHealthCheck,
-						healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition { return nil })))
+						healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition {
+							return nil
+						})))
 				})
 
 				It("should not set conditions", func() {

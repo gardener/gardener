@@ -120,7 +120,7 @@ This constraint indicates that at least one worker pool with the update strategy
 The constraint is not added to `.status.constraints` if all such worker pools are already up-to-date.
 Once the user manually labels all the relevant nodes with `node.machine.sapcloud.io/selected-for-update` and the update process completes, the constraint will be automatically removed.
 
-**`HasIgnoredManagedResources`**:
+**`ManagedResourcesHonored`**:
 
 This constraint indicates that at least one `ManagedResource` in the Shoot's control plane namespace has been annotated with `resources.gardener.cloud/ignore=true`, meaning its reconciliation has been disabled.
 It will not be added to `.status.constraints` if no such `ManagedResource` exists.

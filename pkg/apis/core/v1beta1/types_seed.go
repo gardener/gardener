@@ -125,6 +125,11 @@ type SeedStatus struct {
 	// LastOperation holds information about the last operation on the Seed.
 	// +optional
 	LastOperation *LastOperation `json:"lastOperation,omitempty" protobuf:"bytes,9,opt,name=lastOperation"`
+	// Constraints represents conditions of a Seed's current state that constraint some operations on it.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +optional
+	Constraints []Condition `json:"constraints,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,10,rep,name=constraints"`
 }
 
 // Backup contains the object store configuration for backups for shoot (currently only etcd).
@@ -540,6 +545,9 @@ const (
 	SeedSystemComponentsHealthy ConditionType = "SeedSystemComponentsHealthy"
 	// SeedEmergencyStopShootReconciliations is a constant for a condition type indicating disabled shoot reconciliations.
 	SeedEmergencyStopShootReconciliations ConditionType = "EmergencyStopShootReconciliations"
+	// SeedManagedResourcesHonored is a constant for a constraint type indicating that no ManagedResources
+	// in the seed's namespaces have been annotated with resources.gardener.cloud/ignore=true.
+	SeedManagedResourcesHonored ConditionType = "ManagedResourcesHonored"
 )
 
 // Resource constants for Gardener object types

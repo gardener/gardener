@@ -961,6 +961,13 @@ func (in *GardenStatus) DeepCopyInto(out *GardenStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Constraints != nil {
+		in, out := &in.Constraints, &out.Constraints
+		*out = make([]v1beta1.Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.LastOperation != nil {
 		in, out := &in.LastOperation, &out.LastOperation
 		*out = new(v1beta1.LastOperation)
