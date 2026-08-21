@@ -14,7 +14,6 @@ linters:
             disable:
               - "*"
             enable:
-              - optionalfields
               - jsontags
 issues:
   max-issues-per-linter: 0
