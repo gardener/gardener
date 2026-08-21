@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -36,6 +37,13 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		return nil, err
 	}
 
+	zones := sets.New[string]()
+	for _, pool := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		if v1beta1helper.SystemComponentsAllowed(&pool) && pool.Maximum > 0 {
+			zones.Insert(pool.Zones...)
+		}
+	}
+
 	values := coredns.Values{
 		// resolve conformance test issue (https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44)
 		// before changing
@@ -43,6 +51,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		Image:                           image.String(),
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
+		Zones:                           int32(len(zones)), // #nosec G115 -- `len(zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
 		// Pod/node network CIDRs and cluster IPs are set on deployment to handle dynamic network CIDRs
 	}
 

@@ -104,6 +104,8 @@ type Values struct {
 	SearchPathRewriteCommonSuffixes []string
 	// IPFamilies specifies the IP protocol versions to use for core dns.
 	IPFamilies []gardencorev1beta1.IPFamily
+	// Zones specifies the number of availability zones of the shoot cluster.
+	Zones int32
 }
 
 // New creates a new instance of DeployWaiter for coredns.
@@ -502,7 +504,7 @@ import custom/*.server
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("50m"),
-									corev1.ResourceMemory: resource.MustParse("15Mi"),
+									corev1.ResourceMemory: resource.MustParse("25Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
@@ -727,7 +729,7 @@ import custom/*.server
 			},
 			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 				MinReplicas: new(int32(2)),
-				MaxReplicas: 5,
+				MaxReplicas: max(5, 2*c.values.Zones),
 				Metrics: []autoscalingv2.MetricSpec{{
 					Type: autoscalingv2.ResourceMetricSourceType,
 					Resource: &autoscalingv2.ResourceMetricSource{
