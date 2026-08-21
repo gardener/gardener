@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -1435,7 +1436,6 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		true,
-		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }
@@ -1443,10 +1443,14 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 
-	output := fluentcustomresources.GetStaticClusterOutput(customResourcesLabels)
+	var outputs []*fluentbitv1alpha2.ClusterOutput
+
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		output = fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels)
+		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels))
+	} else {
+		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels))
 	}
+	outputs = append(outputs, fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels))
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
@@ -1454,7 +1458,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 		true,
 		"-garden",
 		logging.GardenCentralLoggingConfigurations,
-		output,
+		outputs,
 	)
 }
 
