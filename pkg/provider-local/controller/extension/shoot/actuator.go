@@ -20,7 +20,9 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -109,6 +111,13 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 				}
 			}
 		}
+
+		// Trigger immediate reconciliation of kube-proxy ManagedResources so that the shoot webhook
+		// (which sets conntrack MaxPerCore=0) fires for existing kube-proxy ConfigMaps that were
+		// created before the webhook was registered in the shoot cluster.
+		if err := a.triggerKubeProxyManagedResourceReconciliation(ctx, namespace); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -154,6 +163,28 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, ex *extensionsv
 
 func getLabels() map[string]string {
 	return map[string]string{"app.kubernetes.io/name": ApplicationName}
+}
+
+// triggerKubeProxyManagedResourceReconciliation annotates all kube-proxy ManagedResources with the
+// gardener.cloud/operation=reconcile annotation. This causes the resource manager to immediately
+// reconcile them, triggering the shoot webhook for kube-proxy ConfigMaps even if they were
+// created before the webhook was registered in the shoot cluster.
+func (a *actuator) triggerKubeProxyManagedResourceReconciliation(ctx context.Context, namespace string) error {
+	mrList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := a.client.List(ctx, mrList, client.InNamespace(namespace), kubeproxy.ManagedResourceLabelSelector()); err != nil {
+		return fmt.Errorf("failed to list kube-proxy ManagedResources: %w", err)
+	}
+
+	for i := range mrList.Items {
+		mr := &mrList.Items[i]
+		patch := client.MergeFrom(mr.DeepCopy())
+		metav1.SetMetaDataAnnotation(&mr.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		if err := a.client.Patch(ctx, mr, patch); err != nil {
+			return fmt.Errorf("failed to annotate kube-proxy ManagedResource %q: %w", mr.Name, err)
+		}
+	}
+
+	return nil
 }
 
 func getResources() (map[string][]byte, error) {
