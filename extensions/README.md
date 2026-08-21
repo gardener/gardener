@@ -98,7 +98,8 @@ Feedback and contributions are always welcome. Please report bugs or suggestions
 You can find further resources about our project here:
 
 * Our landing page [gardener.cloud](https://gardener.cloud/)
-* [Gardener - The Kubernetes Botanist](https://kubernetes.io/blog/2018/05/17/gardener/) blog post on kubernetes.io
-* [Gardener Project Update](https://kubernetes.io/blog/2019/12/02/gardener-project-update/) blog post on kubernetes.io
+* Blog posts on kubernetes.io:
+    * [Gardener - The Kubernetes Botanist](https://kubernetes.io/blog/2018/05/17/gardener/)
+    * [Gardener Project Update](https://kubernetes.io/blog/2019/12/02/gardener-project-update/)
 * [GEP-0001 (Gardener Enhancement Proposal) on extensibility](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility)
 * [Extensibility API documentation](https://github.com/gardener/gardener/tree/master/docs/extensions)
