@@ -1,0 +1,20 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - kubeapilinter
+  settings:
+    custom:
+      kubeapilinter:
+        path: <<KUBE_API_LINTER_PLUGIN_PATH>>/kube-api-linter.so
+        description: Enforces Kubernetes API conventions on API types
+        original-url: sigs.k8s.io/kube-api-linter
+        settings:
+          linters:
+            disable:
+              - "*"
+            enable:
+              - jsontags
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
