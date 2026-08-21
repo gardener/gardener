@@ -80,7 +80,7 @@ func RenewWorkloadIdentityTokens(ctx context.Context, c client.Client, opts ...c
 	return renewTokenInSecrets(ctx, c, securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp, *workloadIdentityTokenRequestorRequirement, opts...)
 }
 
-// renewTokenInSecrets removes the [annotationKey] annotation from all secrets listed with with applied [labelSelector] and [opts].
+// renewTokenInSecrets removes the [annotationKey] annotation from all secrets listed with applied [labelSelector] and [opts].
 // Removal of annotation is expected to trigger reconciliation of the secrets by a token requestor controller.
 func renewTokenInSecrets(ctx context.Context, c client.Client, annotationKey string, labelSelector labels.Requirement, opts ...client.ListOption) error {
 	listOptions := &client.ListOptions{}
@@ -99,9 +99,7 @@ func renewTokenInSecrets(ctx context.Context, c client.Client, annotationKey str
 
 	var fns []flow.TaskFn
 
-	for _, obj := range secretList.Items {
-		secret := obj
-
+	for _, secret := range secretList.Items {
 		fns = append(fns, func(ctx context.Context) error {
 			patch := client.MergeFrom(secret.DeepCopy())
 			delete(secret.Annotations, annotationKey)
