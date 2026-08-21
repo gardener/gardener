@@ -15,26 +15,28 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 ### Infrastructure Provider
 
-- [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
+- [Alibaba Cloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
 - [Equinix Metal](https://github.com/gardener/gardener-extension-provider-equinix-metal)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [Hetzner Cloud](https://github.com/23technologies/gardener-extension-provider-hcloud)
 - [IronCore](https://github.com/ironcore-dev/gardener-extension-provider-ironcore)
-- [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
-- [MetalStack](https://github.com/metal-stack/gardener-extension-provider-metal)
+- [IronCore Metal](https://github.com/ironcore-dev/gardener-extension-provider-ironcore-metal)
+- [KubeVirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
+- [metal-stack](https://github.com/metal-stack/gardener-extension-provider-metal)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
+- [STACKIT](https://github.com/stackitcloud/gardener-extension-provider-stackit)
 - [vSphere](https://github.com/gardener/gardener-extension-provider-vsphere)
 
 ### Primary DNS Provider
 
 The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener related DNS records)
 
-- [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
+- [Alibaba Cloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
-- [CloudFlare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
+- [Cloudflare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [PowerDNS](https://github.com/metal-stack/gardener-extension-dns-powerdns)
@@ -42,11 +44,11 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 
 ### Operating System
 
-- [CoreOS/FlatCar](https://github.com/gardener/gardener-extension-os-coreos)
-- [Debian/Ubuntu (MetalStack)](https://github.com/metal-stack/os-metal-extension)
-- [GardenLinux](https://github.com/gardener/gardener-extension-os-gardenlinux)
+- [CoreOS/Flatcar](https://github.com/gardener/gardener-extension-os-coreos)
+- [Debian/Ubuntu (metal-stack)](https://github.com/metal-stack/os-metal-extension)
+- [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux)
 - [k3os](https://github.com/23technologies/gardener-extension-os-k3os)
-- [SuSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
+- [SUSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
 - [Ubuntu](https://github.com/gardener/gardener-extension-os-ubuntu)
 
 ### Container Runtime
@@ -61,10 +63,15 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 
 ### Generic Extensions
 
-- [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [ACL](https://github.com/stackitcloud/gardener-extension-acl)
+- [Audit (`metal-stack/gardener-extension-audit`)](https://github.com/metal-stack/gardener-extension-audit)
+- [Auditing (`gardener/gardener-extension-auditing`)](https://github.com/gardener/gardener-extension-auditing)
+- [csi-driver-lvm](https://github.com/metal-stack/gardener-extension-csi-driver-lvm)
+- [Envoy Gateway](https://github.com/gardener/gardener-extension-envoy-gateway)
 - [Image Rewriter](https://github.com/gardener/gardener-extension-image-rewriter)
+- [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [Registry Cache](https://github.com/gardener/gardener-extension-registry-cache)
+- [S3 Compatible Storage](https://github.com/metal-stack/gardener-extension-backup-s3)
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
 - [Shoot Falco Service](https://github.com/gardener/gardener-extension-shoot-falco-service)
@@ -74,23 +81,26 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 - [Shoot Networking Problem Detector](https://github.com/gardener/gardener-extension-shoot-networking-problemdetector)
 - [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
 - [Shoot Rsyslog Relp](https://github.com/gardener/gardener-extension-shoot-rsyslog-relp)
+- [Shoot Traefik](https://github.com/gardener/gardener-extension-shoot-traefik)
 
 ### Others
 
 - [OIDC Apps Controller](https://github.com/gardener/oidc-apps-controller)
 
-If you implemented a new extension, please feel free to add it to this list!
+> [!NOTE]
+> If you implemented a new extension, please feel free to add it to this list!
 
 ## Feedback and Support
 
 Feedback and contributions are always welcome. Please report bugs or suggestions as [GitHub issues](https://github.com/gardener/gardener/issues) or reach out on [Slack](https://join.slack.com/t/gardener-cloud/shared_invite/zt-33c9daems-3oOorhnqOSnldZPWqGmIBw).
 
-## Learn more!
+## Learn More!
 
-Please find further resources about out project here:
+You can find further resources about our project here:
 
-* [Our landing page gardener.cloud](https://gardener.cloud/)
-* ["Gardener, the Kubernetes Botanist" blog on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/)
-* ["Gardener Project Update" blog on kubernetes.io](https://kubernetes.io/blog/2019/12/02/gardener-project-update/)
+* Our landing page [gardener.cloud](https://gardener.cloud/)
+* Blog posts on kubernetes.io:
+    * [Gardener - The Kubernetes Botanist](https://kubernetes.io/blog/2018/05/17/gardener/)
+    * [Gardener Project Update](https://kubernetes.io/blog/2019/12/02/gardener-project-update/)
 * [GEP-0001 (Gardener Enhancement Proposal) on extensibility](https://github.com/gardener/enhancements/tree/main/geps/0001-gardener-extensibility)
 * [Extensibility API documentation](https://github.com/gardener/gardener/tree/master/docs/extensions)
