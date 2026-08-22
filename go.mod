@@ -42,7 +42,9 @@ require (
 	github.com/open-telemetry/opentelemetry-operator/apis v0.156.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pelletier/go-toml v1.9.5
+	github.com/perses/perses v0.54.0
 	github.com/perses/perses-operator v0.5.0
+	github.com/perses/spec v0.2.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1
 	github.com/prometheus/blackbox_exporter v0.28.0
 	github.com/prometheus/client_golang v1.24.1
@@ -271,8 +273,6 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/perses/common v0.31.2 // indirect
-	github.com/perses/perses v0.54.0 // indirect
-	github.com/perses/spec v0.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
