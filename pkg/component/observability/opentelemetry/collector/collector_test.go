@@ -359,7 +359,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									},
 									map[string]any{
 										"key":    "loki.resource.labels",
-										"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
+										"value":  "job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role, host.name",
 										"action": "insert",
 									},
 									map[string]any{
@@ -393,7 +393,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 									},
 									map[string]any{
 										"key":    "loki.attribute.labels",
-										"value":  "priority, level, process.command, process.pid, host.name, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
+										"value":  "priority, level, process.command, process.pid, host.id, service.name, service.namespace, job, unit, nodename, origin, pod_name, container_name, namespace_name, gardener_cloud_role",
 										"action": "upsert",
 									},
 									map[string]any{
