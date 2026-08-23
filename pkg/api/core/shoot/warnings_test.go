@@ -431,7 +431,7 @@ var _ = Describe("Warnings", func() {
 				},
 			}
 
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, []int{0})).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, []int{0})).To(BeEmpty())
 		})
 	})
 
