@@ -709,8 +709,8 @@ github.com/sanposhiho/wastedassign/v2 v2.1.0 h1:crurBF7fJKIORrV85u9UUpePDYGWnwvv
 github.com/sanposhiho/wastedassign/v2 v2.1.0/go.mod h1:+oSmSC+9bQ+VUAxA66nBb0Z7N8CK7mscKTDYC6aIek4=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 h1:KRzFb2m7YtdldCEkzs6KqmJw4nqEVZGK7IN2kJkjTuQ=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.2/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
-github.com/saracen/gobuildcache v0.0.0-20250125174822-83bfeb837b93 h1:nSE/4yRnAY2doxewnRXrbP1g7RFEWlHbT+dmzjtGaCc=
-github.com/saracen/gobuildcache v0.0.0-20250125174822-83bfeb837b93/go.mod h1:fEtNeNmOQElhOfDipBd2JGjh18yhIZqPnfrwjOKpHJM=
+github.com/saracen/gobuildcache v0.0.0-20260220100021-30e7c9ecf5a3 h1:arNPdeXFvLoWg0g7wSnJHSposKiIDoai+U1/1jtp2q0=
+github.com/saracen/gobuildcache v0.0.0-20260220100021-30e7c9ecf5a3/go.mod h1:fEtNeNmOQElhOfDipBd2JGjh18yhIZqPnfrwjOKpHJM=
 github.com/sashamelentyev/interfacebloat v1.1.0 h1:xdRdJp0irL086OyW1H/RTZTr1h/tMEOsumirXcOJqAw=
 github.com/sashamelentyev/interfacebloat v1.1.0/go.mod h1:+Y9yU5YdTkrNvoX0xHc84dxiN1iBi9+G8zZIhPVoNjQ=
 github.com/sashamelentyev/usestdlibvars v1.29.0 h1:8J0MoRrw4/NAXtjQqTHrbW9NN+3iMf7Knkq057v4XOQ=
