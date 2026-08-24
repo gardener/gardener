@@ -24,10 +24,6 @@ jobs:
           {
             "images": [
               {
-                "version": "1.25",
-                "image": "golang:1.25.14-bookworm"
-              },
-              {
                 "version": "1.26",
                 "image": "golang:1.26.7-bookworm"
               }
