@@ -236,7 +236,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 	// Remove finalizer from CredentialsBinding
 	log.Info("Removing finalizer")
 	if err := controllerutils.RemoveFinalizers(ctx, r.Client, credentialsBinding, gardencorev1beta1.GardenerName); err != nil {
-		r.Recorder.Eventf(credential, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
+		r.Recorder.Eventf(credentialsBinding, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 
