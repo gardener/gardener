@@ -107,6 +107,45 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to reconcile Istio egress network policy for etcd peer exposure: %w", err)
 	}
 
+	if p.values.ClientHost != "" {
+		if err := p.deployClientExposure(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *peerExposure) deployClientExposure(ctx context.Context) error {
+	var (
+		clientGateway        = p.emptyGatewayFor(p.clientName())
+		clientVirtualService = p.emptyVirtualServiceFor(p.clientName())
+		clientNetworkPolicy  = p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeIngress)
+		clientIstioEgressNP  = p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeEgress)
+	)
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientGateway, gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})); err != nil {
+		return fmt.Errorf("failed to reconcile Istio gateway for etcd client exposure: %w", err)
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientVirtualService, virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, p.clientServiceHost())); err != nil {
+		return fmt.Errorf("failed to reconcile Istio virtual service for etcd client exposure: %w", err)
+	}
+
+	clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientServiceEntry, serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
+		return fmt.Errorf("failed to reconcile Istio service entry for etcd client exposure: %w", err)
+	}
+
+	// Allow the Istio ingress gateway to reach the etcd pods on the client port.
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientNetworkPolicy, p.mutateNetworkPolicy(clientNetworkPolicy, networkingv1.PolicyTypeIngress, etcdconstants.PortEtcdClient)); err != nil {
+		return fmt.Errorf("failed to reconcile network policy for etcd client exposure: %w", err)
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientIstioEgressNP, p.mutateNetworkPolicy(clientIstioEgressNP, networkingv1.PolicyTypeEgress, etcdconstants.PortEtcdClient)); err != nil {
+		return fmt.Errorf("failed to reconcile Istio egress network policy for etcd client exposure: %w", err)
+	}
+
 	return nil
 }
 
@@ -114,6 +153,9 @@ func (p *peerExposure) Destroy(ctx context.Context) error {
 	objects := []client.Object{p.emptyGatewayFor(p.name()), p.emptyVirtualServiceFor(p.name()), p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeEgress)}
 	for i := range p.values.Members {
 		objects = append(objects, p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i)))
+	}
+	if p.values.ClientHost != "" {
+		objects = append(objects, p.emptyGatewayFor(p.clientName()), p.emptyVirtualServiceFor(p.clientName()), p.emptyServiceEntryFor(p.clientName()), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeEgress))
 	}
 	return kubernetesutils.DeleteObjects(ctx, p.client, objects...)
 }
@@ -261,6 +303,51 @@ func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.Virtu
 			Hosts:    allHosts,
 			Gateways: []string{gatewayName},
 			Tls:      routes,
+		}
+		return nil
+	}
+}
+
+func gatewayWithClientTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, hosts []string) func() error {
+	return func() error {
+		gateway.Labels = labels
+		gateway.Spec = istioapinetworkingv1beta1.Gateway{
+			Selector: istioLabels,
+			Servers: []*istioapinetworkingv1beta1.Server{{
+				Hosts: hosts,
+				Port: &istioapinetworkingv1beta1.Port{
+					Number:   uint32(etcdconstants.PortEtcdClientExternal), // #nosec G115 -- Port constants are positive values well within uint32 range.
+					Name:     etcdconstants.ServicePortNameEtcdClient,
+					Protocol: "TLS",
+				},
+				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode: istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH,
+				},
+			}},
+		}
+		return nil
+	}
+}
+
+func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo, hosts []string, gatewayName, destinationHost string) func() error {
+	return func() error {
+		virtualService.Labels = labels
+		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
+			ExportTo: exportTo,
+			Hosts:    hosts,
+			Gateways: []string{gatewayName},
+			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
+				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
+					Port:     uint32(etcdconstants.PortEtcdClientExternal), // #nosec G115 -- Port constants are positive values well within uint32 range.
+					SniHosts: hosts,
+				}},
+				Route: []*istioapinetworkingv1beta1.RouteDestination{{
+					Destination: &istioapinetworkingv1beta1.Destination{
+						Host: destinationHost,
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: uint32(etcdconstants.PortEtcdClient)}, // #nosec G115 -- Port constants are positive values well within uint32 range.
+					},
+				}},
+			}},
 		}
 		return nil
 	}
