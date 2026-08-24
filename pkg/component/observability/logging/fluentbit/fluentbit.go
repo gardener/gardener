@@ -55,8 +55,6 @@ type Values struct {
 	Image string
 	// InitContainerImage is the fluent-bit init container image.
 	InitContainerImage string
-	// VailEnabled specifies whether vali is used and should be configured as a ClusterOutput.
-	ValiEnabled bool
 	// PriorityClassName is the name of the priority class of the fluent-bit.
 	PriorityClassName string
 }
