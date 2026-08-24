@@ -13,6 +13,7 @@ RUN echo "Installing Packages ..." \
 # builder
 FROM base AS builder
 WORKDIR /go/src/github.com/gardener/gardener
+ENV GOTOOLCHAIN=local
 COPY . .
 RUN make create-tools-bin TOOLS_BIN_DIR=hack/tools/bin && \
     rm -rf /go/src/github.com/gardener/gardener/hack/tools/bin/work
