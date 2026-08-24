@@ -300,6 +300,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(valuesBytes)).To(Equal(`gardener:
+  clusterTypes:
+    gardenRuntimeCluster: false
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
     genericKubeconfigSecretName: ` + genericKubeconfigSecret.Name + `
@@ -1100,6 +1102,29 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					namespace := &corev1.Namespace{}
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
 					g.Expect(namespace.Labels).To(HaveKeyWithValue("networking.gardener.cloud/access-target-apiserver", "allowed"))
+				}).Should(Succeed())
+			})
+
+			It("should set gardener.garden.runtimeCluster.enabled=true in Helm values", func() {
+				By("Ensure chart was deployed with runtimeCluster enabled")
+				Eventually(func(g Gomega) {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+					configMap := &corev1.ConfigMap{}
+					g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+
+					values := make(map[string]any)
+					g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+					gardenerValues, ok := values["gardener"].(map[string]any)
+					g.Expect(ok).To(BeTrue())
+					clusterTypes, ok := gardenerValues["clusterTypes"].(map[string]any)
+					g.Expect(ok).To(BeTrue())
+					g.Expect(clusterTypes).To(HaveKeyWithValue("gardenRuntimeCluster", true))
 				}).Should(Succeed())
 			})
 		})

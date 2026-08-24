@@ -139,6 +139,9 @@ var _ = Describe("Admission", func() {
 			expectedVirtualValues := map[string]any{
 				"foo": "bar",
 				"gardener": map[string]any{
+					"clusterTypes": map[string]bool{
+						"gardenCluster": true,
+					},
 					"virtualCluster": map[string]any{
 						"enabled": true,
 						"serviceAccount": map[string]any{
@@ -151,6 +154,9 @@ var _ = Describe("Admission", func() {
 			expectedRuntimeValues := map[string]any{
 				"foo": "bar",
 				"gardener": map[string]any{
+					"clusterTypes": map[string]bool{
+						"gardenRuntimeCluster": true,
+					},
 					"runtimeCluster": map[string]any{
 						"priorityClassName": "gardener-garden-system-400",
 					},

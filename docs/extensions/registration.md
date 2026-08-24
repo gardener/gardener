@@ -277,14 +277,17 @@ In order to allow extension controller deployments to get information about the 
 - Additional properties for garden deployment
   ```yaml
     gardener:
+      clusterTypes:
+        gardenRuntimeCluster: true
       runtimeCluster:
-        enabled: true
         priorityClassName: <priority-class-name-for-extension>
   ```
 
 - Additional properties for seed deployment
   ```yaml
   gardener:
+    clusterTypes:
+      gardenRuntimeCluster: false # true if this seed is also serving as the garden runtime cluster
     version: <gardener-version>
     garden:
       clusterIdentity: <uuid-of-gardener-installation>

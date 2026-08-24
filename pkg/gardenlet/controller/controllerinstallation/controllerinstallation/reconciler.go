@@ -281,9 +281,14 @@ func (r *Reconciler) reconcile(
 		featureToEnabled[feature] = features.DefaultFeatureGate.Enabled(feature)
 	}
 
+	clusterTypes := map[string]bool{
+		"gardenRuntimeCluster": seedIsGarden,
+	}
+
 	// Mix-in some standard values for garden and seed.
 	gardenerMap := map[string]any{
-		"version": r.Identity.Version,
+		"version":      r.Identity.Version,
+		"clusterTypes": clusterTypes,
 		"garden": map[string]any{
 			"clusterIdentity": r.GardenClusterIdentity,
 		},

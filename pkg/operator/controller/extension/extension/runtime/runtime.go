@@ -94,7 +94,11 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
+			"clusterTypes": map[string]any{
+				"gardenRuntimeCluster": "true",
+			},
 			"runtimeCluster": map[string]any{
+				// TODO(timuthy): Remove this field after Gardener v1.153.0 has been released.
 				"enabled":           "true",
 				"priorityClassName": priorityClassName,
 			},

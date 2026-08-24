@@ -128,6 +128,9 @@ var _ = Describe("Runtime", func() {
 			expectedValues := map[string]any{
 				"foo": "bar",
 				"gardener": map[string]any{
+					"clusterTypes": map[string]any{
+						"gardenRuntimeCluster": "true",
+					},
 					"runtimeCluster": map[string]any{
 						"enabled":           "true",
 						"priorityClassName": "gardener-garden-system-200",

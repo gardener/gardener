@@ -123,8 +123,9 @@ Besides the values configured in `.spec.deployment.extension.runtimeValues`, a r
 
 ```yaml
 gardener:
+  clusterTypes:
+    gardenRuntimeCluster: true # indicates the deployment targets a garden runtime cluster
   runtimeCluster:
-    enabled: true # indicates the extension is enabled for the Garden cluster, e.g. for handling `BackupBucket`, `BackupEntry`, `DNSRecord` and `Extension` objects.
     priorityClassName: gardener-garden-system-200
 ```
 
@@ -148,10 +149,11 @@ The following values are passed to the chart during reconciliation:
 
 ```yaml
 gardener:
+  clusterTypes:
+    gardenRuntimeCluster: true # indicates the deployment targets the garden runtime cluster
   runtimeCluster:
     priorityClassName: <Class to be used for extension admission>
   virtualCluster:
-    enabled: true
     namespace: <Extension Namespace name in the virtual cluster (format "extension-<extension-name>")>
 ```
 
@@ -166,8 +168,9 @@ The following values are passed to the chart during reconciliation:
 
 ```yaml
 gardener:
+  clusterTypes:
+    gardenCluster: true # indicates the deployment targets the garden cluster
   virtualCluster:
-    enabled: true
     serviceAccount:
       name: <Name of the service account used to connect to the garden cluster>
       namespace: <Namespace of the service account>
