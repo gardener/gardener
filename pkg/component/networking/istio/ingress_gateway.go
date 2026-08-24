@@ -17,6 +17,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -95,6 +96,13 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			},
 		}
 
+		var etcdPorts []int32
+		for _, port := range istioIngressGateway.Ports {
+			if strings.HasPrefix(port.Name, etcdconstants.ServicePortNameEtcdPeer) || port.Name == etcdconstants.ServicePortNameEtcdClient {
+				etcdPorts = append(etcdPorts, port.Port)
+			}
+		}
+
 		values := map[string]any{
 			"trustDomain":                        istioIngressGateway.TrustDomain,
 			"labels":                             istioIngressGateway.Labels,
@@ -114,6 +122,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
 			"terminateAPIServerTLS":              enableAPIServerTLSTermination,
 			"httpProxy":                          httpProxy,
+			"etcdPorts":                          etcdPorts,
 			"enforceSpreadAcrossHosts":           istioIngressGateway.EnforceSpreadAcrossHosts,
 			"apiServerRequestHeaderUserName":     kubeapiserverconstants.RequestHeaderUserName,
 			"apiServerRequestHeaderGroup":        kubeapiserverconstants.RequestHeaderGroup,
