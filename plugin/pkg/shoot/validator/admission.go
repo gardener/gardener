@@ -376,7 +376,7 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 	}
 
 	if len(allErrs) > 0 {
-		return admission.NewForbidden(a, allErrs.ToAggregate())
+		return apierrors.NewInvalid(a.GetKind().GroupKind(), validationContext.shoot.Name, allErrs)
 	}
 
 	return nil
