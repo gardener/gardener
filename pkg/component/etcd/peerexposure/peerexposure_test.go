@@ -31,10 +31,12 @@ var _ = Describe("PeerExposure", func() {
 		component_ component.DeployWaiter
 		values     Values
 
-		namespace   = "shoot--foo--bar"
-		istioNS     = "istio-ingress"
-		istioLabels = map[string]string{"istio": "ingressgateway"}
-		members     = []PeerMember{
+		namespace         = "shoot--foo--bar"
+		istioNS           = "istio-ingress"
+		clientHost        = "src-etcd-main.ingress.seed.example.com"
+		clientServiceFQDN = "etcd-main-client." + "shoot--foo--bar" + ".svc.cluster.local"
+		istioLabels       = map[string]string{"istio": "ingressgateway"}
+		members           = []PeerMember{
 			{
 				SNIHost:      "src-etcd-main-0.ingress.seed.example.com",
 				PodFQDN:      "etcd-main-0.etcd-main-peer." + "shoot--foo--bar" + ".svc.cluster.local",
@@ -204,6 +206,94 @@ var _ = Describe("PeerExposure", func() {
 				}
 			})
 		})
+
+		Context("when ClientHost is set", func() {
+			BeforeEach(func() {
+				values.ClientHost = clientHost
+				component_ = New(c, namespace, values)
+			})
+
+			It("should create a client gateway with TLS passthrough on the etcd client port", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+
+				clientGateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientGateway), clientGateway)).To(Succeed())
+				Expect(clientGateway.Spec.Selector).To(Equal(istioLabels))
+				Expect(clientGateway.Spec.Servers).To(HaveLen(1))
+				srv := clientGateway.Spec.Servers[0]
+				Expect(srv.Hosts).To(Equal([]string{clientHost}))
+				Expect(srv.Port.Number).To(Equal(uint32(12379)))
+				Expect(srv.Port.Name).To(Equal("tls-etcd-client"))
+				Expect(srv.Port.Protocol).To(Equal("TLS"))
+				Expect(srv.Tls.Mode).To(Equal(istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH))
+			})
+
+			It("should create a client virtual service routing the SNI host to the etcd client service", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+
+				clientVS := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientVS), clientVS)).To(Succeed())
+				Expect(clientVS.Spec.ExportTo).To(Equal([]string{istioNS}))
+				Expect(clientVS.Spec.Hosts).To(Equal([]string{clientHost}))
+				Expect(clientVS.Spec.Gateways).To(Equal([]string{"etcd-main-client"}))
+				Expect(clientVS.Spec.Tls).To(HaveLen(1))
+				route := clientVS.Spec.Tls[0]
+				Expect(route.Match[0].Port).To(Equal(uint32(12379)))
+				Expect(route.Match[0].SniHosts).To(Equal([]string{clientHost}))
+				Expect(route.Route[0].Destination.Host).To(Equal(clientServiceFQDN))
+				Expect(route.Route[0].Destination.Port.Number).To(Equal(uint32(2379)))
+			})
+
+			It("should create a client ServiceEntry exporting the etcd client service to the ingress namespace", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+
+				clientSE := &istionetworkingv1beta1.ServiceEntry{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientSE), clientSE)).To(Succeed())
+				Expect(clientSE.Spec.Hosts).To(Equal([]string{clientServiceFQDN}))
+				Expect(clientSE.Spec.ExportTo).To(Equal([]string{istioNS}))
+				Expect(clientSE.Spec.Resolution).To(Equal(istioapinetworkingv1beta1.ServiceEntry_DNS))
+				Expect(clientSE.Spec.Ports).To(HaveLen(1))
+				Expect(clientSE.Spec.Ports[0].Number).To(Equal(uint32(2379)))
+				Expect(clientSE.Spec.Ports[0].Name).To(Equal("tls-etcd-client"))
+				Expect(clientSE.Spec.Ports[0].Protocol).To(Equal("TLS"))
+			})
+
+			It("should create a network policy allowing the istio ingress gateway to reach the etcd client port", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+
+				clientNP := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-istio-ingress-to-etcd-main-client", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientNP), clientNP)).To(Succeed())
+				Expect(clientNP.Spec.PodSelector.MatchLabels).To(HaveKeyWithValue("app", "etcd-statefulset"))
+				Expect(clientNP.Spec.PodSelector.MatchLabels).To(HaveKeyWithValue("role", "main"))
+				Expect(clientNP.Spec.PolicyTypes).To(ConsistOf(networkingv1.PolicyTypeIngress))
+				Expect(clientNP.Spec.Ingress).To(HaveLen(1))
+				Expect(clientNP.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", istioNS))
+				Expect(clientNP.Spec.Ingress[0].From[0].PodSelector.MatchLabels).To(Equal(istioLabels))
+				Expect(clientNP.Spec.Ingress[0].Ports[0].Port.IntValue()).To(Equal(2379))
+			})
+
+			It("should create an egress network policy in the istio namespace allowing the gateway to reach etcd pods on the client port", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+
+				clientEgressNP := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-istio-ingress-to-etcd-main-client-" + namespace, Namespace: istioNS}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientEgressNP), clientEgressNP)).To(Succeed())
+				Expect(clientEgressNP.Spec.PodSelector.MatchLabels).To(Equal(istioLabels))
+				Expect(clientEgressNP.Spec.PolicyTypes).To(ConsistOf(networkingv1.PolicyTypeEgress))
+				Expect(clientEgressNP.Spec.Egress).To(HaveLen(1))
+				Expect(clientEgressNP.Spec.Egress[0].To[0].NamespaceSelector.MatchLabels).To(HaveKeyWithValue("kubernetes.io/metadata.name", namespace))
+				Expect(clientEgressNP.Spec.Egress[0].To[0].PodSelector.MatchLabels).To(HaveKeyWithValue("app", "etcd-statefulset"))
+				Expect(clientEgressNP.Spec.Egress[0].Ports[0].Port.IntValue()).To(Equal(2379))
+			})
+		})
+
+		Context("when ClientHost is not set", func() {
+			It("should not create any client resources", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+
+				clientGateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientGateway), clientGateway)).To(BeNotFoundError())
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -219,6 +309,29 @@ var _ = Describe("PeerExposure", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(egressNP), egressNP)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(se), se)).To(BeNotFoundError())
+		})
+
+		Context("when ClientHost is set", func() {
+			BeforeEach(func() {
+				values.ClientHost = clientHost
+				component_ = New(c, namespace, values)
+			})
+
+			It("should also delete all client resources", func() {
+				Expect(component_.Deploy(ctx)).To(Succeed())
+				Expect(component_.Destroy(ctx)).To(Succeed())
+
+				clientGateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				clientVS := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				clientSE := &istionetworkingv1beta1.ServiceEntry{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main-client", Namespace: namespace}}
+				clientNP := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-istio-ingress-to-etcd-main-client", Namespace: namespace}}
+				clientEgressNP := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-istio-ingress-to-etcd-main-client-" + namespace, Namespace: istioNS}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientGateway), clientGateway)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientVS), clientVS)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientSE), clientSE)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientNP), clientNP)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clientEgressNP), clientEgressNP)).To(BeNotFoundError())
+			})
 		})
 	})
 })
