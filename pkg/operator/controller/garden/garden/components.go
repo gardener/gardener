@@ -1450,6 +1450,8 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	} else {
 		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels))
 	}
+
+	// The gardener-operator has no option to disable logging, so the default output is always included.
 	outputs = append(outputs, fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels))
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
