@@ -19,6 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -276,7 +277,7 @@ func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot) (string, e
 
 func getEtcdReplicas(shoot *gardencorev1beta1.Shoot) int32 {
 	if v1beta1helper.IsHAControlPlaneConfigured(shoot) {
-		return 3
+		return etcdconstants.HAReplicaCount
 	}
 	return 1
 }

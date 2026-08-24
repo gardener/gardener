@@ -70,9 +70,6 @@ const (
 	// secretNamePrefixPeerServer is the prefix for the secret containing the server certificate and key for the etcd peer network.
 	secretNamePrefixPeerServer = "etcd-peer-server-" // #nosec G101 -- No credential.
 
-	// LabelAppValue is the value of a label whose key is 'app'.
-	LabelAppValue = "etcd-statefulset"
-
 	portNameClient        = "client"
 	portNameBackupRestore = "backuprestore"
 
@@ -352,7 +349,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
-			v1beta1constants.LabelApp:                             LabelAppValue,
+			v1beta1constants.LabelApp:                             etcdconstants.LabelAppValue,
 			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToPublicNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -370,7 +367,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		e.etcd.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
-				v1beta1constants.LabelApp: LabelAppValue,
+				v1beta1constants.LabelApp: etcdconstants.LabelAppValue,
 			}),
 		}
 		e.etcd.Spec.Etcd = druidcorev1alpha1.EtcdConfig{
