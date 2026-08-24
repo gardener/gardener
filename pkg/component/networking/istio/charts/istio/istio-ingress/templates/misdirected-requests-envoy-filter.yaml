@@ -45,9 +45,8 @@ spec:
                 return
               end
 
-              -- Dynamically strip any trailing port (e.g. :443, :9443, etc.)
-              -- :%d+$ matches a colon followed by digits at the end of the string
-              authority = authority:gsub(":%d+$", "")
+              -- Strip trailing 443 port
+              authority = authority:gsub(":443$", "")
 
               if rsn ~= authority then
                 request_handle:respond({[":status"] = "421"}, "Misdirected Request")
