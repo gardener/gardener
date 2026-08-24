@@ -130,6 +130,7 @@ type NewOperationFunc func(
 	ctx context.Context,
 	log logr.Logger,
 	gardenClient client.Client,
+	gardenAPIReader client.Reader,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
 	config *gardenletconfigv1alpha1.GardenletConfiguration,
@@ -148,6 +149,7 @@ var defaultNewOperationFunc NewOperationFunc = func(
 	ctx context.Context,
 	log logr.Logger,
 	gardenClient client.Client,
+	gardenAPIReader client.Reader,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
 	config *gardenletconfigv1alpha1.GardenletConfiguration,
@@ -170,7 +172,7 @@ var defaultNewOperationFunc NewOperationFunc = func(
 			WithGardenClusterIdentity(gardenClusterIdentity).
 			WithGardenFrom(gardenClient, shoot.Namespace).
 			WithShootFromCluster(seedClientSet, shoot).
-			Build(ctx, gardenClient, seedClientSet, shootClientMap, shoot)
+			Build(ctx, gardenClient, gardenAPIReader, seedClientSet, shootClientMap, shoot)
 	}
 	return operation.
 		NewBuilder().
@@ -184,5 +186,5 @@ var defaultNewOperationFunc NewOperationFunc = func(
 		WithGardenFrom(gardenClient, shoot.Namespace).
 		WithSeedFrom(gardenClient, *shoot.Status.SeedName).
 		WithShootFromCluster(seedClientSet, shoot).
-		Build(ctx, gardenClient, seedClientSet, shootClientMap, shoot)
+		Build(ctx, gardenClient, gardenAPIReader, seedClientSet, shootClientMap, shoot)
 }

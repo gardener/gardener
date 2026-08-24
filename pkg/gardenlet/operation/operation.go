@@ -210,6 +210,7 @@ func (b *Builder) WithClock(c clock.Clock) *Builder {
 func (b *Builder) Build(
 	ctx context.Context,
 	gardenClient client.Client,
+	gardenAPIReader client.Reader,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
 	shootObj *gardencorev1beta1.Shoot,
@@ -218,10 +219,11 @@ func (b *Builder) Build(
 	error,
 ) {
 	operation := &Operation{
-		Clock:          b.clockFunc(),
-		GardenClient:   gardenClient,
-		SeedClientSet:  seedClientSet,
-		ShootClientMap: shootClientMap,
+		Clock:           b.clockFunc(),
+		GardenClient:    gardenClient,
+		GardenAPIReader: gardenAPIReader,
+		SeedClientSet:   seedClientSet,
+		ShootClientMap:  shootClientMap,
 	}
 
 	var (

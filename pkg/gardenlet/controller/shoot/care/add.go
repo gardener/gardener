@@ -35,6 +35,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.GardenAPIReader == nil {
+		r.GardenAPIReader = gardenCluster.GetAPIReader()
+	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
