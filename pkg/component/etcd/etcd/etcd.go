@@ -164,6 +164,24 @@ type Values struct {
 	TopologyAwareRoutingEnabled bool
 	StaticPodConfig             *StaticPodConfig
 	MemberNamePrefix            string
+	SkipClientSANVerification   bool
+	// AdditionalAdvertisePeerURLs are extra per-member peer URLs to advertise in addition to the in-cluster peer URLs.
+	// They are used during a live control plane migration so that members residing in a different seed can be
+	// reached across clusters. The member names must follow etcd-druid's CEL constraint (`<memberNamePrefix>-<etcd-name>-<index>`).
+	AdditionalAdvertisePeerURLs []druidcorev1alpha1.MemberPeerURLs
+	// BootstrapWithExistingCluster, when set, configures this etcd to join an existing (source) etcd cluster instead of
+	// bootstrapping a new one. It is set on the destination etcd during a live control plane migration so its
+	// members join the source cluster to form a temporary joint cluster. It can only be set at creation time.
+	BootstrapWithExistingCluster *druidcorev1alpha1.BootstrapWithExistingCluster
+	// ExtraClientServiceDNSNames are additional DNS names to include in the etcd server TLS certificate's Subject
+	// Alternative Names (SANs). During a live control plane migration the source seed adds the Istio ingress
+	// client hostname so that the destination backup-restore can verify the source etcd's server cert when connecting
+	// via --service-endpoints over the Istio ingress gateway.
+	ExtraClientServiceDNSNames []string
+	// ExtraPeerServiceDNSNames are additional DNS names to include in the etcd peer TLS certificate's Subject
+	// Alternative Names (SANs). During a live control plane migration each seed adds its own Istio ingress
+	// peer hostnames so that members in the other seed can verify the peer cert during cross-seed raft connections.
+	ExtraPeerServiceDNSNames []string
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
@@ -251,11 +269,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0]
 	}
 
+	clientServiceDNSNames := append(
+		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil),
+		e.values.ExtraClientServiceDNSNames...,
+	)
 	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
 		ctx,
 		e.secretsManager,
 		e.values.Role,
-		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil),
+		clientServiceDNSNames,
 		controlPlaneNodeIP,
 	)
 	if err != nil {
@@ -272,7 +294,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		}
 
-		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), controlPlaneNodeIP)
+		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, append(e.peerServiceDNSNames(), e.values.ExtraPeerServiceDNSNames...), controlPlaneNodeIP)
 		if err != nil {
 			return fmt.Errorf("failed to generate a peer certificate: %w", err)
 		}
@@ -291,6 +313,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: e.namespace,
 				},
 			},
+		}
+
+		if e.values.SkipClientSANVerification {
+			peerUrlTLS.SkipClientSANVerification = new(true)
 		}
 	}
 
@@ -366,13 +392,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			PeerUrlTLS:              peerUrlTLS,
-			ClientPort:              new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
-			ServerPort:              new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
-			WrapperPort:             new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
-			Metrics:                 &metrics,
-			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
-			Quota:                   new(resource.MustParse("8Gi")),
+			PeerUrlTLS:                  peerUrlTLS,
+			AdditionalAdvertisePeerURLs: e.values.AdditionalAdvertisePeerURLs,
+			ClientPort:                  new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
+			ServerPort:                  new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
+			WrapperPort:                 new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
+			Metrics:                     &metrics,
+			DefragmentationSchedule:     e.computeDefragmentationSchedule(existingEtcd),
+			Quota:                       new(resource.MustParse("8Gi")),
 			ClientService: &druidcorev1alpha1.ClientService{
 				Annotations:         clientService.Annotations,
 				Labels:              clientService.Labels,
@@ -459,6 +486,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		if existingEtcd == nil && e.values.MemberNamePrefix != "" {
 			e.etcd.Spec.MemberNamePrefix = new(e.values.MemberNamePrefix)
+		}
+
+		// BootstrapWithExistingCluster is immutable and may only be set at creation time.
+		// On updates, preserve whatever value was already persisted to avoid clearing it.
+		if existingEtcd == nil {
+			e.etcd.Spec.Etcd.BootstrapWithExistingCluster = e.values.BootstrapWithExistingCluster
+		} else {
+			e.etcd.Spec.Etcd.BootstrapWithExistingCluster = existingEtcd.Spec.Etcd.BootstrapWithExistingCluster
 		}
 		return nil
 	}); err != nil {

@@ -1075,6 +1075,129 @@ var _ = Describe("Etcd", func() {
 			Expect(actual.Spec.MemberNamePrefix).To(BeNil())
 		})
 
+		It("should set spec.etcd.additionalAdvertisePeerURLs from the values", func() {
+			additionalPeerURLs := []druidcorev1alpha1.MemberPeerURLs{
+				{MemberName: "src-etcd-main-0", URLs: []string{"https://src-etcd-main-0.example.com:2380"}},
+				{MemberName: "src-etcd-main-1", URLs: []string{"https://src-etcd-main-1.example.com:2380"}},
+			}
+
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                        role,
+				Class:                       class,
+				Replicas:                    replicas,
+				Autoscaling:                 autoscalingConfig,
+				StorageCapacity:             storageCapacity,
+				StorageClassName:            &storageClassName,
+				DefragmentationSchedule:     &defragmentationSchedule,
+				CARotationPhase:             caRotationPhase,
+				PriorityClassName:           priorityClassName,
+				MaintenanceTimeWindow:       maintenanceTimeWindow,
+				HighAvailabilityEnabled:     highAvailabilityEnabled,
+				BackupConfig:                backupConfig,
+				StaticPodConfig:             staticPodConfig,
+				AdditionalAdvertisePeerURLs: additionalPeerURLs,
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.Etcd.AdditionalAdvertisePeerURLs).To(Equal(additionalPeerURLs))
+		})
+
+		It("should set spec.etcd.bootstrapWithExistingCluster when the Etcd resource does not yet exist", func() {
+			bootstrap := &druidcorev1alpha1.BootstrapWithExistingCluster{
+				Members: []druidcorev1alpha1.BootstrapExistingMember{
+					{Name: "src-etcd-main-0", PeerURLs: []string{"https://src-etcd-main-0.example.com:2380"}},
+				},
+				ClientEndpoints: []string{"https://src-etcd-main-client.source-ns.svc:2379"},
+			}
+
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                         role,
+				Class:                        class,
+				Replicas:                     replicas,
+				Autoscaling:                  autoscalingConfig,
+				StorageCapacity:              storageCapacity,
+				StorageClassName:             &storageClassName,
+				DefragmentationSchedule:      &defragmentationSchedule,
+				CARotationPhase:              caRotationPhase,
+				PriorityClassName:            priorityClassName,
+				MaintenanceTimeWindow:        maintenanceTimeWindow,
+				HighAvailabilityEnabled:      highAvailabilityEnabled,
+				BackupConfig:                 backupConfig,
+				StaticPodConfig:              staticPodConfig,
+				BootstrapWithExistingCluster: bootstrap,
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.Etcd.BootstrapWithExistingCluster).To(Equal(bootstrap))
+		})
+
+		It("should not set spec.etcd.bootstrapWithExistingCluster when the Etcd resource already exists (immutable field)", func() {
+			Expect(c.Create(ctx, &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace},
+				Status: druidcorev1alpha1.EtcdStatus{
+					Etcd: &druidcorev1alpha1.CrossVersionObjectReference{Name: etcdName},
+				},
+			})).To(Succeed())
+
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                         role,
+				Class:                        class,
+				Replicas:                     replicas,
+				Autoscaling:                  autoscalingConfig,
+				StorageCapacity:              storageCapacity,
+				StorageClassName:             &storageClassName,
+				DefragmentationSchedule:      &defragmentationSchedule,
+				CARotationPhase:              caRotationPhase,
+				PriorityClassName:            priorityClassName,
+				MaintenanceTimeWindow:        maintenanceTimeWindow,
+				HighAvailabilityEnabled:      highAvailabilityEnabled,
+				BackupConfig:                 backupConfig,
+				StaticPodConfig:              staticPodConfig,
+				BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{ClientEndpoints: []string{"https://foo:2379"}},
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.Etcd.BootstrapWithExistingCluster).To(BeNil())
+		})
+
+		It("should set spec.etcd.peerUrlTls.skipClientSANVerification when SkipClientSANVerification and HighAvailabilityEnabled are set", func() {
+			_, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
+			Expect(err).ToNot(HaveOccurred())
+
+			etcd = New(log, c, testNamespace, sm, Values{
+				Role:                      role,
+				Class:                     class,
+				Replicas:                  replicas,
+				Autoscaling:               autoscalingConfig,
+				StorageCapacity:           storageCapacity,
+				StorageClassName:          &storageClassName,
+				DefragmentationSchedule:   &defragmentationSchedule,
+				CARotationPhase:           caRotationPhase,
+				PriorityClassName:         priorityClassName,
+				MaintenanceTimeWindow:     maintenanceTimeWindow,
+				HighAvailabilityEnabled:   true,
+				BackupConfig:              backupConfig,
+				StaticPodConfig:           staticPodConfig,
+				SkipClientSANVerification: true,
+			})
+
+			Expect(etcd.Deploy(ctx)).To(Succeed())
+
+			actual := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
+			Expect(actual.Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
+			Expect(actual.Spec.Etcd.PeerUrlTLS.SkipClientSANVerification).To(Equal(new(true)))
+		})
+
 		It("should successfully deploy (normal etcd) and not keep the existing resource request settings", func() {
 			existingResourceRequests := &corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
