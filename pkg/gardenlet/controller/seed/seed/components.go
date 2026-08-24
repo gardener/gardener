@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
@@ -366,6 +367,17 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 
 	if httpProxyLegacyPortEnabled {
 		servicePorts = append(servicePorts, corev1.ServicePort{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)})
+	}
+
+	// When live control plane migration is enabled, expose the etcd peer and client ports on the ingress gateway so
+	// that etcd members of a shoot can form a joint cluster spanning source and destination seeds.
+	if features.DefaultFeatureGate.Enabled(features.LiveControlPlaneMigration) {
+		servicePorts = append(servicePorts, corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdPeer, Port: etcdconstants.PortEtcdPeerExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdPeerExternal)})
+		for i := int32(1); i < etcdconstants.HAReplicaCount; i++ {
+			port := etcdconstants.PortEtcdPeerExternal + i
+			servicePorts = append(servicePorts, corev1.ServicePort{Name: fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i), Port: port, TargetPort: intstr.FromInt32(port)})
+		}
+		servicePorts = append(servicePorts, corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdClient, Port: etcdconstants.PortEtcdClientExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdClientExternal)})
 	}
 
 	istioDeployer, err := sharedcomponent.NewIstio(
