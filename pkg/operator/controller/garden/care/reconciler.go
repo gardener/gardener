@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
@@ -71,6 +72,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Initialize conditions based on the current status.
 	gardenConditions := NewGardenConditions(r.Clock, garden.Status)
+	gardenConstraints := NewGardenConstraints(r.Clock, garden.Status)
 
 	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
 	if err != nil {
@@ -78,32 +80,49 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	}
 
 	conditionThresholds := r.conditionThresholdsToProgressingMapping()
-	updatedConditions := NewHealthCheck(
-		garden,
-		r.RuntimeClient,
-		gardenClientSet,
-		r.Clock,
-		conditionThresholds,
-		r.GardenNamespace,
-		checker.NewHealthChecker(
-			log,
-			r.RuntimeClient,
-			r.Clock,
-			checker.WithConditionThresholds(conditionThresholds),
-			checker.WithLastOperation(garden.Status.LastOperation)),
-	).Check(
-		ctx,
-		gardenConditions,
-	)
 
-	// Update Garden status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions) {
-		log.Info("Updating garden status conditions")
+	var updatedConditions, updatedConstraints []gardencorev1beta1.Condition
+	_ = flow.Parallel(
+		// Trigger health check
+		func(ctx context.Context) error {
+			updatedConditions = NewHealthCheck(
+				garden,
+				r.RuntimeClient,
+				gardenClientSet,
+				r.Clock,
+				conditionThresholds,
+				r.GardenNamespace,
+				checker.NewHealthChecker(
+					log,
+					r.RuntimeClient,
+					r.Clock,
+					checker.WithConditionThresholds(conditionThresholds),
+					checker.WithLastOperation(garden.Status.LastOperation)),
+			).Check(ctx, gardenConditions)
+			return nil
+		},
+		// Trigger constraint check
+		func(ctx context.Context) error {
+			updatedConstraints = NewConstraintCheck(r.RuntimeClient, r.Clock, r.GardenNamespace).Check(ctx, gardenConstraints)
+			return nil
+		},
+	)(ctx)
+
+	conditionsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions)
+	constraintsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(gardenConstraints.ConvertToSlice(), updatedConstraints)
+
+	if conditionsNeedUpdate || constraintsNeedUpdate {
+		// Rebuild garden conditions/constraints to ensure that only the entries with the
+		// correct types will be updated, and any other entries will remain intact
 		patch := client.MergeFrom(garden.DeepCopy())
-		// Rebuild garden conditions to ensure that only the conditions with the
-		// correct types will be updated, and any other conditions will remain intact
-		garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
+		if conditionsNeedUpdate {
+			garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
+		}
+		if constraintsNeedUpdate {
+			garden.Status.Constraints = v1beta1helper.BuildConditions(garden.Status.Constraints, updatedConstraints, gardenConstraints.ConstraintTypes())
+		}
 
+		log.Info("Updating garden status conditions and constraints")
 		if err := r.RuntimeClient.Status().Patch(reconcileCtx, garden, patch); err != nil {
 			log.Error(err, "Could not update garden status")
 			return reconcile.Result{}, err

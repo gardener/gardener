@@ -757,6 +757,84 @@ var _ = Describe("Garden health", func() {
 			})
 		})
 	})
+
+	Describe("GardenConstraints", func() {
+		Describe("#NewGardenConstraints", func() {
+			It("should initialize all constraints", func() {
+				constraints := NewGardenConstraints(fakeClock, operatorv1alpha1.GardenStatus{})
+
+				Expect(constraints.ConvertToSlice()).To(ConsistOf(
+					beConditionOfTypeWithStatusReasonAndMessage(operatorv1alpha1.GardenManagedResourcesHonored, "Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+				))
+			})
+
+			It("should only initialize missing constraints", func() {
+				constraints := NewGardenConstraints(fakeClock, operatorv1alpha1.GardenStatus{
+					Constraints: []gardencorev1beta1.Condition{
+						{Type: "ManagedResourcesHonored"},
+						{Type: "Foo"},
+					},
+				})
+
+				Expect(constraints.ConvertToSlice()).To(HaveExactElements(
+					OfType("ManagedResourcesHonored"),
+				))
+			})
+		})
+
+		Describe("#ConvertToSlice", func() {
+			It("should return the expected constraints", func() {
+				constraints := NewGardenConstraints(fakeClock, operatorv1alpha1.GardenStatus{})
+
+				Expect(constraints.ConvertToSlice()).To(HaveExactElements(
+					OfType("ManagedResourcesHonored"),
+				))
+			})
+		})
+
+		Describe("#ConstraintTypes", func() {
+			It("should return the expected constraint types", func() {
+				constraints := NewGardenConstraints(fakeClock, operatorv1alpha1.GardenStatus{})
+
+				Expect(constraints.ConstraintTypes()).To(HaveExactElements(
+					gardencorev1beta1.ConditionType("ManagedResourcesHonored"),
+				))
+			})
+		})
+
+		Context("ManagedResourcesHonored constraint check", func() {
+			JustBeforeEach(func() {
+				for _, name := range virtualGardenDeployments {
+					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
+				}
+				for _, name := range virtualGardenETCDs {
+					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
+				}
+			})
+
+			It("should not include ManagedResourcesHonored constraint when no ManagedResources are ignored", func() {
+				Expect(runtimeClient.Create(ctx, healthyManagedResource("foo", "RuntimeComponentsHealthy"))).To(Succeed())
+
+				constraints := NewGardenConstraints(fakeClock, garden.Status)
+				updatedConstraints := NewConstraint(runtimeClient, fakeClock, gardenNamespace).Check(ctx, constraints)
+
+				Expect(updatedConstraints).NotTo(ContainCondition(OfType(operatorv1alpha1.GardenManagedResourcesHonored)))
+			})
+
+			It("should set ManagedResourcesHonored to False if a ManagedResource is ignored", func() {
+				mr := healthyManagedResource("foo", "RuntimeComponentsHealthy")
+				mr.Annotations = map[string]string{"resources.gardener.cloud/ignore": "true"}
+				Expect(runtimeClient.Create(ctx, mr)).To(Succeed())
+
+				constraints := NewGardenConstraints(fakeClock, garden.Status)
+				updatedConstraints := NewConstraint(runtimeClient, fakeClock, gardenNamespace).Check(ctx, constraints)
+
+				Expect(updatedConstraints).To(ContainElements(
+					And(OfType(operatorv1alpha1.GardenManagedResourcesHonored), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ManagedResourcesIgnored"), WithMessageSubstrings("foo")),
+				))
+			})
+		})
+	})
 })
 
 func beConditionOfTypeWithStatusReasonAndMessage(typ gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {

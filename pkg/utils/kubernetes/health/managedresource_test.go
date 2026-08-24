@@ -255,4 +255,71 @@ var _ = Describe("Managedresource", func() {
 			}, HaveOccurred()),
 		)
 	})
+
+	Context("#CheckManagedResourcesHonored", func() {
+		managedResource := func(name string, annotations map[string]string) resourcesv1alpha1.ManagedResource {
+			return resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Annotations: annotations},
+			}
+		}
+
+		DescribeTable("managedresources honored",
+			func(managedResources []resourcesv1alpha1.ManagedResource, expectedStatus gardencorev1beta1.ConditionStatus, expectedReason string, messageMatcher types.GomegaMatcher) {
+				status, reason, message := health.CheckManagedResourcesHonored(managedResources)
+				Expect(status).To(Equal(expectedStatus))
+				Expect(reason).To(Equal(expectedReason))
+				Expect(message).To(messageMatcher)
+			},
+			Entry("no managed resources",
+				nil,
+				gardencorev1beta1.ConditionTrue,
+				"AllManagedResourcesActive",
+				Equal("No ManagedResources are annotated to be ignored."),
+			),
+			Entry("managed resource without ignore annotation",
+				[]resourcesv1alpha1.ManagedResource{managedResource("foo", nil)},
+				gardencorev1beta1.ConditionTrue,
+				"AllManagedResourcesActive",
+				Equal("No ManagedResources are annotated to be ignored."),
+			),
+			Entry("managed resource with ignore annotation set to false",
+				[]resourcesv1alpha1.ManagedResource{managedResource("foo", map[string]string{resourcesv1alpha1.Ignore: "false"})},
+				gardencorev1beta1.ConditionTrue,
+				"AllManagedResourcesActive",
+				Equal("No ManagedResources are annotated to be ignored."),
+			),
+			Entry("managed resource with ignore annotation set to a non-boolean value",
+				[]resourcesv1alpha1.ManagedResource{managedResource("foo", map[string]string{resourcesv1alpha1.Ignore: "foo"})},
+				gardencorev1beta1.ConditionTrue,
+				"AllManagedResourcesActive",
+				Equal("No ManagedResources are annotated to be ignored."),
+			),
+			Entry("single managed resource with ignore annotation set to true",
+				[]resourcesv1alpha1.ManagedResource{managedResource("foo", map[string]string{resourcesv1alpha1.Ignore: "true"})},
+				gardencorev1beta1.ConditionFalse,
+				"ManagedResourcesIgnored",
+				ContainSubstring("foo"),
+			),
+			Entry("multiple ignored managed resources are listed alphabetically",
+				[]resourcesv1alpha1.ManagedResource{
+					managedResource("zeta", map[string]string{resourcesv1alpha1.Ignore: "true"}),
+					managedResource("alpha", map[string]string{resourcesv1alpha1.Ignore: "true"}),
+					managedResource("mid", map[string]string{resourcesv1alpha1.Ignore: "true"}),
+				},
+				gardencorev1beta1.ConditionFalse,
+				"ManagedResourcesIgnored",
+				Equal("Some ManagedResources have been annotated with resources.gardener.cloud/ignore=true, meaning their reconciliation is disabled: alpha, mid, zeta"),
+			),
+			Entry("mix of ignored and non-ignored managed resources lists only the ignored ones",
+				[]resourcesv1alpha1.ManagedResource{
+					managedResource("ignored", map[string]string{resourcesv1alpha1.Ignore: "true"}),
+					managedResource("active", nil),
+					managedResource("disabled-ignore", map[string]string{resourcesv1alpha1.Ignore: "false"}),
+				},
+				gardencorev1beta1.ConditionFalse,
+				"ManagedResourcesIgnored",
+				And(ContainSubstring("ignored"), Not(ContainSubstring("active")), Not(ContainSubstring("disabled-ignore"))),
+			),
+		)
+	})
 })

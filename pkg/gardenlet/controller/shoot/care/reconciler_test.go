@@ -682,7 +682,7 @@ func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
 		), ContainCondition(
-			OfType(gardencorev1beta1.ShootHasIgnoredManagedResources),
+			OfType(gardencorev1beta1.ShootManagedResourcesHonored),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
 		), ContainCondition(

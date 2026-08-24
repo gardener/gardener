@@ -5663,6 +5663,13 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 		*out = new(LastOperation)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Constraints != nil {
+		in, out := &in.Constraints, &out.Constraints
+		*out = make([]Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

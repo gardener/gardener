@@ -11735,6 +11735,18 @@ string
 <p>LastOperation holds information about the last operation on the Seed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>constraints</code></br>
+<em>
+<a href="#condition">Condition</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Constraints represents conditions of a Seed's current state that constraint some operations on it.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
