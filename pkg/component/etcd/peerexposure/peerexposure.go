@@ -8,13 +8,18 @@ import (
 	"context"
 	"fmt"
 
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -66,9 +71,52 @@ func (p *peerExposure) name() string {
 	return fmt.Sprintf("etcd-%s-peer", p.values.Role)
 }
 
-func (p *peerExposure) Deploy(_ context.Context) error { return nil }
+func (p *peerExposure) Deploy(ctx context.Context) error {
+	var (
+		gateway        = p.emptyGatewayFor(p.name())
+		virtualService = p.emptyVirtualServiceFor(p.name())
+		networkPolicy  = p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeIngress)
+		istioEgressNP  = p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeEgress)
+	)
 
-func (p *peerExposure) Destroy(_ context.Context) error { return nil }
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, gateway, gatewayWithPeerTLSPassthrough(gateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, p.values.Members)); err != nil {
+		return fmt.Errorf("failed to reconcile Istio gateway for etcd peer exposure: %w", err)
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, virtualService, virtualServiceWithPeerSNIMatch(virtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.Members, gateway.Name)); err != nil {
+		return fmt.Errorf("failed to reconcile Istio virtual service for etcd peer exposure: %w", err)
+	}
+
+	// Gardener seeds set defaultServiceExportTo: ["~"] in the mesh config, so services are self-namespace only by
+	// default. ServiceEntries with resolution: DNS and exportTo pointing at the istio-ingress namespace make each
+	// pod's subdomain discoverable by the ingress proxy without touching the etcd-druid-owned Service (which the druid
+	// admission webhook would reject).
+	for i, m := range p.values.Members {
+		se := p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i))
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, se, serviceEntryForExport(se, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdPeer), etcdconstants.ServicePortNameEtcdPeer)); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
+			return fmt.Errorf("failed to reconcile Istio service entry for etcd peer member %d: %w", i, err)
+		}
+	}
+
+	// Allow the Istio ingress gateway to reach the etcd pods on the peer port.
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, networkPolicy, p.mutateNetworkPolicy(networkPolicy, networkingv1.PolicyTypeIngress, etcdconstants.PortEtcdPeer)); err != nil {
+		return fmt.Errorf("failed to reconcile network policy for etcd peer exposure: %w", err)
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, istioEgressNP, p.mutateNetworkPolicy(istioEgressNP, networkingv1.PolicyTypeEgress, etcdconstants.PortEtcdPeer)); err != nil {
+		return fmt.Errorf("failed to reconcile Istio egress network policy for etcd peer exposure: %w", err)
+	}
+
+	return nil
+}
+
+func (p *peerExposure) Destroy(ctx context.Context) error {
+	objects := []client.Object{p.emptyGatewayFor(p.name()), p.emptyVirtualServiceFor(p.name()), p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeEgress)}
+	for i := range p.values.Members {
+		objects = append(objects, p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i)))
+	}
+	return kubernetesutils.DeleteObjects(ctx, p.client, objects...)
+}
 
 func (p *peerExposure) Wait(_ context.Context) error        { return nil }
 func (p *peerExposure) WaitCleanup(_ context.Context) error { return nil }
@@ -104,5 +152,116 @@ func getLabels(role string) map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  "etcd-peer-exposure",
 		v1beta1constants.LabelRole: role,
+	}
+}
+
+func (p *peerExposure) mutateNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy, policyType networkingv1.PolicyType, port int32) func() error {
+	return func() error {
+		networkPolicy.Labels = getLabels(p.values.Role)
+		etcdLabels := map[string]string{
+			v1beta1constants.LabelApp:  etcdconstants.LabelAppValue,
+			v1beta1constants.LabelRole: p.values.Role,
+		}
+		networkPolicyPort := networkingv1.NetworkPolicyPort{
+			Port:     new(intstr.FromInt32(port)),
+			Protocol: new(corev1.ProtocolTCP),
+		}
+
+		networkPolicy.Spec = networkingv1.NetworkPolicySpec{PolicyTypes: []networkingv1.PolicyType{policyType}}
+		if policyType == networkingv1.PolicyTypeIngress {
+			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: etcdLabels}
+			networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
+				From: []networkingv1.NetworkPolicyPeer{{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: p.values.IstioIngressGatewayNamespace}},
+					PodSelector:       &metav1.LabelSelector{MatchLabels: p.values.IstioIngressGatewayLabels},
+				}},
+				Ports: []networkingv1.NetworkPolicyPort{networkPolicyPort},
+			}}
+		} else {
+			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: p.values.IstioIngressGatewayLabels}
+			networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: p.namespace}},
+					PodSelector:       &metav1.LabelSelector{MatchLabels: etcdLabels},
+				}},
+				Ports: []networkingv1.NetworkPolicyPort{networkPolicyPort},
+			}}
+		}
+		return nil
+	}
+}
+
+func serviceEntryForExport(serviceEntry *istionetworkingv1beta1.ServiceEntry, labels map[string]string, host, ingressNamespace string, port uint32, portName string) func() error {
+	return func() error {
+		serviceEntry.Labels = labels
+		serviceEntry.Spec = istioapinetworkingv1beta1.ServiceEntry{
+			Hosts:    []string{host},
+			ExportTo: []string{ingressNamespace},
+			Ports: []*istioapinetworkingv1beta1.ServicePort{{
+				Number:   port,
+				Name:     portName,
+				Protocol: "TLS",
+			}},
+			Resolution: istioapinetworkingv1beta1.ServiceEntry_DNS,
+		}
+		return nil
+	}
+}
+
+func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, members []PeerMember) func() error {
+	return func() error {
+		gateway.Labels = labels
+		servers := make([]*istioapinetworkingv1beta1.Server, len(members))
+
+		for i, m := range members {
+			servers[i] = &istioapinetworkingv1beta1.Server{
+				Hosts: []string{m.SNIHost},
+				Port: &istioapinetworkingv1beta1.Port{
+					Number:   m.ExternalPort,
+					Name:     fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i),
+					Protocol: "TLS",
+				},
+				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode: istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH,
+				},
+			}
+		}
+		gateway.Spec = istioapinetworkingv1beta1.Gateway{
+			Selector: istioLabels,
+			Servers:  servers,
+		}
+		return nil
+	}
+}
+
+func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, members []PeerMember, gatewayName string) func() error {
+	return func() error {
+		virtualService.Labels = labels
+		routes := make([]*istioapinetworkingv1beta1.TLSRoute, len(members))
+		allHosts := make([]string, len(members))
+
+		for i, m := range members {
+			allHosts[i] = m.SNIHost
+			routes[i] = &istioapinetworkingv1beta1.TLSRoute{
+				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
+					Port:     m.ExternalPort,
+					SniHosts: []string{m.SNIHost},
+				}},
+				Route: []*istioapinetworkingv1beta1.RouteDestination{{
+					Destination: &istioapinetworkingv1beta1.Destination{
+						Host: m.PodFQDN,
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: uint32(etcdconstants.PortEtcdPeer)}, // #nosec G115 -- Port constants are positive values well within uint32 range.
+					},
+				}},
+			}
+		}
+
+		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
+			ExportTo: exportTo,
+			Hosts:    allHosts,
+			Gateways: []string{gatewayName},
+			Tls:      routes,
+		}
+		return nil
 	}
 }
