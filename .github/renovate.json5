@@ -461,7 +461,7 @@
     {
       // Go versions must be in sync with golangci-lint.
       matchDatasources: [
-        'go',
+        'golang-version',
       ],
       matchFileNames: [
         'hack/tools/go\\.mod',
