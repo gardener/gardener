@@ -606,6 +606,44 @@ func HasLiveMigrationAnnotation(annotations map[string]string) bool {
 	return liveMigrate
 }
 
+// LiveMigrationRole describes the role a seed plays during a live control plane migration of a shoot.
+type LiveMigrationRole string
+
+const (
+	// LiveMigrationRoleNone indicates that the seed is not involved in a live control plane migration of the shoot.
+	LiveMigrationRoleNone LiveMigrationRole = ""
+	// LiveMigrationRoleSource indicates that the seed currently hosts the shoot control plane and is the source of a
+	// live control plane migration.
+	LiveMigrationRoleSource LiveMigrationRole = "Source"
+	// LiveMigrationRoleDestination indicates that the seed is the target of a live control plane migration and will
+	// host the shoot control plane once the migration completes.
+	LiveMigrationRoleDestination LiveMigrationRole = "Destination"
+)
+
+// IsLiveMigration returns true if the shoot is undergoing a live control plane migration, i.e. the live-migration
+// intent annotation is set and spec.seedName differs from status.seedName.
+func IsLiveMigration(shoot *gardencorev1beta1.Shoot) bool {
+	return HasLiveMigrationAnnotation(shoot.Annotations) && ShouldPrepareShootForMigration(shoot)
+}
+
+// GetLiveMigrationRole returns the role the seed with the given name plays during a live control plane migration of the
+// shoot. It returns LiveMigrationRoleNone if the shoot is not undergoing a live control plane migration or the seed is
+// not involved.
+func GetLiveMigrationRole(shoot *gardencorev1beta1.Shoot, seedName string) LiveMigrationRole {
+	if !IsLiveMigration(shoot) {
+		return LiveMigrationRoleNone
+	}
+
+	switch seedName {
+	case ptr.Deref(shoot.Status.SeedName, ""):
+		return LiveMigrationRoleSource
+	case ptr.Deref(shoot.Spec.SeedName, ""):
+		return LiveMigrationRoleDestination
+	default:
+		return LiveMigrationRoleNone
+	}
+}
+
 // LastInitiationTimeForWorkerPool returns the last initiation time for the worker pool when found in the given list of
 // pending workers rollouts. If the worker pool is not found in the list, the global last initiation time is returned.
 func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []gardencorev1beta1.PendingWorkersRollout, globalLastInitiationTime *metav1.Time) *metav1.Time {

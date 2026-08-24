@@ -223,6 +223,40 @@ var _ = Describe("Helper", func() {
 			BeTrue()),
 	)
 
+	var (
+		liveMigratingShoot = func(sourceSeed, destinationSeed string, annotate bool) *gardencorev1beta1.Shoot {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec:   gardencorev1beta1.ShootSpec{SeedName: new(destinationSeed)},
+				Status: gardencorev1beta1.ShootStatus{SeedName: new(sourceSeed)},
+			}
+			if annotate {
+				shoot.Annotations = map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "true"}
+			}
+			return shoot
+		}
+	)
+
+	DescribeTable("#IsLiveMigration",
+		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
+			Expect(IsLiveMigration(shoot)).To(match)
+		},
+
+		Entry("annotation set and seed changed", liveMigratingShoot("source", "destination", true), BeTrue()),
+		Entry("annotation set but seed unchanged", liveMigratingShoot("seed", "seed", true), BeFalse()),
+		Entry("seed changed but annotation missing", liveMigratingShoot("source", "destination", false), BeFalse()),
+	)
+
+	DescribeTable("#GetLiveMigrationRole",
+		func(shoot *gardencorev1beta1.Shoot, seedName string, expected LiveMigrationRole) {
+			Expect(GetLiveMigrationRole(shoot, seedName)).To(Equal(expected))
+		},
+
+		Entry("source seed", liveMigratingShoot("source", "destination", true), "source", LiveMigrationRoleSource),
+		Entry("destination seed", liveMigratingShoot("source", "destination", true), "destination", LiveMigrationRoleDestination),
+		Entry("unrelated seed", liveMigratingShoot("source", "destination", true), "other", LiveMigrationRoleNone),
+		Entry("no live migration in progress", liveMigratingShoot("source", "destination", false), "source", LiveMigrationRoleNone),
+	)
+
 	var profile = gardencorev1beta1.SchedulingProfileBinPacking
 
 	DescribeTable("#ShootSchedulingProfile",
