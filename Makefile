@@ -34,6 +34,11 @@ SHELL=/usr/bin/env bash -o pipefail
 
 export SYSTEM_ARCH := $(SYSTEM_ARCH)
 
+# Use a specific Go toolchain version to ensure consistent builds across different environments.
+# renovate: datasource=golang-version depName=go
+# TODO(LucaBernstein): Revert to `?=`
+export GOTOOLCHAIN := go1.27.0
+
 #########################################
 # Tools                                 #
 #########################################

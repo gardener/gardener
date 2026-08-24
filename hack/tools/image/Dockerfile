@@ -1,7 +1,6 @@
 # base
 ARG image
 FROM ${image} AS base
-ENV GOTOOLCHAIN=auto
 RUN echo "Installing Packages ..." \
 		&& apt-get update \
 		&& apt-get install -y --no-install-recommends \

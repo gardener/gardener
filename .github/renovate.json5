@@ -83,6 +83,16 @@
       ],
       datasourceTemplate: 'docker',
     },
+    {
+      // Detection for GOTOOLCHAIN in Makefile (does not match the _VERSION pattern of the ci-infra preset).
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^Makefile$/',
+      ],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)\\s+export GOTOOLCHAIN\\s*\\??=\\s*go(?<currentValue>[^\\s]+)',
+      ],
+    },
   ],
   separateMinorPatch: true,
   packageRules: [
