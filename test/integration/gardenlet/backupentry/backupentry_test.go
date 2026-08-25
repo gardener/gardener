@@ -578,7 +578,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		It("should  not update the pending status on re-reconcile within the grace period", func() {
+		It("should not update the pending status on re-reconcile within the grace period", func() {
 			By("Delete the BackupEntry")
 			Expect(testClient.Delete(ctx, backupEntry)).To(Succeed())
 
