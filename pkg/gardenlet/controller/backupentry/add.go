@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),
 			&gardencorev1beta1.BackupEntry{},
-			&handler.EnqueueRequestForObject{},
+			r.EnqueueWithJitterDelay(),
 			&predicate.GenerationChangedPredicate{},
 			predicate.NewPredicateFuncs(r.BackupEntryPredicate),
 		)).
@@ -82,6 +82,22 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 		)).
 		Complete(r)
+}
+
+// EnqueueWithJitterDelay returns handler.Funcs which enqueues the object with a random Jitter duration when the JitterUpdate
+// is enabled in BackupEntry controller configuration. All other events are normally enqueued.
+func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
+	return controllerutils.EnqueueWithJitterDelay(
+		func(obj client.Object) (int64, bool) {
+			be, ok := obj.(*gardencorev1beta1.BackupEntry)
+			if !ok {
+				return 0, false
+			}
+			return be.Status.ObservedGeneration, true
+		},
+		r.Config.JitterUpdates,
+		r.Config.SyncJitterPeriod,
+	)
 }
 
 // MapBackupBucketToBackupEntry is a handler.MapFunc for mapping a core.gardener.cloud/v1beta1.BackupBucket to the
