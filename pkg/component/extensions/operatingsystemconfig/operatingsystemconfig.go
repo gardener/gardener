@@ -799,6 +799,18 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelWorkerPool, d.worker.Name)
 		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook, "true")
 
+		for k := range d.osc.Labels {
+			if strings.HasPrefix(k, extensionsv1alpha1.ContainerRuntimeNameWorkerLabelPrefix) {
+				delete(d.osc.Labels, k)
+			}
+		}
+
+		if d.worker.CRI != nil {
+			for _, cr := range d.worker.CRI.ContainerRuntimes {
+				metav1.SetMetaDataLabel(&d.osc.ObjectMeta, fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type), "true")
+			}
+		}
+
 		if d.worker.Machine.Image != nil {
 			d.osc.Spec.Type = d.worker.Machine.Image.Name
 			d.osc.Spec.ProviderConfig = d.worker.Machine.Image.ProviderConfig
