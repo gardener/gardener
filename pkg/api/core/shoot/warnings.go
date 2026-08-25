@@ -99,19 +99,14 @@ func GetDNSProviderWarnings(dns *core.DNS, fldPath *field.Path, ignoreWarningsFo
 		}
 
 		providerPath := fldPath.Child("providers").Index(i)
-		warnings = append(warnings, DNSProviderSecretNameWarning(providerPath))
+		warnings = append(warnings, fmt.Sprintf(
+			"you are setting the %s field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use %s instead.",
+			providerPath.Child("secretName").String(),
+			providerPath.Child("credentialsRef").String(),
+		))
 	}
 
 	return warnings
-}
-
-// DNSProviderSecretNameWarning returns the warning for a deprecated DNS provider secretName field.
-func DNSProviderSecretNameWarning(providerPath *field.Path) string {
-	return fmt.Sprintf(
-		"you are setting the %s field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use %s instead.",
-		providerPath.Child("secretName").String(),
-		providerPath.Child("credentialsRef").String(),
-	)
 }
 
 // GetKubeAPIServerWarnings returns warnings for the given KubeAPIServerConfig.

@@ -43,12 +43,7 @@ type shootStrategy struct {
 
 	credentialsRotationInterval time.Duration
 
-	dnsProviderSecretNameWarningSuppressions *dnsProviderSecretNameWarningSuppressions
-}
-
-type dnsProviderSecretNameWarningSuppressions struct {
-	// No mutex here: LRUExpireCache guards every operation with its own lock.
-	cache *utilcache.LRUExpireCache
+	dnsProviderSecretNameWarningSuppressions *utilcache.LRUExpireCache
 }
 
 type dnsProviderSecretNameWarningSuppressionKey struct {
@@ -67,12 +62,10 @@ const (
 // NewStrategy returns a new storage strategy for Shoots.
 func NewStrategy(credentialsRotationInterval time.Duration) shootStrategy {
 	return shootStrategy{
-		ObjectTyper:                 api.Scheme,
-		NameGenerator:               names.SimpleNameGenerator,
-		credentialsRotationInterval: credentialsRotationInterval,
-		dnsProviderSecretNameWarningSuppressions: &dnsProviderSecretNameWarningSuppressions{
-			cache: utilcache.NewLRUExpireCache(dnsProviderSecretNameWarningSuppressionCacheSize),
-		},
+		ObjectTyper:                              api.Scheme,
+		NameGenerator:                            names.SimpleNameGenerator,
+		credentialsRotationInterval:              credentialsRotationInterval,
+		dnsProviderSecretNameWarningSuppressions: utilcache.NewLRUExpireCache(dnsProviderSecretNameWarningSuppressionCacheSize),
 	}
 }
 
@@ -327,26 +320,26 @@ func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Ob
 func (s shootStrategy) storeIgnoredDNSWarnings(shootObj *core.Shoot, ignoredIndexes []int) {
 	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj)
 	if len(ignoredIndexes) == 0 {
-		s.dnsProviderSecretNameWarningSuppressions.cache.Remove(key)
+		s.dnsProviderSecretNameWarningSuppressions.Remove(key)
 		return
 	}
 
 	// Add overwrites an existing entry, so no Remove is needed first and the
 	// pair does not have to be atomic.
-	s.dnsProviderSecretNameWarningSuppressions.cache.Add(key, ignoredIndexes, dnsProviderSecretNameWarningSuppressionTTL)
+	s.dnsProviderSecretNameWarningSuppressions.Add(key, ignoredIndexes, dnsProviderSecretNameWarningSuppressionTTL)
 }
 
 func (s shootStrategy) deleteIgnoredDNSWarningIndexes(shootObj *core.Shoot) {
-	s.dnsProviderSecretNameWarningSuppressions.cache.Remove(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
+	s.dnsProviderSecretNameWarningSuppressions.Remove(dnsProviderSecretNameWarningSuppressionKeyFor(shootObj))
 }
 
 func (s shootStrategy) loadIgnoredDNSWarningIndexes(shootObj *core.Shoot) []int {
 	key := dnsProviderSecretNameWarningSuppressionKeyFor(shootObj)
-	value, ok := s.dnsProviderSecretNameWarningSuppressions.cache.Get(key)
+	value, ok := s.dnsProviderSecretNameWarningSuppressions.Get(key)
 	if !ok {
 		return nil
 	}
-	s.dnsProviderSecretNameWarningSuppressions.cache.Remove(key)
+	s.dnsProviderSecretNameWarningSuppressions.Remove(key)
 
 	indexes, ok := value.([]int)
 	if !ok {
