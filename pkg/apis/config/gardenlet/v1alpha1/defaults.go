@@ -218,6 +218,15 @@ func SetDefaults_BackupBucketControllerConfiguration(obj *BackupBucketController
 		v := DefaultControllerConcurrentSyncs
 		obj.ConcurrentSyncs = &v
 	}
+
+	if obj.SyncJitterPeriod == nil {
+		v := metav1.Duration{Duration: 5 * time.Minute}
+		obj.SyncJitterPeriod = &v
+	}
+
+	if obj.JitterUpdates == nil {
+		obj.JitterUpdates = new(false)
+	}
 }
 
 // SetDefaults_BackupEntryControllerConfiguration sets defaults for the backup entry controller.
@@ -230,6 +239,15 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 	if obj.DeletionGracePeriodHours == nil || *obj.DeletionGracePeriodHours < 0 {
 		v := DefaultBackupEntryDeletionGracePeriodHours
 		obj.DeletionGracePeriodHours = &v
+	}
+
+	if obj.SyncJitterPeriod == nil {
+		v := metav1.Duration{Duration: 5 * time.Minute}
+		obj.SyncJitterPeriod = &v
+	}
+
+	if obj.JitterUpdates == nil {
+		obj.JitterUpdates = new(false)
 	}
 }
 
