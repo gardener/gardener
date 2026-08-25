@@ -671,10 +671,18 @@ func ComputeExpectedGardenletConfiguration(
 			CacheSyncTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 			BackupBucket: &gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: &twenty,
+				JitterUpdates:   new(false),
+				SyncJitterPeriod: &metav1.Duration{
+					Duration: 300000000000,
+				},
 			},
 			BackupEntry: &gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
 				ConcurrentSyncs:          &twenty,
 				DeletionGracePeriodHours: &zero,
+				JitterUpdates:            new(false),
+				SyncJitterPeriod: &metav1.Duration{
+					Duration: 300000000000,
+				},
 			},
 			Bastion: &gardenletconfigv1alpha1.BastionControllerConfiguration{
 				ConcurrentSyncs: &twenty,
