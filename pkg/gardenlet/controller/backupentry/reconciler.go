@@ -396,7 +396,7 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	scheduledFor := backupEntry.DeletionTimestamp.Time.Add(gracePeriod)
+	scheduledFor := backupEntry.DeletionTimestamp.Add(gracePeriod)
 	pendingMsg := fmt.Sprintf("Deletion of backup entry is scheduled for %s", scheduledFor)
 
 	if backupEntry.Status.LastOperation == nil || backupEntry.Status.LastOperation.State != gardencorev1beta1.LastOperationStatePending || backupEntry.Status.LastOperation.Description != pendingMsg {
