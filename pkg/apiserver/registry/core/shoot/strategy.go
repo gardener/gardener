@@ -135,7 +135,9 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					v1beta1constants.OperationRotateETCDEncryptionKey,
 					v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 					v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
-					v1beta1constants.OperationRotateObservabilityCredentials:
+					v1beta1constants.OperationRotateObservabilityCredentials,
+					v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+					v1beta1constants.SeedOperationRenewWorkloadIdentityTokens:
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease = true

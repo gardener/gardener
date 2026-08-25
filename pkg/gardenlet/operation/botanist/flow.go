@@ -297,8 +297,6 @@ func (b *Botanist) ReconcileBackupResourcesTaskGroup(allowBackup, isCopyOfBackup
 		g = flow.NewTaskGroup(TaskGroupReconcileBackupResources).
 			WithDependencies(
 				TaskGroupDeployNamespaces,
-				TaskGroupDeployCloudProviderSecret,
-				TaskGroupInitializeSecretsManagement,
 				TaskGroupReconcileReferencedResources,
 			)
 
@@ -966,12 +964,10 @@ func (b *Botanist) ReconcileVPNComponentsTaskGroup(skipReadiness bool) flow.Task
 			Name: "Deploying vpn-seed-server",
 			Fn:   flow.TaskFn(b.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-
 		_ = g.Add(flow.Task{
 			Name: "Deploying apiserver-proxy",
 			Fn:   flow.TaskFn(b.DeployAPIServerProxy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-
 		deployVPNShoot = g.Add(flow.Task{
 			Name:         "Deploying vpn-shoot system component",
 			Fn:           flow.TaskFn(b.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),

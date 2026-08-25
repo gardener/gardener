@@ -336,7 +336,9 @@ func handleETCDEncryptionKeyRotation(
 
 // MarkAPIServerDeploymentAsReadyForEncryptionKeySwitch adds the credentials.gardener.cloud/new-encryption-key-populated
 // annotation to the deployment. This states that the new encryption key has been populated to all API server replicas
-// and that we are now ready to make switch it so that it's getting used for encrypting data.
+// as second key (usable for decryption). This means we are now ready to switch the order with the first (old key). Then
+// the new key is the first and gets used for encryption and decryption, and the old key is the second used for
+// decryption only.
 func MarkAPIServerDeploymentAsReadyForEncryptionKeySwitch(ctx context.Context, runtimeClient client.Client, runtimeNamespace string, deploymentName string) error {
 	return secretsrotation.PatchAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, deploymentName, func(meta *metav1.PartialObjectMetadata) {
 		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")

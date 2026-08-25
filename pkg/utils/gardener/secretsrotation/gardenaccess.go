@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -86,7 +87,7 @@ func RenewGardenSecretsInAllSelfHostedShoots(ctx context.Context, log logr.Logge
 		return err
 	}
 
-	var shoots []metav1.PartialObjectMetadata
+	var shootsThatAreNoSeeds []metav1.PartialObjectMetadata
 	for _, shoot := range shootList.Items {
 		seed := &metav1.PartialObjectMetadata{}
 		seed.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
@@ -94,28 +95,26 @@ func RenewGardenSecretsInAllSelfHostedShoots(ctx context.Context, log logr.Logge
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("error checking whether self-hosted shoot %s is also registered as a seed: %w", client.ObjectKeyFromObject(&shoot), err)
 			}
-			shoots = append(shoots, shoot)
+			shootsThatAreNoSeeds = append(shootsThatAreNoSeeds, shoot)
 		}
 	}
 
-	log.Info("Self-hosted shoots requiring renewal of their secrets", v1beta1constants.GardenerOperation, operationAnnotation, "number", len(shoots))
+	log.Info("Self-hosted shoots requiring renewal of their secrets", v1beta1constants.GardenerOperation, operationAnnotation, "number", len(shootsThatAreNoSeeds))
 
 	var tasks []flow.TaskFn
-	for _, shoot := range shoots {
-		if shoot.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
+	for _, shoot := range shootsThatAreNoSeeds {
+		existingOperations := v1beta1helper.GetShootGardenerOperations(shoot.Annotations)
+		if slices.Contains(existingOperations, operationAnnotation) {
 			continue
 		}
 
-		if shoot.Annotations[v1beta1constants.GardenerOperation] != "" {
-			return fmt.Errorf("error annotating self-hosted shoot %s: already annotated with \"%s: %s\"", client.ObjectKeyFromObject(&shoot), v1beta1constants.GardenerOperation, shoot.Annotations[v1beta1constants.GardenerOperation])
-		}
-
+		newAnnotation := strings.Join(append(existingOperations, operationAnnotation), v1beta1constants.GardenerOperationsSeparator)
 		tasks = append(tasks, func(ctx context.Context) error {
 			log := log.WithValues("shoot", client.ObjectKeyFromObject(&shoot))
 
 			shoot.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 			patch := client.MergeFrom(shoot.DeepCopy())
-			kubernetesutils.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operationAnnotation)
+			kubernetesutils.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, newAnnotation)
 			if err := c.Patch(ctx, &shoot, patch); err != nil {
 				return fmt.Errorf("error annotating self-hosted shoot %s: %w", client.ObjectKeyFromObject(&shoot), err)
 			}
@@ -137,7 +136,7 @@ func CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots(ctx context.Conte
 	}
 
 	for _, shoot := range shootList.Items {
-		if shoot.Annotations[v1beta1constants.GardenerOperation] != operationAnnotation {
+		if !slices.Contains(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), operationAnnotation) {
 			continue
 		}
 

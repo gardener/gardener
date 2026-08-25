@@ -7,6 +7,8 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -350,7 +352,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 				}
 				return removeShootOperationAnnotation(ctx, b.GardenClient, b.Shoot, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !b.Shoot.IsSelfHosted() || b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+			SkipIf:       !b.Shoot.IsSelfHosted() || !slices.Contains(v1beta1helper.GetShootGardenerOperations(b.Shoot.GetInfo().Annotations), v1beta1constants.SeedOperationRenewGardenAccessSecrets),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		_ = g.Add(flow.Task{
@@ -361,7 +363,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 				}
 				return removeShootOperationAnnotation(ctx, b.GardenClient, b.Shoot, v1beta1constants.SeedOperationRenewWorkloadIdentityTokens)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !b.Shoot.IsSelfHosted() || b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.SeedOperationRenewWorkloadIdentityTokens,
+			SkipIf:       !b.Shoot.IsSelfHosted() || !slices.Contains(v1beta1helper.GetShootGardenerOperations(b.Shoot.GetInfo().Annotations), v1beta1constants.SeedOperationRenewWorkloadIdentityTokens),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 		deployGardenerAccess = g.Add(flow.Task{
@@ -515,6 +517,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		waitUntilExtensionResourcesAfterKAPIReady = g.AddGroup(b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(flowCtx.skipReadiness).WithDependencies(initializeShootClients))
 		_                                         = g.AddGroup(b.ReconcileContainerRuntimeTaskGroup(flowCtx.skipReadiness))
 		waitUntilOperatingSystemConfigReady       = g.AddGroup(b.ReconcileOperatingSystemConfigTaskGroup(flowCtx.skipReadiness).WithDependencies(deleteBastions))
+		waitUntilShootNamespacesReady             = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
 		syncPointReadyForSystemComponents         = flow.NewTaskIDs(
 			initializeShootClients,
 			waitUntilOperatingSystemConfigReady,
@@ -530,9 +533,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
-		waitUntilShootNamespacesReady = g.AddGroup(b.ReconcileShootNamespacesTaskGroup(flowCtx.skipReadiness))
-		deployShootSystemResources    = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(syncPointReadyForSystemComponents))
-		_                             = g.Add(flow.Task{
+		deployShootSystemResources = g.AddGroup(b.ReconcileSystemResourcesTaskGroup().WithDependencies(syncPointReadyForSystemComponents))
+		_                          = g.Add(flow.Task{
 			Name:         "Populating static manifests from seed to shoot",
 			Fn:           flow.TaskFn(b.PopulateStaticManifestsFromSeedToShoot).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady),
@@ -700,8 +702,11 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 
 func removeShootOperationAnnotation(ctx context.Context, gardenClient client.Client, shootObj *shoot.Shoot, operationAnnotation string) error {
 	return shootObj.UpdateInfo(ctx, gardenClient, false, func(s *gardencorev1beta1.Shoot) error {
-		if s.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
+		remaining := v1beta1helper.RemoveOperation(v1beta1helper.GetShootGardenerOperations(s.Annotations), operationAnnotation)
+		if len(remaining) == 0 {
 			delete(s.Annotations, v1beta1constants.GardenerOperation)
+		} else {
+			s.Annotations[v1beta1constants.GardenerOperation] = strings.Join(remaining, v1beta1constants.GardenerOperationsSeparator)
 		}
 		return nil
 	})
