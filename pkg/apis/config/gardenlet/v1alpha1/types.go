@@ -219,6 +219,15 @@ type BackupBucketControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	// +optional
+	SyncJitterPeriod *metav1.Duration `json:"syncJitterPeriod,omitempty"`
+	// JitterUpdates enables enqueuing managed seeds with a random duration(jitter) in case of an update to the spec.
+	// The applied jitterPeriod is taken from SyncJitterPeriod.
+	// +optional
+	JitterUpdates *bool `json:"jitterUpdates,omitempty"`
 }
 
 // BackupEntryControllerConfiguration defines the configuration of the BackupEntry
@@ -235,6 +244,15 @@ type BackupEntryControllerConfiguration struct {
 	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
 	// +optional
 	DeletionGracePeriodShootPurposes []gardencorev1beta1.ShootPurpose `json:"deletionGracePeriodShootPurposes,omitempty"`
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	// +optional
+	SyncJitterPeriod *metav1.Duration `json:"syncJitterPeriod,omitempty"`
+	// JitterUpdates enables enqueuing managed seeds with a random duration(jitter) in case of an update to the spec.
+	// The applied jitterPeriod is taken from SyncJitterPeriod.
+	// +optional
+	JitterUpdates *bool `json:"jitterUpdates,omitempty"`
 }
 
 // BastionControllerConfiguration defines the configuration of the Bastion

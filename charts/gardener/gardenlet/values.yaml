@@ -70,11 +70,15 @@ config:
   controllers:
     backupBucket:
       concurrentSyncs: 20
+      syncJitterPeriod: 5m
+      jitterUpdates: false
     backupEntry:
       concurrentSyncs: 20
     # deletionGracePeriodHours: 24
     # deletionGracePeriodShootPurposes:
     # - production
+      syncJitterPeriod: 5m
+      jitterUpdates: false
     bastion:
       concurrentSyncs: 20
     gardenlet:

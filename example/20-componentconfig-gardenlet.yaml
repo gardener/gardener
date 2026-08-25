@@ -20,11 +20,15 @@ controllers:
     concurrentSyncs: 20
   backupBucket:
     concurrentSyncs: 20
+    syncJitterPeriod: 5m
+  # jitterUpdates: false
   backupEntry:
     concurrentSyncs: 20
     deletionGracePeriodHours: 0
   # deletionGracePeriodShootPurposes:
   # - production
+    syncJitterPeriod: 5m
+  # jitterUpdates: false
   controllerInstallation:
     concurrentSyncs: 20
   controllerInstallationCare:
