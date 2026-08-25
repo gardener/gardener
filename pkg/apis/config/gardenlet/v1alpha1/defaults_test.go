@@ -178,15 +178,23 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.BackupBucket.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.BackupBucket.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.Controllers.BackupBucket.JitterUpdates).To(PointTo(BeFalse()))
 		})
 
 		It("should not overwrite already set values for the backup bucket controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				BackupBucket: &BackupBucketControllerConfiguration{ConcurrentSyncs: new(10)},
+				BackupBucket: &BackupBucketControllerConfiguration{
+					ConcurrentSyncs:  new(10),
+					SyncJitterPeriod: &metav1.Duration{Duration: 2 * time.Minute},
+					JitterUpdates:    new(true),
+				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.BackupBucket.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.BackupBucket.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+			Expect(obj.Controllers.BackupBucket.JitterUpdates).To(PointTo(BeTrue()))
 		})
 	})
 
@@ -197,6 +205,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(20)))
 			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(0)))
 			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodShootPurposes).To(BeEmpty())
+			Expect(obj.Controllers.BackupEntry.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.Controllers.BackupEntry.JitterUpdates).To(PointTo(BeFalse()))
 		})
 
 		It("should not overwrite already set values for the backup entry controller configuration", func() {
@@ -206,6 +216,8 @@ var _ = Describe("Defaults", func() {
 					ConcurrentSyncs:                  new(10),
 					DeletionGracePeriodHours:         new(1),
 					DeletionGracePeriodShootPurposes: deletionGracePeriodShootPurposes,
+					SyncJitterPeriod:                 &metav1.Duration{Duration: 2 * time.Minute},
+					JitterUpdates:                    new(true),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -213,6 +225,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(10)))
 			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(1)))
 			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodShootPurposes).To(Equal(deletionGracePeriodShootPurposes))
+			Expect(obj.Controllers.BackupEntry.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+			Expect(obj.Controllers.BackupEntry.JitterUpdates).To(PointTo(BeTrue()))
 		})
 	})
 
