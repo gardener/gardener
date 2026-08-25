@@ -302,6 +302,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			Expect(string(valuesBytes)).To(Equal(`gardener:
   clusterTypes:
     gardenRuntimeCluster: false
+    seedCluster: true
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
     genericKubeconfigSecretName: ` + genericKubeconfigSecret.Name + `

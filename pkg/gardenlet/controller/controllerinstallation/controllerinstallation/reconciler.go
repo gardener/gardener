@@ -283,6 +283,7 @@ func (r *Reconciler) reconcile(
 
 	clusterTypes := map[string]bool{
 		"gardenRuntimeCluster": seedIsGarden,
+		"seedCluster":          true,
 	}
 
 	// Mix-in some standard values for garden and seed.
