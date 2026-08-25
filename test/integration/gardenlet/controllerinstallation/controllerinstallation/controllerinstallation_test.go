@@ -303,6 +303,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
   clusterTypes:
     gardenRuntimeCluster: false
     seedCluster: true
+    selfHostedShootCluster: false
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
     genericKubeconfigSecretName: ` + genericKubeconfigSecret.Name + `
@@ -832,10 +833,12 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
 
 				gardenerValues := values["gardener"].(map[string]any)
-				Expect(gardenerValues).To(HaveKeyWithValue("selfHostedShootCluster", true))
 				Expect(gardenerValues).To(HaveKeyWithValue("version", "1.2.3"))
 				Expect(gardenerValues).NotTo(HaveKey("seed"))
 				Expect(gardenerValues).To(HaveKey("shoot"))
+				clusterTypes, ok := gardenerValues["clusterTypes"].(map[string]any)
+				Expect(ok).To(BeTrue())
+				Expect(clusterTypes).To(HaveKeyWithValue("selfHostedShootCluster", true))
 
 				By("Ensure deployment has SHOOT_NAME and SHOOT_NAMESPACE env vars but no SEED_NAME")
 				deployment := &appsv1.Deployment{}

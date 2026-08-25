@@ -282,8 +282,9 @@ func (r *Reconciler) reconcile(
 	}
 
 	clusterTypes := map[string]bool{
-		"gardenRuntimeCluster": seedIsGarden,
-		"seedCluster":          true,
+		"gardenRuntimeCluster":   seedIsGarden,
+		"seedCluster":            true,
+		"selfHostedShootCluster": r.SelfHostedShootMeta != nil,
 	}
 
 	// Mix-in some standard values for garden and seed.
@@ -336,8 +337,6 @@ func (r *Reconciler) reconcile(
 	}
 
 	if r.SelfHostedShootMeta != nil {
-		gardenerMap["selfHostedShootCluster"] = true
-
 		shootValues := map[string]any{
 			"name":        shoot.Name,
 			"namespace":   shoot.Namespace,
