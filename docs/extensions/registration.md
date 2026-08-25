@@ -289,6 +289,7 @@ In order to allow extension controller deployments to get information about the 
     clusterTypes:
       gardenRuntimeCluster: false # true if this seed is also serving as the garden runtime cluster
       seedCluster: true
+      shootCluster: false # true for managed seeds
     version: <gardener-version>
     garden:
       clusterIdentity: <uuid-of-gardener-installation>

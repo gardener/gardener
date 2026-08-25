@@ -63,17 +63,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	var seedIsShoot bool
-	if err := r.SeedClientSet.Client().Get(ctx, client.ObjectKey{
-		Namespace: metav1.NamespaceSystem,
-		Name:      v1beta1constants.ConfigMapNameShootInfo,
-	}, &corev1.ConfigMap{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to check if this seed is a shoot: %w", err)
-		}
-		seedIsShoot = false
-	} else {
-		seedIsShoot = true
+	seedIsShoot, err := gardenletutils.ClusterIsShoot(ctx, r.SeedClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check if this seed is a shoot: %w", err)
 	}
 
 	operationType := gardencorev1beta1.LastOperationTypeReconcile

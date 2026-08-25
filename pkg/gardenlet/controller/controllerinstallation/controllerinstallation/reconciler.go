@@ -210,6 +210,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("failed checking whether the seed is the garden cluster at the same time: %w", err)
 	}
 
+	seedIsShoot, err := gardenletutils.ClusterIsShoot(seedCtx, r.SeedClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the seed is a shoot cluster: %w", err)
+	}
+
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
 	if _, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClientSet.Client(), namespace, func() error {
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
@@ -285,6 +290,7 @@ func (r *Reconciler) reconcile(
 		"gardenRuntimeCluster":   seedIsGarden,
 		"seedCluster":            true,
 		"selfHostedShootCluster": r.SelfHostedShootMeta != nil,
+		"shootCluster":           seedIsShoot,
 	}
 
 	// Mix-in some standard values for garden and seed.

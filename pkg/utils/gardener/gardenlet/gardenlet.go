@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -27,6 +29,18 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
+
+// ClusterIsShoot returns 'true' if the cluster is a shoot cluster, determined by the presence of the shoot-info
+// ConfigMap in the kube-system namespace.
+func ClusterIsShoot(ctx context.Context, seedClient client.Reader) (bool, error) {
+	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ConfigMapNameShootInfo}, &corev1.ConfigMap{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
 
 // ClusterIsGarden returns 'true' if the cluster is registered as a Garden cluster.
 func ClusterIsGarden(ctx context.Context, seedClient client.Reader) (bool, error) {
