@@ -73,7 +73,7 @@ func EnqueueWithJitterDelay(
 				return
 			}
 
-			// Objects with deletion timestamp and newly created managed seed will be enqueued immediately.
+			// Objects with deletion timestamp and newly created objects will be enqueued immediately.
 			// Generation is 1 for newly created objects.
 			if e.Object.GetDeletionTimestamp() != nil || e.Object.GetGeneration() == 1 {
 				q.Add(reconcileRequest(e.Object))

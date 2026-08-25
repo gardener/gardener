@@ -163,6 +163,12 @@ shootClientConnection:
 controllers:
   backupBucket:
     concurrentSyncs: {{ required ".Values.config.controllers.backupBucket.concurrentSyncs is required" .Values.config.controllers.backupBucket.concurrentSyncs }}
+    {{- if .Values.config.controllers.backupBucket.syncJitterPeriod }}
+    syncJitterPeriod: {{ .Values.config.controllers.backupBucket.syncJitterPeriod }}
+    {{- end }}
+    {{- if .Values.config.controllers.backupBucket.jitterUpdates }}
+    jitterUpdates: {{ .Values.config.controllers.backupBucket.jitterUpdates }}
+    {{- end }}
   backupEntry:
     concurrentSyncs: {{ required ".Values.config.controllers.backupEntry.concurrentSyncs is required" .Values.config.controllers.backupEntry.concurrentSyncs }}
     {{- if .Values.config.controllers.backupEntry.deletionGracePeriodHours }}
@@ -171,6 +177,12 @@ controllers:
     {{- if .Values.config.controllers.backupEntry.deletionGracePeriodShootPurposes }}
     deletionGracePeriodShootPurposes:
 {{ toYaml .Values.config.controllers.backupEntry.deletionGracePeriodShootPurposes | indent 4 }}
+    {{- end }}
+    {{- if .Values.config.controllers.backupEntry.syncJitterPeriod }}
+    syncJitterPeriod: {{ .Values.config.controllers.backupEntry.syncJitterPeriod }}
+    {{- end }}
+    {{- if .Values.config.controllers.backupEntry.jitterUpdates }}
+    jitterUpdates: {{ .Values.config.controllers.backupEntry.jitterUpdates }}
     {{- end }}
   bastion:
     concurrentSyncs: {{ required ".Values.config.controllers.bastion.concurrentSyncs is required" .Values.config.controllers.bastion.concurrentSyncs }}
