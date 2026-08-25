@@ -60,7 +60,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),
 			&gardencorev1beta1.BackupBucket{},
-			&handler.EnqueueRequestForObject{},
+			r.EnqueueWithJitterDelay(),
 			&predicate.GenerationChangedPredicate{},
 			r.SeedNamePredicate(),
 		)).
@@ -71,6 +71,22 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 		)).
 		Complete(r)
+}
+
+// EnqueueWithJitterDelay returns handler.Funcs which enqueues the object with a random Jitter duration when the JitterUpdate
+// is enabled in BackupBucket controller configuration. All other events are normally enqueued.
+func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
+	return controllerutils.EnqueueWithJitterDelay(
+		func(obj client.Object) (int64, bool) {
+			bb, ok := obj.(*gardencorev1beta1.BackupBucket)
+			if !ok {
+				return 0, false
+			}
+			return bb.Status.ObservedGeneration, true
+		},
+		r.Config.JitterUpdates,
+		r.Config.SyncJitterPeriod,
+	)
 }
 
 // SeedNamePredicate returns a predicate which returns true when the object belongs to this seed.
