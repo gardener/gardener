@@ -588,11 +588,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(backupEntry.DeletionTimestamp).NotTo(BeNil())
 				g.Expect(backupEntry.Status.LastOperation).NotTo(BeNil())
 				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStatePending))
-				g.Expect(backupEntry.Status.LastOperation.Description).To(Equal(fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(time.Duration(deletionGracePeriodHours)*time.Hour))))
+				g.Expect(backupEntry.Status.LastOperation.Description).To(Equal(fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Add(time.Duration(deletionGracePeriodHours)*time.Hour))))
 			}).Should(Succeed())
 
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
-			scheduledTime := backupEntry.DeletionTimestamp.Time.Add(time.Duration(deletionGracePeriodHours) * time.Hour)
+			scheduledTime := backupEntry.DeletionTimestamp.Add(time.Duration(deletionGracePeriodHours) * time.Hour)
 			lastUpdateTime := backupEntry.Status.LastOperation.LastUpdateTime
 
 			By("Step the clock but don't pass the grace period")
