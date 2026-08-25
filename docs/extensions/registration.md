@@ -279,6 +279,7 @@ In order to allow extension controller deployments to get information about the 
     gardener:
       clusterTypes:
         gardenRuntimeCluster: true
+        selfHostedShootCluster: false # true if this garden is also a self-hosted shoot cluster
       runtimeCluster:
         priorityClassName: <priority-class-name-for-extension>
   ```

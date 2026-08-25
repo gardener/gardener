@@ -125,7 +125,7 @@ Besides the values configured in `.spec.deployment.extension.runtimeValues`, a r
 gardener:
   clusterTypes:
     gardenRuntimeCluster: true # indicates the deployment targets a garden runtime cluster
-  runtimeCluster:
+    selfManagedSeedCluster: false # true if this garden is also a self-hosted shoot cluster
     priorityClassName: gardener-garden-system-200
 ```
 
@@ -151,6 +151,7 @@ The following values are passed to the chart during reconciliation:
 gardener:
   clusterTypes:
     gardenRuntimeCluster: true # indicates the deployment targets the garden runtime cluster
+    selfManagedSeedCluster: false # true if this garden is also a self-hosted shoot cluster
   runtimeCluster:
     priorityClassName: <Class to be used for extension admission>
   virtualCluster:

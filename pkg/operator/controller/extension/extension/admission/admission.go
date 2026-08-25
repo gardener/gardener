@@ -100,10 +100,16 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		return fmt.Errorf("failed reconciling access secret: %w", err)
 	}
 
+	isSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, d.runtimeClientSet.Client())
+	if err != nil {
+		return fmt.Errorf("failed checking whether the runtime cluster is a self-hosted shoot: %w", err)
+	}
+
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"clusterTypes": map[string]bool{
 				"gardenRuntimeCluster": true,
+				"selfHostedShoot":      isSelfHostedShoot,
 			},
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
