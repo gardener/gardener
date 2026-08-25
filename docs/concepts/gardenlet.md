@@ -214,6 +214,9 @@ The status from the reconciliation is reported in the `.status.lastOperation` fi
 
 If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller deletes the generated secret in the garden cluster and the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster and it waits for the respective extension controller to remove its finalizers from the `extensions.gardener.cloud/v1alpha1.BackupBucket`. Then it deletes the secret in the seed cluster and finally removes the finalizers from the `core.gardener.cloud/v1beta1.BackupBucket` and the referred secret.
 
+On gardenlet restart, existing `BackupBucket`s are spread across a random delay up to `.controllers.backupBucket.syncJitterPeriod` (default: `5m`) before being enqueued, to avoid overloading the gardener-apiserver.
+When `.controllers.backupBucket.jitterUpdates` is `true` (default: `false`), spec-update events are also delayed by a random duration within `syncJitterPeriod` instead of being enqueued immediately.
+
 ### [`BackupEntry` Controller](../../pkg/gardenlet/controller/backupentry)
 
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
@@ -240,6 +243,9 @@ Additionally, you can limit the [shoot purposes](../usage/shoot/shoot_purposes.m
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
 
 In case a `BackupEntry` is scheduled for future deletion but you want to delete it immediately, add the annotation `backupentry.core.gardener.cloud/force-deletion=true`.
+
+On gardenlet restart, existing `BackupEntry`s are spread across a random delay up to `.controllers.backupEntry.syncJitterPeriod` (default: `5m`) before being enqueued, to avoid overloading the gardener-apiserver.
+When `.controllers.backupEntry.jitterUpdates` is `true` (default: `false`), spec-update events are also delayed by a random duration within `syncJitterPeriod` instead of being enqueued immediately.
 
 ### [`Bastion` Controller](../../pkg/gardenlet/controller/bastion)
 
@@ -346,6 +352,9 @@ On `ManagedSeed` deletion, the controller first deletes the corresponding `Seed`
 Subsequently, it deletes the `gardenlet` instance within the shoot cluster.
 The controller also ensures the deletion of related `Seed` secrets.
 Finally, the dedicated `garden` namespace within the shoot cluster is deleted.
+
+On gardenlet restart, existing `ManagedSeed`s are spread across a random delay up to `.controllers.managedSeed.syncJitterPeriod` (default: `5m`) before being enqueued, to avoid overloading the gardener-apiserver.
+When `.controllers.managedSeed.jitterUpdates` is `true` (default: `false`), spec-update events are also delayed by a random duration within `syncJitterPeriod` instead of being enqueued immediately.
 
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
