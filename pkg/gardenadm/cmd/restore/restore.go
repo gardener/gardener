@@ -77,6 +77,20 @@ func run(ctx context.Context, opts *Options) error {
 				return err
 			},
 		})
+		deletePriorNode = g.Add(flow.Task{
+			Name: "Deleting prior Node",
+			Fn: func(ctx context.Context) error {
+				return b.DeletePriorNode(ctx, opts.PriorNodeName)
+			},
+			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
+		})
+		forceDeletePriorNodePods = g.Add(flow.Task{
+			Name: "Force deleting Pods running on prior Node",
+			Fn: func(ctx context.Context) error {
+				return b.ForceDeletePriorNodePods(ctx, opts.PriorNodeName)
+			},
+			Dependencies: flow.NewTaskIDs(deletePriorNode),
+		})
 		// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
 		// For more details, see https://github.com/gardener/gardener/issues/15279.
 		_ = g.Add(flow.Task{
@@ -84,7 +98,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: func(ctx context.Context) error {
 				return initcmd.RunInitFlow(ctx, b, initOpts)
 			},
-			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
+			Dependencies: flow.NewTaskIDs(deletePriorNode, forceDeletePriorNodePods),
 		})
 	)
 
