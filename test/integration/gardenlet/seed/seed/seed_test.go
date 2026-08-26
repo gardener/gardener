@@ -827,16 +827,14 @@ var _ = Describe("Seed controller tests", func() {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, seedControllerInst))).To(Succeed())
 
 				if seedIsGarden {
-					// The CRDs are cleaned up by the Destroy function of GRM. In case the seed is garden, the Destroy is called by the gardener-operator and since it's
-					// not running in this test, we can safely assert the below-mentioned. But if the seed is not garden, it might so happen that, before we fetch the
-					// ManagedResourceList and expect it to be empty, the CRDs are already gone. Since the gardener-resource-manager is deleted only after all the
-					// managedresources are gone, we don't need to assert it separately.
+					// The ManagedResource CRD is cleaned up by the Destroy function of GRM. In case the seed is garden, the Destroy is called by the gardener-operator and since it's
+					// not running in this test, we can safely assert the below-mentioned.
 					By("Verify that the seed system components have been deleted")
 					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 						return managedResourceList.Items
-					}).Should(BeEmpty())
+					}).WithTimeout(kubernetesutils.WaitTimeout).Should(BeEmpty())
 				} else {
 					By("Verify that gardener-resource-manager has been deleted")
 					// This step might take longer because it has to wait for CRDs to be deleted.
