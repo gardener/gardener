@@ -120,9 +120,12 @@ func (c *crdDeployer) Wait(ctx context.Context) error {
 	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, slices.Collect(maps.Keys(c.crdNameToCRD))...)
 }
 
+// WaitUntilCRDManifestsDestroyed is the default wait function for CRD destruction. Exposed for testing.
+var WaitUntilCRDManifestsDestroyed = kubernetesutils.WaitUntilCRDManifestsDestroyed
+
 // WaitCleanup waits for destruction to finish and CRDs to be fully removed.
 func (c *crdDeployer) WaitCleanup(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsDestroyed(ctx, c.client, slices.Collect(maps.Keys(c.crdNameToCRD))...)
+	return WaitUntilCRDManifestsDestroyed(ctx, c.client, slices.Collect(maps.Keys(c.crdNameToCRD))...)
 }
 
 // generateCRDNameToCRDMap returns a map that has the name of the resource as key, and the corresponding CRD as value.

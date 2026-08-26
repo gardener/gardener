@@ -7,6 +7,7 @@ package garden_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -44,6 +45,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/crddeployer"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensioncomponent "github.com/gardener/gardener/pkg/component/extensions/extension"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
@@ -62,6 +64,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	kubernetestestutils "github.com/gardener/gardener/test/utils/kubernetes"
 	"github.com/gardener/gardener/test/utils/managedresource"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 	"github.com/gardener/gardener/test/utils/operationannotation"
@@ -110,6 +113,7 @@ var _ = Describe("Garden controller tests", func() {
 			&shared.IntervalWaitForGardenerResourceManagerBootstrapping, 500*time.Millisecond,
 			&managedresources.IntervalWait, 100*time.Millisecond,
 			&kubernetesutils.IntervalWait, 100*time.Millisecond,
+			&crddeployer.WaitUntilCRDManifestsDestroyed, kubernetestestutils.VerifyCRDDeletionByDeletionTimestamp,
 		))
 
 		By("Create test Namespace")
@@ -944,11 +948,19 @@ spec:
 		// Deleting these resources can take a long time, especially under load.
 		// It can happen that the storage layer needs to recover, as some CRDs might end up in a stuck terminating state,
 		// with error: "InstanceDeletionFailed could not list instances: storage is (re)initializing}"
-		Eventually(func(g Gomega) []string {
+		// Hence, we are only checking if the CRD is marked for deletion, not that it is actually gone.
+		Eventually(func(g Gomega) {
 			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 			g.Expect(mgrClient.List(ctx, crdList)).To(Succeed())
-			return test.ObjectNames(crdList)
-		}).WithTimeout(4 * time.Minute).ShouldNot(ContainAnyOf(deployedCRDs...))
+
+			for _, deployedCRD := range deployedCRDs {
+				if i := slices.IndexFunc(crdList.Items, func(crd apiextensionsv1.CustomResourceDefinition) bool {
+					return crd.Name == deployedCRD
+				}); i != -1 {
+					g.Expect(crdList.Items[i].DeletionTimestamp).NotTo(BeNil(), "CRD %s should be marked for deletion", deployedCRD)
+				}
+			}
+		}).Should(Succeed())
 
 		By("Verify that secrets have been deleted")
 		Eventually(func(g Gomega) []corev1.Secret {

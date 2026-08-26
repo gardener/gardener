@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	"github.com/gardener/gardener/pkg/component/crddeployer"
 	extensionscrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
@@ -55,6 +56,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	kubernetestestutils "github.com/gardener/gardener/test/utils/kubernetes"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
@@ -192,6 +194,11 @@ var _ = Describe("Seed controller tests", func() {
 		DeferCleanup(test.WithVars(
 			&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 			&resourcemanager.SkipWebhookDeployment, true,
+
+			// It can happen that the storage layer needs to recover, as some CRDs might end up in a stuck terminating state,
+			// with error: "InstanceDeletionFailed could not list instances: storage is (re)initializing}"
+			// Hence, we are only checking if the CRD is marked for deletion, not that it is actually gone.
+			&crddeployer.WaitUntilCRDManifestsDestroyed, kubernetestestutils.VerifyCRDDeletionByDeletionTimestamp,
 		))
 
 		By("Create DNS provider secret in garden namespace")
@@ -839,20 +846,17 @@ var _ = Describe("Seed controller tests", func() {
 					}).Should(BeEmpty())
 				} else {
 					By("Verify that gardener-resource-manager has been deleted")
-					// This step might take longer because it has to wait for CRDs to be deleted.
-					// It can happen that the storage layer needs to recover, as some CRDs might end up in a stuck terminating state,
-					// with error: "InstanceDeletionFailed could not list instances: storage is (re)initializing}"
 					Eventually(func() error {
 						deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 						return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-					}).WithTimeout(4 * time.Minute).Should(BeNotFoundError())
+					}).Should(Succeed())
 
 					// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 					// with other test cases.
 					By("Verify that CRD has been deleted")
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKey{Name: "managedresources.resources.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})
-					}).Should(BeNotFoundError())
+					}).WithTimeout(4 * time.Minute).Should(BeNotFoundError())
 				}
 
 				By("Ensure Seed is gone")
