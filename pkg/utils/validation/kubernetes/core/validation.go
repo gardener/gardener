@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // origin: https://github.com/kubernetes/kubernetes/blob/1467b588060812a11c3e556f645ce0a949bb4b36/pkg/apis/core/validation/validation.go
-// Modifications Copyright Copyright Contributors to the Gardener project
+// Modifications Copyright Contributors to the Gardener project
 
 package core
 

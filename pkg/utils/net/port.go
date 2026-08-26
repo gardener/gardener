@@ -15,7 +15,7 @@
 // This file was copied from the kubernetes-sigs/controller-runtime project
 // https://github.com/kubernetes-sigs/controller-runtime/blob/v0.8.0/pkg/internal/testing/integration/addr/manager.go
 //
-// Modifications Copyright Copyright Contributors to the Gardener project
+// Modifications Copyright Contributors to the Gardener project
 
 package net
 
