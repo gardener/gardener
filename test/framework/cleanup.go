@@ -16,7 +16,7 @@ limitations under the License.
 This file was copied from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/blob/v1.19.0-rc.4/test/e2e/framework/cleanup.go
 
-Modifications Copyright Contributors to the Gardener project
+Modifications Contributors to the Gardener project
 */
 
 package framework
