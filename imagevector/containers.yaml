@@ -637,7 +637,7 @@ images:
   - name: fluent-operator
     sourceRepository: github.com/fluent/fluent-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-operator
-    tag: "v3.10.0"
+    tag: "3.10.0"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
