@@ -541,6 +541,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		})
 		reconcileVPNComponents    = g.AddGroup(b.ReconcileVPNComponentsTaskGroup(flowCtx.skipReadiness).WithDependencies(syncPointReadyForSystemComponents))
 		reconcileSystemComponents = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness).WithDependencies(
+			ensureShootClusterIdentity,
 			initializeShootClients,
 			deployKubeScheduler,
 		))
