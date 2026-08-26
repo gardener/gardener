@@ -96,6 +96,9 @@ require (
 
 replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
 
+// TODO(marc1404): Drop this line once test fixtures have been updated to match the new serialization behavior past v4.0.0-rc.2
+replace go.yaml.in/yaml/v4 => go.yaml.in/yaml/v4 v4.0.0-rc.2
+
 // TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
 exclude github.com/gardener/cert-management v0.22.0
 
