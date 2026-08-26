@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+ * SPDX-FileCopyrightText: Copyright Contributors to the Gardener project
  *
  * SPDX-License-Identifier: Apache-2.0
  */

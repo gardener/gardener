@@ -16,7 +16,7 @@ limitations under the License.
 The utility functions in this file were copied from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/blob/v1.32.3/pkg/registry/authorization/util/helpers.go
 
-Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
+Modifications Copyright Copyright Contributors to the Gardener project
 */
 
 package authorizer

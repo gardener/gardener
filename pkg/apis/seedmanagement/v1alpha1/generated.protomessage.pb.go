@@ -1,7 +1,7 @@
 //go:build kubernetes_protomessage_one_more_release
 // +build kubernetes_protomessage_one_more_release
 
-// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: Copyright Contributors to the Gardener project
 //
 // SPDX-License-Identifier: Apache-2.0
 

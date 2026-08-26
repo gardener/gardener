@@ -16,7 +16,7 @@ limitations under the License.
 The majority of this package is heavily inspired by the kubernetes/kubernetes implementation for their NodeAuthorizer
 package, see https://github.com/kubernetes/kubernetes/blob/v1.20.3/plugin/pkg/auth/authorizer/node.
 
-Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
+Modifications Copyright Copyright Contributors to the Gardener project
 */
 
 package graph
