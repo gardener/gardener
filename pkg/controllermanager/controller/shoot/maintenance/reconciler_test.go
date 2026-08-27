@@ -1802,9 +1802,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		)
 
 		BeforeEach(func() {
-			defer test.WithVar(
+			DeferCleanup(test.WithVar(
 				&IsFeatureGateSupported, isFeatureGateSupported,
-			)
+			))
 
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1953,9 +1953,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		)
 
 		BeforeEach(func() {
-			defer test.WithVar(
+			DeferCleanup(test.WithVar(
 				&IsAdmissionPluginSupported, isAdmissionPluginSupported,
-			)
+			))
 
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
