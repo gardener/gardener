@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -31,16 +32,24 @@ func (b *GardenadmBotanist) ForceDeletePriorNodePods(ctx context.Context, priorN
 		return fmt.Errorf("failed listing Pods: %w", err)
 	}
 
-	forceDeleteOptions := &client.DeleteOptions{
-		GracePeriodSeconds: new(int64(0)),
-		PropagationPolicy:  new(metav1.DeletePropagationBackground),
-	}
-	for _, pod := range podList.Items {
-		b.Logger.Info("Force deleting Pod", "pod", client.ObjectKeyFromObject(&pod), "nodeName", pod.Spec.NodeName)
-		if err := b.SeedClientSet.Client().Delete(ctx, &pod, forceDeleteOptions); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed force deleting Pod %s: %w", client.ObjectKeyFromObject(&pod), err)
+	var (
+		taskFns []flow.TaskFn
+
+		forceDeleteOptions = &client.DeleteOptions{
+			GracePeriodSeconds: new(int64(0)),
+			PropagationPolicy:  new(metav1.DeletePropagationBackground),
 		}
+	)
+	for _, pod := range podList.Items {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			b.Logger.Info("Force deleting Pod", "pod", client.ObjectKeyFromObject(&pod), "nodeName", pod.Spec.NodeName)
+			if err := b.SeedClientSet.Client().Delete(ctx, &pod, forceDeleteOptions); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("failed force deleting Pod %s: %w", client.ObjectKeyFromObject(&pod), err)
+			}
+
+			return nil
+		})
 	}
 
-	return nil
+	return flow.ParallelN(5, taskFns...)(ctx)
 }

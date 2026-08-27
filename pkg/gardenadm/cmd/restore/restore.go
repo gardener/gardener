@@ -89,7 +89,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: func(ctx context.Context) error {
 				return b.ForceDeletePriorNodePods(ctx, opts.PriorNodeName)
 			},
-			Dependencies: flow.NewTaskIDs(deletePriorNode),
+			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
 		})
 		// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
 		// For more details, see https://github.com/gardener/gardener/issues/15279.
