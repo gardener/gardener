@@ -572,10 +572,43 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(BeNotFoundError())
 			}).Should(Succeed())
 
-			By("Ensure finalizers are removed and BackupBucket is released")
+			By("Ensure finalizers are removed and BackupEntry is released")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)
 			}).Should(BeNotFoundError())
+		})
+
+		It("should not update the pending status on re-reconcile within the grace period", func() {
+			By("Delete the BackupEntry")
+			Expect(testClient.Delete(ctx, backupEntry)).To(Succeed())
+
+			By("Ensure the BackupEntry is not deleted till the grace period is passed")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				g.Expect(backupEntry.DeletionTimestamp).NotTo(BeNil())
+				g.Expect(backupEntry.Status.LastOperation).NotTo(BeNil())
+				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStatePending))
+				g.Expect(backupEntry.Status.LastOperation.Description).To(Equal(fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Add(time.Duration(deletionGracePeriodHours)*time.Hour))))
+			}).Should(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			scheduledTime := backupEntry.DeletionTimestamp.Add(time.Duration(deletionGracePeriodHours) * time.Hour)
+			lastUpdateTime := backupEntry.Status.LastOperation.LastUpdateTime
+
+			By("Step the clock but don't pass the grace period")
+			fakeClock.Step((time.Duration(deletionGracePeriodHours)*time.Hour - time.Hour))
+			patch := client.MergeFrom(backupEntry.DeepCopy())
+			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			Expect(testClient.Patch(ctx, backupEntry, patch)).To(Succeed())
+
+			By("Ensure the BackupEntry lastOperation timestamp has not changed")
+			Consistently(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				g.Expect(backupEntry.Status.LastOperation).NotTo(BeNil())
+				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStatePending))
+				g.Expect(backupEntry.Status.LastOperation.Description).To(Equal(fmt.Sprintf("Deletion of backup entry is scheduled for %s", scheduledTime)))
+				g.Expect(backupEntry.Status.LastOperation.LastUpdateTime).To(Equal(lastUpdateTime))
+			}).Should(Succeed())
 		})
 	})
 })

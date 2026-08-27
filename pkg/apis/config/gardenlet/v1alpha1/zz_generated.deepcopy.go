@@ -25,6 +25,16 @@ func (in *BackupBucketControllerConfiguration) DeepCopyInto(out *BackupBucketCon
 		*out = new(int)
 		**out = **in
 	}
+	if in.SyncJitterPeriod != nil {
+		in, out := &in.SyncJitterPeriod, &out.SyncJitterPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.JitterUpdates != nil {
+		in, out := &in.JitterUpdates, &out.JitterUpdates
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
@@ -96,6 +106,16 @@ func (in *BackupEntryControllerConfiguration) DeepCopyInto(out *BackupEntryContr
 		in, out := &in.DeletionGracePeriodShootPurposes, &out.DeletionGracePeriodShootPurposes
 		*out = make([]v1beta1.ShootPurpose, len(*in))
 		copy(*out, *in)
+	}
+	if in.SyncJitterPeriod != nil {
+		in, out := &in.SyncJitterPeriod, &out.SyncJitterPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.JitterUpdates != nil {
+		in, out := &in.JitterUpdates, &out.JitterUpdates
+		*out = new(bool)
+		**out = **in
 	}
 	return
 }
