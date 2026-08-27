@@ -749,6 +749,11 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 				By("Create BackupBucket")
 				Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
 
+				By("Wait until the manager cache observes the backup bucket")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)
+				}).Should(Succeed())
+
 				backupEntry := &gardencorev1beta1.BackupEntry{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      backupEntryName,
