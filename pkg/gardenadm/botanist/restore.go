@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -28,7 +29,7 @@ func (b *GardenadmBotanist) DeletePriorNode(ctx context.Context, priorNodeName s
 // that was lost during the disaster.
 func (b *GardenadmBotanist) ForceDeletePriorNodePods(ctx context.Context, priorNodeName string) error {
 	podList := &corev1.PodList{}
-	if err := b.SeedClientSet.Client().List(ctx, podList, client.MatchingFields{"spec.nodeName": priorNodeName}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, podList, client.MatchingFields{indexer.PodNodeName: priorNodeName}); err != nil {
 		return fmt.Errorf("failed listing Pods: %w", err)
 	}
 
