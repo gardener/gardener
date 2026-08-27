@@ -8,7 +8,7 @@ As a rule, only controllers that observe real-world state should write to `statu
 
 ## Statuses in Gardener APIs
 
-Most Gardener API types carry a `Status` struct that reports what a controller has observed about the resource. While the exact fields vary by resource, several fields appear across many types:
+Most Gardener API types carry a `Status` struct. It reports what a controller has observed about the resource. While the exact fields vary by resource, several fields appear across many types:
 
 | Field | Description |
 |---|---|
@@ -19,28 +19,26 @@ Most Gardener API types carry a `Status` struct that reports what a controller h
 
 ## Conditions
 
-Conditions represent the results of **health checks** — discrete observations about whether a specific aspect of the system is working correctly. Each condition has a `Type` (what is being checked), a `Status` (`True`, `False`, `Unknown`, or `Progressing`), a machine-readable `Reason`, and a human-readable `Message`.
+Conditions represent the results of **health checks** — discrete observations about whether a specific aspect of the system is working correctly.
 
-```go
-type Condition struct {
-    Type               ConditionType
-    Status             ConditionStatus
-    LastTransitionTime metav1.Time
-    LastUpdateTime     metav1.Time
-    Reason             string
-    Message            string
-    Codes              []ErrorCode
-}
-```
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `Type` | `ConditionType` | Yes | The identifier for this condition (e.g. `APIServerAvailable`) |
+| `Status` | `ConditionStatus` | Yes | Whether the condition is `True`, `False`, or `Unknown` |
+| `LastTransitionTime` | `metav1.Time` | Yes | When `Status` last changed |
+| `LastUpdateTime` | `metav1.Time` | Yes | When any field (reason, message, codes) last changed |
+| `Reason` | `string` | Yes | A short, machine-readable word describing why the condition has its current status |
+| `Message` | `string` | Yes | A human-readable description of the condition |
+| `Codes` | `[]ErrorCode` | No | Structured error codes (e.g. `ERR_INFRA_QUOTA_EXCEEDED`, `ERR_UNAUTHORIZED`) used for alerting and user-facing diagnostics |
 
-`LastTransitionTime` records when `Status` last changed. `LastUpdateTime` records when any field (reason, message, codes) last changed. The `Codes` field carries structured error codes (`ERR_INFRA_QUOTA_EXCEEDED`, `ERR_UNAUTHORIZED`, etc.) that Gardener uses for alerting and user-facing diagnostics.
+You can find the full type definition in [`pkg/apis/core/v1beta1/types_utils.go`](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/types_utils.go).
 
 ### Examples
 
 Shoot conditions:
 
 | Type | What it checks |
-|---|---|
+| --- | --- |
 | `APIServerAvailable` | Whether the shoot's kube-apiserver is reachable |
 | `ControlPlaneHealthy` | Health of control plane components (etcd, apiserver, controller-manager, scheduler) |
 | `ObservabilityComponentsHealthy` | Health of monitoring and logging components |
@@ -50,18 +48,18 @@ Shoot conditions:
 Seed conditions:
 
 | Type | What it checks |
-|---|---|
+| --- | --- |
 | `BackupBucketsReady` | Whether all backup buckets for the seed are healthy |
 | `ExtensionsReady` | Whether all extensions installed in the seed are ready |
 | `SeedSystemComponentsHealthy` | Health of system components running in the seed |
 
 ### Introducing New Condition Types
 
-Condition types are deliberately stable. Before introducing a new `ConditionType`, check whether an existing type can be reused — many health checks naturally fit under `SystemComponentsHealthy` or `ControlPlaneHealthy`. Fragmenting health checks into many narrow types makes the overall status harder to read. Also, the Gardener dashboard always displays all conditions, whereas constraints are only shown when relevant (`Status: False`).
+Condition types are deliberately stable. Before introducing a new `ConditionType`, check whether an existing type can be reused — many health checks naturally fit under `SystemComponentsHealthy` or `ControlPlaneHealthy`. Fragmenting health checks into many narrow types makes the overall status harder to read. Additionally, since the Gardener Dashboard always displays all conditions, having too many narrow types would clutter the cluster overview.
 
 ## Constraints
 
-Constraints use the same `Condition` type and struct as health check conditions but serve a different purpose: they carry **operational signals and informational state** that may gate or influence controller behavior, or that surface relevant cluster information to operators and users.
+Constraints use the same [`Condition` type and struct](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/types_utils.go) type and struct as health check conditions but serve a different purpose: they carry **operational signals and informational state** that may gate or influence controller behavior, or that surface relevant cluster information to operators and users.
 
 Unlike conditions, constraints are not limited to binary health checks. They can represent:
 
@@ -71,7 +69,7 @@ Unlike conditions, constraints are not limited to binary health checks. They can
 - **Pending user actions** — `ManualInPlaceWorkersUpdated` signals that a worker pool awaits manual intervention
 - **Informational signals** — `HasIgnoredManagedResources` or `CRDsWithProblematicConversionWebhooks` inform operators of configuration issues
 
-Also see the [shoot status documentation](../usage/shoot/shoot_status.md) for more information.
+See the [shoot status documentation](../usage/shoot/shoot_status.md) for more information.
 
 ### Introducing New Constraint Types
 
@@ -79,12 +77,15 @@ Introducing new constraint types is more common and generally more acceptable th
 
 ## Conditions and Constraints Status Convention
 
-Gardener's Dashboard and other consumers display conditions and constraints generically. To ensure a consistent visual representation, the following convention applies:
+The Gardener Dashboard and other consumers display conditions and constraints generically. To ensure a consistent visual representation, the following convention applies:
 
 - **Positive results** (everything is fine, the operation is possible) → `Status: True`
 - **Negative results** (something is wrong, an operation is blocked) → `Status: False`
 
 Even with this polarity rule, **avoid negating the `Type` name**. A type like `HibernationNotPossible` set to `Status: False` means "hibernation is not not possible" — a double negation that is hard to parse. Instead, use `HibernationPossible` with `Status: True` to express the same state clearly.
+
+> [!NOTE]
+> The Gardener Dashboard always displays all conditions, whereas constraints are only shown when relevant (`Status: False`).
 
 ## Using the Helper Functions
 
@@ -102,7 +103,7 @@ See [`pkg/gardenlet/operation/botanist/dualstackmigration.go`](https://github.co
 
 See [`pkg/controllermanager/controller/shoot/migration/reconciler.go`](https://github.com/gardener/gardener/blob/ad196442201a759ccb56ead63528b328f57d2638/pkg/controllermanager/controller/shoot/migration/reconciler.go#L104) for the builder being used to set a constraint.
 
-### Atomically rebuilding both slices
+### Atomically Rebuilding Both Slices
 
 `BuildConditions` removes a set of managed types from the existing slice and appends the freshly computed values, leaving any types owned by other controllers untouched. Use it when a reconciler refreshes all its conditions and constraints in one pass.
 
