@@ -200,7 +200,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 			return nil, err
 		}
 		if kubeconfigPath != nil && kubeconfigPath.(string) != "" {
-			kubeconfig, err := os.ReadFile(kubeconfigPath.(string))
+			kubeconfig, err := os.ReadFile(filepath.Clean(kubeconfigPath.(string))) // #nosec: G304,G703 -- Path comes from the gardenlet's own configuration, not external input.
 			if err != nil {
 				return nil, err
 			}
@@ -217,7 +217,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 		return nil, err
 	}
 	if kubeconfigPath != nil && kubeconfigPath.(string) != "" {
-		kubeconfig, err := os.ReadFile(filepath.Clean(kubeconfigPath.(string)))
+		kubeconfig, err := os.ReadFile(filepath.Clean(kubeconfigPath.(string))) // #nosec: G304,G703 -- Path comes from the gardenlet's own configuration, not external input.
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +233,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 		return nil, err
 	}
 	if certPath != nil && certPath.(string) != "" && !strings.Contains(certPath.(string), secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
-		cert, err := os.ReadFile(filepath.Clean(certPath.(string)))
+		cert, err := os.ReadFile(filepath.Clean(certPath.(string))) // #nosec: G304,G703 -- Path comes from the gardenlet's own configuration, not external input.
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +249,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletconfigv
 		return nil, err
 	}
 	if keyPath != nil && keyPath.(string) != "" && !strings.Contains(keyPath.(string), secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
-		key, err := os.ReadFile(filepath.Clean(keyPath.(string)))
+		key, err := os.ReadFile(filepath.Clean(keyPath.(string))) // #nosec: G304,G703 -- Path comes from the gardenlet's own configuration, not external input.
 		if err != nil {
 			return nil, err
 		}
