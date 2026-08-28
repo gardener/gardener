@@ -11,6 +11,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -136,6 +137,57 @@ func NamespacedCloudProfileParentRefNameIndexerFunc(obj client.Object) []string 
 func AddProjectNamespace(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.Project{}, core.ProjectNamespace, ProjectNamespaceIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to Project Informer: %w", core.ProjectNamespace, err)
+	}
+	return nil
+}
+
+// ShootAuditPolicyConfigMapNameIndexerFunc extracts the audit policy ConfigMap name from a Shoot.
+func ShootAuditPolicyConfigMapNameIndexerFunc(obj client.Object) []string {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return []string{""}
+	}
+	return []string{v1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)}
+}
+
+// ShootAuthenticationConfigMapNameIndexerFunc extracts the authentication configuration ConfigMap name from a Shoot.
+func ShootAuthenticationConfigMapNameIndexerFunc(obj client.Object) []string {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return []string{""}
+	}
+	return []string{v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)}
+}
+
+// ShootAuthorizationConfigMapNameIndexerFunc extracts the authorization configuration ConfigMap name from a Shoot.
+func ShootAuthorizationConfigMapNameIndexerFunc(obj client.Object) []string {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return []string{""}
+	}
+	return []string{v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)}
+}
+
+// AddShootAuditPolicyConfigMapName adds an index for core.ShootAuditPolicyConfigMapName to the given indexer.
+func AddShootAuditPolicyConfigMapName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, core.ShootAuditPolicyConfigMapName, ShootAuditPolicyConfigMapNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootAuditPolicyConfigMapName, err)
+	}
+	return nil
+}
+
+// AddShootAuthenticationConfigMapName adds an index for core.ShootAuthenticationConfigMapName to the given indexer.
+func AddShootAuthenticationConfigMapName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, core.ShootAuthenticationConfigMapName, ShootAuthenticationConfigMapNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootAuthenticationConfigMapName, err)
+	}
+	return nil
+}
+
+// AddShootAuthorizationConfigMapName adds an index for core.ShootAuthorizationConfigMapName to the given indexer.
+func AddShootAuthorizationConfigMapName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, core.ShootAuthorizationConfigMapName, ShootAuthorizationConfigMapNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootAuthorizationConfigMapName, err)
 	}
 	return nil
 }

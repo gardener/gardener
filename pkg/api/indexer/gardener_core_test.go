@@ -39,6 +39,55 @@ var _ = Describe("Core", func() {
 		Entry("Project w/ namespace", &gardencorev1beta1.Project{Spec: gardencorev1beta1.ProjectSpec{Namespace: new("namespace")}}, ConsistOf("namespace")),
 	)
 
+	DescribeTable("#AddShootAuditPolicyConfigMapName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddShootAuditPolicyConfigMapName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.Shoot{}))
+			Expect(indexer.field).To(Equal("spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no Shoot", &corev1.Secret{}, ConsistOf("")),
+		Entry("Shoot w/o kubeAPIServer", &gardencorev1beta1.Shoot{}, ConsistOf("")),
+		Entry("Shoot w/ kubeAPIServer but w/o auditConfig", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{}}}}, ConsistOf("")),
+		Entry("Shoot w/ auditConfig but w/o configMapRef", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{}}}}}}, ConsistOf("")),
+		Entry("Shoot w/ configMapRef", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "audit-policy"}}}}}}}, ConsistOf("audit-policy")),
+	)
+
+	DescribeTable("#AddShootAuthenticationConfigMapName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddShootAuthenticationConfigMapName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.Shoot{}))
+			Expect(indexer.field).To(Equal("spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no Shoot", &corev1.Secret{}, ConsistOf("")),
+		Entry("Shoot w/o kubeAPIServer", &gardencorev1beta1.Shoot{}, ConsistOf("")),
+		Entry("Shoot w/ kubeAPIServer but w/o structuredAuthentication", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{}}}}, ConsistOf("")),
+		Entry("Shoot w/ structuredAuthentication", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{ConfigMapName: "auth-config"}}}}}, ConsistOf("auth-config")),
+	)
+
+	DescribeTable("#AddShootAuthorizationConfigMapName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddShootAuthorizationConfigMapName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.Shoot{}))
+			Expect(indexer.field).To(Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization.configMapName"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no Shoot", &corev1.Secret{}, ConsistOf("")),
+		Entry("Shoot w/o kubeAPIServer", &gardencorev1beta1.Shoot{}, ConsistOf("")),
+		Entry("Shoot w/ kubeAPIServer but w/o structuredAuthorization", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{}}}}, ConsistOf("")),
+		Entry("Shoot w/ structuredAuthorization", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{ConfigMapName: "authz-config"}}}}}, ConsistOf("authz-config")),
+	)
+
 	DescribeTable("#AddShootSeedName",
 		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
 			Expect(AddShootSeedName(context.TODO(), indexer)).To(Succeed())

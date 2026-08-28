@@ -61,6 +61,7 @@ type Handler struct {
 
 	ConfigMapPurpose            string
 	ConfigMapDataKey            string
+	ShootFieldSelector          string
 	GetConfigMapNameFromShoot   func(shoot *gardencore.Shoot) string
 	SkipValidationOnShootUpdate func(shoot, oldShoot *gardencore.Shoot) bool
 	AdmitConfig                 func(ctx context.Context, configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
@@ -223,7 +224,7 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 	if err := h.Decoder.Decode(request, newConfigMap); err != nil {
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding ConfigMap: %w", err))
 	}
-	
+
 	if err := h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding old ConfigMap: %w", err))
 	}
@@ -234,7 +235,11 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 
 	// lookup if ConfigMap is referenced by any shoot in the same namespace
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := h.Client.List(ctx, shootList, client.InNamespace(request.Namespace)); err != nil {
+	listOpts := []client.ListOption{client.InNamespace(request.Namespace)}
+	if h.ShootFieldSelector != "" {
+		listOpts = append(listOpts, client.MatchingFields{h.ShootFieldSelector: request.Name})
+	}
+	if err := h.Client.List(ctx, shootList, listOpts...); err != nil {
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed listing shoots in namespace %s: %w", request.Namespace, err))
 	}
 
@@ -244,10 +249,7 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 		if err := gardenCoreScheme.Convert(&obj, shoot, nil); err != nil {
 			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed converting Shoot %s into internal version: %w", client.ObjectKeyFromObject(&obj), err))
 		}
-
-		if h.GetConfigMapNameFromShoot(shoot) == request.Name {
-			shoots = append(shoots, shoot)
-		}
+		shoots = append(shoots, shoot)
 	}
 
 	if len(shoots) == 0 {

@@ -20,6 +20,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -49,7 +50,10 @@ var _ = Describe("Handler", func() {
 		utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
 		utilruntime.Must(corev1.AddToScheme(scheme))
 
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(scheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, core.ShootAuditPolicyConfigMapName, indexer.ShootAuditPolicyConfigMapNameIndexerFunc).
+			Build()
 		encoder = &jsonserializer.Serializer{}
 		decoder = admission.NewDecoder(scheme)
 
@@ -72,6 +76,13 @@ var _ = Describe("Handler", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.35.0",
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						AuditConfig: &gardencorev1beta1.AuditConfig{
+							AuditPolicy: &gardencorev1beta1.AuditPolicy{
+								ConfigMapRef: &corev1.ObjectReference{Name: configMap.Name},
+							},
+						},
+					},
 				},
 			},
 		}
@@ -113,6 +124,7 @@ var _ = Describe("Handler", func() {
 			GetConfigMapNameFromShoot: func(_ *core.Shoot) string {
 				return configMap.Name
 			},
+			ShootFieldSelector: core.ShootAuditPolicyConfigMapName,
 			GetNamespace: func() string {
 				return configMap.Namespace
 			},

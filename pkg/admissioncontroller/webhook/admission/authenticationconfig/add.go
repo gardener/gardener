@@ -76,7 +76,8 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 			}
 			return sets.New(getIssuersFromShoot(shoot)...).Equal(sets.New(getIssuersFromShoot(oldShoot)...))
 		},
-		AdmitConfig: h.admitConfig,
+		ShootFieldSelector: gardencore.ShootAuthenticationConfigMapName,
+		AdmitConfig:        h.admitConfig,
 	}
 }
 

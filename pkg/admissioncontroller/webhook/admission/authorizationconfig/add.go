@@ -67,7 +67,8 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 		SkipValidationOnShootUpdate: func(shoot, oldShoot *gardencore.Shoot) bool {
 			return sets.New(getKubeconfigAuthorizerNamesFromShoot(shoot)...).Equal(sets.New(getKubeconfigAuthorizerNamesFromShoot(oldShoot)...))
 		},
-		AdmitConfig: admitConfig,
+		ShootFieldSelector: gardencore.ShootAuthorizationConfigMapName,
+		AdmitConfig:        admitConfig,
 	}
 }
 

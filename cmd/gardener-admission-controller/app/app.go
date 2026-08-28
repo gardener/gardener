@@ -139,6 +139,9 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		indexer.AddBackupBucketShootRefNamespace,
 		indexer.AddBackupEntryShootRefName,
 		indexer.AddBackupEntryShootRefNamespace,
+		indexer.AddShootAuditPolicyConfigMapName,
+		indexer.AddShootAuthenticationConfigMapName,
+		indexer.AddShootAuthorizationConfigMapName,
 	} {
 		if err := fn(ctx, i); err != nil {
 			return err

@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authorizationconfig"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -113,7 +115,10 @@ authorizers:
 	BeforeEach(func() {
 		testEncoder = &jsonserializer.Serializer{}
 
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootAuthorizationConfigMapName, indexer.ShootAuthorizationConfigMapNameIndexerFunc).
+			Build()
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
@@ -343,7 +348,9 @@ authorizers:
 					shootInDifferentNamespaceAndReferencing.Namespace = shootNamespace + "other"
 					Expect(fakeClient.Create(ctx, shootInDifferentNamespaceAndReferencing)).To(Succeed())
 
-					test(admissionv1.Update, configMap, configMap, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
+					newCm := configMap.DeepCopy()
+					newCm.Data["config.yaml"] = anotherValidAuthorizationConfiguration
+					test(admissionv1.Update, configMap, newCm, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
 				})
 
 				It("did not change config.yaml field", func() {
