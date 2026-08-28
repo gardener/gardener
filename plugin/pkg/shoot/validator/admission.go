@@ -44,6 +44,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
+	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -75,6 +77,7 @@ type ValidateShoot struct {
 	projectLister                gardencorev1beta1listers.ProjectLister
 	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
 	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	managedSeedLister            seedmanagementv1alpha1listers.ManagedSeedLister
 	readyFunc                    admission.ReadyFunc
 }
 
@@ -83,6 +86,7 @@ var (
 	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 	_ = admissioninitializer.WantsSecurityInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsSeedManagementInformerFactory(&ValidateShoot{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -144,6 +148,14 @@ func (v *ValidateShoot) SetSecurityInformerFactory(f securityinformers.SharedInf
 	readyFuncs = append(readyFuncs, credentialsBindingInformer.Informer().HasSynced)
 }
 
+// SetSeedManagementInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateShoot) SetSeedManagementInformerFactory(f seedmanagementinformers.SharedInformerFactory) {
+	managedSeedInformer := f.Seedmanagement().V1alpha1().ManagedSeeds()
+	v.managedSeedLister = managedSeedInformer.Lister()
+
+	readyFuncs = append(readyFuncs, managedSeedInformer.Informer().HasSynced)
+}
+
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
 func (v *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
 	configMapInformer := f.Core().V1().ConfigMaps()
@@ -183,6 +195,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.credentialsBindingLister == nil {
 		return errors.New("missing credentials binding lister")
+	}
+	if v.managedSeedLister == nil {
+		return errors.New("missing managed seed lister")
 	}
 	return nil
 }
@@ -336,7 +351,7 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister, v.seedLister); err != nil {
+	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister, v.seedLister, v.managedSeedLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -434,7 +449,7 @@ func (c *validationContext) validateSeedSelectionForMultiZonalShoot() error {
 	return nil
 }
 
-func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorev1beta1listers.ShootLister, seedLister gardencorev1beta1listers.SeedLister) error {
+func (c *validationContext) validateScheduling(ctx context.Context, a admission.Attributes, authorizer authorizer.Authorizer, shootLister gardencorev1beta1listers.ShootLister, seedLister gardencorev1beta1listers.SeedLister, managedSeedLister seedmanagementv1alpha1listers.ManagedSeedLister) error {
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
@@ -528,6 +543,14 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	}
 
 	if shootIsBeingRescheduled {
+		managedSeed, err := managedSeedLister.ManagedSeeds(v1beta1constants.GardenNamespace).Get(*c.shoot.Spec.SeedName)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return apierrors.NewInternalError(fmt.Errorf("could not get managed seed %q: %w", *c.shoot.Spec.SeedName, err))
+		}
+		if err == nil && managedSeed.Spec.Shoot != nil && managedSeed.Spec.Shoot.Name == c.shoot.Name {
+			return admission.NewForbidden(a, fmt.Errorf("managed seed %q is backed by shoot %q and the shoot cannot be migrated to its own managed seed", *c.shoot.Spec.SeedName, c.shoot.Name))
+		}
+
 		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed: %+v", err.Error()))
