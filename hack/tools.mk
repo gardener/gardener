@@ -9,15 +9,15 @@
 # as needed. If the required tool (version) is not built/installed yet, make will make sure to build/install it.
 # The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
-IS_GARDENER := $(shell go list -f '{{.Main}}' -m github.com/gardener/gardener)
+# dependency on github.com/gardener/gardener is optional.
+# If other repos don't use it and the project doesn't depend on the package, silence the error to minimize confusion.
+IS_GARDENER := $(shell go list -f '{{.Main}}' -m github.com/gardener/gardener 2>/dev/null)
 
 ifeq ($(IS_GARDENER),true)
 GARDENER_HACK_DIR          := ./hack
 GARDENER_TOOL_DIR          := ./hack/tools
 GARDENER_LOGCHECK_DIR      := ./hack/tools/logcheck
 else
-# dependency on github.com/gardener/gardener is optional.
-# If other repos don't use it and the project doesn't depend on the package, silence the error to minimize confusion.
 GARDENER_HACK_DIR          := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener 2>/dev/null)/hack
 GARDENER_TOOL_DIR          := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener/hack/tools 2>/dev/null)
 GARDENER_LOGCHECK_DIR      := $(GARDENER_TOOL_DIR)/logcheck
