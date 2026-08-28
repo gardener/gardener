@@ -103,6 +103,7 @@ func (b *GardenadmBotanist) ActivateGardenerNodeAgent(ctx context.Context) error
 		return fmt.Errorf("failed checking whether gardener-node-agent's kubeconfig %s exists: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 	}
 	if alreadyBootstrapped {
+		// gardener-node-agent already obtained its client certificate and wrote its kubeconfig, nothing to do
 		return nil
 	}
 
@@ -131,12 +132,21 @@ func (b *GardenadmBotanist) ActivateGardenerNodeAgent(ctx context.Context) error
 
 // ApproveNodeAgentCertificateSigningRequest approves the node agent certificate signing request.
 func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx context.Context) error {
+	alreadyBootstrapped, err := b.FS.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath)
+	if err != nil {
+		return fmt.Errorf("failed checking whether gardener-node-agent's kubeconfig %s exists: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
+	}
+	if alreadyBootstrapped {
+		// gardener-node-agent already obtained its client certificate and wrote its kubeconfig, nothing to do
+		return nil
+	}
+
 	bootstrapToken, err := b.FS.ReadFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 	if err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
 			return fmt.Errorf("failed to read bootstrap token file: %w", err)
 		}
-		// bootstrap token already deleted, nothing to do
+		// bootstrap token file already deleted by gardener-node-agent once bootstrapped, nothing to do
 		return nil
 	}
 
@@ -148,6 +158,7 @@ func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx contex
 		return fmt.Errorf("failed listing certificate signing requests: %w", err)
 	}
 
+	foundForApproval := false
 	for _, csr := range csrList.Items {
 		if csr.Spec.Username == username && csr.Spec.SignerName == certificatesv1.KubeAPIServerClientSignerName {
 			x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
@@ -172,13 +183,17 @@ func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx contex
 				if err := b.SeedClientSet.Client().SubResource("approval").Update(ctx, &csr); err != nil {
 					return fmt.Errorf("failed approving certificate signing request: %w", err)
 				}
-			}
 
-			return nil
+				foundForApproval = true
+			}
 		}
 	}
 
-	return fmt.Errorf("no certificate signing request found for gardener-node-agent from username %q", username)
+	if !foundForApproval {
+		return fmt.Errorf("no certificate signing request found to approve for gardener-node-agent from username %q", username)
+	}
+
+	return nil
 }
 
 // FinalizeGardenerNodeAgentBootstrapping deletes the temporary cluster-admin ClusterRoleBinding for
