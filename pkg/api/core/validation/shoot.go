@@ -72,6 +72,8 @@ var (
 		core.AlwaysVerify,
 	)
 	availableShootOperations = sets.New(
+		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+		v1beta1constants.SeedOperationRenewWorkloadIdentityTokens,
 		v1beta1constants.ShootOperationMaintain,
 		v1beta1constants.ShootOperationRetry,
 		v1beta1constants.ShootOperationForceInPlaceUpdate,
@@ -107,8 +109,11 @@ var (
 		v1beta1constants.OperationRotateETCDEncryptionKey,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	)
-	availableShootOperationsToRunInParallel = availableShootMaintenanceOperations
-	incompatibleShootOperations             = map[string][]string{
+	availableShootOperationsToRunInParallel = availableShootMaintenanceOperations.Union(sets.New(
+		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+		v1beta1constants.SeedOperationRenewWorkloadIdentityTokens,
+	))
+	incompatibleShootOperations = map[string][]string{
 		v1beta1constants.OperationRotateCredentialsStart: {
 			v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 			v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,

@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -98,6 +99,10 @@ type Interface interface {
 	// RolloutPeerCA gets the peer CA and patches the
 	// related `etcd` resource to use this new CA for peer communication.
 	RolloutPeerCA(context.Context) error
+	// IsPeerCARolledOut checks if the Etcd resource was annotated with credentials.gardener.cloud/peer-ca-rolled-out.
+	IsPeerCARolledOut(context.Context) (bool, error)
+	// MarkAsPeerCARolloutCompleted annotates the Etcd resources with credentials.gardener.cloud/peer-ca-rolled-out=true.
+	MarkAsPeerCARolloutCompleted(context.Context) error
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// GetReplicas gets the Replicas field in the Values.
@@ -880,9 +885,15 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
 
-	url := fmt.Sprintf("https://%s%s.%s:%d/snapshot/full?final=true", e.values.NamePrefix, etcdconstants.ServiceName(e.values.Role), e.namespace, etcdconstants.PortBackupRestore)
+	address := fmt.Sprintf("%s%s.%s", e.values.NamePrefix, etcdconstants.ServiceName(e.values.Role), e.namespace)
+	if e.values.StaticPodConfig != nil {
+		if len(e.values.StaticPodConfig.ControlPlaneNodesIPAddresses) < 1 {
+			return fmt.Errorf("no static pod nodes IP addresses are configured for this etcd")
+		}
+		address = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0].String()
+	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://%s:%d/snapshot/full?final=true", address, etcdconstants.PortBackupRestore), nil)
 	if err != nil {
 		return err
 	}
@@ -973,6 +984,25 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 	}
 
 	return e.Wait(ctx)
+}
+
+func (e *etcd) IsPeerCARolledOut(ctx context.Context) (bool, error) {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+	}
+	return e.etcd.Annotations[secretsrotation.AnnotationKeyPeerCARolledOut] == "true", nil
+}
+
+func (e *etcd) MarkAsPeerCARolloutCompleted(ctx context.Context) error {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(e.etcd.DeepCopy())
+	metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, secretsrotation.AnnotationKeyPeerCARolledOut, "true")
+	return e.client.Patch(ctx, e.etcd, patch)
 }
 
 func (e *etcd) GetValues() Values { return e.values }

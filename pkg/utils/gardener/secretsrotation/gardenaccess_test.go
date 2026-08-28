@@ -269,4 +269,147 @@ var _ = Describe("RenewGardenAccess", func() {
 			Expect(CheckIfKubeconfigRenewalCompletedInAllShootGardenlets(ctx, gardenClient)).To(Succeed())
 		})
 	})
+
+	Context("#RenewGardenSecretsInAllSelfHostedShoots", func() {
+		var shoots []gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoots = []gardencorev1beta1.Shoot{
+				{ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "garden", Labels: map[string]string{"shoot.gardener.cloud/self-hosted": "true"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "shoot2", Namespace: "garden", Labels: map[string]string{"shoot.gardener.cloud/self-hosted": "true"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "shoot3", Namespace: "garden", Labels: map[string]string{"shoot.gardener.cloud/self-hosted": "true"}}},
+			}
+		})
+
+		createShoots := func() error {
+			for _, shoot := range shoots {
+				if err := gardenClient.Create(ctx, &shoot); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		It("should succeed and annotate all self-hosted shoots", func() {
+			Expect(createShoots()).To(Succeed())
+
+			Expect(RenewGardenSecretsInAllSelfHostedShoots(ctx, logger.WithValues(secretType, gardenAccess), gardenClient, renewGardenAccessSecrets)).To(Succeed())
+
+			shootList := gardencorev1beta1.ShootList{}
+			Expect(gardenClient.List(ctx, &shootList)).To(Succeed())
+			for _, shoot := range shootList.Items {
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(Equal(renewGardenAccessSecrets))
+			}
+		})
+
+		It("should succeed if some shoots are already annotated with the operation", func() {
+			shoots[0].SetAnnotations(map[string]string{"gardener.cloud/operation": renewGardenAccessSecrets})
+			Expect(createShoots()).To(Succeed())
+
+			Expect(RenewGardenSecretsInAllSelfHostedShoots(ctx, logger.WithValues(secretType, gardenAccess), gardenClient, renewGardenAccessSecrets)).To(Succeed())
+
+			shootList := gardencorev1beta1.ShootList{}
+			Expect(gardenClient.List(ctx, &shootList)).To(Succeed())
+			for _, shoot := range shootList.Items {
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(Equal(renewGardenAccessSecrets))
+			}
+		})
+
+		It("should succeed and append the operation if some shoots are already annotated with a different operation", func() {
+			shoots[0].SetAnnotations(map[string]string{"gardener.cloud/operation": renewWorkloadIdentityTokens})
+			Expect(createShoots()).To(Succeed())
+
+			Expect(RenewGardenSecretsInAllSelfHostedShoots(ctx, logger.WithValues(secretType, gardenAccess), gardenClient, renewGardenAccessSecrets)).To(Succeed())
+
+			updated := &gardencorev1beta1.Shoot{}
+			Expect(gardenClient.Get(ctx, client.ObjectKey{Name: "shoot1", Namespace: "garden"}, updated)).To(Succeed())
+			Expect(updated.Annotations["gardener.cloud/operation"]).To(Equal(renewWorkloadIdentityTokens + ";" + renewGardenAccessSecrets))
+
+			shootList := gardencorev1beta1.ShootList{}
+			Expect(gardenClient.List(ctx, &shootList)).To(Succeed())
+			for _, shoot := range shootList.Items {
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(ContainSubstring(renewGardenAccessSecrets))
+			}
+		})
+
+		It("should skip non-self-hosted shoots", func() {
+			nonSelfHosted := gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "regular-shoot", Namespace: "garden"}}
+			Expect(gardenClient.Create(ctx, &nonSelfHosted)).To(Succeed())
+			Expect(createShoots()).To(Succeed())
+
+			Expect(RenewGardenSecretsInAllSelfHostedShoots(ctx, logger.WithValues(secretType, gardenAccess), gardenClient, renewGardenAccessSecrets)).To(Succeed())
+
+			updated := &gardencorev1beta1.Shoot{}
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(&nonSelfHosted), updated)).To(Succeed())
+			Expect(updated.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+		})
+
+		It("should skip self-hosted shoots that are also registered as seeds", func() {
+			seed := gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "shoot1"}}
+			Expect(gardenClient.Create(ctx, &seed)).To(Succeed())
+			Expect(createShoots()).To(Succeed())
+
+			Expect(RenewGardenSecretsInAllSelfHostedShoots(ctx, logger.WithValues(secretType, gardenAccess), gardenClient, renewGardenAccessSecrets)).To(Succeed())
+
+			updated := &gardencorev1beta1.Shoot{}
+			Expect(gardenClient.Get(ctx, client.ObjectKey{Name: "shoot1", Namespace: "garden"}, updated)).To(Succeed())
+			Expect(updated.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+		})
+	})
+
+	Context("#CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots", func() {
+		var shoots []gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoots = []gardencorev1beta1.Shoot{
+				{ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "garden", Labels: map[string]string{"shoot.gardener.cloud/self-hosted": "true"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "shoot2", Namespace: "garden", Labels: map[string]string{"shoot.gardener.cloud/self-hosted": "true"}}},
+			}
+		})
+
+		createShoots := func() error {
+			for _, shoot := range shoots {
+				if err := gardenClient.Create(ctx, &shoot); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		It("should succeed if no self-hosted shoot is annotated anymore", func() {
+			Expect(createShoots()).To(Succeed())
+
+			Expect(CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots(ctx, gardenClient, renewGardenAccessSecrets, gardenAccess)).To(Succeed())
+		})
+
+		It("should succeed if some shoots have a different `gardener.cloud/operation` annotation", func() {
+			shoots[0].SetAnnotations(map[string]string{"gardener.cloud/operation": "reconcile"})
+			Expect(createShoots()).To(Succeed())
+
+			Expect(CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots(ctx, gardenClient, renewGardenAccessSecrets, gardenAccess)).To(Succeed())
+		})
+
+		It("should fail if some self-hosted shoots are still annotated", func() {
+			shoots[1].SetAnnotations(map[string]string{"gardener.cloud/operation": renewGardenAccessSecrets})
+			Expect(createShoots()).To(Succeed())
+
+			Expect(CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots(ctx, gardenClient, renewGardenAccessSecrets, gardenAccess)).To(MatchError(ContainSubstring("renewing \"garden access\" secrets for self-hosted shoot garden/shoot2 is not yet completed")))
+		})
+
+		It("should fail if some self-hosted shoots have a combined annotation that still includes the operation", func() {
+			shoots[1].SetAnnotations(map[string]string{"gardener.cloud/operation": renewWorkloadIdentityTokens + ";" + renewGardenAccessSecrets})
+			Expect(createShoots()).To(Succeed())
+
+			Expect(CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots(ctx, gardenClient, renewGardenAccessSecrets, gardenAccess)).To(MatchError(ContainSubstring("renewing \"garden access\" secrets for self-hosted shoot garden/shoot2 is not yet completed")))
+		})
+
+		It("should succeed if only a self-hosted shoot registered as a seed is still annotated", func() {
+			shoots[1].SetAnnotations(map[string]string{"gardener.cloud/operation": renewGardenAccessSecrets})
+			Expect(createShoots()).To(Succeed())
+			seed := gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "shoot2"}}
+			Expect(gardenClient.Create(ctx, &seed)).To(Succeed())
+
+			Expect(CheckIfGardenSecretsRenewalCompletedInAllSelfHostedShoots(ctx, gardenClient, renewGardenAccessSecrets, gardenAccess)).To(Succeed())
+		})
+	})
 })

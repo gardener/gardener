@@ -20,17 +20,17 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		return nil, nil
 	}
 
-	imageAdmissionController, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaAdmissionController, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageAdmissionController, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaAdmissionController, imagevectorutils.RuntimeVersion(b.Shoot.RuntimeKubernetesVersion.String()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageRecommender, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaRecommender, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageRecommender, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaRecommender, imagevectorutils.RuntimeVersion(b.Shoot.RuntimeKubernetesVersion.String()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageUpdater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaUpdater, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageUpdater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaUpdater, imagevectorutils.RuntimeVersion(b.Shoot.RuntimeKubernetesVersion.String()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,12 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		}
 		featureGates  map[string]bool
 		isManagedSeed = b.ManagedSeed != nil
+		clusterType   = component.ClusterTypeShoot
 	)
+
+	if b.Shoot.IsSelfHosted() {
+		clusterType = component.ClusterTypeSeed
+	}
 
 	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {
 		valuesRecommender.Interval = vpaConfig.RecommenderInterval
@@ -86,7 +91,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		vpa.Values{
-			ClusterType:              component.ClusterTypeShoot,
+			ClusterType:              clusterType,
 			IsManagedSeed:            isManagedSeed,
 			SecretNameServerCA:       v1beta1constants.SecretNameCACluster,
 			RuntimeKubernetesVersion: b.Shoot.RuntimeKubernetesVersion,
