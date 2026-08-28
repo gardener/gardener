@@ -2756,7 +2756,7 @@ func schema_pkg_apis_core_v1beta1_Condition(ref common.ReferenceCallback) common
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Condition holds the information about the state of a resource.",
+				Description: "Condition holds the information about the state of a resource based on health checks.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
@@ -9392,7 +9392,7 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Conditions represents the latest available observations of a Seed's current state.",
+							Description: "Conditions represents the latest available observations of a Seed's current state based on health checks.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -10422,7 +10422,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Conditions represents the latest available observations of a Shoots's current state.",
+							Description: "Conditions represents the latest available observations of a Shoots's current state based on health checks.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -10441,7 +10441,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Constraints represents conditions of a Shoot's current state that constraint some operations on it.",
+							Description: "Constraints represents conditions of a Shoot's current state that constraint or are relevant for some operations.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

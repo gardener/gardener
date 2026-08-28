@@ -139,7 +139,7 @@ spec:
               conditions:
                 items:
                   description: Condition holds the information about the state of
-                    a resource.
+                    a resource based on health checks.
                   properties:
                     codes:
                       description: Well-defined error codes in case the condition

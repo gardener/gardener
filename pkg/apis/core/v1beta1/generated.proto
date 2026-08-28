@@ -655,7 +655,7 @@ message ClusterAutoscalerOptions {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 5;
 }
 
-// Condition holds the information about the state of a resource.
+// Condition holds the information about the state of a resource based on health checks.
 message Condition {
   // Type of the condition.
   optional string type = 1;
@@ -3275,7 +3275,7 @@ message SeedStatus {
   // +optional
   optional string kubernetesVersion = 2;
 
-  // Conditions represents the latest available observations of a Seed's current state.
+  // Conditions represents the latest available observations of a Seed's current state based on health checks.
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
@@ -3692,13 +3692,13 @@ message ShootStateSpec {
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 message ShootStatus {
-  // Conditions represents the latest available observations of a Shoots's current state.
+  // Conditions represents the latest available observations of a Shoots's current state based on health checks.
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
   repeated Condition conditions = 1;
 
-  // Constraints represents conditions of a Shoot's current state that constraint some operations on it.
+  // Constraints represents conditions of a Shoot's current state that constraint or are relevant for some operations.
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional

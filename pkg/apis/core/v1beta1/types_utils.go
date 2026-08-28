@@ -21,7 +21,7 @@ type ConditionStatus string
 // ConditionType is a string alias.
 type ConditionType string
 
-// Condition holds the information about the state of a resource.
+// Condition holds the information about the state of a resource based on health checks.
 type Condition struct {
 	// Type of the condition.
 	Type ConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=ConditionType"`

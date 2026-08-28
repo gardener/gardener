@@ -56,7 +56,7 @@ type ControllerInstallationSpec struct {
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.
 type ControllerInstallationStatus struct {
-	// Conditions represents the latest available observations of a ControllerInstallations's current state.
+	// Conditions represents the latest available observations of a ControllerInstallations's current state based on health checks.
 	Conditions []Condition
 	// ProviderStatus contains type-specific status.
 	// +optional
