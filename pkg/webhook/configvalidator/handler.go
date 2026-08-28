@@ -27,7 +27,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	operator "github.com/gardener/gardener/pkg/apis/operator"
+	"github.com/gardener/gardener/pkg/apis/operator"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
@@ -221,7 +221,15 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 	}
 
 	if err := h.Decoder.Decode(request, newConfigMap); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding ConfigMap: %w", err))
+	}
+	
+	if err := h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding old ConfigMap: %w", err))
+	}
+
+	if apiequality.Semantic.DeepEqual(newConfigMap.Data, oldConfigMap.Data) {
+		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
 	}
 
 	// lookup if ConfigMap is referenced by any shoot in the same namespace
@@ -249,14 +257,6 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 	configRaw, err := h.rawConfigurationFromConfigMap(newConfigMap.Data)
 	if err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(newConfigMap), err))
-	}
-
-	if err = h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding old ConfigMap: %w", err))
-	}
-
-	if oldConfigRaw, ok := oldConfigMap.Data[h.ConfigMapDataKey]; ok && oldConfigRaw == configRaw {
-		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
 	}
 
 	if errCode, err := h.AdmitConfig(ctx, configRaw, shoots); err != nil {

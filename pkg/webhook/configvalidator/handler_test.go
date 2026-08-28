@@ -34,6 +34,7 @@ var _ = Describe("Handler", func() {
 		encoder    runtime.Encoder
 		decoder    admission.Decoder
 
+		dataKey   string
 		configMap *corev1.ConfigMap
 		shoot     *gardencorev1beta1.Shoot
 		garden    *operatorv1alpha1.Garden
@@ -52,6 +53,7 @@ var _ = Describe("Handler", func() {
 		encoder = &jsonserializer.Serializer{}
 		decoder = admission.NewDecoder(scheme)
 
+		dataKey = "config.yaml"
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "config-name",
@@ -107,7 +109,7 @@ var _ = Describe("Handler", func() {
 			Decoder:   decoder,
 
 			ConfigMapPurpose: "test config",
-			ConfigMapDataKey: "config.yaml",
+			ConfigMapDataKey: dataKey,
 			GetConfigMapNameFromShoot: func(_ *core.Shoot) string {
 				return configMap.Name
 			},
@@ -262,9 +264,16 @@ var _ = Describe("Handler", func() {
 			request.Operation = admissionv1.Update
 			request.Name = configMap.Name
 
+			configMap.Data = map[string]string{dataKey: "foo"}
 			rawConfigMap, err := runtime.Encode(encoder, configMap)
 			Expect(err).NotTo(HaveOccurred())
 			request.Object.Raw = rawConfigMap
+
+			oldConfigMap := configMap.DeepCopy()
+			oldConfigMap.Data = map[string]string{dataKey: "bar"}
+			rawOldConfigMap, err := runtime.Encode(encoder, oldConfigMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.OldObject.Raw = rawOldConfigMap
 		})
 
 		It("should allow because the operation is not update", func() {
@@ -294,6 +303,11 @@ var _ = Describe("Handler", func() {
 
 		It("should return an error because the ConfigMap does not contain the data key", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+			emptyConfigMap := configMap.DeepCopy()
+			emptyConfigMap.Data = map[string]string{}
+			rawEmptyConfigMap, err := runtime.Encode(encoder, emptyConfigMap)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = rawEmptyConfigMap
 
 			response := handler.Handle(ctx, request)
 			Expect(response.Allowed).To(BeFalse())
