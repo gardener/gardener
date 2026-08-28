@@ -262,6 +262,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 									"--enable-leader-election",
 									"--zap-log-level=info",
 									"--zap-time-encoding=rfc3339nano",
+									"--feature-gates=-operator.networkpolicy",
 								},
 								Env: []corev1.EnvVar{
 									{

@@ -401,6 +401,9 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					DisablePrometheusAnnotations: true,
 				},
 			},
+			NetworkPolicy: otelv1beta1.NetworkPolicy{
+				Enabled: new(false),
+			},
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:             o.values.Image,
 				Replicas:          new(o.values.Replicas),
