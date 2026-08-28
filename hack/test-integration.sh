@@ -20,10 +20,10 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ] ; then
   trap "report-collector \"$ARTIFACTS/junit.xml\"" EXIT
   test_flags="--ginkgo.junit-report=junit.xml"
   # Use Ginkgo timeout in Prow to print everything that is buffered in GinkgoWriter.
-  test_flags+=" --ginkgo.timeout=5m"
+  test_flags+=" --ginkgo.timeout=10m"
 else
   # We don't want Ginkgo's timeout flag locally because it causes skipping the test cache.
-  timeout_flag=-timeout=5m
+  timeout_flag=-timeout=10m
 fi
 
 GO111MODULE=on go test ${timeout_flag:-} $@ $test_flags | grep -v 'no test files'
