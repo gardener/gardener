@@ -16,7 +16,7 @@ limitations under the License.
 This file was copied and modified from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/controller/certificates/approver/sarapprove.go
 
-Modifications Copyright SAP SE or an SAP affiliate company and Gardener contributors
+Modifications Contributors to the Gardener project
 */
 
 package certificatesigningrequest

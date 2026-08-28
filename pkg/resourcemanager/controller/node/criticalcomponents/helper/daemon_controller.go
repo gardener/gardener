@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// Modifications Contributors to the Gardener project
 
 // This file contains several helper functions copied from the DaemonSet controller for determining which Nodes should
 // run daemon pods.

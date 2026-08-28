@@ -1,5 +1,5 @@
 --[[ 
-SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+SPDX-FileCopyrightText: Contributors to the Gardener project
 SPDX-License-Identifier: Apache-2.0
 --]]
 function add_kubernetes_namespace_name_to_record(tag, timestamp, record)
