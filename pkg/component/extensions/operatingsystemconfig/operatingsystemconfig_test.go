@@ -239,7 +239,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 				if worker.CRI != nil {
 					for _, cr := range worker.CRI.ContainerRuntimes {
-						oscLabels[fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)] = "true"
+						oscLabels[fmt.Sprintf("containerruntime.worker.gardener.cloud/%s", cr.Type)] = "true"
 					}
 				}
 

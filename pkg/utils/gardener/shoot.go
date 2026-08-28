@@ -201,6 +201,22 @@ func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEn
 	return labels
 }
 
+// OperatingSystemConfigLabelsForWorkerPool returns a map of all gardener-managed labels for an OperatingSystemConfig resource for the given worker pool.
+func OperatingSystemConfigLabelsForWorkerPool(workerPool gardencorev1beta1.Worker) map[string]string {
+	labels := map[string]string{
+		v1beta1constants.LabelWorkerPool:                                    workerPool.Name,
+		v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
+	}
+
+	if workerPool.CRI != nil {
+		for _, cr := range workerPool.CRI.ContainerRuntimes {
+			labels[fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)] = "true"
+		}
+	}
+
+	return labels
+}
+
 const (
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
 	//
