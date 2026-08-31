@@ -250,7 +250,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}))
 		})
 
-		It("should merge ExpirationDate as old classification field when lifecycle classifications are disabled", func() {
+		It("should merge ExpirationDate as legacy classification field when lifecycle classifications are disabled", func() {
 			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, false))
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{Version: "1.0.0", ExpirationDate: &newExpiryDate},

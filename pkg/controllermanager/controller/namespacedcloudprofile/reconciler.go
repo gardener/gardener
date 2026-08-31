@@ -203,17 +203,17 @@ var (
 )
 
 // mergeExpirableVersions merges one parent ExpirableVersion with a NamespacedCloudProfile override.
-// Old classification fields are kept while lifecycle classifications are disabled; otherwise,
-// old classification fields are migrated so they can merge with lifecycle classifications.
+// Legacy classification fields are kept while lifecycle classifications are disabled; otherwise,
+// legacy classification fields are migrated so they can merge with lifecycle classifications.
 func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
 	if !features.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
-		return mergeOldClassificationFields(base, override)
+		return mergeLegacyClassificationFields(base, override)
 	}
 
 	migratedBase := migrateVersionToLifecycles(base)
 	migratedOverride := migrateVersionToLifecycles(override)
 
-	allowAdditionalLifecycleClassifications := v1beta1helper.IsUsingLegacyClassifications(override)
+	allowAdditionalLifecycleClassifications := v1beta1helper.UsesLegacyClassifications(override)
 
 	if allowAdditionalLifecycleClassifications && override.Classification != nil {
 		migratedBase.Lifecycle = removeImplicitLaterLifecycleClassifications(migratedBase.Lifecycle, migratedOverride.Lifecycle[0].Classification)
@@ -233,9 +233,9 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 	return migratedBase
 }
 
-// mergeOldClassificationFields merges old classification fields without producing lifecycle classifications.
+// mergeLegacyClassificationFields merges legacy classification fields without producing lifecycle classifications.
 // This is required while VersionClassificationLifecycle is disabled because lifecycle is rejected by API validation.
-func mergeOldClassificationFields(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
+func mergeLegacyClassificationFields(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
 	base.Lifecycle = nil
 	if override.Classification != nil {
 		base.Classification = override.Classification
@@ -247,7 +247,7 @@ func mergeOldClassificationFields(base, override gardencorev1beta1.ExpirableVers
 }
 
 // removeImplicitLaterLifecycleClassifications removes implicit no-start lifecycle classifications that are later than the
-// old classification override. Without this, an old classification such as preview
+// legacy classification override. Without this, a legacy classification such as preview
 // would be immediately superseded by the parent default supported stage during migration.
 func removeImplicitLaterLifecycleClassifications(stages []gardencorev1beta1.LifecycleStage, classification gardencorev1beta1.VersionClassification) []gardencorev1beta1.LifecycleStage {
 	classificationStage := gardencorev1beta1.LifecycleStage{Classification: classification}
