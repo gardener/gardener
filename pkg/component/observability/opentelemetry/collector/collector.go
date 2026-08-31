@@ -56,6 +56,9 @@ const (
 	tlsMountPath             = "/tls"
 	tlsCertificateVolumeName = "tls-certificate"
 
+	caBundleVolumeName = "ca-bundle"
+	caBundleMountPath  = "/etc/otel/tls"
+
 	metricsPort                    = 8888
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
@@ -135,6 +138,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
 		ingressTLSSecret                 *corev1.Secret
+		caBundle                         *corev1.Secret
 		loggingAgentShootAccessSecret    = o.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
 		shootObjects                     = []client.Object{}
@@ -163,7 +167,8 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		caBundle, found := o.secretsManager.Get(o.values.SecretNameServerCA)
+		var found bool
+		caBundle, found = o.secretsManager.Get(o.values.SecretNameServerCA)
 		if !found {
 			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
 		}
@@ -180,6 +185,12 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 
 		seedObjects = append(seedObjects, istioResources...)
+	} else if o.values.SecretNameServerCA != "" {
+		var found bool
+		caBundle, found = o.secretsManager.Get(o.values.SecretNameServerCA)
+		if !found {
+			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
+		}
 	}
 
 	if o.values.ShootNodeLoggingEnabled {
@@ -212,7 +223,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 	}
 
-	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName, ingressTLSSecret))
+	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName, ingressTLSSecret, caBundle))
 	seedObjects = append(seedObjects, o.serviceMonitor())
 	seedObjects = append(seedObjects, o.serviceAccount())
 	seedObjects = append(seedObjects, o.vpa())
@@ -386,7 +397,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 	}
 }
 
-func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string, ingressTLSSecret *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
+func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string, ingressTLSSecret *corev1.Secret, caBundle *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
@@ -515,33 +526,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 				},
 				Exporters: otelv1beta1.AnyConfig{
-					Object: map[string]any{
-						"loki": map[string]any{
-							"endpoint": lokiEndpoint,
-							"default_labels_enabled": map[string]any{
-								"exporter": false,
-								"job":      false,
-							},
-							"sending_queue": map[string]any{
-								"queue_size": 16777216,
-								"sizer":      "bytes",
-								"batch": map[string]any{
-									"flush_timeout": "1s",
-									"max_size":      4194304,
-									"sizer":         "bytes",
-								},
-							},
-						},
-						"debug/logs": map[string]any{
-							"verbosity": "basic",
-						},
-						"otlphttp/victorialogs": map[string]any{
-							"logs_endpoint": "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint,
-							"headers": map[string]any{
-								"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
-							},
-						},
-					},
+					Object: o.buildExporters(lokiEndpoint, caBundle),
 				},
 				Service: otelv1beta1.Service{
 					Telemetry: &otelv1beta1.AnyConfig{
@@ -626,6 +611,26 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		}
 	}
 
+	if caBundle != nil {
+		obj.Spec.Volumes = append(obj.Spec.Volumes, corev1.Volume{
+			Name: caBundleVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: caBundle.Name,
+					Items: []corev1.KeyToPath{{
+						Key:  secrets.DataKeyCertificateBundle,
+						Path: secrets.DataKeyCertificateBundle,
+					}},
+				},
+			},
+		})
+		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{
+			Name:      caBundleVolumeName,
+			MountPath: caBundleMountPath,
+			ReadOnly:  true,
+		})
+	}
+
 	// We want these annotations to be passed down to the service that will be created by the OpenTelemetry Operator.
 	// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
 	// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
@@ -644,6 +649,46 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	return obj
+}
+
+func (o *otelCollector) buildExporters(lokiEndpoint string, caBundle *corev1.Secret) map[string]any {
+	vlLogsEndpoint := "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint
+
+	lokiExporter := map[string]any{
+		"endpoint": lokiEndpoint,
+		"default_labels_enabled": map[string]any{
+			"exporter": false,
+			"job":      false,
+		},
+		"sending_queue": map[string]any{
+			"queue_size": 16777216,
+			"sizer":      "bytes",
+			"batch": map[string]any{
+				"flush_timeout": "1s",
+				"max_size":      4194304,
+				"sizer":         "bytes",
+			},
+		},
+	}
+
+	vlExporter := map[string]any{
+		"logs_endpoint": vlLogsEndpoint,
+		"headers": map[string]any{
+			"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
+		},
+	}
+
+	if caBundle != nil {
+		caFile := path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle)
+		vlExporter["logs_endpoint"] = "https://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint
+		vlExporter["tls"] = map[string]any{"ca_file": caFile}
+	}
+
+	return map[string]any{
+		"loki":                  lokiExporter,
+		"debug/logs":            map[string]any{"verbosity": "basic"},
+		"otlphttp/victorialogs": vlExporter,
+	}
 }
 
 func (o *otelCollector) injectRBACProxyContainers(obj *otelv1beta1.OpenTelemetryCollector, valiRBACProxyArgs []string, otlpRBACProxyArgs []string) {
