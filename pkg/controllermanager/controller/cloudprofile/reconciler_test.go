@@ -236,7 +236,7 @@ var _ = Describe("Reconciler", func() {
 			moreFuture = &metav1.Time{Time: now.Add(48 * time.Hour)}
 		})
 
-		It("should reconcile status of old classifications and requeue due to expiration date", func() {
+		It("should reconcile status of legacy classifications and requeue due to expiration date", func() {
 			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{
 					Version:        "1.28.2",
