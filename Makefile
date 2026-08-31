@@ -252,7 +252,7 @@ DEV_SETUP_WITH_LPP_RESIZE_SUPPORT        ?= false
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT ?= false
 IPFAMILY                                 ?= ipv4
 
-kind-% gind-% operator-% gardener-% garden-% seed-% seed2-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
+kind-% gind-% gink-% operator-% gardener-% garden-% seed-% seed2-% ci-e2e-kind: export IPFAMILY := $(IPFAMILY)
 kind-%: export WITH_LPP_RESIZE_SUPPORT := $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
 
 export KUBECONFIG_RUNTIME_CLUSTER         := $(DEV_SETUP)/kubeconfigs/runtime/kubeconfig
@@ -301,6 +301,10 @@ kind2-down: kind-single-node2-down
 # gind-{up,down}
 gind-up gind-down: $(YQ)
 	$(DEV_SETUP)/gind.sh $(subst gind-,,$@)
+
+# gink-{up,down}
+gink-up gink-down: $(YQ)
+	$(DEV_SETUP)/gink.sh $(subst gink-,,$@)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
