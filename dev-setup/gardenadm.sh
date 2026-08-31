@@ -11,7 +11,7 @@ VALID_COMMANDS=("up" "down")
 
 SCENARIO="${SCENARIO:-unmanaged-infra}"
 NETWORK_PROVIDER="${NETWORK_PROVIDER:-calico}"
-VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect" "connect-kind")
+VALID_SCENARIOS=("unmanaged-infra" "managed-infra" "connect" "connect-kind" "connect-managed")
 
 function skaffold_profiles() {
   local profiles=(
@@ -49,6 +49,9 @@ garden_runtime_cluster_kubeconfig="$KUBECONFIG_RUNTIME_CLUSTER"
 if [[ "$SCENARIO" == "connect" ]]; then
   garden_runtime_cluster_kubeconfig="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
   ./hack/usage/generate-kubeconfig.sh self-hosted-shoot --docker gind-machine-0 > "$garden_runtime_cluster_kubeconfig"
+elif [[ "$SCENARIO" == "connect-managed" ]]; then
+  garden_runtime_cluster_kubeconfig="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
+  ./hack/usage/generate-kubeconfig.sh self-hosted-shoot | grep -v "namespace: kube-system" > "$garden_runtime_cluster_kubeconfig"
 fi
 
 case "$COMMAND" in
@@ -92,7 +95,7 @@ case "$COMMAND" in
     ;;
 
   down)
-    if [[ "$SCENARIO" != "connect" ]]; then
+    if [[ "$SCENARIO" != "connect" && "$SCENARIO" != "connect-managed" ]]; then
       skaffold delete \
         -n "gardenadm-$SCENARIO"
     else
