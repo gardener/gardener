@@ -6,3 +6,6 @@ resources:
 
 components:
 - ../../components/kubeconfigs/seed-root
+
+patches:
+- path: patch-managedseed.yaml
