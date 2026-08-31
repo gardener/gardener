@@ -258,6 +258,11 @@ func removeImplicitLaterLifecycleClassifications(stages []gardencorev1beta1.Life
 	})
 }
 
+// adjustLifecycleStartTimes keeps the merged lifecycle valid after a NamespacedCloudProfile
+// overrides the StartTime of one or more lifecycle stages.
+//
+// If an overridden StartTime would make an earlier stage start later than it, or a later
+// stage start earlier than it, the neighboring stages are moved to the overridden time.
 func adjustLifecycleStartTimes(base, override []gardencorev1beta1.LifecycleStage) {
 	for _, overrideStage := range override {
 		if overrideStage.StartTime == nil {
@@ -268,15 +273,25 @@ func adjustLifecycleStartTimes(base, override []gardencorev1beta1.LifecycleStage
 			comparison := compareLifecycleStages(base[i], overrideStage)
 
 			switch {
-			case comparison < 0 && base[i].StartTime != nil && overrideStage.StartTime.Before(base[i].StartTime):
+			// Earlier lifecycle stages must not start after the overridden stage.
+			// Move them back to the overridden StartTime if necessary.
+			case comparison < 0 &&
+				base[i].StartTime != nil &&
+				overrideStage.StartTime.Before(base[i].StartTime):
 				base[i].StartTime = overrideStage.StartTime
-			case comparison > 0 && (base[i].StartTime == nil || base[i].StartTime.Before(overrideStage.StartTime)):
+
+			// Later lifecycle stages must not start before the overridden stage.
+			// Move them forward to the overridden StartTime if necessary.
+			case comparison > 0 &&
+				(base[i].StartTime == nil || base[i].StartTime.Before(overrideStage.StartTime)):
 				base[i].StartTime = overrideStage.StartTime
 			}
 		}
 	}
 }
 
+// compareLifecycleStages returns the order of two lifecycle stages.
+// The lifecycle order is: unavailable < preview < supported < deprecated < expired.
 func compareLifecycleStages(a, b gardencorev1beta1.LifecycleStage) int {
 	order := map[gardencorev1beta1.VersionClassification]int{
 		gardencorev1beta1.ClassificationUnavailable: 0,
@@ -288,6 +303,8 @@ func compareLifecycleStages(a, b gardencorev1beta1.LifecycleStage) int {
 	return order[a.Classification] - order[b.Classification]
 }
 
+// mergeClassificationLifecycles applies a NamespacedCloudProfile override to an existing
+// lifecycle stage.
 func mergeClassificationLifecycles(base, override gardencorev1beta1.LifecycleStage) gardencorev1beta1.LifecycleStage {
 	if override.StartTime != nil {
 		base.StartTime = override.StartTime
