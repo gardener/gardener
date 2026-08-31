@@ -323,7 +323,7 @@ func GetMachineImageDiff(oldImages, newImages []core.MachineImage) MachineImageD
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+		// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
 		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
 		if (version.Classification == nil || *version.Classification != classification) &&
 			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {

@@ -397,7 +397,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			}).Should(Succeed())
 		})
 
-		It("should update the NamespacedCloudProfile status on CloudProfile spec update with old classification", func() {
+		It("should update the NamespacedCloudProfile status on CloudProfile spec update with legacy classification", func() {
 			deprecated := gardencorev1beta1.ClassificationDeprecated
 			preview := gardencorev1beta1.ClassificationPreview
 
