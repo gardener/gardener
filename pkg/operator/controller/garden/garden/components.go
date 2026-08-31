@@ -397,7 +397,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings)
+	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, secretsManager)
 	if err != nil {
 		return
 	}
@@ -1504,7 +1504,7 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 	return deployer, nil
 }
 
-func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	deployer, err := sharedcomponent.NewVictoriaLogs(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1517,6 +1517,8 @@ func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings) (compo
 			Enabled:     pvcAutoscalerEnabled(settings),
 			MaxCapacity: resource.MustParse("200Gi"),
 		},
+		secretsManager,
+		operatorv1alpha1.SecretNameCARuntime,
 	)
 	if err != nil {
 		return nil, err
