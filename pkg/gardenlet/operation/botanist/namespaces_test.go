@@ -225,6 +225,42 @@ var _ = Describe("Namespaces", func() {
 			))
 		})
 
+		It("should successfully deploy the namespace with container runtime labels from worker pools", func() {
+			defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+				{
+					Name: "worker-1",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "kata"},
+							{Type: "gvisor"},
+						},
+					},
+				},
+				{
+					Name: "worker-2",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "gvisor"},
+						},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+			defaultExpectations("", 1)
+			Expect(botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("extensions.gardener.cloud/kata", "true"),
+				HaveKeyWithValue("extensions.gardener.cloud/gvisor", "true"),
+			))
+		})
+
 		It("should successfully deploy the namespace when failure tolerance type is zone", func() {
 			defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 				HighAvailability: &gardencorev1beta1.HighAvailability{

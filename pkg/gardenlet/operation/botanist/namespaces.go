@@ -293,7 +293,7 @@ func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.
-// The function considers only extensions of kind `Extension`.
+// The function considers extensions of kind `Extension` and `ContainerRuntime`.
 func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set[string], error) {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
@@ -314,6 +314,14 @@ func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set
 			types.Delete(extension.Type)
 		} else {
 			types.Insert(extension.Type)
+		}
+	}
+
+	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		if worker.CRI != nil {
+			for _, cr := range worker.CRI.ContainerRuntimes {
+				types.Insert(cr.Type)
+			}
 		}
 	}
 
