@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/go-logr/logr"
 )
 
 // Reconciler reconciles NamespacedCloudProfiles.
@@ -55,7 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if namespacedCloudProfile.DeletionTimestamp != nil {
-		return r.delete(ctx, namespacedCloudProfile)
+		return r.delete(ctx, log, namespacedCloudProfile)
 	}
 
 	if !controllerutil.ContainsFinalizer(namespacedCloudProfile, gardencorev1beta1.GardenerName) {
@@ -86,9 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 // delete deletes the NamespacedCloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
 // no Shoots are assigned to the CloudProfile anymore.
 // If this is the case, the controller will remove the finalizers from the NamespacedCloudProfile so that it can be garbage collected.
-func (r *Reconciler) delete(ctx context.Context, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) (reconcile.Result, error) {
-	log := logf.FromContext(ctx)
-
+func (r *Reconciler) delete(ctx context.Context, log logr.Logger, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) (reconcile.Result, error) {
 	if !sets.New(namespacedCloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
