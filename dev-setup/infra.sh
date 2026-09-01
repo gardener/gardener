@@ -190,6 +190,32 @@ EOF
       fi
     }
 
+    # Write the gardener-local-registry-ca Secret (referenced via caBundleSecretRef by the gardenlet and
+    # provider-local extension) from the current CA.
+    write_registry_ca_secrets() {
+      local ca_crt="$DIR_REGISTRY_TLS/ca.crt"
+      [[ -f "$ca_crt" ]] || return 0
+
+      local dest
+      for dest in \
+        "$(dirname "$0")/gardenlet/base/secret-registry-ca.yaml" \
+        "$(dirname "$0")/extensions/provider-local/components/extension/secret-registry-ca.yaml"; do
+        cat > "$dest" <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gardener-local-registry-ca
+  namespace: garden
+  labels:
+    gardener.cloud/role: oci-ca-bundle
+type: Opaque
+stringData:
+  bundle.crt: |
+$(sed 's/^/    /' "$ca_crt")
+EOF
+      done
+    }
+
     ensure_local_registry_hosts() {
       local host="registry.local.gardener.cloud"
 
@@ -360,6 +386,8 @@ EOF
     change_registry_upstream_urls_to_prow_caches
 
     ensure_local_registry_tls
+
+    write_registry_ca_secrets
 
     docker compose -f "$INFRA_COMPOSE_FILE" up -d
 
