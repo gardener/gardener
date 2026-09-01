@@ -23,7 +23,7 @@ import (
 )
 
 // CentralScrapeConfigs returns the central ScrapeConfig resources for the shoot prometheus.
-func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bool) []*monitoringv1alpha1.ScrapeConfig {
+func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless, shootNodeLoggingEnabled bool) []*monitoringv1alpha1.ScrapeConfig {
 	out := []*monitoringv1alpha1.ScrapeConfig{
 		// We fetch kubelet metrics from seed's kube-system Prometheus and filter the metrics in shoot's namespace.
 		{
@@ -364,7 +364,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 			},
 		)
 
-		if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
+		if shootNodeLoggingEnabled && features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 			nodeMetricsURL := fmt.Sprintf("/api/v1/nodes/${1}:%d/proxy/metrics", otelcomponent.MetricsPort)
 			out = append(out,
 				&monitoringv1alpha1.ScrapeConfig{
