@@ -209,27 +209,30 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 		return mergeLegacyClassificationFields(base, override)
 	}
 
-	migratedBase := migrateVersionToLifecycles(base)
-	migratedOverride := migrateVersionToLifecycles(override)
+	baseLifecycle := v1beta1helper.ToLifecycleStages(base)
+	overrideLifecycle := v1beta1helper.ToLifecycleStages(override)
 
 	allowAdditionalLifecycleClassifications := v1beta1helper.UsesLegacyClassifications(override)
 
 	if allowAdditionalLifecycleClassifications && override.Classification != nil {
-		migratedBase.Lifecycle = removeImplicitLaterLifecycleClassifications(migratedBase.Lifecycle, migratedOverride.Lifecycle[0].Classification)
+		baseLifecyle = removeImplicitLaterLifecycleClassifications(baseLifecyle, overrideLifecycle[0].Classification)
 	}
 
-	migratedBase.Lifecycle = mergeDeep(
-		migratedBase.Lifecycle,
-		migratedOverride.Lifecycle,
+	baseLifecyle = mergeDeep(
+		baseLifecyle,
+		overrideLifecycle,
 		classificationLifecycleKeyFunc,
 		mergeClassificationLifecycles,
 		allowAdditionalLifecycleClassifications,
 	)
 
-	slices.SortFunc(migratedBase.Lifecycle, compareLifecycleStages)
-	adjustLifecycleStartTimes(migratedBase.Lifecycle, migratedOverride.Lifecycle)
+	slices.SortFunc(baseLifecyle, compareLifecycleStages)
+	adjustLifecycleStartTimes(baseLifecyle, overrideLifecycle)
 
-	return migratedBase
+	return gardencorev1beta1.ExpirableVersion{
+		Version:   base.Version,
+		Lifecycle: baseLifecyle,
+	}
 }
 
 // mergeLegacyClassificationFields merges legacy classification fields without producing lifecycle classifications.
@@ -309,32 +312,6 @@ func mergeClassificationLifecycles(base, override gardencorev1beta1.LifecycleSta
 		base.StartTime = override.StartTime
 	}
 	return base
-}
-
-// migrateVersionToLifecycles converts a legacy ExpirableVersion using Classification or ExpirationDate
-// to lifecycle classifications. If lifecycle classifications are already set, it returns the version unchanged.
-func migrateVersionToLifecycles(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
-	if len(version.Lifecycle) > 0 {
-		return version
-	}
-
-	result := gardencorev1beta1.ExpirableVersion{
-		Version: version.Version,
-		Lifecycle: []gardencorev1beta1.LifecycleStage{
-			{
-				Classification: v1beta1helper.CurrentLifecycleClassification(version),
-			},
-		},
-	}
-
-	if version.ExpirationDate != nil {
-		result.Lifecycle = append(result.Lifecycle, gardencorev1beta1.LifecycleStage{
-			Classification: gardencorev1beta1.ClassificationExpired,
-			StartTime:      version.ExpirationDate,
-		})
-	}
-
-	return result
 }
 
 func mergeMachineImages(base, override gardencorev1beta1.MachineImage) gardencorev1beta1.MachineImage {
