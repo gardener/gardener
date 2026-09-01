@@ -212,26 +212,26 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 	baseLifecycle := v1beta1helper.ToLifecycleStages(base)
 	overrideLifecycle := v1beta1helper.ToLifecycleStages(override)
 
-	allowAdditionalLifecycleClassifications := v1beta1helper.UsesLegacyClassifications(override)
-
-	if allowAdditionalLifecycleClassifications && override.Classification != nil {
-		baseLifecyle = removeImplicitLaterLifecycleClassifications(baseLifecyle, overrideLifecycle[0].Classification)
+	// If the override starts with an implicit stage, remove higher implicit stages from the base.
+	// Otherwise, they would immediately override it.
+	if len(overrideLifecycle) > 0 && overrideLifecycle[0].StartTime == nil {
+		baseLifecycle = removeImplicitLaterStages(baseLifecycle, overrideLifecycle[0].Classification)
 	}
 
-	baseLifecyle = mergeDeep(
-		baseLifecyle,
+	baseLifecycle = mergeDeep(
+		baseLifecycle,
 		overrideLifecycle,
 		classificationLifecycleKeyFunc,
 		mergeClassificationLifecycles,
-		allowAdditionalLifecycleClassifications,
+		true,
 	)
 
-	slices.SortFunc(baseLifecyle, compareLifecycleStages)
-	adjustLifecycleStartTimes(baseLifecyle, overrideLifecycle)
+	slices.SortFunc(baseLifecycle, compareLifecycleStages)
+	adjustLifecycleStartTimes(baseLifecycle, overrideLifecycle)
 
 	return gardencorev1beta1.ExpirableVersion{
 		Version:   base.Version,
-		Lifecycle: baseLifecyle,
+		Lifecycle: baseLifecycle,
 	}
 }
 
@@ -248,10 +248,13 @@ func mergeLegacyClassificationFields(base, override gardencorev1beta1.ExpirableV
 	return base
 }
 
-// removeImplicitLaterLifecycleClassifications removes implicit no-start lifecycle classifications that are later than the
-// legacy classification override. Without this, a legacy classification such as preview
-// would be immediately superseded by the parent default supported stage during migration.
-func removeImplicitLaterLifecycleClassifications(stages []gardencorev1beta1.LifecycleStage, classification gardencorev1beta1.VersionClassification) []gardencorev1beta1.LifecycleStage {
+// removeImplicitLaterStages removes implicit lifecycle stages (stages with StartTime == nil)
+// from the base lifecycle that rank higher in lifecycle order than the given classification.
+//
+// For example, if the base has an implicit 'supported' stage (from defaulting) and the override
+// introduces an initial 'preview' stage without a StartTime, the implicit 'supported' stage is
+// removed so that 'preview' is not immediately superseded.
+func removeImplicitLaterStages(stages []gardencorev1beta1.LifecycleStage, classification gardencorev1beta1.VersionClassification) []gardencorev1beta1.LifecycleStage {
 	classificationStage := gardencorev1beta1.LifecycleStage{Classification: classification}
 	return slices.DeleteFunc(stages, func(stage gardencorev1beta1.LifecycleStage) bool {
 		isImplicitStage := stage.StartTime == nil
