@@ -104,7 +104,7 @@ var _ = Describe("health check", func() {
 
 		tests := func(shoot *gardencorev1beta1.Shoot, names []any, isWorkerless bool) {
 			It("should return expected deployments for shoot", func() {
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
@@ -125,7 +125,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA)
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
@@ -144,10 +144,28 @@ var _ = Describe("health check", func() {
 					},
 				}
 
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA)
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
+			})
+
+			It("should not include VPA deployments when shoot is garden", func() {
+				if isWorkerless {
+					return
+				}
+
+				shootWithVPA := shoot.DeepCopy()
+				shootWithVPA.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+						Enabled: true,
+					},
+				}
+
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA, true)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
 			})
 
 		}

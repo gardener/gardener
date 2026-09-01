@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
@@ -431,7 +432,16 @@ func (h *Health) checkControlPlane(
 		return exitCondition, nil
 	}
 
-	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo())
+	shootIsGarden := false
+	if h.shoot.IsSelfHosted() {
+		var err error
+		shootIsGarden, err = gardenletutils.ClusterIsGarden(ctx, h.seedClient.Client())
+		if err != nil {
+			return nil, fmt.Errorf("failed checking whether shoot is garden: %w", err)
+		}
+	}
+
+	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo(), shootIsGarden)
 	if err != nil {
 		return nil, err
 	}
@@ -1118,7 +1128,7 @@ func cosmeticMachineMessage(numberOfMachines int) string {
 }
 
 // ComputeRequiredControlPlaneDeployments returns names of required deployments based on the given shoot.
-func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
+func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot, shootIsGarden bool) (sets.Set[string], error) {
 	requiredControlPlaneDeployments := commonControlPlaneDeployments.Clone()
 
 	if !v1beta1helper.IsWorkerless(shoot) {
@@ -1129,7 +1139,7 @@ func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 		}
 
-		if v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+		if !shootIsGarden && v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
 			for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
 				requiredControlPlaneDeployments.Insert(vpaDeployment)
 			}
