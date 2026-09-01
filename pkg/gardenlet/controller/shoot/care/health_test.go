@@ -99,7 +99,27 @@ var _ = Describe("health check", func() {
 				"kube-apiserver",
 				"kube-controller-manager",
 			}
-			commonDeploymentNames = append(workerlessDeploymentNames, "kube-scheduler", "machine-controller-manager")
+			baseWorkerDeploymentNames = []any{
+				"gardener-resource-manager",
+				"kube-apiserver",
+				"kube-controller-manager",
+				"kube-scheduler",
+			}
+			managedInfraDeploymentNames = []any{
+				"gardener-resource-manager",
+				"kube-apiserver",
+				"kube-controller-manager",
+				"kube-scheduler",
+				"machine-controller-manager",
+			}
+			managedInfraShoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SecretBindingName: new("test-binding"),
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{Name: "worker"}},
+					},
+				},
+			}
 		)
 
 		tests := func(shoot *gardencorev1beta1.Shoot, names []any, isWorkerless bool) {
@@ -108,27 +128,6 @@ var _ = Describe("health check", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
-			})
-
-			It("should return expected deployments for shoot with Cluster Autoscaler", func() {
-				if isWorkerless {
-					return
-				}
-
-				expectedDeploymentNames := append(names, "cluster-autoscaler")
-				shootWithCA := shoot.DeepCopy()
-				shootWithCA.Spec.Provider.Workers = []gardencorev1beta1.Worker{
-					{
-						Name:    "worker",
-						Minimum: 0,
-						Maximum: 1,
-					},
-				}
-
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA, false)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
 			})
 
 			It("should return expected deployments for shoot with VPA", func() {
@@ -167,11 +166,27 @@ var _ = Describe("health check", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
 			})
-
 		}
 
-		Context("shoot", func() {
-			tests(shoot, commonDeploymentNames, false)
+		Context("shoot without managed infrastructure", func() {
+			tests(shoot, baseWorkerDeploymentNames, false)
+		})
+
+		Context("shoot with managed infrastructure", func() {
+			tests(managedInfraShoot, managedInfraDeploymentNames, false)
+
+			It("should include cluster-autoscaler when workers have maximum > 0", func() {
+				shootWithCA := managedInfraShoot.DeepCopy()
+				shootWithCA.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{Name: "worker", Minimum: 0, Maximum: 1},
+				}
+
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA, false)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deploymentNames.UnsortedList()).To(ConsistOf(
+					append(managedInfraDeploymentNames, "cluster-autoscaler")...))
+			})
 		})
 
 		Context("workerless shoot", func() {

@@ -1133,10 +1133,12 @@ func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot, shoo
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
-		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
 
-		if v1beta1helper.ShootWantsClusterAutoscaler(shoot) {
-			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
+		if v1beta1helper.HasManagedInfrastructure(shoot) {
+			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
+			if v1beta1helper.ShootWantsClusterAutoscaler(shoot) {
+				requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
+			}
 		}
 
 		if !shootIsGarden && v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
