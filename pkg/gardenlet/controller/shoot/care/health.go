@@ -707,7 +707,7 @@ func (h *Health) checkWorkers(
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
 func ComputeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
 	requiredDeployments := commonMonitoringDeployments.Clone()
-	if v1beta1helper.IsWorkerless(shoot) {
+	if v1beta1helper.IsWorkerless(shoot) || v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
 

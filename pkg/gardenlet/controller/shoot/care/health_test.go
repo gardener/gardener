@@ -202,6 +202,19 @@ var _ = Describe("health check", func() {
 		It("should return expected deployments for workerless shoot", func() {
 			Expect(ComputeRequiredMonitoringSeedDeployments(workerlessShoot).UnsortedList()).To(BeEmpty())
 		})
+
+		It("should return expected deployments for self-hosted shoot", func() {
+			selfHostedShoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Name: "worker", ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
+						},
+					},
+				},
+			}
+			Expect(ComputeRequiredMonitoringSeedDeployments(selfHostedShoot).UnsortedList()).To(BeEmpty())
+		})
 	})
 
 	DescribeTable("#PardonCondition",
