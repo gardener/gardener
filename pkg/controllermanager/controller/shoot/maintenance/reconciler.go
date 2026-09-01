@@ -706,12 +706,10 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 				isSuccessful: true,
 			}
 		} else {
-			reason := "ETCD encryption key rotation is already in progress"
-			maintenanceResults[v1beta1constants.OperationRotateETCDEncryptionKey] = updateResult{
-				description:  "Could not start ETCD encryption key rotation",
-				reason:       reason,
-				isSuccessful: false,
-			}
+			// A new rotation cannot be started while another one is still in progress. This is not a maintenance
+			// failure though: the etcd encryption key is already being rotated, so the rotation is simply skipped and
+			// reevaluated in the next maintenance window.
+			log.Info("Skipping automatic rotation of ETCD encryption key because a rotation is already in progress", "phase", etcdEncryptionKeyRotationPhase)
 		}
 	}
 
