@@ -370,9 +370,9 @@ var _ = Describe("buildRef", func() {
 			&gardencorev1.OCIRepository{Repository: new("oci://example.com/foo"), Tag: new("1.0.0"), Digest: new(digest)},
 			mustNewDigest("example.com/foo@"+digest),
 		),
-		Entry("configure insecure in local setup when using registry.local.gardener.cloud",
+		Entry("local registry ref is parsed without forcing insecure",
 			&gardencorev1.OCIRepository{Ref: new("registry.local.gardener.cloud:5001/foo:1.0.0")},
-			name.MustParseReference("registry.local.gardener.cloud:5001/foo:1.0.0", name.Insecure),
+			mustNewTag("registry.local.gardener.cloud:5001/foo:1.0.0"),
 		),
 	)
 })
