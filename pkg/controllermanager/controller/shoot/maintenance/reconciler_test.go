@@ -1637,25 +1637,28 @@ var _ = Describe("Shoot Maintenance", func() {
 			}))
 		})
 
-		It("should fail etcd encryption key rotation when etcd key rotation is in progress", func() {
-			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
-			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0
-			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
-				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
-					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
-						Phase: gardencorev1beta1.RotationPrepared,
+		DescribeTable("should not attempt etcd encryption key rotation when a rotation is already in progress",
+			func(phase gardencorev1beta1.CredentialsRotationPhase) {
+				shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
+				shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0
+				shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+							Phase: phase,
+						},
 					},
-				},
-			}
-			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
+				}
+				results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
-			Expect(results).To(HaveLen(1))
-			Expect(results["rotate-etcd-encryption-key"]).To(Equal(updateResult{
-				description:  "Could not start ETCD encryption key rotation",
-				reason:       "ETCD encryption key rotation is already in progress",
-				isSuccessful: false,
-			}))
-		})
+				Expect(results).To(BeEmpty())
+			},
+
+			Entry("preparing", gardencorev1beta1.RotationPreparing),
+			Entry("preparing without workers rollout", gardencorev1beta1.RotationPreparingWithoutWorkersRollout),
+			Entry("waiting for workers rollout", gardencorev1beta1.RotationWaitingForWorkersRollout),
+			Entry("prepared", gardencorev1beta1.RotationPrepared),
+			Entry("completing", gardencorev1beta1.RotationCompleting),
+		)
 
 		It("should not attempt etcd encryption key rotation when shoot is hibernated", func() {
 			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
