@@ -62,14 +62,21 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkingProvider, *b.Shoot.GetInfo().Spec.Networking.Type)
 		}
 
-		// Remove all old extension labels before reconciling the new extension labels.
+		// Remove all old extension and container runtime labels before reconciling the new labels.
 		for k := range namespace.Labels {
-			if strings.HasPrefix(k, v1beta1constants.LabelExtensionPrefix) {
+			if strings.HasPrefix(k, v1beta1constants.LabelExtensionPrefix) || strings.HasPrefix(k, extensionsv1alpha1.ContainerRuntimeNameWorkerLabelPrefix) {
 				delete(namespace.Labels, k)
 			}
 		}
 		for extensionType := range requiredExtensions {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelExtensionPrefix+extensionType, "true")
+		}
+		for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+			if worker.CRI != nil {
+				for _, cr := range worker.CRI.ContainerRuntimes {
+					metav1.SetMetaDataLabel(&namespace.ObjectMeta, fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type), "true")
+				}
+			}
 		}
 
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, seedProviderType)
@@ -293,7 +300,7 @@ func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.
-// The function considers extensions of kind `Extension` and `ContainerRuntime`.
+// The function considers only extensions of kind `Extension`.
 func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set[string], error) {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
@@ -314,14 +321,6 @@ func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set
 			types.Delete(extension.Type)
 		} else {
 			types.Insert(extension.Type)
-		}
-	}
-
-	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
-		if worker.CRI != nil {
-			for _, cr := range worker.CRI.ContainerRuntimes {
-				types.Insert(cr.Type)
-			}
 		}
 	}
 
