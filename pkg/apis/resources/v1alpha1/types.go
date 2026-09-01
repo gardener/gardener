@@ -172,6 +172,9 @@ const (
 	// scenarios where the target service can exist n-times in multiple namespaces and a component needs to talk to all
 	// of them but doesn't know the namespace names upfront.
 	NetworkingPodLabelSelectorNamespaceAlias = "networking.resources.gardener.cloud/pod-label-selector-namespace-alias"
+	// NetworkingNetworkPolicyPodSelector is a constant for an annotation on a Service which contains a label selector
+	// for the pods targeted by generated NetworkPolicy resources. If unset, the Service's pod selector is used.
+	NetworkingNetworkPolicyPodSelector = "networking.resources.gardener.cloud/network-policy-pod-selector"
 	// NetworkingFromWorldToPorts is a constant for an annotation on a Service which contains a list of ports to which
 	// ingress traffic from everywhere shall be allowed.
 	NetworkingFromWorldToPorts = "networking.resources.gardener.cloud/from-world-to-ports"

@@ -688,6 +688,19 @@ The components in namespace `b` now need to be labeled with `networking.resource
 > Obviously, this approach also works for namespace selectors different from `kubernetes.io/metadata.name` to cover scenarios where the namespace name is not known upfront or where multiple namespaces with a similar label are relevant.
 > The controller creates two dedicated policies for each namespace matching the selectors. 
 
+#### Overwriting The NetworkPolicy Target Pod Selector
+
+By default, the controller uses the `Service`'s `.spec.selector` to select the destination pods in generated ingress and egress `NetworkPolicy`s.
+If a policy should target a different or broader set of pods without changing the `Service` endpoints, annotate the `Service` with a JSON-encoded `metav1.LabelSelector`:
+
+```yaml
+metadata:
+  annotations:
+    networking.resources.gardener.cloud/network-policy-pod-selector: '{"matchLabels":{"app":"example"}}'
+```
+
+This selector is used only for the generated `NetworkPolicy`s. The `Service` continues to route traffic according to `.spec.selector`.
+
 #### `Service` Targets In Multiple Namespaces
 
 Finally, let's say there is a `Service` called `example` which exists in different namespaces whose names are not static (e.g., `foo-1`, `foo-2`), and a component in namespace `bar` wants to initiate connections with all of them.

@@ -114,6 +114,13 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
 			})
 
+			It("should return true because the network-policy-pod-selector annotation was changed", func() {
+				oldService := service.DeepCopy()
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/network-policy-pod-selector": "foo"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
+			})
+
 			It("should return true because the from-world-to-ports annotation was changed", func() {
 				oldService := service.DeepCopy()
 				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-world-to-ports": "foo"}
