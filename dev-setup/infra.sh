@@ -12,6 +12,8 @@ VALID_COMMANDS=("up" "down" "setup-loopback-devices")
 INFRA_COMPOSE_FILE="$(dirname "$0")/infra/docker-compose.yaml"
 DIR_BACKUP_BUCKET="$(dirname "$0")/../dev/local-backupbuckets"
 DIR_REGISTRY="$(dirname "$0")/../dev/local-registry"
+DIR_REGISTRY_TLS="$(dirname "$0")/infra/registry/tls"
+REGISTRY_HOST="registry.local.gardener.cloud"
 
 SUDO=""
 if [[ "$(id -u)" != "0" ]]; then
@@ -67,6 +69,78 @@ case "$COMMAND" in
     # insecure registry to allow pushing to it from the host. The insecureRegistries settings in the skaffold config
     # doesn't apply here, because skaffold uses the Docker daemon/CLI under the hood for pushing images, which only
     # considers the Docker daemon's registry configuration.
+    # The local registry serves its API over HTTPS using a self-signed CA (generated once and reused across restarts).
+    # The Go-based tools that push to it (skaffold, helm) verify the server certificate, so the CA is installed into
+    # the OS trust store below (macOS login keychain / Linux system trust store).
+    ensure_local_registry_tls() {
+      local ca_crt="$DIR_REGISTRY_TLS/ca.crt"
+      local ca_key="$DIR_REGISTRY_TLS/ca.key"
+      local tls_crt="$DIR_REGISTRY_TLS/registry.crt"
+      local tls_key="$DIR_REGISTRY_TLS/registry.key"
+
+      mkdir -p "$DIR_REGISTRY_TLS"
+
+      # Also regenerate if any certificate is expired or expires within 30 days (certs are valid for 180 days).
+      for cert_file in "$ca_crt" "$tls_crt"; do
+        if [[ -f "$cert_file" ]] && ! openssl x509 -in "$cert_file" -noout -checkend 2592000 2>/dev/null; then
+          echo "> Registry certificate $cert_file is expired or expiring soon, regenerating..."
+          rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
+          break
+        fi
+      done
+
+      if [[ ! -f "$ca_crt" || ! -f "$tls_crt" || ! -f "$tls_key" ]]; then
+        echo "> Generating self-signed CA and server certificate for $REGISTRY_HOST..."
+        local cnf
+        cnf="$(mktemp)"
+        cat > "$cnf" <<EOF
+[req]
+distinguished_name = dn
+[dn]
+[v3_ca]
+basicConstraints = critical,CA:TRUE
+subjectKeyIdentifier = hash
+keyUsage = critical,keyCertSign,cRLSign
+nameConstraints = critical,permitted;DNS:$REGISTRY_HOST,permitted;DNS:localhost,permitted;IP:127.0.0.1/255.255.255.255,permitted;IP:::1/ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+[v3_server]
+basicConstraints = CA:FALSE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = $REGISTRY_HOST
+DNS.2 = localhost
+IP.1 = 127.0.0.1
+IP.2 = ::1
+EOF
+
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 180 -nodes \
+          -set_serial 1 \
+          -keyout "$ca_key" -out "$ca_crt" \
+          -subj "/CN=Gardener Local Registry CA" \
+          -config "$cnf" -extensions v3_ca 2>/dev/null
+
+        local csr
+        csr="$(mktemp)"
+        openssl req -newkey rsa:4096 -sha256 -nodes \
+          -keyout "$tls_key" -out "$csr" \
+          -subj "/CN=$REGISTRY_HOST" -config "$cnf" 2>/dev/null
+        openssl x509 -req -in "$csr" -CA "$ca_crt" -CAkey "$ca_key" \
+          -set_serial 1 \
+          -out "$tls_crt" -days 180 -sha256 \
+          -extfile "$cnf" -extensions v3_server 2>/dev/null
+
+        rm -f "$cnf" "$csr"
+
+        # Restart the registry container if it is already running so it picks up the new cert immediately.
+        docker compose -f "$(dirname "$0")/infra/docker-compose.yaml" restart registry 2>/dev/null || true
+      else
+        echo "> Reusing existing registry TLS certificates in $DIR_REGISTRY_TLS."
+      fi
+    }
+
     ensure_local_registry_hosts() {
       local host="registry.local.gardener.cloud"
 
@@ -235,6 +309,8 @@ EOF
     setup_kind_network
 
     change_registry_upstream_urls_to_prow_caches
+
+    ensure_local_registry_tls
 
     docker compose -f "$INFRA_COMPOSE_FILE" up -d
 
