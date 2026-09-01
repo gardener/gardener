@@ -2388,7 +2388,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Entry("failed credentials rotation",
 				entry{
 					credentials:     map[string]updateResult{"ssh-keypair": {isSuccessful: false, description: "rotation prerequisites not met", reason: "Rotation period elapsed"}},
-					expectedDesc:    `(0/1) maintenance operations successful. Credentials "ssh-keypair": Automatic rotation failed. Reason for update: Rotation period elapsed`,
+					expectedDesc:    `(0/1) maintenance operations successful. Credentials "ssh-keypair": Automatic rotation failed. Reason for rotation: Rotation period elapsed`,
 					expectedFailure: `Credentials "ssh-keypair": Automatic rotation failure due to: rotation prerequisites not met`,
 				},
 			),
