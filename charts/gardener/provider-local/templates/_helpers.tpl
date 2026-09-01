@@ -1,5 +1,5 @@
 {{- define "name" -}}
-{{- if .Values.gardener.runtimeCluster.enabled -}}
+{{- if .Values.gardener.runtimeCluster -}}
 gardener-extension-provider-local-runtime
 {{- else -}}
 gardener-extension-provider-local

@@ -84,8 +84,6 @@ gardener:
     featureGates: {}
   seed:
     provider: local
-  runtimeCluster:
-    enabled: false
 
 usablePorts:
 - 8080  # metrics
