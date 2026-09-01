@@ -28,8 +28,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -40,22 +42,23 @@ import (
 var _ = Describe("validator", func() {
 	Describe("#Validate", func() {
 		var (
-			ctx                     context.Context
-			admissionHandler        *ValidateShoot
-			ctrl                    *gomock.Controller
-			auth                    *mockauthorizer.MockAuthorizer
-			kubeInformerFactory     kubeinformers.SharedInformerFactory
-			coreInformerFactory     gardencoreinformers.SharedInformerFactory
-			securityInformerFactory securityinformers.SharedInformerFactory
-			cloudProfile            gardencorev1beta1.CloudProfile
-			namespacedCloudProfile  gardencorev1beta1.NamespacedCloudProfile
-			seed                    gardencorev1beta1.Seed
-			secretBinding           gardencorev1beta1.SecretBinding
-			credentialsBinding      securityv1alpha1.CredentialsBinding
-			project                 gardencorev1beta1.Project
-			shoot                   core.Shoot
-			shootWithoutSeed        core.Shoot
-			versionedShoot          gardencorev1beta1.Shoot
+			ctx                           context.Context
+			admissionHandler              *ValidateShoot
+			ctrl                          *gomock.Controller
+			auth                          *mockauthorizer.MockAuthorizer
+			kubeInformerFactory           kubeinformers.SharedInformerFactory
+			coreInformerFactory           gardencoreinformers.SharedInformerFactory
+			securityInformerFactory       securityinformers.SharedInformerFactory
+			seedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
+			cloudProfile                  gardencorev1beta1.CloudProfile
+			namespacedCloudProfile        gardencorev1beta1.NamespacedCloudProfile
+			seed                          gardencorev1beta1.Seed
+			secretBinding                 gardencorev1beta1.SecretBinding
+			credentialsBinding            securityv1alpha1.CredentialsBinding
+			project                       gardencorev1beta1.Project
+			shoot                         core.Shoot
+			shootWithoutSeed              core.Shoot
+			versionedShoot                gardencorev1beta1.Shoot
 
 			userInfo            = &user.DefaultInfo{Name: "foo"}
 			authorizeAttributes authorizer.AttributesRecord
@@ -353,6 +356,8 @@ var _ = Describe("validator", func() {
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 			securityInformerFactory = securityinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
+			seedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetSeedManagementInformerFactory(seedManagementInformerFactory)
 
 			authorizeAttributes = authorizer.AttributesRecord{
 				User:            userInfo,
@@ -5877,6 +5882,54 @@ var _ = Describe("validator", func() {
 					seed.Spec.Provider.Type = "gcp"
 					newSeed.Spec.Provider.Type = "aws"
 
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should reject migration of shoot to the seed it represents as a managed seed", func() {
+					managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      newSeedName,
+							Namespace: v1beta1constants.GardenNamespace,
+						},
+						Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+							Shoot: &seedmanagementv1alpha1.Shoot{
+								Name: shoot.Name,
+							},
+						},
+					}
+					Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().ManagedSeeds().Informer().GetStore().Add(managedSeed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("managed seed %q is backed by shoot %q and the shoot cannot be migrated to its own managed seed", newSeedName, shoot.Name)))
+				})
+
+				It("should allow migration of shoot to a seed that is not its own managed seed", func() {
+					managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      newSeedName,
+							Namespace: v1beta1constants.GardenNamespace,
+						},
+						Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+							Shoot: &seedmanagementv1alpha1.Shoot{
+								Name: "other-shoot",
+							},
+						},
+					}
+					Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().ManagedSeeds().Informer().GetStore().Add(managedSeed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should allow migration when no managed seed exists for the destination seed", func() {
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
