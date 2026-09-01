@@ -85,6 +85,18 @@ case "$COMMAND" in
         if [[ -f "$cert_file" ]] && ! openssl x509 -in "$cert_file" -noout -checkend 2592000 2>/dev/null; then
           echo "> Registry certificate $cert_file is expired or expiring soon, regenerating..."
           rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
+          # Remove the old CA from the system trust store so the new one can be re-added below.
+          if [[ "$(uname -s)" == "Darwin" ]]; then
+            security delete-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db 2>/dev/null || true
+          elif [[ "$(uname -s)" == "Linux" ]]; then
+            if command -v update-ca-certificates >/dev/null 2>&1; then
+              ${SUDO}rm -f /usr/local/share/ca-certificates/gardener-local-registry-ca.crt
+              ${SUDO}update-ca-certificates --fresh >/dev/null 2>&1 || true
+            elif command -v update-ca-trust >/dev/null 2>&1; then
+              ${SUDO}rm -f /etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem
+              ${SUDO}update-ca-trust extract >/dev/null 2>&1 || true
+            fi
+          fi
           break
         fi
       done
@@ -138,6 +150,43 @@ EOF
         docker compose -f "$(dirname "$0")/infra/docker-compose.yaml" restart registry 2>/dev/null || true
       else
         echo "> Reusing existing registry TLS certificates in $DIR_REGISTRY_TLS."
+      fi
+
+      # On macOS, add the CA to the current user's login keychain so that Go tools (e.g. skaffold) trust the registry.
+      # This uses the login keychain (no sudo, current user only). The CA is constrained by nameConstraints to only
+      # sign for registry.local.gardener.cloud and localhost, so trusting it here carries negligible risk.
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        if ! security find-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db >/dev/null 2>&1; then
+          echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password..."
+          security add-trusted-cert -d -r trustRoot \
+            -k ~/Library/Keychains/login.keychain-db "$ca_crt"
+        fi
+      # On Linux, install the CA into the system trust store so that Go tools (e.g. skaffold, kubectl) trust the
+      # registry. The CA is constrained by nameConstraints to only sign for registry.local.gardener.cloud and
+      # localhost, so trusting it system-wide carries negligible risk.
+      elif [[ "$(uname -s)" == "Linux" ]]; then
+        if [[ -n "$SUDO" ]]; then
+          echo "> Installing the registry CA into the system trust store may prompt for your sudo password..."
+        fi
+        if command -v update-ca-certificates >/dev/null 2>&1; then
+          # Debian/Ubuntu
+          local trust_anchor="/usr/local/share/ca-certificates/gardener-local-registry-ca.crt"
+          if ! cmp -s "$ca_crt" "$trust_anchor" 2>/dev/null; then
+            echo "> Installing registry CA into $trust_anchor..."
+            ${SUDO}cp "$ca_crt" "$trust_anchor"
+            ${SUDO}update-ca-certificates >/dev/null
+          fi
+        elif command -v update-ca-trust >/dev/null 2>&1; then
+          # RHEL/Fedora
+          local trust_anchor="/etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem"
+          if ! cmp -s "$ca_crt" "$trust_anchor" 2>/dev/null; then
+            echo "> Installing registry CA into $trust_anchor..."
+            ${SUDO}cp "$ca_crt" "$trust_anchor"
+            ${SUDO}update-ca-trust extract >/dev/null
+          fi
+        else
+          echo "> WARNING: no supported CA trust tool (update-ca-certificates/update-ca-trust) found; skaffold may not trust the registry."
+        fi
       fi
     }
 
