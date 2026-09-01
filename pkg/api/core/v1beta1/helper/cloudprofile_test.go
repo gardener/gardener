@@ -156,7 +156,94 @@ var _ = Describe("CloudProfile Helper", func() {
 			})
 			Expect(classification).To(Equal(gardencorev1beta1.ClassificationPreview))
 		})
+	})
 
+	Context("UsesLegacyClassifications", func() {
+		It("returns false when version only has version field", func() {
+			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{Version: "1.28.0"})).To(BeFalse())
+		})
+
+		It("returns false when lifecycle is non-empty", func() {
+			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{
+				Version: "1.28.0",
+				Lifecycle: []gardencorev1beta1.LifecycleStage{
+					{Classification: gardencorev1beta1.ClassificationSupported},
+				},
+				Classification: new(gardencorev1beta1.ClassificationPreview),
+			})).To(BeFalse())
+		})
+
+		It("returns true when classification is set without lifecycle", func() {
+			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: new(gardencorev1beta1.ClassificationPreview),
+			})).To(BeTrue())
+		})
+
+		It("returns true when expiration date is set without lifecycle", func() {
+			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
+			})).To(BeTrue())
+		})
+	})
+
+	Context("ToLifecycleStages", func() {
+		It("returns unchanged lifecycle when lifecycle stages are already defined", func() {
+			stages := []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationSupported, StartTime: new(metav1.NewTime(now.Add(time.Hour)))},
+			}
+			result := ToLifecycleStages(gardencorev1beta1.ExpirableVersion{
+				Version:   "1.28.0",
+				Lifecycle: stages,
+			})
+			Expect(result).To(Equal(stages))
+		})
+
+		It("returns supported stage when no lifecycle stages and no legacy classification fields are present", func() {
+			result := ToLifecycleStages(gardencorev1beta1.ExpirableVersion{
+				Version: "1.28.0",
+			})
+			Expect(result).To(Equal([]gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+			}))
+		})
+
+		It("converts legacy classification without expiration date", func() {
+			result := ToLifecycleStages(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: new(gardencorev1beta1.ClassificationPreview),
+			})
+			Expect(result).To(Equal([]gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+			}))
+		})
+
+		It("converts legacy expiration date without classification (defaults to supported)", func() {
+			expiry := new(metav1.NewTime(now.Add(time.Hour)))
+			result := ToLifecycleStages(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				ExpirationDate: expiry,
+			})
+			Expect(result).To(Equal([]gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: expiry},
+			}))
+		})
+
+		It("converts both legacy classification and expiration date", func() {
+			expiry := new(metav1.NewTime(now.Add(time.Hour)))
+			result := ToLifecycleStages(gardencorev1beta1.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: new(gardencorev1beta1.ClassificationDeprecated),
+				ExpirationDate: expiry,
+			})
+			Expect(result).To(Equal([]gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationDeprecated},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: expiry},
+			}))
+		})
 	})
 
 	Describe("Get the duration until the next lifecycle stage from the CloudProfile", func() {
