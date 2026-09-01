@@ -218,7 +218,7 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 		baseLifecycle = removeImplicitLaterStages(baseLifecycle, overrideLifecycle[0].Classification)
 	}
 
-	baseLifecycle = mergeDeep(
+	resultLifecycle := mergeDeep(
 		baseLifecycle,
 		overrideLifecycle,
 		classificationLifecycleKeyFunc,
@@ -226,12 +226,12 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 		true,
 	)
 
-	slices.SortFunc(baseLifecycle, compareLifecycleStages)
-	adjustLifecycleStartTimes(baseLifecycle, overrideLifecycle)
+	slices.SortFunc(resultLifecycle, compareLifecycleStages)
+	adjustLifecycleStartTimes(resultLifecycle, overrideLifecycle)
 
 	return gardencorev1beta1.ExpirableVersion{
 		Version:   base.Version,
-		Lifecycle: baseLifecycle,
+		Lifecycle: resultLifecycle,
 	}
 }
 
@@ -266,30 +266,36 @@ func removeImplicitLaterStages(stages []gardencorev1beta1.LifecycleStage, classi
 // adjustLifecycleStartTimes keeps the merged lifecycle valid after a NamespacedCloudProfile
 // overrides the StartTime of one or more lifecycle stages.
 //
-// If an overridden StartTime would make an earlier stage start later than it, or a later
-// stage start earlier than it, the neighboring stages are moved to the overridden time.
-func adjustLifecycleStartTimes(base, override []gardencorev1beta1.LifecycleStage) {
-	for _, overrideStage := range override {
+// For every override, all stages of the already merged resultLifecycle are checked:
+// - If a result stage is earlier than the override but starts after it: Move it to the override StartTime.
+// - If a result stage is later  than the override but starts before it: Move it to the override StartTime.
+//
+// This keeps the override StartTime authoritative while preserving the lifecycle order.
+func adjustLifecycleStartTimes(
+	resultLifecycle,
+	overrideLifecycle []gardencorev1beta1.LifecycleStage,
+) {
+	for _, overrideStage := range overrideLifecycle {
 		if overrideStage.StartTime == nil {
 			continue
 		}
 
-		for i := range base {
-			comparison := compareLifecycleStages(base[i], overrideStage)
+		for i := range resultLifecycle {
+			resultStage := &resultLifecycle[i]
+			classificationOrder := compareLifecycleStages(*resultStage, overrideStage)
 
 			switch {
-			// Earlier lifecycle stages must not start after the overridden stage.
-			// Move them back to the overridden StartTime if necessary.
-			case comparison < 0 &&
-				base[i].StartTime != nil &&
-				overrideStage.StartTime.Before(base[i].StartTime):
-				base[i].StartTime = overrideStage.StartTime
+			// resultStage is earlier in the lifecycle then the override, check if resultStage is after the override.
+			case classificationOrder < 0 &&
+				resultStage.StartTime != nil &&
+				overrideStage.StartTime.Before(resultStage.StartTime):
+				resultStage.StartTime = overrideStage.StartTime
 
-			// Later lifecycle stages must not start before the overridden stage.
-			// Move them forward to the overridden StartTime if necessary.
-			case comparison > 0 &&
-				(base[i].StartTime == nil || base[i].StartTime.Before(overrideStage.StartTime)):
-				base[i].StartTime = overrideStage.StartTime
+			// Later stages must not start before the override stage.
+			case classificationOrder > 0 &&
+				(resultStage.StartTime == nil ||
+					resultStage.StartTime.Before(overrideStage.StartTime)):
+				resultStage.StartTime = overrideStage.StartTime
 			}
 		}
 	}
@@ -297,6 +303,10 @@ func adjustLifecycleStartTimes(base, override []gardencorev1beta1.LifecycleStage
 
 // compareLifecycleStages returns the order of two lifecycle stages.
 // The lifecycle order is: unavailable < preview < supported < deprecated < expired.
+//
+//	< 0: a is earlier in the lifecycle
+//	= 0: a and b have the same classification
+//	> 0: a is later in the lifecycle
 func compareLifecycleStages(a, b gardencorev1beta1.LifecycleStage) int {
 	order := map[gardencorev1beta1.VersionClassification]int{
 		gardencorev1beta1.ClassificationUnavailable: 0,
