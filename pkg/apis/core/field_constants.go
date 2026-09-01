@@ -60,6 +60,15 @@ const (
 	// ShootCloudProfileRefKind is the field selector path for finding
 	// the referenced CloudProfile kind of a core.gardener.cloud/v1beta1.Shoot.
 	ShootCloudProfileRefKind = "spec.cloudProfile.Kind"
+	// ShootAuditPolicyConfigMapName is the field selector path for finding Shoots
+	// referencing a given audit policy ConfigMap.
+	ShootAuditPolicyConfigMapName = "spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name"
+	// ShootAuthenticationConfigMapName is the field selector path for finding Shoots
+	// referencing a given authentication configuration ConfigMap.
+	ShootAuthenticationConfigMapName = "spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName"
+	// ShootAuthorizationConfigMapName is the field selector path for finding Shoots
+	// referencing a given authorization configuration ConfigMap.
+	ShootAuthorizationConfigMapName = "spec.kubernetes.kubeAPIServer.structuredAuthorization.configMapName"
 	// ShootSeedName is the field selector path for finding
 	// the Seed cluster of a core.gardener.cloud/v1beta1.Shoot.
 	ShootSeedName = "spec.seedName"

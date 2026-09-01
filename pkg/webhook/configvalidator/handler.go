@@ -27,7 +27,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	operator "github.com/gardener/gardener/pkg/apis/operator"
+	"github.com/gardener/gardener/pkg/apis/operator"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
@@ -61,6 +61,7 @@ type Handler struct {
 
 	ConfigMapPurpose            string
 	ConfigMapDataKey            string
+	ShootFieldSelector          string
 	GetConfigMapNameFromShoot   func(shoot *gardencore.Shoot) string
 	SkipValidationOnShootUpdate func(shoot, oldShoot *gardencore.Shoot) bool
 	AdmitConfig                 func(ctx context.Context, configRaw string, shootsReferencingConfigMap []*gardencore.Shoot) (int32, error)
@@ -221,12 +222,24 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 	}
 
 	if err := h.Decoder.Decode(request, newConfigMap); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding ConfigMap: %w", err))
+	}
+
+	if err := h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding old ConfigMap: %w", err))
+	}
+
+	if apiequality.Semantic.DeepEqual(newConfigMap.Data, oldConfigMap.Data) {
+		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
 	}
 
 	// lookup if ConfigMap is referenced by any shoot in the same namespace
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := h.Client.List(ctx, shootList, client.InNamespace(request.Namespace)); err != nil {
+	listOpts := []client.ListOption{client.InNamespace(request.Namespace)}
+	if h.ShootFieldSelector != "" {
+		listOpts = append(listOpts, client.MatchingFields{h.ShootFieldSelector: request.Name})
+	}
+	if err := h.Client.List(ctx, shootList, listOpts...); err != nil {
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed listing shoots in namespace %s: %w", request.Namespace, err))
 	}
 
@@ -236,10 +249,7 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 		if err := gardenCoreScheme.Convert(&obj, shoot, nil); err != nil {
 			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed converting Shoot %s into internal version: %w", client.ObjectKeyFromObject(&obj), err))
 		}
-
-		if h.GetConfigMapNameFromShoot(shoot) == request.Name {
-			shoots = append(shoots, shoot)
-		}
+		shoots = append(shoots, shoot)
 	}
 
 	if len(shoots) == 0 {
@@ -249,14 +259,6 @@ func (h *Handler) admitConfigMapForShoots(ctx context.Context, request admission
 	configRaw, err := h.rawConfigurationFromConfigMap(newConfigMap.Data)
 	if err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(newConfigMap), err))
-	}
-
-	if err = h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error decoding old ConfigMap: %w", err))
-	}
-
-	if oldConfigRaw, ok := oldConfigMap.Data[h.ConfigMapDataKey]; ok && oldConfigRaw == configRaw {
-		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
 	}
 
 	if errCode, err := h.AdmitConfig(ctx, configRaw, shoots); err != nil {

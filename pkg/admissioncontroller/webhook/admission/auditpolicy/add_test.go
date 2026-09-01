@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -123,7 +125,10 @@ rules:
 	BeforeEach(func() {
 		testEncoder = &jsonserializer.Serializer{}
 
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootAuditPolicyConfigMapName, indexer.ShootAuditPolicyConfigMapNameIndexerFunc).
+			Build()
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
@@ -354,7 +359,9 @@ rules:
 					shootInDifferentNamespaceAndReferencing.Namespace = shootNamespace + "other"
 					Expect(fakeClient.Create(ctx, shootInDifferentNamespaceAndReferencing)).To(Succeed())
 
-					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
+					newCm := cm.DeepCopy()
+					newCm.Data["policy"] = anotherValidAuditPolicy
+					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
 				})
 
 				It("did not change policy field", func() {

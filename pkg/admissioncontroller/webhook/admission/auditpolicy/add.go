@@ -50,7 +50,8 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 		GetConfigMapNameFromShoot: func(shoot *gardencore.Shoot) string {
 			return gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
-		AdmitConfig: admitConfig,
+		ShootFieldSelector: gardencore.ShootAuditPolicyConfigMapName,
+		AdmitConfig:        admitConfig,
 	}
 }
 

@@ -23,6 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authenticationconfig"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -207,7 +209,10 @@ anonymous:
 	BeforeEach(func() {
 		testEncoder = &jsonserializer.Serializer{}
 
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootAuthenticationConfigMapName, indexer.ShootAuthenticationConfigMapNameIndexerFunc).
+			Build()
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
@@ -619,7 +624,9 @@ anonymous:
 					shootInDifferentNamespaceAndReferencing.Namespace = shootNamespace + "other"
 					Expect(fakeClient.Create(ctx, shootInDifferentNamespaceAndReferencing)).To(Succeed())
 
-					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
+					newCm := cm.DeepCopy()
+					newCm.Data["config.yaml"] = anotherValidAuthenticationConfiguration
+					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
 				})
 
 				It("did not change config.yaml field", func() {
