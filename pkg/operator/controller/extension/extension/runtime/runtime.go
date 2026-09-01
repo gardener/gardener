@@ -105,7 +105,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 				"selfHostedShoot":      isSelfHostedShoot,
 			},
 			"runtimeCluster": map[string]any{
-				// TODO(timuthy): Remove this field after Gardener v1.153.0 has been released.
+				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released.
 				"enabled":           "true",
 				"priorityClassName": priorityClassName,
 			},

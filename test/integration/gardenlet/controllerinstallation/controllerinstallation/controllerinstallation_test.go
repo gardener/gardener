@@ -1058,7 +1058,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
 		})
 
-		Context("when seed is garden at the same time", func() {
+		When("seed is garden at the same time", func() {
 			BeforeEach(func() {
 				garden := &operatorv1alpha1.Garden{
 					ObjectMeta: metav1.ObjectMeta{GenerateName: "garden-"},

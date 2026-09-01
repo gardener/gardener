@@ -115,7 +115,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
 			},
 			"virtualCluster": map[string]any{
-				// TODO(timuthy): Remove this field after Gardener v1.153.0 has been released. There is no replacement as a virtual cluster is always involved in an admission deployment.
+				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released. There is no replacement as a virtual cluster is always involved in an admission deployment.
 				"enabled":   true,
 				"namespace": virtualNamespace(extension).GetName(),
 			},
@@ -208,7 +208,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 				"gardenCluster": true,
 			},
 			"virtualCluster": map[string]any{
-				// TODO(timuthy): Remove this field after Gardener v1.153.0 has been released.
+				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released.
 				"enabled": true,
 				"serviceAccount": map[string]any{
 					"name":      accessSecret.ServiceAccountName,

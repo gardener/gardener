@@ -205,14 +205,19 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	seedIsGarden, err := gardenletutils.ClusterIsGarden(seedCtx, r.SeedClientSet.Client())
+	isGarden, err := gardenletutils.ClusterIsGarden(seedCtx, r.SeedClientSet.Client())
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed checking whether the seed is the garden cluster at the same time: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the cluster is a garden runtime cluster: %w", err)
 	}
 
-	seedIsShoot, err := gardenletutils.ClusterIsShoot(seedCtx, r.SeedClientSet.Client())
+	isSeed, err := gardenletutils.ClusterIsSeed(seedCtx, r.SeedClientSet.Client())
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed checking whether the seed is a shoot cluster: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the cluster is a seed cluster: %w", err)
+	}
+
+	isShoot, err := gardenletutils.ClusterIsShoot(seedCtx, r.SeedClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the cluster is a shoot cluster: %w", err)
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
@@ -234,7 +239,7 @@ func (r *Reconciler) reconcile(
 			}
 		}
 
-		if seedIsGarden {
+		if isGarden {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer, "allowed")
 		}
 
@@ -287,10 +292,10 @@ func (r *Reconciler) reconcile(
 	}
 
 	clusterTypes := map[string]bool{
-		"gardenRuntimeCluster":   seedIsGarden,
-		"seedCluster":            true,
+		"gardenRuntimeCluster":   isGarden,
+		"seedCluster":            isSeed,
 		"selfHostedShootCluster": r.SelfHostedShootMeta != nil,
-		"shootCluster":           seedIsShoot,
+		"shootCluster":           isShoot,
 	}
 
 	// Mix-in some standard values for garden and seed.
