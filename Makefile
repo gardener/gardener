@@ -205,7 +205,7 @@ endif
 .PHONY: format
 format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@MODE=$(MODE) ./hack/format.sh ./charts ./cmd ./extensions ./pkg ./plugin ./test ./hack
-	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
+	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -format-only -l -w .
 
 .PHONY: sast
 sast: $(GOSEC)

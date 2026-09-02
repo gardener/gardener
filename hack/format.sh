@@ -8,7 +8,7 @@ set -e
 
 echo "> Format"
 
-goimports -l -w $@
+goimports -format-only -l -w $@
 
 # Format import order only after files have been formatted by imports.
 echo "> Format Import Order"
