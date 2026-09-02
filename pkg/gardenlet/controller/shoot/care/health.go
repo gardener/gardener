@@ -450,6 +450,7 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
+	// TODO(acumino): Remove check for self-hosted shoot when dependency-watchdog-prober is enabled for self-hosted shoots.
 	if !h.shoot.IsWorkerless && !h.shoot.IsSelfHosted() && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.ControlPlaneNamespace); err != nil {
 			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
@@ -707,6 +708,7 @@ func (h *Health) checkWorkers(
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
 func ComputeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
 	requiredDeployments := commonMonitoringDeployments.Clone()
+	// TODO(acumino): Remove check for self-hosted shoot when kube-state-metrics is enabled for self-hosted shoots.
 	if v1beta1helper.IsWorkerless(shoot) || v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
