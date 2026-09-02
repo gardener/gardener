@@ -535,6 +535,13 @@ func (c *mutationContext) ensureMachineImage(oldWorkers []core.Worker, worker co
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the
 	// shoot maintenance controller.
+
+	// For unmanaged infrastructure shoots, the OS is not managed by the shoot, do not default
+	// Machine.Image.Version from the CloudProfile.
+	if helper.IsShootSelfHosted(c.shoot.Spec.Provider.Workers) && !helper.HasManagedInfrastructure(c.shoot) {
+		return worker.Machine.Image, nil
+	}
+
 	machineType := v1beta1helper.FindMachineTypeByName(c.cloudProfileSpec.MachineTypes, worker.Machine.Type)
 
 	oldWorker := helper.FindWorkerByName(oldWorkers, worker.Name)
