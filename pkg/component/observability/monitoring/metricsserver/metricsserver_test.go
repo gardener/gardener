@@ -228,13 +228,14 @@ spec:
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
-          failureThreshold: 1
+          failureThreshold: 3
           httpGet:
             path: /livez
             port: 8443
             scheme: HTTPS
           initialDelaySeconds: 30
           periodSeconds: 30
+          timeoutSeconds: 5
         name: metrics-server
         readinessProbe:
           failureThreshold: 1
