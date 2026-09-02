@@ -78,7 +78,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	if ctx.SyncControlPlaneAuthTokens {
-		for _, componentName := range []string{v1beta1constants.DeploymentNameKubeControllerManager, v1beta1constants.DeploymentNameKubeScheduler} {
+		for _, componentName := range []string{v1beta1constants.DeploymentNameKubeControllerManager, v1beta1constants.DeploymentNameKubeScheduler, v1beta1constants.ETCDMain, v1beta1constants.ETCDEvents} {
 			additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 				SecretName: gardenerutils.SecretNamePrefixShootAccess + componentName,
 				Path:       staticpod.FilePathForProjectedVolumeItem(componentName, "kubeconfig", resourcesv1alpha1.DataKeyToken),
