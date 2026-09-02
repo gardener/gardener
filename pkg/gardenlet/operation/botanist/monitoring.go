@@ -190,7 +190,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
-	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.ControlPlaneNamespace, caSecret.Name, b.Shoot.IsWorkerless))
+	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.ControlPlaneNamespace, caSecret.Name, b.Shoot.IsWorkerless, b.isShootNodeLoggingEnabled()))
 
 	return b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx)
 }

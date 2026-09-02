@@ -355,16 +355,21 @@ var _ = Describe("ScrapeConfigs", func() {
 
 		When("cluster is workerless", func() {
 			It("should return the expected objects even when the OTel feature is enabled", func() {
-				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true)).To(HaveExactElements(workerlessScrapeConfigs))
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true, false)).To(HaveExactElements(workerlessScrapeConfigs))
 
 				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
-				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true)).To(HaveExactElements(workerlessScrapeConfigs))
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, true, true)).To(HaveExactElements(workerlessScrapeConfigs))
 			})
 		})
 
 		When("cluster is not workerless", func() {
 			It("should return expected scrape configs with OTel feature disabled", func() {
-				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false)).To(HaveExactElements(nonWorkerlessScrapeConfigs))
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false, false)).To(HaveExactElements(nonWorkerlessScrapeConfigs))
+			})
+
+			It("should not return the OTel scrape config when shoot node logging is disabled", func() {
+				DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, true))
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false, false)).To(HaveExactElements(nonWorkerlessScrapeConfigs))
 			})
 
 			It("should return expected scrape configs with OTel feature enabled", func() {
@@ -442,7 +447,7 @@ var _ = Describe("ScrapeConfigs", func() {
 						},
 					},
 				)
-				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false)).To(HaveExactElements(items))
+				Expect(shoot.CentralScrapeConfigs(namespace, clusterCASecretName, false, true)).To(HaveExactElements(items))
 			})
 		})
 	})
