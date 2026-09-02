@@ -264,7 +264,20 @@ func initializeFakeGardenResources(
 		objects = append(objects, configMap.DeepCopy())
 	}
 	for _, secret := range resources.Secrets {
-		objects = append(objects, secret.DeepCopy())
+		s := secret.DeepCopy()
+		// The fake garden client does not run the kube-apiserver's Secret strategy, which merges stringData into data.
+		// Do it here so consumers reading secret.Data (e.g. the OCI HelmRegistry reading the CA bundle) behave as they
+		// would against a real garden cluster.
+		if len(s.StringData) > 0 {
+			if s.Data == nil {
+				s.Data = make(map[string][]byte, len(s.StringData))
+			}
+			for k, v := range s.StringData {
+				s.Data[k] = []byte(v)
+			}
+			s.StringData = nil
+		}
+		objects = append(objects, s)
 	}
 	for _, workloadIdentity := range resources.WorkloadIdentities {
 		objects = append(objects, workloadIdentity.DeepCopy())
