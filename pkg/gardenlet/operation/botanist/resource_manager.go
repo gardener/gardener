@@ -70,6 +70,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	}
 
 	if b.Shoot.IsSelfHosted() {
+		values.IsSelfHostedShoot = true
 		values.KubernetesServiceHost = nil
 		// Disable the vpa-in-place-updates webhook as there are no VPA components that manage VPA resources and
 		// there is no reason for the GRM webhook to be deployed.

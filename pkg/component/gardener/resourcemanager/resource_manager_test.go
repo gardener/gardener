@@ -2499,6 +2499,25 @@ subjects:
 			})
 		})
 
+		Context("target cluster != source cluster, self-hosted shoot", func() {
+			BeforeEach(func() {
+				cfg.IsSelfHostedShoot = true
+				resourceManager = New(fakeClient, deployNamespace, sm, cfg)
+				resourceManager.SetSecrets(secrets)
+			})
+
+			It("should annotate the service to allow webhook traffic from all sources", func() {
+				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+
+				actualService := &corev1.Service{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager"}, actualService)).To(Succeed())
+				Expect(actualService.Annotations).To(HaveKeyWithValue(
+					"networking.resources.gardener.cloud/from-world-to-ports",
+					fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, serverPort),
+				))
+			})
+		})
+
 		Context("target cluster != source cluster, workerless shoot", func() {
 			JustBeforeEach(func() {
 				clusterRole.Rules = allowManagedResources

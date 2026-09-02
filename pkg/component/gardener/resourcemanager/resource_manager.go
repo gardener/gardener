@@ -326,6 +326,8 @@ type Values struct {
 	NodeAgentAuthorizerAuthorizeWithSelectors *bool
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
 	MachineNamespace *string
+	// IsSelfHostedShoot specifies whether GRM is deployed for a self-hosted shoot cluster.
+	IsSelfHostedShoot bool
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
 	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-updates webhook should be enabled.
@@ -776,6 +778,13 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 				Port:     new(intstr.FromInt32(r.serverPort())),
 				Protocol: new(corev1.ProtocolTCP),
 			}))
+		}
+
+		if r.values.IsSelfHostedShoot {
+			// For self-hosted shoots the kube-apiserver runs as a host-network static pod and cannot be matched
+			// by a podSelector-based NetworkPolicy. Allowing webhook traffic from all sources ensures the
+			// apiserver can reach GRM even when GRM is not scheduled on the control-plane node.
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, r.serverPort()))
 		}
 
 		// TODO: Consider enabling TAR even for seed/garden runtime/self-hosted shoots.
