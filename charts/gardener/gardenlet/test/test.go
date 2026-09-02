@@ -903,6 +903,7 @@ func ComputeExpectedGardenletConfiguration(
 	config.GardenClientConnection.KubeconfigSecret = kubeconfigSecret
 
 	if seedConfig != nil {
+		gardencorev1beta1.DefaultSeedSpec(&seedConfig.Spec)
 		config.SeedConfig = seedConfig
 	}
 
