@@ -48,11 +48,11 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(Equal(config.LogLevelInfo))
-			Expect(obj.SeedConfig).NotTo(BeNil())
 			Expect(obj.LogFormat).To(Equal(config.LogFormatJSON))
+			Expect(obj.SeedConfig).NotTo(BeNil())
 			Expect(obj.SNI).NotTo(BeNil())
-			Expect(obj.Monitoring).NotTo(BeNil())
 			Expect(obj.ETCDConfig).NotTo(BeNil())
+			Expect(obj.Monitoring).NotTo(BeNil())
 		})
 
 		It("should not overwrite already set values for the gardenlet configuration", func() {

@@ -59,58 +59,14 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.SNI = &SNI{}
 	}
 
-	if obj.Monitoring == nil {
-		obj.Monitoring = &MonitoringConfig{}
-	}
-
 	if obj.ETCDConfig == nil {
 		obj.ETCDConfig = &ETCDConfig{}
 	}
 
 	SetDefaults_ExposureClassHandler(obj.ExposureClassHandlers)
-}
 
-// SetDefaults_ServerConfiguration sets defaults for the configuration of the HTTP server.
-func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
-	if obj.HealthProbes == nil {
-		obj.HealthProbes = &Server{}
-	}
-	if obj.HealthProbes.Port == 0 {
-		obj.HealthProbes.Port = 2728
-	}
-
-	if obj.Metrics == nil {
-		obj.Metrics = &Server{}
-	}
-	if obj.Metrics.Port == 0 {
-		obj.Metrics.Port = 2729
-	}
-}
-
-// SetDefaults_ExposureClassHandler sets defaults for the configuration for an exposure class handler.
-func SetDefaults_ExposureClassHandler(obj []ExposureClassHandler) {
-	var defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
-
-	for i, handler := range obj {
-		if obj[i].SNI == nil {
-			obj[i].SNI = &SNI{Ingress: &SNIIngress{}}
-		}
-		if obj[i].SNI.Ingress == nil {
-			obj[i].SNI.Ingress = &SNIIngress{}
-		}
-		if obj[i].SNI.Ingress.Namespace == nil {
-			namespaceName := "istio-ingress-handler-" + handler.Name
-			obj[i].SNI.Ingress.Namespace = &namespaceName
-		}
-		if obj[i].SNI.Ingress.ServiceName == nil {
-			obj[i].SNI.Ingress.ServiceName = &defaultSVCName
-		}
-		if len(obj[i].SNI.Ingress.Labels) == 0 {
-			obj[i].SNI.Ingress.Labels = map[string]string{
-				v1beta1constants.LabelApp:   v1beta1constants.DefaultIngressGatewayAppLabelValue,
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
-			}
-		}
+	if obj.Monitoring == nil {
+		obj.Monitoring = &MonitoringConfig{}
 	}
 }
 
@@ -128,6 +84,16 @@ func SetDefaults_KubeconfigValidity(obj *KubeconfigValidity) {
 	}
 	if obj.AutoRotationJitterPercentageMax == nil {
 		obj.AutoRotationJitterPercentageMax = new(int32(90))
+	}
+}
+
+// SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.
+func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
+	if obj.QPS == 0.0 {
+		obj.QPS = 50.0
+	}
+	if obj.Burst == 0 {
+		obj.Burst = 100
 	}
 }
 
@@ -157,14 +123,14 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.Seed == nil {
 		obj.Seed = &SeedControllerConfiguration{}
 	}
+	if obj.SeedCare == nil {
+		obj.SeedCare = &SeedCareControllerConfiguration{}
+	}
 	if obj.Shoot == nil {
 		obj.Shoot = &ShootControllerConfiguration{}
 	}
 	if obj.ShootCare == nil {
 		obj.ShootCare = &ShootCareControllerConfiguration{}
-	}
-	if obj.SeedCare == nil {
-		obj.SeedCare = &SeedCareControllerConfiguration{}
 	}
 	if obj.ShootState == nil {
 		obj.ShootState = &ShootStateControllerConfiguration{}
@@ -187,39 +153,6 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.CacheSyncTimeout == nil {
 		obj.CacheSyncTimeout = &metav1.Duration{Duration: 2 * time.Minute}
 	}
-}
-
-// SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.
-func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	if obj.QPS == 0.0 {
-		obj.QPS = 50.0
-	}
-	if obj.Burst == 0 {
-		obj.Burst = 100
-	}
-}
-
-// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the gardenlet.
-func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
-	if obj.ResourceLock == "" {
-		// Don't use a constant from the client-go resourcelock package here (resourcelock is not an API package, pulls
-		// in some other dependencies and is thereby not suitable to be used in this API package).
-		obj.ResourceLock = "leases"
-	}
-
-	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
-
-	if obj.ResourceNamespace == "" {
-		obj.ResourceNamespace = GardenletDefaultLockObjectNamespace
-	}
-	if obj.ResourceName == "" {
-		obj.ResourceName = GardenletDefaultLockObjectName
-	}
-}
-
-// SetDefaults_SeedConfig sets defaults for the networks of the seed.
-func SetDefaults_SeedConfig(obj *SeedConfig) {
-	gardencorev1beta1.SetDefaults_SeedNetworks(&obj.Spec.Networks)
 }
 
 // SetDefaults_BackupBucketControllerConfiguration sets defaults for the backup bucket controller.
@@ -258,21 +191,6 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 
 	if obj.JitterUpdates == nil {
 		obj.JitterUpdates = new(false)
-	}
-}
-
-// SetDefaults_MonitoringConfig sets the defaults for the monitoring stack.
-func SetDefaults_MonitoringConfig(obj *MonitoringConfig) {
-	if obj.Shoot == nil {
-		obj.Shoot = &ShootMonitoringConfig{}
-	}
-}
-
-// SetDefaults_ShootMonitoringConfig sets the defaults for the shoot monitoring.
-func SetDefaults_ShootMonitoringConfig(obj *ShootMonitoringConfig) {
-	if obj.Enabled == nil {
-		v := true
-		obj.Enabled = &v
 	}
 }
 
@@ -474,34 +392,44 @@ func SetDefaults_VPAEvictionRequirementsControllerConfiguration(obj *VPAEviction
 	}
 }
 
-// SetDefaults_SNI sets defaults for SNI.
-func SetDefaults_SNI(obj *SNI) {
-	if obj.Ingress == nil {
-		obj.Ingress = &SNIIngress{}
+// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the gardenlet.
+func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
+	if obj.ResourceLock == "" {
+		// Don't use a constant from the client-go resourcelock package here (resourcelock is not an API package, pulls
+		// in some other dependencies and is thereby not suitable to be used in this API package).
+		obj.ResourceLock = "leases"
+	}
+
+	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
+
+	if obj.ResourceNamespace == "" {
+		obj.ResourceNamespace = GardenletDefaultLockObjectNamespace
+	}
+	if obj.ResourceName == "" {
+		obj.ResourceName = GardenletDefaultLockObjectName
 	}
 }
 
-// SetDefaults_SNIIngress sets defaults for SNI ingressgateway.
-func SetDefaults_SNIIngress(obj *SNIIngress) {
-	var (
-		defaultNS      = v1beta1constants.DefaultSNIIngressNamespace
-		defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
-	)
-
-	if obj.Namespace == nil {
-		obj.Namespace = &defaultNS
+// SetDefaults_ServerConfiguration sets defaults for the configuration of the HTTP server.
+func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
+	if obj.HealthProbes == nil {
+		obj.HealthProbes = &Server{}
+	}
+	if obj.HealthProbes.Port == 0 {
+		obj.HealthProbes.Port = 2728
 	}
 
-	if obj.ServiceName == nil {
-		obj.ServiceName = &defaultSVCName
+	if obj.Metrics == nil {
+		obj.Metrics = &Server{}
 	}
+	if obj.Metrics.Port == 0 {
+		obj.Metrics.Port = 2729
+	}
+}
 
-	if obj.Labels == nil {
-		obj.Labels = map[string]string{
-			v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-			"istio":                   "ingressgateway",
-		}
-	}
+// SetDefaults_SeedConfig sets defaults for the networks of the seed.
+func SetDefaults_SeedConfig(obj *SeedConfig) {
+	gardencorev1beta1.SetDefaults_SeedNetworks(&obj.Spec.Networks)
 }
 
 // SetDefaults_Logging sets defaults for the Logging stack.
@@ -538,6 +466,36 @@ func SetDefaults_Logging(obj *Logging) {
 	}
 	if obj.ShootEventLogging.Enabled == nil {
 		obj.ShootEventLogging.Enabled = obj.Enabled
+	}
+}
+
+// SetDefaults_SNI sets defaults for SNI.
+func SetDefaults_SNI(obj *SNI) {
+	if obj.Ingress == nil {
+		obj.Ingress = &SNIIngress{}
+	}
+}
+
+// SetDefaults_SNIIngress sets defaults for SNI ingressgateway.
+func SetDefaults_SNIIngress(obj *SNIIngress) {
+	var (
+		defaultNS      = v1beta1constants.DefaultSNIIngressNamespace
+		defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
+	)
+
+	if obj.Namespace == nil {
+		obj.Namespace = &defaultNS
+	}
+
+	if obj.ServiceName == nil {
+		obj.ServiceName = &defaultSVCName
+	}
+
+	if obj.Labels == nil {
+		obj.Labels = map[string]string{
+			v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+			"istio":                   "ingressgateway",
+		}
 	}
 }
 
@@ -581,5 +539,47 @@ func SetDefaults_BackupCompactionController(obj *BackupCompactionController) {
 	}
 	if obj.MetricsScrapeWaitDuration == nil {
 		obj.MetricsScrapeWaitDuration = &metav1.Duration{Duration: 60 * time.Second}
+	}
+}
+
+// SetDefaults_ExposureClassHandler sets defaults for the configuration for an exposure class handler.
+func SetDefaults_ExposureClassHandler(obj []ExposureClassHandler) {
+	var defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
+
+	for i, handler := range obj {
+		if obj[i].SNI == nil {
+			obj[i].SNI = &SNI{Ingress: &SNIIngress{}}
+		}
+		if obj[i].SNI.Ingress == nil {
+			obj[i].SNI.Ingress = &SNIIngress{}
+		}
+		if obj[i].SNI.Ingress.Namespace == nil {
+			namespaceName := "istio-ingress-handler-" + handler.Name
+			obj[i].SNI.Ingress.Namespace = &namespaceName
+		}
+		if obj[i].SNI.Ingress.ServiceName == nil {
+			obj[i].SNI.Ingress.ServiceName = &defaultSVCName
+		}
+		if len(obj[i].SNI.Ingress.Labels) == 0 {
+			obj[i].SNI.Ingress.Labels = map[string]string{
+				v1beta1constants.LabelApp:   v1beta1constants.DefaultIngressGatewayAppLabelValue,
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler,
+			}
+		}
+	}
+}
+
+// SetDefaults_MonitoringConfig sets the defaults for the monitoring stack.
+func SetDefaults_MonitoringConfig(obj *MonitoringConfig) {
+	if obj.Shoot == nil {
+		obj.Shoot = &ShootMonitoringConfig{}
+	}
+}
+
+// SetDefaults_ShootMonitoringConfig sets the defaults for the shoot monitoring.
+func SetDefaults_ShootMonitoringConfig(obj *ShootMonitoringConfig) {
+	if obj.Enabled == nil {
+		v := true
+		obj.Enabled = &v
 	}
 }
