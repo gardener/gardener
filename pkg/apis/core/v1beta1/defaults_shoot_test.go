@@ -638,6 +638,8 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should default both KubernetesVersion and MachineImageVersion field for shoot with workers", func() {
+			obj.Spec.CredentialsBindingName = new("credentials")
+
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Maintenance).NotTo(BeNil())

@@ -121,7 +121,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	if !v1beta1helper.IsWorkerless(shoot) {
+	if !v1beta1helper.IsWorkerless(shoot) && v1beta1helper.HasManagedInfrastructure(shoot) {
 		workerToMachineImageUpdate, err = maintainMachineImages(log, maintainedShoot, cloudProfile)
 		if err != nil {
 			// continue execution to allow the kubernetes version update

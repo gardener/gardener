@@ -1013,6 +1013,41 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 				}).Should(Succeed())
 			})
 		})
+
+		It("should not update machine image for self-hosted shoot without managed infrastructure", func() {
+			selfHostedShoot := shoot.DeepCopy()
+			selfHostedShoot.Name = ""
+			selfHostedShoot.ResourceVersion = ""
+			selfHostedShoot.Namespace = v1beta1constants.GardenNamespace
+			selfHostedShoot.Spec.CredentialsBindingName = nil
+			selfHostedShoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+				{
+					Name:         "worker",
+					Minimum:      1,
+					Maximum:      1,
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+					Machine:      shoot.Spec.Provider.Workers[0].Machine,
+				},
+			}
+			selfHostedShoot.Spec.Provider.Workers[0].Machine.Image = testMachineImage.DeepCopy()
+			selfHostedShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
+
+			By("Create shoot without managed infrastructure")
+			Expect(testClient.Create(ctx, selfHostedShoot)).To(Succeed())
+			DeferCleanup(func() {
+				By("Delete shoot without managed infrastructure")
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, selfHostedShoot))).To(Succeed())
+			})
+
+			By("Trigger maintenance")
+			Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, selfHostedShoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+			waitForShootToBeMaintained(selfHostedShoot)
+
+			By("Ensure machine image version was not updated")
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(selfHostedShoot), selfHostedShoot)).To(Succeed())
+			Expect(*selfHostedShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: testMachineImage.Name, Version: testMachineImage.Version}))
+		})
 	})
 
 	Describe("Kubernetes version maintenance tests", func() {

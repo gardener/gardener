@@ -25,6 +25,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
@@ -50,8 +51,9 @@ var (
 	testClient client.Client
 	mgrClient  client.Reader
 
-	testNamespace *corev1.Namespace
-	fakeClock     *testclock.FakeClock
+	testNamespace   *corev1.Namespace
+	gardenNamespace *corev1.Namespace
+	fakeClock       *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -96,12 +98,29 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
+	By("Create garden Namespace")
+	gardenNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1beta1constants.GardenNamespace,
+		},
+	}
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created garden Namespace for test")
+
+	DeferCleanup(func() {
+		By("Delete garden Namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  kubernetes.GardenScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+			DefaultNamespaces: map[string]cache.Config{
+				testNamespace.Name:               {},
+				v1beta1constants.GardenNamespace: {},
+			},
 		},
 		Controller: controllerconfig.Controller{
 			SkipNameValidation: new(true),
