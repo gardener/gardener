@@ -7,6 +7,7 @@ package victorialogs
 import (
 	"context"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -121,7 +122,7 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 	if v.values.SecretNameServerCA != "" {
 		serverTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "victoria-logs-server-tls",
-			CommonName:                  constants.ServiceName + "." + v.namespace + ".svc.cluster.local",
+			CommonName:                  fmt.Sprintf("%s.%s.svc", constants.ServiceName, v.namespace),
 			DNSNames:                    kubernetesutils.DNSNamesForService(constants.ServiceName, v.namespace),
 			CertType:                    secrets.ServerCert,
 			SkipPublishingCACertificate: true,
@@ -250,18 +251,18 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 	}
 
 	if vlServerTLSSecretName != "" {
-		vlSingle.Spec.CommonAppsParams.ExtraArgs = map[string]string{
+		vlSingle.Spec.ExtraArgs = map[string]string{
 			"tls":         "true",
-			"tlsCertFile": vlServerTLSMountPath + "/" + secrets.DataKeyCertificate,
-			"tlsKeyFile":  vlServerTLSMountPath + "/" + secrets.DataKeyPrivateKey,
+			"tlsCertFile": path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
+			"tlsKeyFile":  path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
 		}
-		vlSingle.Spec.CommonAppsParams.Volumes = []corev1.Volume{{
+		vlSingle.Spec.Volumes = []corev1.Volume{{
 			Name: vlServerTLSVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{SecretName: vlServerTLSSecretName},
 			},
 		}}
-		vlSingle.Spec.CommonAppsParams.VolumeMounts = []corev1.VolumeMount{{
+		vlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
 			Name:      vlServerTLSVolumeName,
 			MountPath: vlServerTLSMountPath,
 			ReadOnly:  true,

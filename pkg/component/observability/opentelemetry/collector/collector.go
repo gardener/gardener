@@ -145,6 +145,14 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		seedObjects                      = []client.Object{}
 	)
 
+	if o.values.SecretNameServerCA != "" {
+		var found bool
+		caBundle, found = o.secretsManager.Get(o.values.SecretNameServerCA)
+		if !found {
+			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
+		}
+	}
+
 	if o.values.ClusterType == component.ClusterTypeShoot {
 		if o.values.WithRBACProxy {
 			if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
@@ -167,12 +175,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		var found bool
-		caBundle, found = o.secretsManager.Get(o.values.SecretNameServerCA)
-		if !found {
-			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
-		}
-
 		genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -185,12 +187,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 
 		seedObjects = append(seedObjects, istioResources...)
-	} else if o.values.SecretNameServerCA != "" {
-		var found bool
-		caBundle, found = o.secretsManager.Get(o.values.SecretNameServerCA)
-		if !found {
-			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
-		}
 	}
 
 	if o.values.ShootNodeLoggingEnabled {
@@ -652,8 +648,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 }
 
 func (o *otelCollector) buildExporters(lokiEndpoint string, caBundle *corev1.Secret) map[string]any {
-	vlLogsEndpoint := "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint
-
 	lokiExporter := map[string]any{
 		"endpoint": lokiEndpoint,
 		"default_labels_enabled": map[string]any{
@@ -672,16 +666,15 @@ func (o *otelCollector) buildExporters(lokiEndpoint string, caBundle *corev1.Sec
 	}
 
 	vlExporter := map[string]any{
-		"logs_endpoint": vlLogsEndpoint,
+		"logs_endpoint": fmt.Sprintf("%s://%s:%d%s", "http", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint),
 		"headers": map[string]any{
 			"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
 		},
 	}
 
 	if caBundle != nil {
-		caFile := path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle)
-		vlExporter["logs_endpoint"] = "https://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint
-		vlExporter["tls"] = map[string]any{"ca_file": caFile}
+		vlExporter["logs_endpoint"] = fmt.Sprintf("%s://%s:%d%s", "https", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint)
+		vlExporter["tls"] = map[string]any{"ca_file": path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle)}
 	}
 
 	return map[string]any{

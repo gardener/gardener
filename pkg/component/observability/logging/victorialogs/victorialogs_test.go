@@ -40,6 +40,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -65,10 +67,11 @@ var _ = Describe("VictoriaLogs", func() {
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 
-		vlSingle       *victoriametricsv1.VLSingle
-		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
-		serviceMonitor *monitoringv1.ServiceMonitor
-		prometheusRule *monitoringv1.PrometheusRule
+		vlSingle          *victoriametricsv1.VLSingle
+		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceMonitor    *monitoringv1.ServiceMonitor
+		prometheusRule    *monitoringv1.PrometheusRule
+		fakeSecretManager secretsmanager.Interface
 	)
 
 	BeforeEach(func() {
@@ -77,8 +80,10 @@ var _ = Describe("VictoriaLogs", func() {
 		utilruntime.Must(victoriametricsv1.AddToScheme(scheme))
 
 		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-		component = New(c, namespace, values)
+		fakeSecretManager = fakesecretsmanager.New(c, namespace)
+		component = New(c, namespace, values, fakeSecretManager)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+
 	})
 
 	JustBeforeEach(func() {
@@ -234,7 +239,7 @@ var _ = Describe("VictoriaLogs", func() {
 				"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
 				"sha512:ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff",
 			} {
-				component = New(c, namespace, Values{ImageRepository: imageRepository, ImageTag: digestTag})
+				component = New(c, namespace, Values{ImageRepository: imageRepository, ImageTag: digestTag}, fakeSecretManager)
 				Expect(component.Deploy(ctx)).To(MatchError(ContainSubstring("digest-only image reference")))
 			}
 		})
@@ -291,7 +296,7 @@ var _ = Describe("VictoriaLogs", func() {
 						MaxCapacity: maxCapacity,
 					},
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 
 				Expect(component.Deploy(ctx)).To(Succeed())
 
@@ -316,7 +321,7 @@ var _ = Describe("VictoriaLogs", func() {
 					ImageTag:        imageTag,
 					ClusterType:     componentpkg.ClusterTypeSeed,
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 			})
 
 			It("should successfully deploy all resources with seed-specific configuration", func() {
@@ -364,7 +369,7 @@ var _ = Describe("VictoriaLogs", func() {
 						MaxCapacity: resource.MustParse("200Gi"),
 					},
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 			})
 
 			It("should successfully deploy all resources with garden-specific configuration", func() {
@@ -399,6 +404,65 @@ var _ = Describe("VictoriaLogs", func() {
 			})
 		})
 
+		Context("when TLS is enabled via SecretNameServerCA", func() {
+			BeforeEach(func() {
+				values = Values{
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
+				}
+				component = New(c, namespace, values, fakeSecretManager)
+			})
+
+			It("should deploy VLSingle with TLS extra args, volumes, and volume mounts", func() {
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+
+				// Discover the generated TLS secret name from the cluster.
+				tlsSecretList := &corev1.SecretList{}
+				Expect(c.List(ctx, tlsSecretList, client.InNamespace(namespace), client.MatchingLabels{"name": "victoria-logs-server-tls"})).To(Succeed())
+				Expect(tlsSecretList.Items).To(HaveLen(1))
+				tlsSecretName := tlsSecretList.Items[0].Name
+
+				expectedVlSingle := vlSingle.DeepCopy()
+				expectedVlSingle.Spec.ExtraArgs = map[string]string{
+					"tls":         "true",
+					"tlsCertFile": "/etc/victorialogs/tls/tls.crt",
+					"tlsKeyFile":  "/etc/victorialogs/tls/tls.key",
+				}
+				expectedVlSingle.Spec.Volumes = []corev1.Volume{{
+					Name: "vl-server-tls",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{SecretName: tlsSecretName},
+					},
+				}}
+				expectedVlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
+					Name:      "vl-server-tls",
+					MountPath: "/etc/victorialogs/tls",
+					ReadOnly:  true,
+				}}
+
+				expectedServiceMonitor := serviceMonitor.DeepCopy()
+				expectedServiceMonitor.Spec.Endpoints[0].Scheme = new(monitoringv1.SchemeHTTPS)
+				expectedServiceMonitor.Spec.Endpoints[0].HTTPConfigWithProxyAndTLSFiles = monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+						TLSConfig: &monitoringv1.TLSConfig{
+							SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
+						},
+					},
+				}
+
+				Expect(customResourcesManagedResource).To(consistOf(
+					expectedVlSingle,
+					vpa,
+					expectedServiceMonitor,
+					prometheusRule,
+				))
+			})
+		})
+
 		Context("when deployed in shoot cluster", func() {
 			BeforeEach(func() {
 				values = Values{
@@ -406,7 +470,7 @@ var _ = Describe("VictoriaLogs", func() {
 					ImageTag:        imageTag,
 					ClusterType:     componentpkg.ClusterTypeShoot,
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 			})
 
 			It("should successfully deploy all resources with shoot-specific configuration", func() {
