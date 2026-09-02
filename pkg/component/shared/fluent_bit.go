@@ -22,6 +22,7 @@ func NewFluentBit(
 	gardenNamespaceName string,
 	enabled bool,
 	priorityClassName string,
+	isGardenCluster bool,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -43,6 +44,7 @@ func NewFluentBit(
 			Image:              fluentBitImage.String(),
 			InitContainerImage: fluentBitInitImageName,
 			PriorityClassName:  priorityClassName,
+			IsGardenCluster:    isGardenCluster,
 		},
 	)
 
