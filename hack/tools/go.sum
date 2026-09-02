@@ -522,8 +522,8 @@ github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/incu6us/goimports-reviser/v3 v3.12.6 h1:Zz3K08/z+UhHCv00dB0UUo6knlVPtaiFFhWBomwpC5s=
-github.com/incu6us/goimports-reviser/v3 v3.12.6/go.mod h1:XW/EFSqrGfm/6fYU0YJ+i0RPb26qN6Dt39Cj5BqIZjo=
+github.com/incu6us/goimports-reviser/v3 v3.13.0 h1:SziHk60/tT9E59lVD1lQP7ot5avLpteriGUds6v63Ng=
+github.com/incu6us/goimports-reviser/v3 v3.13.0/go.mod h1:XW/EFSqrGfm/6fYU0YJ+i0RPb26qN6Dt39Cj5BqIZjo=
 github.com/invopop/jsonschema v0.14.0 h1:MHQqLhvpNUZfw+hM3AZDYK7jxO8FZoQeQM77g8iyZjg=
 github.com/invopop/jsonschema v0.14.0/go.mod h1:ygm6C2EaVNMBDPpaPlnOA2pFAxBnxGjFlMZABxm9n2I=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
