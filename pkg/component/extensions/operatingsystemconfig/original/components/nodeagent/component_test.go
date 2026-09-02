@@ -112,6 +112,14 @@ WantedBy=multi-user.target`),
 						Path:       "/var/lib/static-pods/kube-scheduler/kubeconfig/token",
 					},
 					{
+						SecretName: "shoot-access-etcd-main",
+						Path:       "/var/lib/static-pods/etcd-main/kubeconfig/token",
+					},
+					{
+						SecretName: "shoot-access-etcd-events",
+						Path:       "/var/lib/static-pods/etcd-events/kubeconfig/token",
+					},
+					{
 						SecretName: "shoot-access-cluster-admin",
 						Path:       "/etc/kubernetes/admin-token",
 					},

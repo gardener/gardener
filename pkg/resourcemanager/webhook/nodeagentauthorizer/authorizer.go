@@ -299,6 +299,8 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 		openTelemetryCollectorTokenSecretName,
 		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameKubeControllerManager,
 		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameKubeScheduler,
+		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.ETCDMain,
+		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.ETCDEvents,
 		gardenerutils.SecretNamePrefixShootAccess + adminaccess.ShootAccessSecretNameSuffix,
 	}
 
