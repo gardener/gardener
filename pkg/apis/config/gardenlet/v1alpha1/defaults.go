@@ -11,6 +11,7 @@ import (
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
 	"github.com/gardener/gardener/pkg/apis/config"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
@@ -42,6 +43,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 
 	if obj.LogFormat == "" {
 		obj.LogFormat = config.LogFormatJSON
+	}
+
+	if obj.SeedConfig == nil {
+		obj.SeedConfig = &SeedConfig{}
 	}
 
 	if obj.Logging == nil {
@@ -210,6 +215,11 @@ func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.Le
 	if obj.ResourceName == "" {
 		obj.ResourceName = GardenletDefaultLockObjectName
 	}
+}
+
+// SetDefaults_SeedConfig sets defaults for the networks of the seed.
+func SetDefaults_SeedConfig(obj *SeedConfig) {
+	gardencorev1beta1.SetDefaults_SeedNetworks(&obj.Spec.Networks)
 }
 
 // SetDefaults_BackupBucketControllerConfiguration sets defaults for the backup bucket controller.

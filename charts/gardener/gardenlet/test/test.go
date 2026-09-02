@@ -904,6 +904,12 @@ func ComputeExpectedGardenletConfiguration(
 
 	if seedConfig != nil {
 		config.SeedConfig = seedConfig
+	} else {
+		config.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{}
+	}
+
+	if len(config.SeedConfig.Spec.Networks.IPFamilies) == 0 {
+		config.SeedConfig.Spec.Networks.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
 	}
 
 	return config
