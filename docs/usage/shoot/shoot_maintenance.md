@@ -108,6 +108,7 @@ spec:
 
 During the daily maintenance, the `gardener-controller-manager` starts the rotation for specific credentials if the Shoot opted-in for automatic rotation for the given credential and the set period has passed since the last rotation completion.
 Automatic ETCD encryption key rotation requires a running ETCD and `kube-apiserver`, so it is skipped while the Shoot is hibernated. If an overdue automatic rotation cannot run during the next maintenance window because of the hibernation schedule, Gardener reports the `AutomaticCredentialsRotationPossible` constraint in the Shoot status. Adjust the maintenance window or hibernation schedule so that maintenance runs while the Shoot is awake.
+If an ETCD encryption key rotation is still in progress when the maintenance runs, the automatic rotation is skipped for this maintenance window and reevaluated in the next one. This is not reported as a maintenance failure.
 Automatic rotation can be disabled for specific credential by setting the `rotationPeriod` field to `0`.
 
 ## Cluster Reconciliation

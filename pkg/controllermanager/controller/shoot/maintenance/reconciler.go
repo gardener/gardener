@@ -95,7 +95,10 @@ func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) (time.Duration, time.T
 // Such maintenance operations can fail if a version must be updated, but the GCM cannot find a suitable version to update to.
 // Note: the updates might still be rejected by APIServer validation.
 type updateResult struct {
-	description  string
+	// description states what the maintenance operation did, or why it failed if isSuccessful is false.
+	description string
+	// reason states why the maintenance operation was performed in the first place. It must not be used for stating
+	// why the operation failed, see description.
 	reason       string
 	isSuccessful bool
 }
@@ -465,7 +468,7 @@ func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, worker
 		}
 
 		countFailedOperations++
-		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credentials %q: Automatic rotation failed. Reason for update: %s", credentials, result.reason))
+		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Credentials %q: Automatic rotation failed. Reason for rotation: %s", credentials, result.reason))
 		failureReason = fmt.Sprintf("%s, Credentials %q: Automatic rotation failure due to: %s", failureReason, credentials, result.description)
 	}
 
@@ -702,12 +705,10 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 				isSuccessful: true,
 			}
 		} else {
-			reason := "ETCD encryption key rotation is already in progress"
-			maintenanceResults[v1beta1constants.OperationRotateETCDEncryptionKey] = updateResult{
-				description:  "Could not start ETCD encryption key rotation",
-				reason:       reason,
-				isSuccessful: false,
-			}
+			// A new rotation cannot be started while another one is still in progress. This is not a maintenance
+			// failure though: the etcd encryption key is already being rotated, so the rotation is simply skipped and
+			// reevaluated in the next maintenance window.
+			log.Info("Skipping automatic rotation of ETCD encryption key because a rotation is already in progress", "phase", etcdEncryptionKeyRotationPhase)
 		}
 	}
 
