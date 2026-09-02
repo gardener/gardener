@@ -10,8 +10,6 @@ build:
     - image: local-skaffold/gardener-extension-provider-local/node
       context: pkg/provider-local/machine-provider/node
       docker: {}
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
 manifests:
   kustomize:
     paths:
@@ -608,8 +606,6 @@ build:
               - dev-setup/gardenlet/base/generate-patch-gardenlet.sh
               - image
               - gardener-node-agent
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'

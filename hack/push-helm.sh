@@ -32,13 +32,9 @@ yq -i ".name |= \"$name\"" "$chart_dir/Chart.yaml"
 
 helm package "$chart_dir" -d "$chart_dir" --version "$tag"
 
-if echo $registry | grep -q -F "registry.local.gardener.cloud:5001"; then
-    push_http="--plain-http"
-fi 
-
 deadline=$(( $(date +%s) + 30 ))
 attempt=0
-until helm push $push_http "$chart_dir/$name-$tag.tgz" "oci://$registry"; do
+until helm push "$chart_dir/$name-$tag.tgz" "oci://$registry"; do
     attempt=$(( attempt + 1 ))
     if [[ $(date +%s) -ge $deadline ]]; then
         echo "helm push failed after $attempt attempt(s), giving up" >&2
