@@ -50,6 +50,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.LogLevel).To(Equal(config.LogLevelInfo))
 			Expect(obj.LogFormat).To(Equal(config.LogFormatJSON))
 			Expect(obj.SeedConfig).NotTo(BeNil())
+			Expect(obj.Logging).NotTo(BeNil())
 			Expect(obj.SNI).NotTo(BeNil())
 			Expect(obj.ETCDConfig).NotTo(BeNil())
 			Expect(obj.Monitoring).NotTo(BeNil())
