@@ -83,6 +83,8 @@ images:
     sourceRepository: github.com/gardener/etcd-backup-restore
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl
     tag: "v0.44.1"
+    resourceId:
+      name: etcdbrctl
   - name: dependency-watchdog
     sourceRepository: github.com/gardener/dependency-watchdog
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog
