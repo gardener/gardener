@@ -24,6 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentbit"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -44,6 +47,7 @@ var _ = Describe("Fluent Bit", func() {
 			InitContainerImage: image,
 			ValiEnabled:        true,
 			PriorityClassName:  priorityClassName,
+			IsGardenCluster:    false,
 		}
 
 		c         client.Client
@@ -54,164 +58,144 @@ var _ = Describe("Fluent Bit", func() {
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 
-		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "aggregate-fluent-bit",
-				Namespace: namespace,
-				Labels:    map[string]string{"prometheus": "aggregate"},
-			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":                              "fluent-bit",
-					"role":                             "logging",
-					"gardener.cloud/role":              "logging",
-					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/to-runtime-apiserver":                                               "allowed",
-					"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": "allowed",
-					"networking.resources.gardener.cloud/to-opentelemetry-collector-collector-tcp-4317":            "allowed",
-				}},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics",
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							TargetLabel: "__metrics_path__",
-							Replacement: new("/api/v2/metrics/prometheus"),
-						},
-						{
-							Action: "labelmap",
-							Regex:  `__meta_kubernetes_pod_label_(.+)`,
-						},
+		// serviceMonitorSpec and serviceMonitorPluginSpec hold the common spec, reused across seed/garden tests
+		serviceMonitorSpec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+				"app":                              "fluent-bit",
+				"role":                             "logging",
+				"gardener.cloud/role":              "logging",
+				"networking.gardener.cloud/to-dns": "allowed",
+				"networking.gardener.cloud/to-runtime-apiserver":                                               "allowed",
+				"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": "allowed",
+				"networking.resources.gardener.cloud/to-opentelemetry-collector-collector-tcp-4317":            "allowed",
+			}},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: "metrics",
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						TargetLabel: "__metrics_path__",
+						Replacement: new("/api/v2/metrics/prometheus"),
 					},
-					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-						SourceLabels: []monitoringv1.LabelName{"__name__"},
-						Action:       "keep",
-						Regex:        `^(fluentbit_input_bytes_total|fluentbit_input_records_total|fluentbit_output_proc_bytes_total|fluentbit_output_proc_records_total|fluentbit_output_errors_total|fluentbit_output_retries_total|fluentbit_output_retries_failed_total|fluentbit_filter_add_records_total|fluentbit_filter_drop_records_total|fluentbit_storage_mem_chunks|fluentbit_storage_fs_chunks|fluentbit_storage_fs_chunks_up|fluentbit_storage_fs_chunks_down)$`,
-					}},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_pod_label_(.+)`,
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(fluentbit_input_bytes_total|fluentbit_input_records_total|fluentbit_output_proc_bytes_total|fluentbit_output_proc_records_total|fluentbit_output_errors_total|fluentbit_output_retries_total|fluentbit_output_retries_failed_total|fluentbit_filter_add_records_total|fluentbit_filter_drop_records_total|fluentbit_storage_mem_chunks|fluentbit_storage_fs_chunks|fluentbit_storage_fs_chunks_up|fluentbit_storage_fs_chunks_down)$`,
 				}},
-			},
+			}},
 		}
-		serviceMonitorPlugin = &monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "aggregate-fluent-bit-output-plugin",
-				Namespace: namespace,
-				Labels:    map[string]string{"prometheus": "aggregate"},
-			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":                              "fluent-bit",
-					"role":                             "logging",
-					"gardener.cloud/role":              "logging",
-					"networking.gardener.cloud/to-dns": "allowed",
-					"networking.gardener.cloud/to-runtime-apiserver":                                               "allowed",
-					"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": "allowed",
-					"networking.resources.gardener.cloud/to-opentelemetry-collector-collector-tcp-4317":            "allowed",
-				}},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics-plugin",
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							Action:      "replace",
-							Replacement: new("fluent-bit-output-plugin"),
-							TargetLabel: "job",
-						},
-						{
-							Action: "labelmap",
-							Regex:  `__meta_kubernetes_pod_label_(.+)`,
-						},
+		serviceMonitorPluginSpec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+				"app":                              "fluent-bit",
+				"role":                             "logging",
+				"gardener.cloud/role":              "logging",
+				"networking.gardener.cloud/to-dns": "allowed",
+				"networking.gardener.cloud/to-runtime-apiserver":                                               "allowed",
+				"networking.resources.gardener.cloud/to-all-shoots-opentelemetry-collector-collector-tcp-4317": "allowed",
+				"networking.resources.gardener.cloud/to-opentelemetry-collector-collector-tcp-4317":            "allowed",
+			}},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: "metrics-plugin",
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: new("fluent-bit-output-plugin"),
+						TargetLabel: "job",
 					},
-					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-						SourceLabels: []monitoringv1.LabelName{"__name__"},
-						Action:       "keep",
-						Regex:        `^(fluentbit_gardener_buffered_logs|fluentbit_gardener_incoming_logs_total|fluentbit_gardener_output_client_logs_total|fluentbit_gardener_clients_total|fluentbit_gardener_errors_total|fluentbit_gardener_dropped_logs_total|fluentbit_gardener_dque_size|fluentbit_gardener_exported_client_logs_total|fluentbit_gardener_throttled_logs_total|output_plugin_otel_sdk_exporter_log_exported_total|output_plugin_otel_sdk_log_created_total|output_plugin_otel_sdk_exporter_log_inflight|output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket|output_plugin_otel_sdk_exporter_operation_duration_seconds_sum|output_plugin_otel_sdk_exporter_operation_duration_seconds_count|output_plugin_rpc_client_call_duration_seconds_bucket|output_plugin_rpc_client_call_duration_seconds_sum|output_plugin_rpc_client_call_duration_seconds_count|output_plugin_rpc_client_request_size_bytes_bucket|output_plugin_rpc_client_request_size_bytes_sum|output_plugin_rpc_client_request_size_bytes_count|output_plugin_rpc_client_response_size_bytes_bucket|output_plugin_rpc_client_response_size_bytes_sum|output_plugin_rpc_client_response_size_bytes_count|process_cpu_seconds_total|process_resident_memory_bytes|process_virtual_memory_bytes|process_network_transmit_bytes_total|process_network_receive_bytes_total|process_virtual_memory_max_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_objects|go_memstats_mallocs_total|go_memstats_frees_total|go_goroutines|go_gc_duration_seconds|go_gc_duration_seconds_sum|go_gc_duration_seconds_count|target_info)$`,
-					}},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_pod_label_(.+)`,
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(fluentbit_gardener_buffered_logs|fluentbit_gardener_incoming_logs_total|fluentbit_gardener_output_client_logs_total|fluentbit_gardener_clients_total|fluentbit_gardener_errors_total|fluentbit_gardener_dropped_logs_total|fluentbit_gardener_dque_size|fluentbit_gardener_exported_client_logs_total|fluentbit_gardener_throttled_logs_total|output_plugin_otel_sdk_exporter_log_exported_total|output_plugin_otel_sdk_log_created_total|output_plugin_otel_sdk_exporter_log_inflight|output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket|output_plugin_otel_sdk_exporter_operation_duration_seconds_sum|output_plugin_otel_sdk_exporter_operation_duration_seconds_count|output_plugin_rpc_client_call_duration_seconds_bucket|output_plugin_rpc_client_call_duration_seconds_sum|output_plugin_rpc_client_call_duration_seconds_count|output_plugin_rpc_client_request_size_bytes_bucket|output_plugin_rpc_client_request_size_bytes_sum|output_plugin_rpc_client_request_size_bytes_count|output_plugin_rpc_client_response_size_bytes_bucket|output_plugin_rpc_client_response_size_bytes_sum|output_plugin_rpc_client_response_size_bytes_count|process_cpu_seconds_total|process_resident_memory_bytes|process_virtual_memory_bytes|process_network_transmit_bytes_total|process_network_receive_bytes_total|process_virtual_memory_max_bytes|go_memstats_heap_alloc_bytes|go_memstats_heap_inuse_bytes|go_memstats_heap_idle_bytes|go_memstats_heap_objects|go_memstats_mallocs_total|go_memstats_frees_total|go_goroutines|go_gc_duration_seconds|go_gc_duration_seconds_sum|go_gc_duration_seconds_count|target_info)$`,
 				}},
-			},
+			}},
 		}
-		prometheusRule = &monitoringv1.PrometheusRule{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "aggregate-fluent-bit",
-				Namespace: namespace,
-				Labels:    map[string]string{"prometheus": "aggregate"},
-			},
-			Spec: monitoringv1.PrometheusRuleSpec{
-				Groups: []monitoringv1.RuleGroup{{
-					Name: "fluent-bit.rules",
-					Rules: []monitoringv1.Rule{
-						{
-							Alert: "FluentBitDown",
-							Expr:  intstr.FromString(`absent(up{job="fluent-bit"} == 1)`),
-							For:   new(monitoringv1.Duration("15m")),
-							Labels: map[string]string{
-								"service":    "logging",
-								"severity":   "warning",
-								"type":       "seed",
-								"visibility": "operator",
-							},
-							Annotations: map[string]string{
-								"description": "There are no fluent-bit pods running on seed: {{$externalLabels.seed}}. No logs will be collected.",
-								"summary":     "Fluent-bit is down",
-							},
+		prometheusRuleSpec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "fluent-bit.rules",
+				Rules: []monitoringv1.Rule{
+					{
+						Alert: "FluentBitDown",
+						Expr:  intstr.FromString(`absent(up{job="fluent-bit"} == 1)`),
+						For:   new(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "logging",
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
 						},
-						{
-							Alert: "FluentBitIdleInputPlugins",
-							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m])) == 0`),
-							For:   new(monitoringv1.Duration("6h")),
-							Labels: map[string]string{
-								"service":    "logging",
-								"severity":   "warning",
-								"type":       "seed",
-								"visibility": "operator",
-							},
-							Annotations: map[string]string{
-								"description": "The input plugins of Fluent-bit pod {{$labels.pod}} running on seed {{$externalLabels.seed}} haven't collected any logs for the last 6 hours.",
-								"summary":     "Fluent-bit input plugins haven't process any data for the past 6 hours",
-							},
-						},
-						{
-							Alert: "FluentBitReceivesLogsWithoutMetadata",
-							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_vali_gardener_logs_without_metadata_total[4m])) > 0`),
-							Labels: map[string]string{
-								"service":    "logging",
-								"severity":   "warning",
-								"type":       "seed",
-								"visibility": "operator",
-							},
-							Annotations: map[string]string{
-								"description": "{{$labels.pod}} receives logs without metadata on seed: {{$externalLabels.seed}}. These logs will be dropped.",
-								"summary":     "Fluent-bit receives logs without metadata",
-							},
-						},
-						{
-							Alert: "FluentBitSendsOoOLogs",
-							Expr:  intstr.FromString(`sum by (pod) (increase(prometheus_target_scrapes_sample_out_of_order_total[4m])) > 0`),
-							Labels: map[string]string{
-								"service":    "logging",
-								"severity":   "warning",
-								"type":       "seed",
-								"visibility": "operator",
-							},
-							Annotations: map[string]string{
-								"description": "{{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs to the Vali. These logs will be dropped.",
-								"summary":     "Fluent-bit sends OoO logs",
-							},
-						},
-						{
-							Alert: "FluentBitGardenerValiPluginErrors",
-							Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_vali_gardener_errors_total[4m])) > 0`),
-							Labels: map[string]string{
-								"service":    "logging",
-								"severity":   "warning",
-								"type":       "seed",
-								"visibility": "operator",
-							},
-							Annotations: map[string]string{
-								"description": "There are errors in the {{$labels.pod}} GardenerVali plugin on seed: {{$externalLabels.seed}}.",
-								"summary":     "Errors in Fluent-bit GardenerVali plugin",
-							},
+						Annotations: map[string]string{
+							"description": "There are no fluent-bit pods running on seed: {{$externalLabels.seed}}. No logs will be collected.",
+							"summary":     "Fluent-bit is down",
 						},
 					},
-				}},
-			},
+					{
+						Alert: "FluentBitIdleInputPlugins",
+						Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m])) == 0`),
+						For:   new(monitoringv1.Duration("6h")),
+						Labels: map[string]string{
+							"service":    "logging",
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"description": "The input plugins of Fluent-bit pod {{$labels.pod}} running on seed {{$externalLabels.seed}} haven't collected any logs for the last 6 hours.",
+							"summary":     "Fluent-bit input plugins haven't process any data for the past 6 hours",
+						},
+					},
+					{
+						Alert: "FluentBitReceivesLogsWithoutMetadata",
+						Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_vali_gardener_logs_without_metadata_total[4m])) > 0`),
+						Labels: map[string]string{
+							"service":    "logging",
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"description": "{{$labels.pod}} receives logs without metadata on seed: {{$externalLabels.seed}}. These logs will be dropped.",
+							"summary":     "Fluent-bit receives logs without metadata",
+						},
+					},
+					{
+						Alert: "FluentBitSendsOoOLogs",
+						Expr:  intstr.FromString(`sum by (pod) (increase(prometheus_target_scrapes_sample_out_of_order_total[4m])) > 0`),
+						Labels: map[string]string{
+							"service":    "logging",
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"description": "{{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs to the Vali. These logs will be dropped.",
+							"summary":     "Fluent-bit sends OoO logs",
+						},
+					},
+					{
+						Alert: "FluentBitGardenerValiPluginErrors",
+						Expr:  intstr.FromString(`sum by (pod) (increase(fluentbit_vali_gardener_errors_total[4m])) > 0`),
+						Labels: map[string]string{
+							"service":    "logging",
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"description": "There are errors in the {{$labels.pod}} GardenerVali plugin on seed: {{$externalLabels.seed}}.",
+							"summary":     "Errors in Fluent-bit GardenerVali plugin",
+						},
+					},
+				},
+			}},
 		}
 	)
 
@@ -237,7 +221,7 @@ var _ = Describe("Fluent Bit", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
+		It("should successfully deploy all resources when deployed on seed", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
 
@@ -265,6 +249,19 @@ var _ = Describe("Fluent Bit", func() {
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
+			serviceMonitor := &monitoringv1.ServiceMonitor{
+				ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, aggregate.Label),
+				Spec:       serviceMonitorSpec,
+			}
+			serviceMonitorPlugin := &monitoringv1.ServiceMonitor{
+				ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", namespace, aggregate.Label),
+				Spec:       serviceMonitorPluginSpec,
+			}
+			prometheusRule := &monitoringv1.PrometheusRule{
+				ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, aggregate.Label),
+				Spec:       prometheusRuleSpec,
+			}
+
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(customResourcesManagedResource).To(contains(
 				serviceMonitor,
@@ -290,7 +287,68 @@ var _ = Describe("Fluent Bit", func() {
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "containerd-parser", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "systemd", "")
 
-			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
+			componenttest.PrometheusRule(prometheusRule, "testdata/seed-fluent-bit.prometheusrule.test.yaml")
+		})
+
+		Context("when deployed in garden cluster", func() {
+			BeforeEach(func() {
+				component = New(c, namespace, Values{
+					Image:              image,
+					InitContainerImage: image,
+					ValiEnabled:        true,
+					PriorityClassName:  priorityClassName,
+					IsGardenCluster:    true,
+				})
+			})
+
+			It("should use garden prometheus label and GardenScrapeTargets network policy", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
+
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+				serviceMonitor := &monitoringv1.ServiceMonitor{
+					ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, garden.Label),
+					Spec:       serviceMonitorSpec,
+				}
+				serviceMonitorPlugin := &monitoringv1.ServiceMonitor{
+					ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", namespace, garden.Label),
+					Spec:       serviceMonitorPluginSpec,
+				}
+				prometheusRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, garden.Label),
+					Spec:       prometheusRuleSpec,
+				}
+
+				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+				Expect(customResourcesManagedResource).To(contains(
+					serviceMonitor,
+					serviceMonitorPlugin,
+					prometheusRule,
+				))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
+				manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(manifests).To(HaveLen(12))
+				Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
+				Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+				test.ExpectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config", namespace)
+				test.ExpectKindWithNameAndNamespace(manifests, "FluentBit", "fluent-bit-0b189", namespace)
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterFluentBitConfig", "fluent-bit-config", "")
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "tail-kubernetes", "")
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "01-systemd", "")
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "02-add-tag-to-record", "")
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "zz-modify-severity", "")
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "containerd-parser", "")
+				test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "systemd", "")
+
+				componenttest.PrometheusRule(prometheusRule, "testdata/garden-fluent-bit.prometheusrule.test.yaml")
+			})
 		})
 
 		Context("with vali disabled", func() {
