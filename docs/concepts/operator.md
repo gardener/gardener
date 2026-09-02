@@ -126,10 +126,16 @@ gardener:
   clusterTypes:
     gardenRuntimeCluster: true # indicates the deployment targets a garden runtime cluster
     selfHostedShootCluster: false # true if this garden is also a self-hosted shoot cluster
+  runtimeCluster:
     priorityClassName: gardener-garden-system-200
 ```
 
 As soon as a `Garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster.
+
+> [!IMPORTANT]
+> The `.gardener.clusterTypes` values identify the roles of the cluster the extension is being deployed to. It does not reflect the deployment target.
+> This mainly helps avoid resource conflicts in case a cluster serves multiple roles at the same time, e.g., the garden runtime cluster also acting as a seed.
+> Whether the extension controller is being deployed to the garden runtime cluster, a seed cluster, or a self-hosted shoot must be derived from `.gardener.runtimeCluster`, `.gardener.seedCluster`, and `.gardener.shoot`.
 
 ##### Extension Registration
 
