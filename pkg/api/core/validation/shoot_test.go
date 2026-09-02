@@ -8633,7 +8633,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 
 				Expect(errList).To(matcher)
 			},
@@ -8725,7 +8725,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: maxUnavailable,
 					UpdateStrategy: &updateStrategy,
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -8768,7 +8768,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Labels:         labels,
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -8804,7 +8804,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Annotations:    annotations,
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -8839,7 +8839,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Taints:         taints,
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -8883,7 +8883,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable: &maxUnavailable,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("volume"),
@@ -8909,7 +8909,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume:         &vol,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal("volume.size"),
@@ -8935,7 +8935,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume:         &vol,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(errType),
 				"Field": Equal("volume.name"),
@@ -8967,7 +8967,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal("dataVolumes[1].size"),
@@ -8997,7 +8997,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -9036,7 +9036,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf())
 		})
 
@@ -9064,7 +9064,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name3,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -9095,7 +9095,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
@@ -9134,7 +9134,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				},
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.33.3"}, shootNamespace, providerType, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.33.3"}, shootNamespace, providerType, nil, false, true)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -9239,7 +9239,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow worker without taints", func() {
-				errList := ValidateWorker(worker, kubernetes, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, kubernetes, shootNamespace, providerType, fldPath, false, true)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -9253,7 +9253,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Effect: "NoExecute",
 				}}
 
-				errList := ValidateWorker(worker, kubernetes, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, kubernetes, shootNamespace, providerType, fldPath, false, true)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -9270,7 +9270,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Effect: "NoExecute",
 				}}
 
-				errList := ValidateWorker(worker, kubernetes, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, kubernetes, shootNamespace, providerType, fldPath, false, true)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -9413,7 +9413,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should fail if the update strategy is not supported", func() {
 				worker.UpdateStrategy = new(testUpdateStrategy)
 
-				Expect(ValidateWorker(worker, core.Kubernetes{}, shootNamespace, providerType, fldPath, false)).To(ConsistOf(
+				Expect(ValidateWorker(worker, core.Kubernetes{}, shootNamespace, providerType, fldPath, false, true)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("workers[0].updateStrategy"),
@@ -9425,7 +9425,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should succeed if the update strategy is supported", func() {
 				worker.UpdateStrategy = new(core.AutoInPlaceUpdate)
 
-				Expect(ValidateWorker(worker, core.Kubernetes{}, shootNamespace, providerType, fldPath, false)).To(BeEmpty())
+				Expect(ValidateWorker(worker, core.Kubernetes{}, shootNamespace, providerType, fldPath, false, true)).To(BeEmpty())
 			})
 		})
 
@@ -9502,7 +9502,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed if MachineControllerManagerSettings is nil", func() {
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9511,7 +9511,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DisableHealthTimeout: new(false),
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9520,7 +9520,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DisableHealthTimeout: new(true),
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.disableHealthTimeout"),
@@ -9535,7 +9535,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DisableHealthTimeout: new(false),
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9546,7 +9546,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DisableHealthTimeout: new(true),
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9555,7 +9555,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachineDrainTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineDrainTimeout"),
@@ -9568,7 +9568,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachineHealthTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineHealthTimeout"),
@@ -9581,7 +9581,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachineCreationTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machineCreationTimeout"),
@@ -9594,7 +9594,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * 2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
@@ -9609,7 +9609,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * 2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9620,7 +9620,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachineInPlaceUpdateTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
@@ -9633,7 +9633,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxEvictRetries: new(int32(-2)),
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManagerSettings.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
 			})
 
@@ -9642,7 +9642,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MachinePreserveTimeout: &metav1.Duration{Duration: time.Minute * -2},
 				}
 
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.machinePreserveTimeout"),
@@ -9656,7 +9656,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					AutoPreserveFailedMachineMax: new(worker.Maximum),
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9666,7 +9666,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					AutoPreserveFailedMachineMax: new(worker.Maximum - 1),
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9676,7 +9676,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					AutoPreserveFailedMachineMax: new(worker.Maximum + 1),
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
@@ -9690,7 +9690,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					AutoPreserveFailedMachineMax: new(worker.Maximum + 1),
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
@@ -9704,7 +9704,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					AutoPreserveFailedMachineMax: new(int32(0)),
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(BeEmpty())
 			})
 
@@ -9714,7 +9714,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
 					AutoPreserveFailedMachineMax: new(int32(-1)),
 				}
-				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false)
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
@@ -9737,7 +9737,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Priority:       new(int32(-2)),
 		}
 
-		errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false)
+		errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, nil, false, true)
 		Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 			"Type":   Equal(field.ErrorTypeInvalid),
 			"Field":  Equal("priority"),
