@@ -12,15 +12,19 @@ import (
 
 	"github.com/spf13/afero"
 	gonumgraph "gonum.org/v1/gonum/graph"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1helper "github.com/gardener/gardener/pkg/api/core/v1/helper"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm"
@@ -122,6 +126,28 @@ func RunForShoot(
 				return getAndExportObject(ctx, c, fs, opts, "ControllerDeployment", extension.ControllerDeployment)
 			},
 		)
+
+		// Export the Secrets/ConfigMaps referenced in the ControllerDeployment's `.resources` field (used for
+		// templating Helm values via `{{ .resources.<name>.data.<key> }}`) as well as any Secrets referenced by the
+		// Helm OCIRepository (pull secret and CA bundle). All of these reside in the garden namespace and are required
+		// for a later `gardenadm init` to resolve the Helm values.
+		for _, ref := range extension.ControllerDeployment.Resources {
+			taskFns = append(taskFns, func(ctx context.Context) error {
+				return getAndExportReferencedResource(ctx, c, fs, opts, ref.ResourceRef)
+			})
+		}
+
+		if extension.ControllerDeployment.Helm != nil {
+			for _, secretName := range v1helper.GetSecretsForOCIRepository(extension.ControllerDeployment.Helm.OCIRepository) {
+				taskFns = append(taskFns, func(ctx context.Context) error {
+					return getAndExportReferencedResource(ctx, c, fs, opts, autoscalingv1.CrossVersionObjectReference{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+						Name:       secretName,
+					})
+				})
+			}
+		}
 	}
 
 	fmt.Fprintf(opts.Out, "Fetching required resources for from garden cluster...\n\n")
@@ -217,6 +243,30 @@ func getAndExportObject(ctx context.Context, c client.Client, fs afero.Afero, op
 		return nil
 	}
 	return exportObject(fs, opts, kind, obj)
+}
+
+// getAndExportReferencedResource exports a Secret/ConfigMap referenced by a ControllerDeployment (either via its
+// `.resources` field or via the Helm OCIRepository). The referenced object is expected to reside in the garden
+// namespace. Only `Secret`s and `ConfigMap`s with apiVersion `v1` are supported (mirroring the resolution performed by
+// the controllerdeployment-reference controller); references to other kinds are ignored.
+func getAndExportReferencedResource(ctx context.Context, c client.Client, fs afero.Afero, opts *CommonOptions, ref autoscalingv1.CrossVersionObjectReference) error {
+	if ref.APIVersion != corev1.SchemeGroupVersion.String() {
+		return nil
+	}
+
+	var obj client.Object
+	switch ref.Kind {
+	case "Secret":
+		obj = &corev1.Secret{}
+	case "ConfigMap":
+		obj = &corev1.ConfigMap{}
+	default:
+		return nil
+	}
+
+	obj.SetName(ref.Name)
+	obj.SetNamespace(v1beta1constants.GardenNamespace)
+	return getAndExportObject(ctx, c, fs, opts, ref.Kind, obj)
 }
 
 func exportObject(fs afero.Afero, opts *CommonOptions, kind string, obj client.Object) error {

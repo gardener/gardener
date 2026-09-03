@@ -79,6 +79,9 @@ var _ = Describe("New", func() {
 		Expect(fakeClient.Create(ctx, resources.ControllerRegistrationNetwork)).To(Succeed())
 		Expect(fakeClient.Create(ctx, resources.ControllerDeploymentDNS)).To(Succeed())
 		Expect(fakeClient.Create(ctx, resources.ControllerRegistrationDNS)).To(Succeed())
+		Expect(fakeClient.Create(ctx, resources.ReferencedSecret)).To(Succeed())
+		Expect(fakeClient.Create(ctx, resources.ReferencedConfigMap)).To(Succeed())
+		Expect(fakeClient.Create(ctx, resources.ReferencedOCISecret)).To(Succeed())
 
 		shootRaw, err := runtime.Encode(&json.Serializer{}, resources.Shoot)
 		Expect(err).NotTo(HaveOccurred())
@@ -106,6 +109,9 @@ var _ = Describe("New", func() {
 				ContainSubstring("Exported ControllerRegistration/"+resources.ControllerRegistrationNetwork.Name),
 				ContainSubstring("Exported ControllerDeployment/"+resources.ControllerDeploymentDNS.Name),
 				ContainSubstring("Exported ControllerRegistration/"+resources.ControllerRegistrationDNS.Name),
+				ContainSubstring("Exported Secret/"+resources.ReferencedSecret.Name),
+				ContainSubstring("Exported ConfigMap/"+resources.ReferencedConfigMap.Name),
+				ContainSubstring("Exported Secret/"+resources.ReferencedOCISecret.Name),
 			))
 
 			for _, path := range []string{
@@ -121,6 +127,9 @@ var _ = Describe("New", func() {
 				fmt.Sprintf("controllerregistration-%s.yaml", resources.ControllerRegistrationNetwork.Name),
 				fmt.Sprintf("controllerdeployment-%s.yaml", resources.ControllerDeploymentDNS.Name),
 				fmt.Sprintf("controllerregistration-%s.yaml", resources.ControllerRegistrationDNS.Name),
+				fmt.Sprintf("secret-%s.yaml", resources.ReferencedSecret.Name),
+				fmt.Sprintf("configmap-%s.yaml", resources.ReferencedConfigMap.Name),
+				fmt.Sprintf("secret-%s.yaml", resources.ReferencedOCISecret.Name),
 			} {
 				exists, err := fs.Exists(path)
 				Expect(err).NotTo(HaveOccurred(), "for path "+path)
