@@ -184,7 +184,7 @@ func ItShouldWaitForShootToBeDeleted(s *ShootContext) {
 		Eventually(ctx, func() error {
 			err := s.GardenKomega.Get(s.Shoot)()
 			if err == nil {
-				s.Log.Info("Waiting for deletion", "lastOperation", s.Shoot.Status.LastOperation, "lastErrors", s.Shoot.Status.LastErrors, "RetryCycleStartTime", s.Shoot.Status.RetryCycleStartTime)
+				s.Log.Info("Waiting for deletion", "lastOperation", s.Shoot.Status.LastOperation, "lastErrors", s.Shoot.Status.LastErrors, "retryCycleStartTime", s.Shoot.Status.RetryCycleStartTime)
 			}
 			return err
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
