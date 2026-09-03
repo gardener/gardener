@@ -69,20 +69,6 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			gardenClusterKubeconfigPathOnHost = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
 		)
 
-		initClientSet := func(ctx context.Context, clientSet *kubernetes.Interface, kubeconfigPath string, scheme client.Options) {
-			if *clientSet != nil {
-				return
-			}
-			Eventually(ctx, func() error {
-				var err error
-				*clientSet, err = kubernetes.NewClientFromFile("", kubeconfigPath,
-					kubernetes.WithDisabledCachedClient(),
-					kubernetes.WithClientOptions(scheme),
-				)
-				return err
-			}).Should(Succeed())
-		}
-
 		initGardenClientSet := func(ctx context.Context) {
 			initClientSet(ctx, &gardenClientSet, gardenClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.GardenScheme})
 		}
@@ -579,6 +565,31 @@ func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffe
 	cmd.Stderr = io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter))
 
 	return stdOutBuffer, stdErrBuffer, cmd.Run()
+}
+
+func dockerCommand(ctx context.Context, args ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
+
+	cmd := exec.CommandContext(ctx, "docker", args...) // #nosec G204 -- Used for e2e tests only.
+	cmd.Stdout = io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter))
+	cmd.Stderr = io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter))
+
+	return stdOutBuffer, stdErrBuffer, cmd.Run()
+}
+
+// initClientSet lazily creates a client set from the given kubeconfig, unless clientSet already points to one.
+func initClientSet(ctx context.Context, clientSet *kubernetes.Interface, kubeconfigPath string, options client.Options) {
+	if *clientSet != nil {
+		return
+	}
+	Eventually(ctx, func() error {
+		var err error
+		*clientSet, err = kubernetes.NewClientFromFile("", kubeconfigPath,
+			kubernetes.WithDisabledCachedClient(),
+			kubernetes.WithClientOptions(options),
+		)
+		return err
+	}).Should(Succeed())
 }
 
 func machineContainerName(ordinal int) string {
