@@ -74,9 +74,20 @@ function copy_virtual_garden_kubeconfig_from_old_gardener_version_folder() {
   cp "dev-setup/${KUBECONFIG_VIRTUAL_GARDEN_CLUSTER#*/dev-setup/}" "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER"
 }
 
+# TODO(LucaBernstein): remove this after v1.152 has been released.
+# This calico patch release contains a fix that removes the calico-typha ScrapeConfig if disabled.
+function bump_patch_calico_extension_1_59_1() {
+  for file_path in \
+      "dev-setup/extensions/networking-calico/components/controllerregistration/kustomization.yaml" \
+      "dev-setup/extensions/networking-calico/components/extension/extension.yaml"; do
+      sed -i 's/1.59.0/1.59.1/g' $file_path
+    done
+}
+
 function install_previous_release() {
   pushd "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE" >/dev/null
   copy_kubeconfig_files_to_old_gardener_version_folder
+  bump_patch_calico_extension_1_59_1
   make gardener-up
   copy_virtual_garden_kubeconfig_from_old_gardener_version_folder
   popd >/dev/null

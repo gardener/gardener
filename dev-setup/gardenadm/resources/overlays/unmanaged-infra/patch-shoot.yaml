@@ -15,3 +15,8 @@ spec:
       kind: NetworkConfig
       ipam:
         type: calico-ipam
+      # Disable calico-typha so Felix watches the kube-apiserver directly. Typha's watcher cache can block resync for
+      # 30m after a transient kube-apiserver outage (e.g. during data plane rolls), leaving newly rolled pods with
+      # unprogrammed network interfaces.
+      typha:
+        enabled: false
