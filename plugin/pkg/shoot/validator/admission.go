@@ -1060,8 +1060,7 @@ func (c *validationContext) validateMachineCapabilities(path *field.Path, worker
 }
 
 func (c *validationContext) validateMachineImage(idxPath *field.Path, worker core.Worker, oldWorker core.Worker, isNewWorkerPool bool, a admission.Attributes) *field.Error {
-	// For unmanaged infrastructure shoots, the OS is not managed by the shoot, do not default
-	// Machine image version is not required and must not be validated against the CloudProfile.
+	// For unmanaged infrastructure shoots, the OS is not managed by the shoot so validation of the machine image is not required.
 	if helper.IsShootSelfHosted(c.shoot.Spec.Provider.Workers) && !helper.HasManagedInfrastructure(c.shoot) {
 		return nil
 	}
