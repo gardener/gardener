@@ -75,6 +75,13 @@ func extractControllerDeploymentInfo(obj any) (string, []string, []string) {
 	return controllerDeployment.Name, secretNames, configMapsNames
 }
 
+// HandleControllerDeploymentCreateOrUpdate adds edges from the Secrets/ConfigMaps referenced by the ControllerDeployment
+// (via its Helm OCIRepository pull secret/CA bundle and its `.resources` field) to the ControllerDeployment vertex.
+func (g *graph) HandleControllerDeploymentCreateOrUpdate(controllerDeployment *gardencorev1.ControllerDeployment) {
+	name, secretNames, configMapNames := extractControllerDeploymentInfo(controllerDeployment)
+	g.handleControllerDeploymentCreateOrUpdate(name, secretNames, configMapNames)
+}
+
 func (g *graph) handleControllerDeploymentCreateOrUpdate(controllerDeploymentName string, secretNames, configMapNames []string) {
 	start := time.Now()
 	defer func() {
