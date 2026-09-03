@@ -5099,6 +5099,30 @@ func (m *InPlaceUpdatesStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.WorkerPoolToHashMap) > 0 {
+		keysForWorkerPoolToHashMap := make([]string, 0, len(m.WorkerPoolToHashMap))
+		for k := range m.WorkerPoolToHashMap {
+			keysForWorkerPoolToHashMap = append(keysForWorkerPoolToHashMap, string(k))
+		}
+		sort.Strings(keysForWorkerPoolToHashMap)
+		for iNdEx := len(keysForWorkerPoolToHashMap) - 1; iNdEx >= 0; iNdEx-- {
+			v := m.WorkerPoolToHashMap[string(keysForWorkerPoolToHashMap[iNdEx])]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintGenerated(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(keysForWorkerPoolToHashMap[iNdEx])
+			copy(dAtA[i:], keysForWorkerPoolToHashMap[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(keysForWorkerPoolToHashMap[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintGenerated(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
 	if m.PendingWorkerUpdates != nil {
 		{
 			size, err := m.PendingWorkerUpdates.MarshalToSizedBuffer(dAtA[:i])
@@ -15417,6 +15441,14 @@ func (m *InPlaceUpdatesStatus) Size() (n int) {
 		l = m.PendingWorkerUpdates.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if len(m.WorkerPoolToHashMap) > 0 {
+		for k, v := range m.WorkerPoolToHashMap {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + len(v) + sovGenerated(uint64(len(v)))
+			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
+		}
+	}
 	return n
 }
 
@@ -19796,8 +19828,19 @@ func (this *InPlaceUpdatesStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
+	keysForWorkerPoolToHashMap := make([]string, 0, len(this.WorkerPoolToHashMap))
+	for k := range this.WorkerPoolToHashMap {
+		keysForWorkerPoolToHashMap = append(keysForWorkerPoolToHashMap, k)
+	}
+	sort.Strings(keysForWorkerPoolToHashMap)
+	mapStringForWorkerPoolToHashMap := "map[string]string{"
+	for _, k := range keysForWorkerPoolToHashMap {
+		mapStringForWorkerPoolToHashMap += fmt.Sprintf("%v: %v,", k, this.WorkerPoolToHashMap[k])
+	}
+	mapStringForWorkerPoolToHashMap += "}"
 	s := strings.Join([]string{`&InPlaceUpdatesStatus{`,
 		`PendingWorkerUpdates:` + strings.Replace(this.PendingWorkerUpdates.String(), "PendingWorkerUpdates", "PendingWorkerUpdates", 1) + `,`,
+		`WorkerPoolToHashMap:` + mapStringForWorkerPoolToHashMap + `,`,
 		`}`,
 	}, "")
 	return s
@@ -35235,6 +35278,133 @@ func (m *InPlaceUpdatesStatus) Unmarshal(dAtA []byte) error {
 			if err := m.PendingWorkerUpdates.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkerPoolToHashMap", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.WorkerPoolToHashMap == nil {
+				m.WorkerPoolToHashMap = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowGenerated
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipGenerated(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.WorkerPoolToHashMap[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

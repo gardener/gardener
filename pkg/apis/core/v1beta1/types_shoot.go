@@ -269,6 +269,10 @@ type InPlaceUpdatesStatus struct {
 	// PendingWorkerUpdates contains information about worker pools pending in-place updates.
 	// +optional
 	PendingWorkerUpdates *PendingWorkerUpdates `json:"pendingWorkerUpdates,omitempty" protobuf:"bytes,1,opt,name=pendingWorkerUpdates"`
+	// WorkerPoolToHashMap stores the last-applied in-place update hash per worker pool.
+	// Used for shoots with unmanaged infrastructure (no Worker extension resource).
+	// +optional
+	WorkerPoolToHashMap map[string]string `json:"workerPoolToHashMap,omitempty" protobuf:"bytes,2,rep,name=workerPoolToHashMap"`
 }
 
 // PendingWorkerUpdates contains information about worker pools pending in-place update.
