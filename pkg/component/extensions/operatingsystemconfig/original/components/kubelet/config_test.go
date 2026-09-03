@@ -141,6 +141,7 @@ var _ = Describe("Config", func() {
 			KubeReserved: map[string]string{
 				"cpu":    "80m",
 				"memory": "1Gi",
+				"pid":    "20k",
 			},
 			MaxOpenFiles:   1000000,
 			MaxPods:        110,
@@ -233,7 +234,7 @@ var _ = Describe("Config", func() {
 			ImageMaximumGCAge:                metav1.Duration{Duration: 0 * time.Second},
 			KubeAPIBurst:                     50,
 			KubeAPIQPS:                       new(int32(50)),
-			KubeReserved:                     utils.MergeStringMaps(params.KubeReserved, map[string]string{"memory": "1Gi"}),
+			KubeReserved:                     utils.MergeStringMaps(params.KubeReserved, map[string]string{"memory": "1Gi", "pid": "20k"}),
 			MaxOpenFiles:                     1000000,
 			MaxPods:                          *params.MaxPods,
 			MemorySwap:                       *params.MemorySwap,

@@ -166,6 +166,7 @@ var (
 	kubeReservedDefaults = map[string]string{
 		string(corev1.ResourceCPU):    "80m",
 		string(corev1.ResourceMemory): "1Gi",
+		string("pid"):                 "20k",
 	}
 )
 
@@ -240,7 +241,7 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.KubeReserved == nil {
-		c.KubeReserved = make(map[string]string, 2)
+		c.KubeReserved = make(map[string]string, 3)
 	}
 	for k, v := range kubeReservedDefaults {
 		if c.KubeReserved[k] == "" {

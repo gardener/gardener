@@ -100,6 +100,7 @@ kubeAPIQPS: 50
 kubeReserved:
   cpu: 80m
   memory: 1Gi
+  pid: 20k
 logging:
   flushFrequency: 0
   options:
