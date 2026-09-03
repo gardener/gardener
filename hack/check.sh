@@ -27,7 +27,7 @@ folders=()
 for f in "$@"; do
   folders+=( "$(echo $f | sed 's/\.\.\.//')" )
 done
-unformatted_files="$(goimports -l ${folders[*]})"
+unformatted_files="$(goimports -format-only -l ${folders[*]})"
 if [[ "$unformatted_files" ]]; then
   echo "Unformatted files detected:"
   echo "$unformatted_files"

@@ -41,4 +41,4 @@ $out
 
 out_file="${images_yaml%.yaml}.go"
 echo "$out" > "$out_file"
-goimports -l -w "$out_file"
+goimports -format-only -l -w "$out_file"
