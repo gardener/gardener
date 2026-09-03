@@ -8,9 +8,14 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -65,4 +70,27 @@ func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 		shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
 		return nil
 	})
+}
+
+// RecoverStaleVPNShootPods deletes vpn-shoot pods so they get recreated, triggering a fresh CNI call
+// and new WorkloadEndpoint creation in Calico. This recovers from Typha WEP watch staleness where
+// the pods were scheduled during a transient apiserver outage and Calico never programmed their veths.
+func (b *Botanist) RecoverStaleVPNShootPods(ctx context.Context) error {
+	podList := &corev1.PodList{}
+	if err := b.ShootClientSet.Client().List(ctx, podList,
+		client.InNamespace(metav1.NamespaceSystem),
+		client.MatchingLabels{v1beta1constants.LabelApp: "vpn-shoot"},
+	); err != nil {
+		return fmt.Errorf("failed to list vpn-shoot pods: %w", err)
+	}
+
+	b.Logger.Info("Readiness of vpn-shoot timed out, deleting pods to recover from potential Calico stale state", "podCount", len(podList.Items))
+	for _, pod := range podList.Items {
+		if err := b.ShootClientSet.Client().Delete(ctx, pod.DeepCopy()); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete vpn-shoot pod %s: %w", pod.Name, err)
+		}
+		b.Logger.Info("Deleted vpn-shoot pod for Calico reprogramming", "pod", pod.Name)
+	}
+
+	return b.Shoot.Components.SystemComponents.VPNShoot.Wait(ctx)
 }
