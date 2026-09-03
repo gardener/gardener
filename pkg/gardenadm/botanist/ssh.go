@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net"
 	"os"
@@ -64,6 +65,29 @@ func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) er
 // SSHConnection returns the SSH connection to the control plane machine opened by ConnectToControlPlaneMachine.
 func (b *GardenadmBotanist) SSHConnection() *sshutils.Connection {
 	return b.sshConnection
+}
+
+// InstallRegistryCABundle installs the private container registry's CA bundle into the control plane machine's trust
+// store, so that the subsequent `ctr` pull of the gardenadm binary can verify the registry's TLS certificate. It is a
+// no-op unless a registry CA bundle is configured (via the image vector's containers CA bundle). Unlike shoot worker
+// nodes, the control plane machine has no running kube-apiserver yet from which gardener-node-agent's init script would
+// otherwise fetch and install the registry CA before pulling images, so we install it here directly from the bundle.
+func (b *GardenadmBotanist) InstallRegistryCABundle(ctx context.Context) error {
+	if b.RegistryCABundle == nil {
+		return nil
+	}
+
+	const caPath = "/usr/local/share/ca-certificates/registry-ca.crt"
+	if err := b.sshConnection.Copy(ctx, caPath, "0644", []byte(*b.RegistryCABundle)); err != nil {
+		return fmt.Errorf("failed copying registry CA bundle to control plane machine: %w", err)
+	}
+
+	if _, stderr, err := b.sshConnection.Run(ctx, "bash -c 'update-ca-certificates && systemctl restart containerd'"); err != nil {
+		out, _ := io.ReadAll(stderr)
+		return fmt.Errorf("failed installing registry CA bundle into the control plane machine's trust store: %w: %s", err, string(out))
+	}
+
+	return nil
 }
 
 var (
