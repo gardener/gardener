@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: Contributors to the Gardener project
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -70,10 +70,8 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			}
 
 			By("Copy the garden cluster kubeconfig onto the node")
-			gardenKubeconfig, err := os.ReadFile(gardenKubeconfigPathOnHost) // #nosec: G304 -- variable points to a static file path
-			Expect(err).NotTo(HaveOccurred())
 			Eventually(ctx, func() error {
-				_, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("echo '%s' > %s", string(gardenKubeconfig), gardenKubeconfigPathOnNode))
+				_, _, err := dockerCommand(ctx, "cp", gardenKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
 				return err
 			}).Should(Succeed())
 
@@ -84,6 +82,10 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			stdOut, _, err = execute(ctx, 0, append(connectCommand, "--log-level=debug")...)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
+
+			// TODO(DobromirNPeev): Check how to eliminate the workarounds for obtaining a ShootState below -
+			// patching the Shoot ".status.lastOperation" and restarting the gardenlet Pods.
+			// These workarounds are no longer needed after the shoot/shoot controller got enabled in Gardener v1.148+.
 
 			By("Patch the Shoot status with a successful create lastOperation")
 			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
@@ -134,8 +136,10 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			// cluster state to the backup store, exercising full+delta replay on recovery. etcd-main is a host-network
 			// static Pod, so the endpoint is reachable via localhost. The request blocks until the delta is uploaded.
 			By("Send an HTTP request for a delta snapshot")
-			_, _, err := execute(ctx, 0, "curl", "-sk", "--fail", "https://localhost:8080/snapshot/delta")
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(ctx, func() error {
+				_, _, err := execute(ctx, 0, "curl", "-sk", "--fail", "https://localhost:8080/snapshot/delta")
+				return err
+			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("should simulate a disaster by destroying the control plane node", func(ctx SpecContext) {

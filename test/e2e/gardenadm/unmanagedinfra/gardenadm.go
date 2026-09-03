@@ -557,14 +557,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 // nolint:unparam
 func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
-	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
-
-	args := append([]string{"exec", machineContainerName(ordinal)}, command...)
-	cmd := exec.CommandContext(ctx, "docker", args...) // #nosec G204 -- Used for e2e tests only.
-	cmd.Stdout = io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter))
-	cmd.Stderr = io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter))
-
-	return stdOutBuffer, stdErrBuffer, cmd.Run()
+	return dockerCommand(ctx, append([]string{"exec", machineContainerName(ordinal)}, command...)...)
 }
 
 func dockerCommand(ctx context.Context, args ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {

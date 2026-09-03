@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+# SPDX-FileCopyrightText: Contributors to the Gardener project
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -16,16 +16,16 @@ clamp_mss_to_pmtu
 trap "
   ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
   ( export_artifacts_gind )
-  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden )
-  ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots shootstates managedseeds controllerinstallations )
-  ( export KUBECONFIG=$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER; export_artifacts_for_cluster 'self-hosted-shoot' )
+  ( [[ -s $KUBECONFIG_RUNTIME_CLUSTER ]] && { export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden; } || true )
+  ( [[ -s $KUBECONFIG_VIRTUAL_GARDEN_CLUSTER ]] && { export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots shootstates managedseeds controllerinstallations; } || true )
+  ( [[ -s $KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER ]] && { export KUBECONFIG=$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER; export_artifacts_for_cluster 'self-hosted-shoot'; } || true )
   ( make gind-down )
   ( make kind-down )
 " EXIT
 
+make gind-up GARDENADM_INIT_FLAGS="--log-level=debug" SCENARIO=join
+
 make kind-up
 make gardenadm-up SCENARIO=connect-kind
-
-make gind-up GARDENADM_INIT_FLAGS="--log-level=debug" SCENARIO=join
 
 make test-e2e-local-gardenadm-unmanaged-infra-restore
