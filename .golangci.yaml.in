@@ -10,6 +10,7 @@ linters:
     - ginkgolinter
     - gocritic
     - importas
+    - kubeapilinter
     - logcheck
     - misspell
     - nilerr
@@ -268,9 +269,27 @@ linters:
         path: <<LOGCHECK_PLUGIN_PATH>>/logcheck.so
         description: Check structured logging calls to logr.Logger instances
         original-url: github.com/gardener/gardener/hack/tools/logcheck
+      kubeapilinter:
+        path: <<KUBE_API_LINTER_PLUGIN_PATH>>/kube-api-linter.so
+        description: Enforces Kubernetes API conventions on API types
+        original-url: sigs.k8s.io/kube-api-linter
+        settings:
+          linters:
+            disable:
+              - "*"
+            enable:
+              - jsontags
   exclusions:
     generated: lax
     rules:
+      # kubeapilinter only applies to versioned API types. Restrict it to the versioned packages under pkg/apis (matched by
+      # their version-suffixed directory, e.g. v1, v1alpha1, v1beta1) and exclude it everywhere else - in particular the
+      # internal (unversioned) API packages, whose types intentionally carry no JSON tags. New versioned API packages under
+      # pkg/apis are covered automatically. To lint versioned API types in other locations (e.g. extensions/pkg/apis/...,
+      # pkg/provider-local/apis/...), extend the path-except pattern below.
+      - linters:
+          - kubeapilinter
+        path-except: 'pkg/apis/.*/v[0-9]+((alpha|beta)[0-9]+)?/'
       - linters:
           - staticcheck
         text: 'SA1019:' # Excludes messages where deprecated variables are used

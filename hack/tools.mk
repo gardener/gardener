@@ -43,9 +43,6 @@ IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
 KIND                       := $(TOOLS_BIN_DIR)/kind
 KUBECTL                    := $(TOOLS_BIN_DIR)/kubectl
 KUSTOMIZE                  := $(TOOLS_BIN_DIR)/kustomize
-# plugin binaries loaded by golangci-lint
-LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so
-KUBE_API_LINTER            := $(TOOLS_BIN_DIR)/kube-api-linter.so
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
@@ -58,6 +55,10 @@ SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
 TYPOS                      := $(TOOLS_BIN_DIR)/typos
 GOBUILDCACHE               := $(TOOLS_BIN_DIR)/gobuildcache
+
+# plugin binaries loaded by golangci-lint
+LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so
+KUBE_API_LINTER            := $(TOOLS_BIN_DIR)/kube-api-linter.so
 
 # default tool versions
 # renovate: datasource=github-releases depName=helm/helm
@@ -97,7 +98,7 @@ K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
 # Hash of analyzer sources + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
 LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
-KUBE_API_LINTER_VERSION    ?= $(shell { find $(GARDENER_TOOL_DIR)/kube-api-linter -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+KUBE_API_LINTER_VERSION    ?= $(shell { [ -n "$(GARDENER_TOOL_DIR)" ] && find $(GARDENER_TOOL_DIR)/kube-api-linter -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -147,7 +148,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(KUBE_API_LINTER) $(LOGCHECK) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
+create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE) $(LOGCHECK) $(KUBE_API_LINTER)
 
 #########################################
 # Tools                                 #
