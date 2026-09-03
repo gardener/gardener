@@ -390,6 +390,8 @@ test-e2e-local-gardenadm-unmanaged-infra-connect: $(GINKGO)
 	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="unmanaged-infra && connect" ./test/e2e/gardenadm/...
 test-e2e-local-gardenadm-unmanaged-infra-seed: $(GINKGO)
 	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="unmanaged-infra && (seed || hosted-shoot)" ./test/e2e/gardenadm/...
+test-e2e-local-gardenadm-unmanaged-infra-restore: $(GINKGO)
+	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="unmanaged-infra && restore" ./test/e2e/gardenadm/...
 
 test-e2e-non-ha-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade && !high-availability" ./test/e2e/gardener/...
@@ -421,6 +423,8 @@ ci-e2e-kind-gardenadm-unmanaged-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-unmanaged-infra.sh
 ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-unmanaged-infra-external-gardener.sh
+ci-e2e-kind-gardenadm-unmanaged-infra-restore: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-gardenadm-unmanaged-infra-restore.sh
 ci-e2e-kind-gardenadm-managed-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-managed-infra.sh
 ci-e2e-kind-upgrade: $(KIND) $(YQ)
