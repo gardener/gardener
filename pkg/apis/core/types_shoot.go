@@ -206,6 +206,9 @@ type NetworkingStatus struct {
 type InPlaceUpdatesStatus struct {
 	// PendingWorkerUpdates contains information about worker pools pending in-place updates.
 	PendingWorkerUpdates *PendingWorkerUpdates
+	// WorkerPoolToHashMap stores the last-applied in-place update hash per worker pool.
+	// Used for shoots with unmanaged infrastructure (no Worker extension resource).
+	WorkerPoolToHashMap map[string]string
 }
 
 // PendingWorkerUpdates contains information about worker pools pending in-place update.

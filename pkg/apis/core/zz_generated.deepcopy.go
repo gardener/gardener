@@ -2581,6 +2581,13 @@ func (in *InPlaceUpdatesStatus) DeepCopyInto(out *InPlaceUpdatesStatus) {
 		*out = new(PendingWorkerUpdates)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.WorkerPoolToHashMap != nil {
+		in, out := &in.WorkerPoolToHashMap, &out.WorkerPoolToHashMap
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
