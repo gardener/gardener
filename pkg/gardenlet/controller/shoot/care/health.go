@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
@@ -431,7 +432,16 @@ func (h *Health) checkControlPlane(
 		return exitCondition, nil
 	}
 
-	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo())
+	shootIsGarden := false
+	if h.shoot.IsSelfHosted() {
+		var err error
+		shootIsGarden, err = gardenletutils.ClusterIsGarden(ctx, h.seedClient.Client())
+		if err != nil {
+			return nil, fmt.Errorf("failed checking whether shoot is garden: %w", err)
+		}
+	}
+
+	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo(), shootIsGarden)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +450,8 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
-	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
+	// TODO(acumino): Remove check for self-hosted shoot when dependency-watchdog-prober is enabled for self-hosted shoots.
+	if !h.shoot.IsWorkerless && !h.shoot.IsSelfHosted() && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.ControlPlaneNamespace); err != nil {
 			return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
 		} else if len(scaledDownDeploymentNames) > 0 {
@@ -697,7 +708,8 @@ func (h *Health) checkWorkers(
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
 func ComputeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
 	requiredDeployments := commonMonitoringDeployments.Clone()
-	if v1beta1helper.IsWorkerless(shoot) {
+	// TODO(acumino): Remove check for self-hosted shoot when kube-state-metrics is enabled for self-hosted shoots.
+	if v1beta1helper.IsWorkerless(shoot) || v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
 
@@ -1118,18 +1130,20 @@ func cosmeticMachineMessage(numberOfMachines int) string {
 }
 
 // ComputeRequiredControlPlaneDeployments returns names of required deployments based on the given shoot.
-func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
+func ComputeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot, shootIsGarden bool) (sets.Set[string], error) {
 	requiredControlPlaneDeployments := commonControlPlaneDeployments.Clone()
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
-		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
 
-		if v1beta1helper.ShootWantsClusterAutoscaler(shoot) {
-			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
+		if v1beta1helper.HasManagedInfrastructure(shoot) {
+			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
+			if v1beta1helper.ShootWantsClusterAutoscaler(shoot) {
+				requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
+			}
 		}
 
-		if v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+		if !shootIsGarden && v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
 			for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
 				requiredControlPlaneDeployments.Insert(vpaDeployment)
 			}
