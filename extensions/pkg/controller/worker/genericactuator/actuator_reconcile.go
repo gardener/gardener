@@ -57,6 +57,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to generate the machine deployments: %w", err)
 	}
 
+	if err := validateMachineDeploymentPoolNames(worker, wantedMachineDeployments); err != nil {
+		return err
+	}
+
 	var (
 		clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
 		isHibernationEnabled  = extensionscontroller.IsHibernationEnabled(cluster)
@@ -170,6 +174,20 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	// Call post reconciliation hook after Worker reconciliation has happened.
 	if err := workerDelegate.PostReconcileHook(ctx); err != nil {
 		return fmt.Errorf("post worker reconciliation hook failed: %w", err)
+	}
+
+	return nil
+}
+
+func validateMachineDeploymentPoolNames(worker *extensionsv1alpha1.Worker, machineDeployments extensionsworkercontroller.MachineDeployments) error {
+	workerPoolNames := sets.New[string]()
+	for _, pool := range worker.Spec.Pools {
+		workerPoolNames.Insert(pool.Name)
+	}
+	for _, deployment := range machineDeployments {
+		if !workerPoolNames.Has(deployment.PoolName) {
+			return fmt.Errorf("generated MachineDeployment %q references unknown worker pool %q", deployment.Name, deployment.PoolName)
+		}
 	}
 
 	return nil
