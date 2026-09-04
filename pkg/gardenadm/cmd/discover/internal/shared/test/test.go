@@ -30,6 +30,12 @@ type Resources struct {
 	ControllerDeploymentDNS        *gardencorev1.ControllerDeployment
 	ControllerRegistrationDNS      *gardencorev1beta1.ControllerRegistration
 
+	// These are referenced by ControllerDeploymentProvider and reside in the garden namespace.
+	ReferencedSecret            *corev1.Secret
+	ReferencedConfigMap         *corev1.ConfigMap
+	ReferencedOCIPullSecret     *corev1.Secret
+	ReferencedOCICABundleSecret *corev1.Secret
+
 	Shoot *gardencorev1beta1.Shoot
 }
 
@@ -83,9 +89,58 @@ func NewResources() *Resources {
 			Name: "test-cloud-profile",
 		},
 	}
+	referencedSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-referenced-secret",
+			Namespace: "garden",
+		},
+	}
+	referencedConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-referenced-configmap",
+			Namespace: "garden",
+		},
+	}
+	referencedOCIPullSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-referenced-oci-pull-secret",
+			Namespace: "garden",
+		},
+	}
+	referencedOCICABundleSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-referenced-oci-ca-bundle-secret",
+			Namespace: "garden",
+		},
+	}
 	controllerDeploymentProvider := &gardencorev1.ControllerDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-controller-deployment-provider",
+		},
+		Helm: &gardencorev1.HelmControllerDeployment{
+			OCIRepository: &gardencorev1.OCIRepository{
+				Ref:               new("test-registry.example.com/charts/provider:v1.0.0"),
+				PullSecretRef:     &corev1.LocalObjectReference{Name: referencedOCIPullSecret.Name},
+				CABundleSecretRef: &corev1.LocalObjectReference{Name: referencedOCICABundleSecret.Name},
+			},
+		},
+		Resources: []gardencorev1.NamedResourceReference{
+			{
+				Name: "config",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       referencedSecret.Name,
+				},
+			},
+			{
+				Name: "log-level",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+					Name:       referencedConfigMap.Name,
+				},
+			},
 		},
 	}
 	controllerRegistrationProvider := &gardencorev1beta1.ControllerRegistration{
@@ -195,6 +250,10 @@ func NewResources() *Resources {
 		ControllerRegistrationNetwork:  controllerRegistrationNetwork,
 		ControllerDeploymentDNS:        controllerDeploymentDNS,
 		ControllerRegistrationDNS:      controllerRegistrationDNS,
+		ReferencedSecret:               referencedSecret,
+		ReferencedConfigMap:            referencedConfigMap,
+		ReferencedOCIPullSecret:        referencedOCIPullSecret,
+		ReferencedOCICABundleSecret:    referencedOCICABundleSecret,
 		Shoot:                          shoot,
 	}
 }

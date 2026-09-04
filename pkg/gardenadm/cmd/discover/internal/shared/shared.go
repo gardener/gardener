@@ -57,12 +57,19 @@ func RunForShoot(
 		if err != nil {
 			return fmt.Errorf("failed reading backup resources for shoot: %w", err)
 		}
-		if backupBucket != nil && backupEntry == nil {
+		if backupBucket == nil {
+			fmt.Fprintf(opts.Out, "WARNING: found no BackupBucket for Shoot %s - backup restoration may not be possible\n", client.ObjectKeyFromObject(shoot))
+		} else if backupEntry == nil {
 			fmt.Fprintf(opts.Out, "WARNING: found BackupBucket without a corresponding BackupEntry for Shoot %s - backup restoration may not be possible\n", client.ObjectKeyFromObject(shoot))
 		}
 	}
 
 	fmt.Fprintf(opts.Out, "Computing required resources for Shoot...\n")
+
+	extensions, err := requiredExtensions(ctx, c, shoot, opts.ManagedInfrastructure)
+	if err != nil {
+		return fmt.Errorf("failed computing required extensions: %w", err)
+	}
 
 	g := graph.New(opts.Log, c, true)
 	g.HandleShootCreateOrUpdate(ctx, shoot)
@@ -79,6 +86,11 @@ func RunForShoot(
 	}
 	if backupBucket != nil {
 		g.HandleBackupBucketCreateOrUpdate(backupBucket)
+	}
+	// Feed the ControllerDeployments into the graph so the Secrets/ConfigMaps they reference become vertices and get
+	// exported by the generic vertex walk below.
+	for _, extension := range extensions {
+		g.HandleControllerDeploymentCreateOrUpdate(extension.ControllerDeployment)
 	}
 
 	var taskFns []flow.TaskFn
@@ -108,20 +120,12 @@ func RunForShoot(
 		return getAndExportObject(ctx, c, fs, opts, "Project", project)
 	})
 
-	extensions, err := requiredExtensions(ctx, c, shoot, opts.ManagedInfrastructure)
-	if err != nil {
-		return fmt.Errorf("failed computing required extensions: %w", err)
-	}
-
+	// ControllerDeployments are exported via the generic vertex walk above, so only the ControllerRegistrations need
+	// exporting here.
 	for _, extension := range extensions {
-		taskFns = append(taskFns,
-			func(ctx context.Context) error {
-				return getAndExportObject(ctx, c, fs, opts, "ControllerRegistration", extension.ControllerRegistration)
-			},
-			func(ctx context.Context) error {
-				return getAndExportObject(ctx, c, fs, opts, "ControllerDeployment", extension.ControllerDeployment)
-			},
-		)
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return getAndExportObject(ctx, c, fs, opts, "ControllerRegistration", extension.ControllerRegistration)
+		})
 	}
 
 	fmt.Fprintf(opts.Out, "Fetching required resources for from garden cluster...\n\n")
