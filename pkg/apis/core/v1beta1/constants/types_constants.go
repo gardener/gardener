@@ -553,6 +553,8 @@ const (
 	// LabelBasicAuthSecretManaged is a constant for a label used on virtual services to indicate whether the referenced basic-auth secret is managed by the secrets manager ("true") or used verbatim ("false").
 	LabelBasicAuthSecretManaged = "reference.gardener.cloud/basic-auth-secret-managed"
 
+	// LabelKeyExtensionName is used to identify the name of an extension.
+	LabelKeyExtensionName = "extension.gardener.cloud/name"
 	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
 	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
 	// LabelExtensionProviderTypePrefix is used to prefix extension label for cloud provider types.

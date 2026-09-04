@@ -124,7 +124,18 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 	}
 
 	mrName := operator.ExtensionRuntimeManagedResourceName(extension.Name)
-	if err := managedresources.CreateForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName, false, renderedChart.AsSecretData()); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(
+		ctx,
+		d.runtimeClientSet.Client(),
+		d.gardenNamespace,
+		mrName,
+		false,
+		map[string]string{
+			managedresources.LabelKeyOrigin:        managedresources.LabelValueOperator,
+			v1beta1constants.LabelKeyExtensionName: extension.Name,
+		},
+		renderedChart.AsSecretData(),
+	); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 

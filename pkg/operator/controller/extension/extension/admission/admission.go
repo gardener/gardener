@@ -154,7 +154,10 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		d.gardenNamespace,
 		managedResourceName,
 		false,
-		map[string]string{managedresources.LabelKeyOrigin: managedresources.LabelValueOperator},
+		map[string]string{
+			managedresources.LabelKeyOrigin:        managedresources.LabelValueOperator,
+			v1beta1constants.LabelKeyExtensionName: extension.Name,
+		},
 		secretData,
 	); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
@@ -233,7 +236,18 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 	}
 
 	managedResourceName := operator.ExtensionAdmissionVirtualManagedResourceName(extension.Name)
-	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, serializedObjects); err != nil {
+	if err := managedresources.CreateForShootWithLabels(
+		ctx,
+		d.runtimeClientSet.Client(),
+		d.gardenNamespace,
+		managedResourceName,
+		managedresources.LabelValueOperator,
+		false,
+		map[string]string{
+			v1beta1constants.LabelKeyExtensionName: extension.Name,
+		},
+		serializedObjects,
+	); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
