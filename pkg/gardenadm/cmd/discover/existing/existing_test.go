@@ -181,7 +181,7 @@ var _ = Describe("Existing", func() {
 
 			Eventually(func() string { return string(stdOut.Contents()) }).Should(SatisfyAll(
 				ContainSubstring("Computing required resources for Shoot..."),
-				ContainSubstring("Fetching required resources for from garden cluster..."),
+				ContainSubstring("Fetching required resources from garden cluster..."),
 				ContainSubstring("Exported Namespace/"+resources.Namespace.Name),
 				ContainSubstring("Exported Project/"+resources.Project.Name),
 				ContainSubstring("Exported Secret/"+resources.Secret.Name),
