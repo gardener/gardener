@@ -59,14 +59,31 @@ func migrateExtensionManagedResources(ctx context.Context, c client.Client, log 
 	return flow.Parallel(taskFns...)(ctx)
 }
 
+const migratedTo = "resources.gardener.cloud/migrated-to"
+
 func migrateExtensionManagedResource(ctx context.Context, c client.Client, log logr.Logger, mr resourcesv1alpha1.ManagedResource) error {
 	name := mr.Name
 	extensionName := strings.TrimSuffix(strings.TrimPrefix(name, oldExtensionRuntimePrefix), oldExtensionRuntimeSuffix)
 	newMRName := operator.ExtensionRuntimeManagedResourceName(extensionName)
+
+	// Check if the currently processed ManagedResource is a false-positive, i.e. not managed by the Gardener Operator.
+	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := c.List(ctx, managedResourceList, client.MatchingLabels{v1beta1constants.LabelKeyExtensionName: extensionName}, client.Limit(1)); err != nil {
+		return fmt.Errorf("failed to check if migration has already happened %q: %w", extensionName, err)
+	}
+	// The currently processed ManagedResource is probably not managed by the Gardener Operator if the expected ManagedResource already exists.
+	// Additionally, if the ManagedResource has the migrateTo annotation, it means the previous migration run was interrupted.
+	// In this case, we should not skip the migration.
+	if len(managedResourceList.Items) == 1 && !metav1.HasAnnotation(mr.ObjectMeta, migratedTo) {
+		log.Info("Skipping migration of extension ManagedResource: not managed by gardener-operator", "name", name)
+		return nil
+	}
+
 	log.Info("Migrating extension ManagedResource", "old", name, "new", newMRName)
 
 	patch := client.MergeFrom(mr.DeepCopy())
 	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, resourcesv1alpha1.Ignore, "true")
+	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, migratedTo, newMRName)
 	mr.Spec.KeepObjects = new(true)
 	if err := c.Patch(ctx, &mr, patch); err != nil {
 		return fmt.Errorf("failed annotating old ManagedResource %q with ignore annotation: %w", name, err)
