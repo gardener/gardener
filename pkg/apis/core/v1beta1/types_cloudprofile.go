@@ -365,6 +365,19 @@ const (
 // VersionClassification is the logical state of a version.
 type VersionClassification string
 
+var order = map[VersionClassification]int{
+	ClassificationUnavailable: 0,
+	ClassificationPreview:     1,
+	ClassificationSupported:   2,
+	ClassificationDeprecated:  3,
+	ClassificationExpired:     4,
+}
+
+// Compare compares two VersionClassification objects to determine their order.
+func (v VersionClassification) Compare(other VersionClassification) int {
+	return order[v] - order[other]
+}
+
 // IsActive returns whether the version can be used.
 func (v VersionClassification) IsActive() bool {
 	return v != ClassificationExpired && v != ClassificationUnavailable
