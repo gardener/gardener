@@ -31,6 +31,18 @@ import (
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
+// getExpiryStage extracts the expired LifecycleStage from a version's lifecycle stages.
+// For legacy classifications it converts it to LifecycleStages.
+// If the version does not have an Expired stage, it returns nil.
+func getExpiryStage(version gardencore.ExpirableVersion) *gardencore.LifecycleStage {
+	for _, stage := range gardencorehelper.ToLifecycleStages(version) {
+		if stage.Classification == gardencore.ClassificationExpired {
+			return &stage
+		}
+	}
+	return nil
+}
+
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameNamespacedCloudProfileValidator, func(_ io.Reader) (admission.Interface, error) {
@@ -209,7 +221,10 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
 		}
 		if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(newVersion) {
-			if override, exists := currentVersionsMerged[newVersion.Version]; !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
+			override, exists := currentVersionsMerged[newVersion.Version]
+			overrideStage := getExpiryStage(override)
+			newStage := getExpiryStage(newVersion)
+			if !exists || overrideStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 				return fmt.Errorf("expiration date for version %q is in the past", newVersion.Version)
 			}
 		}
@@ -283,7 +298,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 					if !imageVersionAlreadyInNamespacedCloudProfile {
 						allErrs = append(allErrs, validateNamespacedCloudProfileExtendedMachineImages(imageVersion, imageVersionIndexPath)...)
 
-						if imageVersion.ExpirationDate == nil {
+						if imageVersion.ExpirationDate == nil && len(imageVersion.Lifecycle) == 0 {
 							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q must be set", imageVersion.Version)))
 						}
 					}
@@ -296,7 +311,9 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						if oldVersionsMerged != nil {
 							override, exists = oldVersionsMerged.GetImageVersion(image.Name, imageVersion.Version)
 						}
-						if !exists || !override.ExpirationDate.Equal(imageVersion.ExpirationDate) {
+						overrideStage := getExpiryStage(override.ExpirableVersion)
+						newStage := getExpiryStage(imageVersion.ExpirableVersion)
+						if !exists || overrideStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version)))
 						}
 					}
