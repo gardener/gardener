@@ -282,11 +282,9 @@ linters:
   exclusions:
     generated: lax
     rules:
-      # kubeapilinter only applies to versioned API types. Restrict it to the versioned packages under pkg/apis (matched by
-      # their version-suffixed directory, e.g. v1, v1alpha1, v1beta1) and exclude it everywhere else - in particular the
-      # internal (unversioned) API packages, whose types intentionally carry no JSON tags. New versioned API packages under
-      # pkg/apis are covered automatically. To lint versioned API types in other locations (e.g. extensions/pkg/apis/...,
-      # pkg/provider-local/apis/...), extend the path-except pattern below.
+      # kubeapilinter only applies to versioned API types under pkg/apis. The internal (unversioned) API packages
+      # intentionally carry no JSON tags and are excluded. New versioned packages are covered automatically.
+      # To lint API types in other locations (e.g. extensions/pkg/apis/...), extend the path-except pattern below.
       - linters:
           - kubeapilinter
         path-except: 'pkg/apis/.*/v[0-9]+((alpha|beta)[0-9]+)?/'
