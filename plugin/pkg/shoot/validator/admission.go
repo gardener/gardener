@@ -1306,7 +1306,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 		}
 
 		versionStr := versionConstraint.Version
-		if ptr.Deref(versionConstraint.Classification, "") == gardencorev1beta1.ClassificationPreview {
+		if v1beta1helper.VersionIsPreview(versionConstraint) {
 			versionStr += " (preview)"
 		}
 		validValues = append(validValues, versionStr)

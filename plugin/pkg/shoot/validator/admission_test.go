@@ -2845,6 +2845,23 @@ var _ = Describe("validator", func() {
 				Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.3\"")))
 			})
 
+			It("should format preview versions with (preview) in supported values list when defined with Lifecycle", func() {
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{
+					Version: "1.29.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationPreview},
+					},
+				})
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.Kubernetes.Version = "1.2.3"
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("\"1.29.0 (preview)\"")))
+			})
+
 			It("should reject to create a cluster with an expired kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = expiredVersion.Version
 
