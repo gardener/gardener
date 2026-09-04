@@ -51,9 +51,6 @@ func ToLifecycleStages(version core.ExpirableVersion) []core.LifecycleStage {
 // An empty Classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
 	lifecycle := ToLifecycleStages(version)
-	if len(lifecycle) == 0 {
-		return core.ClassificationSupported
-	}
 
 	var (
 		currentTime           = time.Now()

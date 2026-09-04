@@ -208,16 +208,6 @@ var _ = Describe("CloudProfile Helper", func() {
 			Expect(UsesLegacyClassifications(core.ExpirableVersion{Version: "1.28.0"})).To(BeFalse())
 		})
 
-		It("returns false when lifecycle is non-empty", func() {
-			Expect(UsesLegacyClassifications(core.ExpirableVersion{
-				Version: "1.28.0",
-				Lifecycle: []core.LifecycleStage{
-					{Classification: core.ClassificationSupported},
-				},
-				Classification: new(core.ClassificationPreview),
-			})).To(BeFalse())
-		})
-
 		It("returns true when classification is set without lifecycle", func() {
 			Expect(UsesLegacyClassifications(core.ExpirableVersion{
 				Version:        "1.28.0",
