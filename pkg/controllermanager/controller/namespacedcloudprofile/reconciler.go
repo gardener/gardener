@@ -210,7 +210,7 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 	}
 
 	baseLifecycle := v1beta1helper.ToLifecycleStages(base)
-	overrideLifecycle := v1beta1helper.ToLifecycleStages(override)
+	overrideLifecycle := toLifecycleOverrideStages(override)
 
 	// If the override starts with an implicit stage, remove higher implicit stages from the base.
 	// Otherwise, they would immediately override it.
@@ -236,6 +236,32 @@ func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) g
 		Version:   base.Version,
 		Lifecycle: resultLifecycle,
 	}
+}
+
+// toLifecycleOverrideStages converts legacy classification fields of an ExpirableVersion to lifecycle stages
+// for use in overrides.
+// It intentionally does not apply defaulting, because defaulted stages would be treated as explicit overrides during merging.
+func toLifecycleOverrideStages(override gardencorev1beta1.ExpirableVersion) []gardencorev1beta1.LifecycleStage {
+	if len(override.Lifecycle) > 0 {
+		return override.Lifecycle
+	}
+
+	var stages []gardencorev1beta1.LifecycleStage
+
+	if override.Classification != nil {
+		stages = append(stages, gardencorev1beta1.LifecycleStage{
+			Classification: *override.Classification,
+		})
+	}
+
+	if override.ExpirationDate != nil {
+		stages = append(stages, gardencorev1beta1.LifecycleStage{
+			Classification: gardencorev1beta1.ClassificationExpired,
+			StartTime:      override.ExpirationDate,
+		})
+	}
+
+	return stages
 }
 
 // mergeLegacyClassificationFields merges legacy classification fields without producing lifecycle classifications.
