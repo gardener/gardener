@@ -12,7 +12,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -24,16 +23,21 @@ func UsesLegacyClassifications(version core.ExpirableVersion) bool {
 	return len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil)
 }
 
-// ToLifecycleStages converts a legacy Classification of an ExpirableVersion to Lifecycle Classifications.
-// If the version already defines Lifecycle Classifications, they are returned.
+// ToLifecycleStages converts the legacy classification fields of an ExpirableVersion to lifecycle stages.
+// If the version already defines lifecycle stages, they are returned unchanged.
 func ToLifecycleStages(version core.ExpirableVersion) []core.LifecycleStage {
 	if len(version.Lifecycle) > 0 {
 		return version.Lifecycle
 	}
 
+	classification := core.ClassificationSupported
+	if version.Classification != nil {
+		classification = *version.Classification
+	}
+
 	stages := []core.LifecycleStage{
 		{
-			Classification: ptr.Deref(version.Classification, core.ClassificationSupported),
+			Classification: classification,
 		},
 	}
 

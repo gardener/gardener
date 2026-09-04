@@ -14,7 +14,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -35,9 +34,14 @@ func ToLifecycleStages(version gardencorev1beta1.ExpirableVersion) []gardencorev
 		return version.Lifecycle
 	}
 
+	classification := gardencorev1beta1.ClassificationSupported
+	if version.Classification != nil {
+		classification = *version.Classification
+	}
+
 	stages := []gardencorev1beta1.LifecycleStage{
 		{
-			Classification: ptr.Deref(version.Classification, gardencorev1beta1.ClassificationSupported),
+			Classification: classification,
 		},
 	}
 
