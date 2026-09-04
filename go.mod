@@ -21,7 +21,7 @@ require (
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management/pkg/apis v0.27.0
 	github.com/gardener/dependency-watchdog v1.8.0
-	github.com/gardener/etcd-druid/api v0.38.1
+	github.com/gardener/etcd-druid/api v0.38.2
 	github.com/gardener/gardener/pkg/apis v1.149.0
 	github.com/gardener/machine-controller-manager v0.62.1
 	github.com/gardener/pvc-autoscaler v0.3.0

@@ -74,7 +74,7 @@ images:
   - name: etcd-druid
     sourceRepository: github.com/gardener/etcd-druid
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcd-druid
-    tag: "v0.38.1"
+    tag: "v0.38.2"
   - name: etcd
     sourceRepository: github.com/etcd-io/etcd
     repository: gcr.io/etcd-development/etcd
@@ -82,7 +82,7 @@ images:
   - name: etcd-backup-restore
     sourceRepository: github.com/gardener/etcd-backup-restore
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl
-    tag: "v0.44.1"
+    tag: "v0.44.2"
     resourceId:
       name: etcdbrctl
   - name: dependency-watchdog
