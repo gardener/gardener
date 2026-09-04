@@ -30,12 +30,11 @@ type Resources struct {
 	ControllerDeploymentDNS        *gardencorev1.ControllerDeployment
 	ControllerRegistrationDNS      *gardencorev1beta1.ControllerRegistration
 
-	// ReferencedSecret and ReferencedConfigMap are referenced by ControllerDeploymentProvider via its `.resources`
-	// field. ReferencedOCISecret is referenced by ControllerDeploymentProvider via its Helm OCIRepository pull secret.
-	// All of them reside in the garden namespace.
-	ReferencedSecret    *corev1.Secret
-	ReferencedConfigMap *corev1.ConfigMap
-	ReferencedOCISecret *corev1.Secret
+	// These are referenced by ControllerDeploymentProvider and reside in the garden namespace.
+	ReferencedSecret            *corev1.Secret
+	ReferencedConfigMap         *corev1.ConfigMap
+	ReferencedOCIPullSecret     *corev1.Secret
+	ReferencedOCICABundleSecret *corev1.Secret
 
 	Shoot *gardencorev1beta1.Shoot
 }
@@ -102,9 +101,15 @@ func NewResources() *Resources {
 			Namespace: "garden",
 		},
 	}
-	referencedOCISecret := &corev1.Secret{
+	referencedOCIPullSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-referenced-oci-secret",
+			Name:      "test-referenced-oci-pull-secret",
+			Namespace: "garden",
+		},
+	}
+	referencedOCICABundleSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-referenced-oci-ca-bundle-secret",
 			Namespace: "garden",
 		},
 	}
@@ -114,8 +119,9 @@ func NewResources() *Resources {
 		},
 		Helm: &gardencorev1.HelmControllerDeployment{
 			OCIRepository: &gardencorev1.OCIRepository{
-				Ref:           new("test-registry.example.com/charts/provider:v1.0.0"),
-				PullSecretRef: &corev1.LocalObjectReference{Name: referencedOCISecret.Name},
+				Ref:               new("test-registry.example.com/charts/provider:v1.0.0"),
+				PullSecretRef:     &corev1.LocalObjectReference{Name: referencedOCIPullSecret.Name},
+				CABundleSecretRef: &corev1.LocalObjectReference{Name: referencedOCICABundleSecret.Name},
 			},
 		},
 		Resources: []gardencorev1.NamedResourceReference{
@@ -246,7 +252,8 @@ func NewResources() *Resources {
 		ControllerRegistrationDNS:      controllerRegistrationDNS,
 		ReferencedSecret:               referencedSecret,
 		ReferencedConfigMap:            referencedConfigMap,
-		ReferencedOCISecret:            referencedOCISecret,
+		ReferencedOCIPullSecret:        referencedOCIPullSecret,
+		ReferencedOCICABundleSecret:    referencedOCICABundleSecret,
 		Shoot:                          shoot,
 	}
 }

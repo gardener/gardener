@@ -87,10 +87,8 @@ func RunForShoot(
 	if backupBucket != nil {
 		g.HandleBackupBucketCreateOrUpdate(backupBucket)
 	}
-	// Feed the required ControllerDeployments into the graph so that the Secrets/ConfigMaps they reference (via their
-	// `.resources` field and the Helm OCIRepository pull secret/CA bundle) become vertices and get exported by the
-	// generic vertex walk below. These referenced resources reside in the garden namespace and are required for a later
-	// `gardenadm init`/`restore` to resolve the extension Helm values.
+	// Feed the ControllerDeployments into the graph so the Secrets/ConfigMaps they reference become vertices and get
+	// exported by the generic vertex walk below.
 	for _, extension := range extensions {
 		g.HandleControllerDeploymentCreateOrUpdate(extension.ControllerDeployment)
 	}
@@ -122,8 +120,8 @@ func RunForShoot(
 		return getAndExportObject(ctx, c, fs, opts, "Project", project)
 	})
 
-	// The ControllerDeployments themselves are exported via the generic vertex walk above (they were fed into the graph
-	// together with their referenced Secrets/ConfigMaps), so only the ControllerRegistrations need to be exported here.
+	// ControllerDeployments are exported via the generic vertex walk above, so only the ControllerRegistrations need
+	// exporting here.
 	for _, extension := range extensions {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			return getAndExportObject(ctx, c, fs, opts, "ControllerRegistration", extension.ControllerRegistration)

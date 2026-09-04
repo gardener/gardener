@@ -91,7 +91,8 @@ var _ = Describe("Existing", func() {
 		Expect(fakeClient.Create(ctx, resources.ControllerRegistrationDNS)).To(Succeed())
 		Expect(fakeClient.Create(ctx, resources.ReferencedSecret)).To(Succeed())
 		Expect(fakeClient.Create(ctx, resources.ReferencedConfigMap)).To(Succeed())
-		Expect(fakeClient.Create(ctx, resources.ReferencedOCISecret)).To(Succeed())
+		Expect(fakeClient.Create(ctx, resources.ReferencedOCIPullSecret)).To(Succeed())
+		Expect(fakeClient.Create(ctx, resources.ReferencedOCICABundleSecret)).To(Succeed())
 
 		backupBucketSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -195,7 +196,8 @@ var _ = Describe("Existing", func() {
 				ContainSubstring("Exported ControllerRegistration/"+resources.ControllerRegistrationDNS.Name),
 				ContainSubstring("Exported Secret/"+resources.ReferencedSecret.Name),
 				ContainSubstring("Exported ConfigMap/"+resources.ReferencedConfigMap.Name),
-				ContainSubstring("Exported Secret/"+resources.ReferencedOCISecret.Name),
+				ContainSubstring("Exported Secret/"+resources.ReferencedOCIPullSecret.Name),
+				ContainSubstring("Exported Secret/"+resources.ReferencedOCICABundleSecret.Name),
 				ContainSubstring("Exported Secret/"+backupBucketSecret.Name),
 				ContainSubstring("Exported Secret/"+backupBucketGeneratedSecret.Name),
 				ContainSubstring("Exported BackupBucket/"+backupBucket.Name),
@@ -219,7 +221,8 @@ var _ = Describe("Existing", func() {
 				fmt.Sprintf("controllerregistration-%s.yaml", resources.ControllerRegistrationDNS.Name),
 				fmt.Sprintf("secret-%s.yaml", resources.ReferencedSecret.Name),
 				fmt.Sprintf("configmap-%s.yaml", resources.ReferencedConfigMap.Name),
-				fmt.Sprintf("secret-%s.yaml", resources.ReferencedOCISecret.Name),
+				fmt.Sprintf("secret-%s.yaml", resources.ReferencedOCIPullSecret.Name),
+				fmt.Sprintf("secret-%s.yaml", resources.ReferencedOCICABundleSecret.Name),
 				fmt.Sprintf("secret-%s.yaml", backupBucketSecret.Name),
 				fmt.Sprintf("secret-%s.yaml", backupBucketGeneratedSecret.Name),
 				fmt.Sprintf("backupbucket-%s.yaml", backupBucket.Name),
