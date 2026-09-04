@@ -43,6 +43,15 @@ var _ = Describe("CloudProfile Helper", func() {
 				Expect(VersionIsActive(version)).To(BeTrue())
 			})
 
+			It("should default to supported when only a future expiration date is set", func() {
+				version := core.ExpirableVersion{
+					ExpirationDate: new(metav1.NewTime(now.Add(1 * time.Hour))),
+					Version:        "1.28.0",
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationSupported))
+				Expect(VersionIsActive(version)).To(BeTrue())
+			})
+
 			It("should return preview when the expiration date is in the future", func() {
 				version := core.ExpirableVersion{
 					Classification: new(core.ClassificationPreview),
@@ -66,6 +75,15 @@ var _ = Describe("CloudProfile Helper", func() {
 			It("should return expired when the expiration date is in the past", func() {
 				version := core.ExpirableVersion{
 					Classification: new(core.ClassificationDeprecated),
+					ExpirationDate: new(metav1.NewTime(now.Add(-1 * time.Hour))),
+					Version:        "1.28.0",
+				}
+				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationExpired))
+				Expect(VersionIsActive(version)).To(BeFalse())
+			})
+
+			It("should return expired when the expiration date is in the past and classification is nil", func() {
+				version := core.ExpirableVersion{
 					ExpirationDate: new(metav1.NewTime(now.Add(-1 * time.Hour))),
 					Version:        "1.28.0",
 				}
@@ -258,15 +276,15 @@ var _ = Describe("CloudProfile Helper", func() {
 			}))
 		})
 
-		It("converts legacy expiration date without classification (defaults to supported)", func() {
-			expiry := new(metav1.NewTime(now.Add(time.Hour)))
+		It("converts legacy expiration date without classification", func() {
+			future := new(metav1.NewTime(now.Add(time.Hour)))
 			result := ToLifecycleStages(core.ExpirableVersion{
 				Version:        "1.28.0",
-				ExpirationDate: expiry,
+				ExpirationDate: future,
 			})
 			Expect(result).To(Equal([]core.LifecycleStage{
 				{Classification: core.ClassificationSupported},
-				{Classification: core.ClassificationExpired, StartTime: expiry},
+				{Classification: core.ClassificationExpired, StartTime: future},
 			}))
 		})
 
