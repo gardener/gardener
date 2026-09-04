@@ -75,6 +75,24 @@ var _ = Describe("Types", func() {
 		Entry("#ClassificationExpired is not active", ClassificationExpired, false),
 	)
 
+	DescribeTable("#VersionClassification.Compare", func(a, b VersionClassification, expectedOrder int) {
+		switch {
+		case expectedOrder < 0:
+			Expect(a.Compare(b)).To(BeNumerically("<", 0))
+		case expectedOrder > 0:
+			Expect(a.Compare(b)).To(BeNumerically(">", 0))
+		default:
+			Expect(a.Compare(b)).To(Equal(0))
+		}
+	},
+		Entry("unavailable < preview", ClassificationUnavailable, ClassificationPreview, -1),
+		Entry("preview < supported", ClassificationPreview, ClassificationSupported, -1),
+		Entry("supported < deprecated", ClassificationSupported, ClassificationDeprecated, -1),
+		Entry("deprecated < expired", ClassificationDeprecated, ClassificationExpired, -1),
+		Entry("supported > preview", ClassificationSupported, ClassificationPreview, 1),
+		Entry("supported == supported", ClassificationSupported, ClassificationSupported, 0),
+	)
+
 	Describe("#GetCapabilitiesWithAppliedDefaults", func() {
 		It("should apply default values when capabilities are nil", func() {
 			var capabilities Capabilities
