@@ -102,47 +102,43 @@ func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(true))
 }
 
-// SetInPlaceUpdatePendingWorkers sets the Shoot status with the name of worker pools which are undergoing an in-place update.
-func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
+// SetInPlaceUpdateStatus sets the Shoot status with the name of worker pools which are undergoing an in-place update.
+func (b *Botanist) SetInPlaceUpdateStatus(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
 	var (
-		autoInPlaceUpdatePendingWorkers   []string
-		manualInPlaceUpdatePendingWorkers []string
-		poolHashMap                       map[string]string
-		poolHashMapToUpdate               map[string]string
-		hasManagedInfrastructure          = v1beta1helper.HasManagedInfrastructure(b.Shoot.GetInfo())
+		autoInPlaceUpdatePendingWorkers       []string
+		manualInPlaceUpdatePendingWorkers     []string
+		poolHashMap                           map[string]string
+		poolHashMapToUpdateForSelfHostedShoot map[string]string
+		hasManagedInfrastructure              = v1beta1helper.HasManagedInfrastructure(b.Shoot.GetInfo())
 	)
+
+	if worker != nil {
+		if worker.Status.InPlaceUpdates != nil {
+			poolHashMap = worker.Status.InPlaceUpdates.WorkerPoolToHashMap
+		}
+	} else if !hasManagedInfrastructure {
+		if b.Shoot.GetInfo().Status.InPlaceUpdates != nil {
+			poolHashMap = b.Shoot.GetInfo().Status.InPlaceUpdates.WorkerPoolToHashMap
+		}
+	}
 
 	for _, pool := range b.Shoot.GetInfo().Spec.Provider.Workers {
 		if !v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
 			continue
 		}
 
+		var oldPoolHash string
 		if worker != nil {
-			if worker.Status.InPlaceUpdates != nil {
-				poolHashMap = worker.Status.InPlaceUpdates.WorkerPoolToHashMap
-			}
-		} else if !hasManagedInfrastructure {
-			if b.Shoot.GetInfo().Status.InPlaceUpdates != nil {
-				poolHashMap = b.Shoot.GetInfo().Status.InPlaceUpdates.WorkerPoolToHashMap
-			}
-		}
-
-		var oldPoolName = pool.Name
-		if worker != nil {
-			// For managed infra, lookup pool by matching in worker spec
 			var oldPool extensionsv1alpha1.WorkerPool
 			oldPoolIndex := slices.IndexFunc(worker.Spec.Pools, func(ow extensionsv1alpha1.WorkerPool) bool {
 				oldPool = ow
 				return ow.Name == pool.Name
 			})
-			if oldPoolIndex != -1 {
-				oldPoolName = oldPool.Name
+			if oldPoolIndex != -1 && poolHashMap != nil {
+				oldPoolHash = poolHashMap[oldPool.Name]
 			}
-		}
-
-		var oldPoolHash string
-		if poolHashMap != nil {
-			oldPoolHash = poolHashMap[oldPoolName]
+		} else if !hasManagedInfrastructure && poolHashMap != nil {
+			oldPoolHash = poolHashMap[pool.Name]
 		}
 
 		var (
@@ -182,10 +178,10 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 		}
 
 		if oldPoolHash == "" && !hasManagedInfrastructure {
-			if poolHashMapToUpdate == nil {
-				poolHashMapToUpdate = make(map[string]string)
+			if poolHashMapToUpdateForSelfHostedShoot == nil {
+				poolHashMapToUpdateForSelfHostedShoot = make(map[string]string)
 			}
-			poolHashMapToUpdate[pool.Name] = newPoolHash
+			poolHashMapToUpdateForSelfHostedShoot[pool.Name] = newPoolHash
 			// For unmanaged infra, we don't need to set the pending worker updates in the Shoot status on first reconciliation
 			// since the initial hashes are stored in the Shoot status and will be used for comparison in subsequent reconciliations.
 			continue
@@ -199,7 +195,7 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 		}
 	}
 
-	if len(autoInPlaceUpdatePendingWorkers) == 0 && len(manualInPlaceUpdatePendingWorkers) == 0 && len(poolHashMapToUpdate) == 0 {
+	if len(autoInPlaceUpdatePendingWorkers) == 0 && len(manualInPlaceUpdatePendingWorkers) == 0 && len(poolHashMapToUpdateForSelfHostedShoot) == 0 {
 		return nil
 	}
 
@@ -220,11 +216,11 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 		}
 
 		// Store initial hashes for unmanaged infra pools on first reconciliation
-		if len(poolHashMapToUpdate) > 0 {
+		if len(poolHashMapToUpdateForSelfHostedShoot) > 0 {
 			if shoot.Status.InPlaceUpdates.WorkerPoolToHashMap == nil {
 				shoot.Status.InPlaceUpdates.WorkerPoolToHashMap = make(map[string]string)
 			}
-			maps.Copy(shoot.Status.InPlaceUpdates.WorkerPoolToHashMap, poolHashMapToUpdate)
+			maps.Copy(shoot.Status.InPlaceUpdates.WorkerPoolToHashMap, poolHashMapToUpdateForSelfHostedShoot)
 		}
 
 		for _, poolName := range autoInPlaceUpdatePendingWorkers {

@@ -82,7 +82,7 @@ func AddToManager(
 
 	// unmanaged infrastructure shoots only support AutoInPlaceUpdate update strategy
 	// status controller is required only if shoots has workers with ManualInPlaceUpdate update strategy
-	if selfHostedShoot != nil && !v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
+	if selfHostedShoot == nil || v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
 		if err := (&status.Reconciler{
 			Config:   *cfg.Controllers.ShootStatus,
 			SeedName: seedName,
