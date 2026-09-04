@@ -55,9 +55,6 @@ func ToLifecycleStages(version gardencorev1beta1.ExpirableVersion) []gardencorev
 // An empty Classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
 func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
 	lifecycle := ToLifecycleStages(version)
-	if len(lifecycle) == 0 {
-		return gardencorev1beta1.ClassificationSupported
-	}
 
 	var (
 		currentTime           = time.Now()
