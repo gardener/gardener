@@ -1178,4 +1178,15 @@ const (
 	// that contains a label selector for shoots. The static manifests will only be propagated for shoots matching the
 	// selector.
 	AnnotationStaticManifestsShootSelector = "static-manifests.shoot.gardener.cloud/selector"
+
+	// ClusterTypeGardenCluster is the type value indicating that the cluster is a garden cluster.
+	ClusterTypeGardenCluster = "gardenCluster"
+	// ClusterTypeGardenRuntimeCluster is the type value indicating that the cluster is a garden runtime cluster.
+	ClusterTypeGardenRuntimeCluster = "gardenRuntimeCluster"
+	// ClusterTypeSeedCluster is the type value indicating that the cluster is a seed cluster.
+	ClusterTypeSeedCluster = "seedCluster"
+	// ClusterTypeSelfHostedShootCluster is the type value indicating that the cluster is a self-hosted shoot cluster.
+	ClusterTypeSelfHostedShootCluster = "selfHostedShootCluster"
+	// ClusterTypeShootCluster is the type value indicating that the cluster is a shoot cluster.
+	ClusterTypeShootCluster = "shootCluster"
 )

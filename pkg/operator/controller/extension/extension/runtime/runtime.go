@@ -101,8 +101,8 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"clusterTypes": map[string]any{
-				"gardenRuntimeCluster":   true,
-				"selfHostedShootCluster": isSelfHostedShoot,
+				v1beta1constants.ClusterTypeGardenRuntimeCluster:   true,
+				v1beta1constants.ClusterTypeSelfHostedShootCluster: isSelfHostedShoot,
 			},
 			"runtimeCluster": map[string]any{
 				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released.

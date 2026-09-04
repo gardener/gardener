@@ -108,8 +108,8 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"clusterTypes": map[string]bool{
-				"gardenRuntimeCluster":   true,
-				"selfHostedShootCluster": isSelfHostedShoot,
+				v1beta1constants.ClusterTypeGardenRuntimeCluster:   true,
+				v1beta1constants.ClusterTypeSelfHostedShootCluster: isSelfHostedShoot,
 			},
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
@@ -205,7 +205,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"clusterTypes": map[string]bool{
-				"gardenCluster": true,
+				v1beta1constants.ClusterTypeGardenCluster: true,
 			},
 			"virtualCluster": map[string]any{
 				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released.

@@ -292,10 +292,10 @@ func (r *Reconciler) reconcile(
 	}
 
 	clusterTypes := map[string]bool{
-		"gardenRuntimeCluster":   isGarden,
-		"seedCluster":            isSeed,
-		"selfHostedShootCluster": r.SelfHostedShootMeta != nil,
-		"shootCluster":           isShoot,
+		v1beta1constants.ClusterTypeGardenRuntimeCluster:   isGarden,
+		v1beta1constants.ClusterTypeSeedCluster:            isSeed,
+		v1beta1constants.ClusterTypeSelfHostedShootCluster: r.SelfHostedShootMeta != nil,
+		v1beta1constants.ClusterTypeShootCluster:           isShoot,
 	}
 
 	// Mix-in some standard values for garden and seed.
