@@ -132,8 +132,8 @@ var _ = Describe("Runtime", func() {
 				"foo": "bar",
 				"gardener": map[string]any{
 					"clusterTypes": map[string]any{
-						"gardenRuntimeCluster": true,
-						"selfHostedShoot":      false,
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": false,
 					},
 					"runtimeCluster": map[string]any{
 						"enabled":           "true",
@@ -160,7 +160,7 @@ var _ = Describe("Runtime", func() {
 			Expect(namespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "eu-west-1a,eu-west-1b"))
 		})
 
-		It("should set selfHostedShoot=true in clusterTypes when runtime cluster is a self-hosted shoot", func() {
+		It("should set selfHostedShootCluster=true in clusterTypes when runtime cluster is a self-hosted shoot", func() {
 			kubeSystemNamespace := &corev1.Namespace{}
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: metav1.NamespaceSystem}, kubeSystemNamespace)).To(Succeed())
 			patch := client.MergeFrom(kubeSystemNamespace.DeepCopy())
@@ -172,8 +172,8 @@ var _ = Describe("Runtime", func() {
 			expectedValues := map[string]any{
 				"gardener": map[string]any{
 					"clusterTypes": map[string]any{
-						"gardenRuntimeCluster": true,
-						"selfHostedShoot":      true,
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": true,
 					},
 					"runtimeCluster": map[string]any{
 						"enabled":           "true",

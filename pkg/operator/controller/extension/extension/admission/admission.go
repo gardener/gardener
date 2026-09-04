@@ -108,8 +108,8 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"clusterTypes": map[string]bool{
-				"gardenRuntimeCluster": true,
-				"selfHostedShoot":      isSelfHostedShoot,
+				"gardenRuntimeCluster":   true,
+				"selfHostedShootCluster": isSelfHostedShoot,
 			},
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,

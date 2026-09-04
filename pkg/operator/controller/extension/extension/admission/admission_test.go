@@ -158,8 +158,8 @@ var _ = Describe("Admission", func() {
 				"foo": "bar",
 				"gardener": map[string]any{
 					"clusterTypes": map[string]bool{
-						"gardenRuntimeCluster": true,
-						"selfHostedShoot":      false,
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": false,
 					},
 					"runtimeCluster": map[string]any{
 						"priorityClassName": "gardener-garden-system-400",
@@ -183,7 +183,7 @@ var _ = Describe("Admission", func() {
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 		})
 
-		It("should set selfHostedShoot=true in clusterTypes when runtime cluster is a self-hosted shoot", func() {
+		It("should set selfHostedShootCluster=true in clusterTypes when runtime cluster is a self-hosted shoot", func() {
 			kubeSystemNamespace := &corev1.Namespace{}
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: metav1.NamespaceSystem}, kubeSystemNamespace)).To(Succeed())
 			patch := client.MergeFrom(kubeSystemNamespace.DeepCopy())
@@ -196,8 +196,8 @@ var _ = Describe("Admission", func() {
 			expectedRuntimeValues := map[string]any{
 				"gardener": map[string]any{
 					"clusterTypes": map[string]bool{
-						"gardenRuntimeCluster": true,
-						"selfHostedShoot":      true,
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": true,
 					},
 					"runtimeCluster": map[string]any{
 						"priorityClassName": "gardener-garden-system-400",
