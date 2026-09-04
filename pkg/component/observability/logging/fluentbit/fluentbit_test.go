@@ -24,9 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentbit"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
-	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -250,16 +247,28 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
 			serviceMonitor := &monitoringv1.ServiceMonitor{
-				ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, aggregate.Label),
-				Spec:       serviceMonitorSpec,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aggregate-fluent-bit",
+					Namespace: namespace,
+					Labels:    map[string]string{"prometheus": "aggregate"},
+				},
+				Spec: serviceMonitorSpec,
 			}
 			serviceMonitorPlugin := &monitoringv1.ServiceMonitor{
-				ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", namespace, aggregate.Label),
-				Spec:       serviceMonitorPluginSpec,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aggregate-fluent-bit-output-plugin",
+					Namespace: namespace,
+					Labels:    map[string]string{"prometheus": "aggregate"},
+				},
+				Spec: serviceMonitorPluginSpec,
 			}
 			prometheusRule := &monitoringv1.PrometheusRule{
-				ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, aggregate.Label),
-				Spec:       prometheusRuleSpec,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aggregate-fluent-bit",
+					Namespace: namespace,
+					Labels:    map[string]string{"prometheus": "aggregate"},
+				},
+				Spec: prometheusRuleSpec,
 			}
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
@@ -310,16 +319,28 @@ var _ = Describe("Fluent Bit", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 
 				serviceMonitor := &monitoringv1.ServiceMonitor{
-					ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, garden.Label),
-					Spec:       serviceMonitorSpec,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-fluent-bit",
+						Namespace: namespace,
+						Labels:    map[string]string{"prometheus": "garden"},
+					},
+					Spec: serviceMonitorSpec,
 				}
 				serviceMonitorPlugin := &monitoringv1.ServiceMonitor{
-					ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", namespace, garden.Label),
-					Spec:       serviceMonitorPluginSpec,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-fluent-bit-output-plugin",
+						Namespace: namespace,
+						Labels:    map[string]string{"prometheus": "garden"},
+					},
+					Spec: serviceMonitorPluginSpec,
 				}
 				prometheusRule := &monitoringv1.PrometheusRule{
-					ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", namespace, garden.Label),
-					Spec:       prometheusRuleSpec,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-fluent-bit",
+						Namespace: namespace,
+						Labels:    map[string]string{"prometheus": "garden"},
+					},
+					Spec: prometheusRuleSpec,
 				}
 
 				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
