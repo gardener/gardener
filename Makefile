@@ -139,8 +139,10 @@ check-plutono-dashboards:
 	@hack/check-plutono-dashboards.sh
 
 .PHONY: check
-check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(YQ) $(TYPOS) logcheck-symlinks
-	@sed ./.golangci.yaml.in -e "s#<<LOGCHECK_PLUGIN_PATH>>#$(TOOLS_BIN_DIR)#g" > ./.golangci.yaml
+check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(KUBE_API_LINTER) $(LOGCHECK) $(YQ) $(TYPOS) logcheck-symlinks
+	@sed ./.golangci.yaml.in \
+		-e "s#<<TOOLS_BIN_DIR>>#$(abspath $(TOOLS_BIN_DIR))#g" \
+		> ./.golangci.yaml
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 

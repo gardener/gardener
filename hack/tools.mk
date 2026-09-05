@@ -43,8 +43,6 @@ IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
 KIND                       := $(TOOLS_BIN_DIR)/kind
 KUBECTL                    := $(TOOLS_BIN_DIR)/kubectl
 KUSTOMIZE                  := $(TOOLS_BIN_DIR)/kustomize
-# plugin binary loaded by golangci-lint
-LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
@@ -57,6 +55,10 @@ SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
 TYPOS                      := $(TOOLS_BIN_DIR)/typos
 GOBUILDCACHE               := $(TOOLS_BIN_DIR)/gobuildcache
+
+# plugin binaries loaded by golangci-lint
+LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so
+KUBE_API_LINTER            := $(TOOLS_BIN_DIR)/kube-api-linter.so
 
 # default tool versions
 # renovate: datasource=github-releases depName=helm/helm
@@ -96,6 +98,8 @@ K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
 # Hash of analyzer sources + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
 LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+# Hash of wrapper sources + pinned kube-api-linter version + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
+KUBE_API_LINTER_VERSION    ?= $(shell { [ -n "$(GARDENER_TOOL_DIR)" ] && find $(GARDENER_TOOL_DIR)/kube-api-linter -type f -name '*.go' | LC_ALL=C sort | xargs shasum -a 256; echo $(call version_gomod,sigs.k8s.io/kube-api-linter); echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -145,7 +149,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(LOGCHECK) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE)
+create-tools-bin: $(CONTROLLER_GEN) $(CRD_REF_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOLANGCI_LINT) $(GOSEC) $(GO_ADD_LICENSE) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(KUSTOMIZE) $(TYPOS) $(GOBUILDCACHE) $(LOGCHECK) $(KUBE_API_LINTER)
 
 #########################################
 # Tools                                 #
@@ -166,10 +170,10 @@ $(GOIMPORTS): $(call tool_version_file,$(GOIMPORTS),$(GOIMPORTS_VERSION))
 $(GOIMPORTSREVISER): $(call tool_version_file,$(GOIMPORTSREVISER),$(GOIMPORTSREVISER_VERSION))
 	$(call go_tool_copy,$(GOIMPORTSREVISER))
 
-# Include LOGCHECK_VERSION in golangci-lint's marker so any input that invalidates the bundled logcheck plugin also
-# invalidates golangci-lint, forcing both to be (re)built from the same module graph and avoiding plugin-vs-host
-# x/tools/go/analysis mismatches.
-$(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION)-$(LOGCHECK_VERSION))
+# Include LOGCHECK_VERSION and KUBE_API_LINTER_VERSION in golangci-lint's marker so any input that invalidates either
+# bundled plugin also invalidates golangci-lint, forcing all to be (re)built from the same module graph and avoiding
+# plugin-vs-host x/tools/go/analysis mismatches.
+$(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION)-$(LOGCHECK_VERSION)-$(KUBE_API_LINTER_VERSION))
 	$(call go_tool_copy,$(GOLANGCI_LINT))
 
 $(GOSEC): $(call tool_version_file,$(GOSEC),$(GOSEC_VERSION))
@@ -227,6 +231,10 @@ $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGC
 	@[ -n "$(GARDENER_LOGCHECK_DIR)" ] || { echo "GARDENER_LOGCHECK_DIR is not set, cannot build logcheck plugin. Consider adding github.com/gardener/gardener/hack/tools/logcheck as dependency if errors occur." >&2; exit 1; }
 	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin $(GARDENER_LOGCHECK_DIR)/plugin
 endif
+
+# Build kube-api-linter plugin with the same toolchain as golangci-lint (required for plugin loading).
+$(KUBE_API_LINTER): $(call tool_version_file,$(KUBE_API_LINTER),$(KUBE_API_LINTER_VERSION)) $(GOLANGCI_LINT)
+	cd $(GARDENER_TOOL_DIR)/kube-api-linter; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(KUBE_API_LINTER)) -buildmode=plugin ./plugin
 
 $(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
 	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) $(GARDENER_TOOL_DIR)/install-promtool.sh
