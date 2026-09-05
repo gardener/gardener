@@ -339,7 +339,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	)
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
-	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, spec.CredentialsBindingName != nil || spec.SecretBindingName != nil, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, spec.Kubernetes.Version, opts, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, spec.Kubernetes.Version, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
@@ -483,7 +483,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		// worker Kubernetes versions must not be downgraded; minor version skips are allowed, except for AutoInPlaceUpdate and ManualInPlaceUpdate.
 		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, !helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy), idxPath.Child("kubernetes", "version"))...)
 
-		if helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
+		if helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) && (newSpec.CredentialsBindingName != nil || newSpec.SecretBindingName != nil) {
 			allErrs = append(allErrs, validateMachineImageVersionInPlaceUpdate(newWorker.Machine.Image, oldWorker.Machine.Image, idxPath.Child("machine", "image", "version"))...)
 		}
 	}
@@ -2188,7 +2188,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 	return allErrs
 }
 
-func validateProvider(shootNamespace string, provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateProvider(shootNamespace string, provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless, hasManagedInfrastructure bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 		maxPod  int32
@@ -2216,7 +2216,7 @@ func validateProvider(shootNamespace string, provider core.Provider, kubernetes 
 		}
 
 		for i, worker := range provider.Workers {
-			allErrs = append(allErrs, ValidateWorker(worker, kubernetes, shootNamespace, provider.Type, fldPath.Child("workers").Index(i), inTemplate)...)
+			allErrs = append(allErrs, ValidateWorker(worker, kubernetes, shootNamespace, provider.Type, fldPath.Child("workers").Index(i), inTemplate, hasManagedInfrastructure)...)
 
 			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
 				maxPod = *worker.Kubernetes.Kubelet.MaxPods
@@ -2250,7 +2250,7 @@ const (
 var volumeSizeRegex = regexp.MustCompile(`^(\d)+Gi$`)
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespace, shootProviderType string, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespace, shootProviderType string, fldPath *field.Path, inTemplate, hasManagedInfrastructure bool) field.ErrorList {
 	kubernetesVersion := kubernetes.Version
 	allErrs := field.ErrorList{}
 
@@ -2274,7 +2274,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 			if len(worker.Machine.Image.Name) == 0 {
 				allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "must specify a machine image name"))
 			}
-			if len(worker.Machine.Image.Version) == 0 {
+			if hasManagedInfrastructure && len(worker.Machine.Image.Version) == 0 {
 				allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "version"), "must specify a machine image version"))
 			}
 		}

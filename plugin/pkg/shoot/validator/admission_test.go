@@ -4196,6 +4196,36 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("machine image 'cr-image-name@1.2.3' does not support container runtime 'unsupported-cr-1', supported values: [supported-cr-1 supported-cr-2"))
 				})
+
+				It("should not validate machine image for self-hosted shoot without managed infrastructure", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: expiredVersion,
+					}
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.CredentialsBindingName = nil
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should validate machine image for self-hosted shoot that has managed infrastructure", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: expiredVersion,
+					}
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("machine image version"))
+					Expect(err.Error()).To(ContainSubstring("is expired"))
+				})
 			})
 
 			Context("update Shoot", func() {
@@ -4888,6 +4918,38 @@ var _ = Describe("validator", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{Name: "constraint-image-name", Version: "1.2.4"}))
+				})
+
+				It("should not validate machine image for self-hosted shoot without managed infrastructure", func() {
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: expiredVersion,
+					}
+					newShoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					newShoot.Spec.SecretBindingName = nil
+					newShoot.Spec.CredentialsBindingName = nil
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should validate machine image for self-hosted shoot that has managed infrastructure", func() {
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    imageName1,
+						Version: expiredVersion,
+					}
+					newShoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("machine image version"))
+					Expect(err.Error()).To(ContainSubstring("is expired"))
 				})
 			})
 

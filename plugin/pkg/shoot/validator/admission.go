@@ -1060,6 +1060,10 @@ func (c *validationContext) validateMachineCapabilities(path *field.Path, worker
 }
 
 func (c *validationContext) validateMachineImage(idxPath *field.Path, worker core.Worker, oldWorker core.Worker, isNewWorkerPool bool, a admission.Attributes) *field.Error {
+	// For unmanaged infrastructure shoots, the OS is not managed by the shoot so validation of the machine image is not required.
+	if helper.IsShootSelfHosted(c.shoot.Spec.Provider.Workers) && !helper.HasManagedInfrastructure(c.shoot) {
+		return nil
+	}
 	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
 	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.MachineCapabilities)
 	if !isMachineImagePresentInCloudprofile {

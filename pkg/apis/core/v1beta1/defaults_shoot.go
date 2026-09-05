@@ -182,7 +182,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			}
 		}
 
-		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
+		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil && (obj.Spec.CredentialsBindingName != nil || obj.Spec.SecretBindingName != nil) {
 			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)
 		}
 

@@ -1624,6 +1624,42 @@ var _ = Describe("mutator", func() {
 						Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.1"))
 					})
 				})
+
+				It("should not default machine image version for self-hosted shoot without managed infrastructure", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name: imageName1,
+					}
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+						Name: imageName1,
+					}))
+				})
+
+				It("should default machine image version for self-hosted shoot that has managed infrastructure", func() {
+					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
+					if !isCapabilityCloudProfile {
+						expectedImageVersion = latestNonExpiredVersion
+					}
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name: imageName1,
+					}
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.CredentialsBindingName = new("binding")
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+						Name:    imageName1,
+						Version: expectedImageVersion,
+					}))
+				})
 			})
 
 			Context("update Shoot", func() {
@@ -1966,6 +2002,48 @@ var _ = Describe("mutator", func() {
 
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal("24.0"))
+				})
+
+				It("should not default machine image version for self-hosted shoot without managed infrastructure", func() {
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name: imageName1,
+					}
+					newShoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+						Name: imageName1,
+					}))
+				})
+
+				It("should default machine image version for self-hosted shoot that has managed infrastructure", func() {
+					expectedImageVersion := latestNonExpiredVersionThatSupportsCapabilities
+					if !isCapabilityCloudProfile {
+						expectedImageVersion = latestNonExpiredVersion
+					}
+					newShoot := shoot.DeepCopy()
+					newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
+					newWorker.Name = "cp-worker"
+					newWorker.Machine.Image = &core.ShootMachineImage{
+						Name: imageName1,
+					}
+					newWorker.ControlPlane = &core.WorkerControlPlane{}
+					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker)
+					newShoot.Spec.CredentialsBindingName = new("binding")
+
+					attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					cpWorkerIdx := len(newShoot.Spec.Provider.Workers) - 1
+					Expect(newShoot.Spec.Provider.Workers[cpWorkerIdx].Machine.Image).To(Equal(&core.ShootMachineImage{
+						Name:    imageName1,
+						Version: expectedImageVersion,
+					}))
 				})
 			})
 		},
