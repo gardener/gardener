@@ -137,7 +137,7 @@ func NewGardenadmBotanist(
 		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
 	}
 
-	gardenadmBotanist.Botanist, err = newBotanist(ctx, log, clientSet, gardenClient, resources, runsControlPlane)
+	gardenadmBotanist.Botanist, err = newBotanist(ctx, log, clientSet, gardenClient, gardenClient, resources, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
@@ -195,6 +195,7 @@ func newBotanist(
 	log logr.Logger,
 	clientSet kubernetes.Interface,
 	gardenClient client.Client,
+	gardenReader client.Reader,
 	resources gardenadm.Resources,
 	runsControlPlane bool,
 ) (
@@ -215,7 +216,7 @@ func newBotanist(
 	o, err := operation.Initialize(
 		ctx,
 		log,
-		gardenClient,
+		gardenReader,
 		gardenClient,
 		clientSet,
 		nil, // gardenadm has no ShootClientMap

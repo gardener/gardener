@@ -153,5 +153,5 @@ func Initialize(
 		return nil, err
 	}
 
-	return opBuilder.WithShoot(shootObj).Build(ctx, gardenClient, seedClientSet, shootClientMap, shoot)
+	return opBuilder.WithShoot(shootObj).Build(ctx, gardenClient, gardenAPIReader, seedClientSet, shootClientMap, shoot)
 }

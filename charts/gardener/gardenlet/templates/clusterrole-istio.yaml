@@ -18,6 +18,7 @@ rules:
   - virtualservices
   - envoyfilters
   - sidecars
+  - serviceentries
   verbs:
   - create
   - get

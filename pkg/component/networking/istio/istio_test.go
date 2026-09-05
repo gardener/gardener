@@ -6,6 +6,7 @@ package istio_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	. "github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -215,6 +217,11 @@ var _ = Describe("istiod", func() {
 
 		istioIngressServiceClass = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_service_class.yaml")
+			return string(data)
+		}
+
+		istioIngressServiceWithEtcdPorts = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_etcd_ports.yaml")
 			return string(data)
 		}
 
@@ -623,6 +630,40 @@ var _ = Describe("istiod", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(istioManifests).To(ContainElement(istioIngressServiceClass()))
+			})
+		})
+
+		Context("etcd ports", func() {
+			BeforeEach(func() {
+				igw[0].Ports = append(igw[0].Ports,
+					corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdPeer, Port: etcdconstants.PortEtcdPeerExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdPeerExternal)},
+					corev1.ServicePort{Name: fmt.Sprintf("%s-1", etcdconstants.ServicePortNameEtcdPeer), Port: etcdconstants.PortEtcdPeerExternal + 1, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdPeerExternal + 1)},
+					corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdClient, Port: etcdconstants.PortEtcdClientExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdClientExternal)},
+				)
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should include peer and client etcd ports in from-world-to-ports and exclude non-etcd ports", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+
+				var err error
+				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(istioManifests).To(ContainElement(istioIngressServiceWithEtcdPorts()))
 			})
 		})
 

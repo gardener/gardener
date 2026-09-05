@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -29,7 +30,7 @@ import (
 var NewEtcd = etcd.New
 
 // DefaultEtcd returns a deployer for the etcd.
-func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, error) {
+func (b *Botanist) DefaultEtcd(ctx context.Context, role string, class etcd.Class) (etcd.Interface, error) {
 	values := etcd.Values{
 		Role:                        role,
 		Class:                       class,
@@ -51,6 +52,11 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	if !b.Shoot.IsSelfHosted() &&
 		b.Config != nil && b.Config.ETCDConfig != nil && b.Config.ETCDConfig.FeatureGates["UpgradeEtcdVersion"] {
 		values.MemberNamePrefix = b.Seed.GetInfo().Name
+	}
+
+	// During a live control plane migration the etcd members of the two seeds form a single cluster.
+	if err := b.setLiveMigrationEtcdValues(ctx, &values, role); err != nil {
+		return nil, err
 	}
 
 	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.GetInfo())
@@ -312,7 +318,7 @@ func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot) (string, e
 
 func getEtcdReplicas(shoot *gardencorev1beta1.Shoot) int32 {
 	if v1beta1helper.IsHAControlPlaneConfigured(shoot) {
-		return 3
+		return etcdconstants.HAReplicaCount
 	}
 	return 1
 }

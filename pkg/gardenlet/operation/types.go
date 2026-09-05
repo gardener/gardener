@@ -56,6 +56,7 @@ type Operation struct {
 	Shoot                 *shoot.Shoot
 	ManagedSeed           *seedmanagementv1alpha1.ManagedSeed
 	GardenClient          client.Client
+	GardenAPIReader       client.Reader
 	SeedClientSet         kubernetes.Interface
 	ShootClientMap        clientmap.ClientMap
 	ShootClientSet        kubernetes.Interface
