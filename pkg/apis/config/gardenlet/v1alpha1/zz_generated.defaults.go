@@ -97,6 +97,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}
 	SetDefaults_ServerConfiguration(&in.Server)
+	if in.SeedConfig != nil {
+		SetDefaults_SeedConfig(in.SeedConfig)
+	}
 	if in.Logging != nil {
 		SetDefaults_Logging(in.Logging)
 	}

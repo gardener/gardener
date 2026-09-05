@@ -49,9 +49,11 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(Equal(config.LogLevelInfo))
 			Expect(obj.LogFormat).To(Equal(config.LogFormatJSON))
+			Expect(obj.SeedConfig).NotTo(BeNil())
+			Expect(obj.Logging).NotTo(BeNil())
 			Expect(obj.SNI).NotTo(BeNil())
-			Expect(obj.Monitoring).NotTo(BeNil())
 			Expect(obj.ETCDConfig).NotTo(BeNil())
+			Expect(obj.Monitoring).NotTo(BeNil())
 		})
 
 		It("should not overwrite already set values for the gardenlet configuration", func() {
@@ -656,6 +658,27 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.HealthProbes.Port).To(Equal(1010))
 			Expect(obj.Server.Metrics.BindAddress).To(Equal("127.0.0.1"))
 			Expect(obj.Server.Metrics.Port).To(Equal(1011))
+		})
+	})
+
+	Describe("SeedConfig defaulting", func() {
+		It("should default the seed configuarion", func() {
+			SetObjectDefaults_GardenletConfiguration(obj)
+			Expect(obj.SeedConfig.Spec.Networks.IPFamilies).To(Equal([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}))
+		})
+		It("should not overwrite already set values for the SeedNetworks IPFamilies", func() {
+			expectedIPFamilies := []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+			obj.SeedConfig = &SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
+					Spec: gardencorev1beta1.SeedSpec{
+						Networks: gardencorev1beta1.SeedNetworks{
+							IPFamilies: expectedIPFamilies,
+						},
+					},
+				},
+			}
+			SetObjectDefaults_GardenletConfiguration(obj)
+			Expect(obj.SeedConfig.Spec.Networks.IPFamilies).To(Equal(expectedIPFamilies))
 		})
 	})
 
