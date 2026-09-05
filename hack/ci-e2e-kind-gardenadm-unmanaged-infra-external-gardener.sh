@@ -30,5 +30,6 @@ make gardenadm-up SCENARIO=connect-kind
 make test-e2e-local-gardenadm-unmanaged-infra-initjoin
 make test-e2e-local-gardenadm-unmanaged-infra-connect
 
+"$(dirname "$0")/../dev-setup/gardenlet/overlays/multi-node-gardenadm/generate-patch-managedseed.sh" unmanaged-infra
 make seed-up KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
 make test-e2e-local-gardenadm-unmanaged-infra-seed
