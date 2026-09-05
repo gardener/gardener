@@ -1120,6 +1120,7 @@ build:
             - pkg/provider-local/controller/extension/shootafterworker
             - pkg/provider-local/controller/healthcheck
             - pkg/provider-local/controller/infrastructure
+            - pkg/provider-local/controller/kubeproxysecret
             - pkg/provider-local/controller/operatingsystemconfig
             - pkg/provider-local/controller/selfhostedshootexposure
             - pkg/provider-local/controller/worker
@@ -1134,7 +1135,7 @@ build:
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/prometheus
             - pkg/provider-local/webhook/rolloutspeedup
-            - pkg/provider-local/webhook/shoot
+            - pkg/provider-local/webhook/seed
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
             - pkg/utils/chart
