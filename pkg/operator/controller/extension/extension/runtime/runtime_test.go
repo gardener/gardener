@@ -105,6 +105,9 @@ var _ = Describe("Runtime", func() {
 
 		priorityClass := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-garden-system-200"}}
 		Expect(runtimeClient.Create(ctx, priorityClass)).To(Succeed())
+
+		kubeSystemNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+		Expect(runtimeClient.Create(ctx, kubeSystemNamespace)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -128,6 +131,10 @@ var _ = Describe("Runtime", func() {
 			expectedValues := map[string]any{
 				"foo": "bar",
 				"gardener": map[string]any{
+					"clusterTypes": map[string]any{
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": false,
+					},
 					"runtimeCluster": map[string]any{
 						"enabled":           "true",
 						"priorityClassName": "gardener-garden-system-200",
@@ -151,6 +158,38 @@ var _ = Describe("Runtime", func() {
 			Expect(namespace.Labels).To(HaveKeyWithValue("networking.gardener.cloud/access-target-apiserver", "allowed"))
 			Expect(namespace.Labels).To(HaveKeyWithValue("pod-security.kubernetes.io/enforce", "baseline"))
 			Expect(namespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "eu-west-1a,eu-west-1b"))
+		})
+
+		It("should set selfHostedShootCluster=true in clusterTypes when runtime cluster is a self-hosted shoot", func() {
+			kubeSystemNamespace := &corev1.Namespace{}
+			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: metav1.NamespaceSystem}, kubeSystemNamespace)).To(Succeed())
+			patch := client.MergeFrom(kubeSystemNamespace.DeepCopy())
+			metav1.SetMetaDataLabel(&kubeSystemNamespace.ObjectMeta, "gardener.cloud/role", "shoot")
+			Expect(runtimeClient.Patch(ctx, kubeSystemNamespace, patch)).To(Succeed())
+
+			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRef}, []byte("extension-chart"))
+
+			expectedValues := map[string]any{
+				"gardener": map[string]any{
+					"clusterTypes": map[string]any{
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": true,
+					},
+					"runtimeCluster": map[string]any{
+						"enabled":           "true",
+						"priorityClassName": "gardener-garden-system-200",
+					},
+				},
+			}
+
+			chartRenderer.EXPECT().RenderArchive([]byte("extension-chart"), extension.Name, "runtime-extension-test-extension", expectedValues).Return(&chartrenderer.RenderedChart{}, nil)
+
+			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
+				return nil
+			})()
+
+			_, err := runtime.Reconcile(ctx, log, extension)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should succeed if extension deployment is not defined", func() {

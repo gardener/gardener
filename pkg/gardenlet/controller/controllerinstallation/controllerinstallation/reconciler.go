@@ -205,9 +205,19 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	seedIsGarden, err := gardenletutils.ClusterIsGarden(seedCtx, r.SeedClientSet.Client())
+	isGarden, err := gardenletutils.ClusterIsGarden(seedCtx, r.SeedClientSet.Client())
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed checking whether the seed is the garden cluster at the same time: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the cluster is a garden runtime cluster: %w", err)
+	}
+
+	isSeed, err := gardenletutils.ClusterIsSeed(seedCtx, r.SeedClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the cluster is a seed cluster: %w", err)
+	}
+
+	isShoot, err := gardenletutils.ClusterIsShoot(seedCtx, r.SeedClientSet.Client())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed checking whether the cluster is a shoot cluster: %w", err)
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
@@ -229,7 +239,7 @@ func (r *Reconciler) reconcile(
 			}
 		}
 
-		if seedIsGarden {
+		if isGarden {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer, "allowed")
 		}
 
@@ -281,9 +291,17 @@ func (r *Reconciler) reconcile(
 		featureToEnabled[feature] = features.DefaultFeatureGate.Enabled(feature)
 	}
 
+	clusterTypes := map[string]bool{
+		v1beta1constants.ClusterTypeGardenRuntimeCluster:   isGarden,
+		v1beta1constants.ClusterTypeSeedCluster:            isSeed,
+		v1beta1constants.ClusterTypeSelfHostedShootCluster: r.SelfHostedShootMeta != nil,
+		v1beta1constants.ClusterTypeShootCluster:           isShoot,
+	}
+
 	// Mix-in some standard values for garden and seed.
 	gardenerMap := map[string]any{
-		"version": r.Identity.Version,
+		"version":      r.Identity.Version,
+		"clusterTypes": clusterTypes,
 		"garden": map[string]any{
 			"clusterIdentity": r.GardenClusterIdentity,
 		},
@@ -330,8 +348,6 @@ func (r *Reconciler) reconcile(
 	}
 
 	if r.SelfHostedShootMeta != nil {
-		gardenerMap["selfHostedShootCluster"] = true
-
 		shootValues := map[string]any{
 			"name":        shoot.Name,
 			"namespace":   shoot.Namespace,

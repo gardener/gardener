@@ -78,13 +78,12 @@ metrics:
 
 gardener:
   version: ""
+  clusterTypes:
+    selfHostedShootCluster: false
   gardenlet:
     featureGates: {}
   seed:
     provider: local
-  runtimeCluster:
-    enabled: false
-  selfHostedShootCluster: false
 
 usablePorts:
 - 8080  # metrics

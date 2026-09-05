@@ -44,7 +44,7 @@ spec:
         {{- end }}
 {{ include "labels" . | indent 8 }}
     spec:
-      {{- if .Values.gardener.runtimeCluster.enabled }}
+      {{- if .Values.gardener.runtimeCluster }}
       priorityClassName: {{ .Values.gardener.runtimeCluster.priorityClassName }}
       {{- else }}
       priorityClassName: gardener-system-900
@@ -67,7 +67,7 @@ spec:
         - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --heartbeat-namespace={{ .Release.Namespace }}
         - --heartbeat-renew-interval-seconds={{ .Values.controllers.heartbeat.renewIntervalSeconds }}
-        {{- if .Values.gardener.runtimeCluster.enabled }}
+        {{- if .Values.gardener.runtimeCluster }}
         - --disable-webhooks=controlplane,networkpolicy,shoot
         - --controllers=backupbucket,backupentry,dnsrecord,local-ext-shoot
         - --extension-classes=garden
@@ -89,8 +89,8 @@ spec:
         {{- if .Values.gardener.version }}
         - --gardener-version={{ .Values.gardener.version }}
         {{- end }}
-        {{- if .Values.gardener.selfHostedShootCluster }}
-        - --self-hosted-shoot-cluster={{ .Values.gardener.selfHostedShootCluster }}
+        {{- if .Values.gardener.clusterTypes.selfHostedShootCluster }}
+        - --self-hosted-shoot-cluster={{ .Values.gardener.clusterTypes.selfHostedShootCluster }}
         {{- end }}
         - --log-level={{ .Values.logLevel | default "info"  }}
         - --log-format={{ .Values.logFormat | default "json"  }}

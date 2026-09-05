@@ -75,6 +75,9 @@ var _ = Describe("Admission", func() {
 
 		admission = New(runtimeClientSet, &events.FakeRecorder{}, "garden", ociRegistry)
 
+		kubeSystemNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+		Expect(runtimeClient.Create(ctx, kubeSystemNamespace)).To(Succeed())
+
 		extensionName = "test-extension"
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
@@ -139,6 +142,9 @@ var _ = Describe("Admission", func() {
 			expectedVirtualValues := map[string]any{
 				"foo": "bar",
 				"gardener": map[string]any{
+					"clusterTypes": map[string]bool{
+						"gardenCluster": true,
+					},
 					"virtualCluster": map[string]any{
 						"enabled": true,
 						"serviceAccount": map[string]any{
@@ -151,6 +157,10 @@ var _ = Describe("Admission", func() {
 			expectedRuntimeValues := map[string]any{
 				"foo": "bar",
 				"gardener": map[string]any{
+					"clusterTypes": map[string]bool{
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": false,
+					},
 					"runtimeCluster": map[string]any{
 						"priorityClassName": "gardener-garden-system-400",
 					},
@@ -171,6 +181,42 @@ var _ = Describe("Admission", func() {
 			Expect(admission.Reconcile(ctx, log, virtualClientSet, genericKubeconfigSecretName, extension)).To(Succeed())
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "extension-admission-virtual-" + extensionName, Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+		})
+
+		It("should set selfHostedShootCluster=true in clusterTypes when runtime cluster is a self-hosted shoot", func() {
+			kubeSystemNamespace := &corev1.Namespace{}
+			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: metav1.NamespaceSystem}, kubeSystemNamespace)).To(Succeed())
+			patch := client.MergeFrom(kubeSystemNamespace.DeepCopy())
+			metav1.SetMetaDataLabel(&kubeSystemNamespace.ObjectMeta, "gardener.cloud/role", "shoot")
+			Expect(runtimeClient.Patch(ctx, kubeSystemNamespace, patch)).To(Succeed())
+
+			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte("virtual-chart"))
+			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefRuntime}, []byte("runtime-chart"))
+
+			expectedRuntimeValues := map[string]any{
+				"gardener": map[string]any{
+					"clusterTypes": map[string]bool{
+						"gardenRuntimeCluster":   true,
+						"selfHostedShootCluster": true,
+					},
+					"runtimeCluster": map[string]any{
+						"priorityClassName": "gardener-garden-system-400",
+					},
+					"virtualCluster": map[string]any{
+						"enabled":   true,
+						"namespace": "extension-" + extensionName,
+					},
+				},
+			}
+
+			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, fmt.Sprintf("extension-%s", extension.Name), gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive([]byte("runtime-chart"), extension.Name, "garden", expectedRuntimeValues).Return(&chartrenderer.RenderedChart{}, nil)
+
+			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
+				return nil
+			})()
+
+			Expect(admission.Reconcile(ctx, log, virtualClientSet, genericKubeconfigSecretName, extension)).To(Succeed())
 		})
 
 		It("should succeed if admission deployment is not defined", func() {

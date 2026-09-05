@@ -100,12 +100,22 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		return fmt.Errorf("failed reconciling access secret: %w", err)
 	}
 
+	isSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, d.runtimeClientSet.Client())
+	if err != nil {
+		return fmt.Errorf("failed checking whether the runtime cluster is a self-hosted shoot: %w", err)
+	}
+
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
+			"clusterTypes": map[string]bool{
+				v1beta1constants.ClusterTypeGardenRuntimeCluster:   true,
+				v1beta1constants.ClusterTypeSelfHostedShootCluster: isSelfHostedShoot,
+			},
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
 			},
 			"virtualCluster": map[string]any{
+				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released. There is no replacement as a virtual cluster is always involved in an admission deployment.
 				"enabled":   true,
 				"namespace": virtualNamespace(extension).GetName(),
 			},
@@ -194,7 +204,11 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
+			"clusterTypes": map[string]bool{
+				v1beta1constants.ClusterTypeGardenCluster: true,
+			},
 			"virtualCluster": map[string]any{
+				// TODO(timuthy): Remove this field after Gardener v1.159.0 has been released.
 				"enabled": true,
 				"serviceAccount": map[string]any{
 					"name":      accessSecret.ServiceAccountName,

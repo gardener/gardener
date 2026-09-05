@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +24,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -69,6 +71,35 @@ var _ = Describe("Gardenlet", func() {
 				Build()
 
 			Expect(ClusterIsGarden(ctx, fakeClient)).To(BeFalse())
+		})
+	})
+
+	Describe("#ClusterIsSeed", func() {
+		var (
+			ctx        context.Context
+			fakeClient client.Client
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.SeedScheme).
+				Build()
+		})
+
+		It("should return that the cluster is a seed cluster", func() {
+			crd := &apiextensionsv1.CustomResourceDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "clusters.extensions.gardener.cloud",
+				},
+			}
+			Expect(fakeClient.Create(ctx, crd)).To(Succeed())
+
+			Expect(ClusterIsSeed(ctx, fakeClient)).To(BeTrue())
+		})
+
+		It("should return that the cluster is not a seed cluster because the clusters CRD is not found", func() {
+			Expect(ClusterIsSeed(ctx, fakeClient)).To(BeFalse())
 		})
 	})
 

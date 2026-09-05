@@ -123,12 +123,19 @@ Besides the values configured in `.spec.deployment.extension.runtimeValues`, a r
 
 ```yaml
 gardener:
+  clusterTypes:
+    gardenRuntimeCluster: true # indicates the deployment targets a garden runtime cluster
+    selfHostedShootCluster: false # true if this garden is also a self-hosted shoot cluster
   runtimeCluster:
-    enabled: true # indicates the extension is enabled for the Garden cluster, e.g. for handling `BackupBucket`, `BackupEntry`, `DNSRecord` and `Extension` objects.
     priorityClassName: gardener-garden-system-200
 ```
 
 As soon as a `Garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster.
+
+> [!IMPORTANT]
+> The `.gardener.clusterTypes` values identify the roles of the cluster the extension is being deployed to. It does not reflect the deployment target.
+> This mainly helps avoid resource conflicts in case a cluster serves multiple roles at the same time, e.g., the garden runtime cluster also acting as a seed.
+> Whether the extension controller is being deployed to the garden runtime cluster, a seed cluster, or a self-hosted shoot must be derived from `.gardener.runtimeCluster`, `.gardener.seedCluster`, and `.gardener.shoot`.
 
 ##### Extension Registration
 
@@ -148,10 +155,12 @@ The following values are passed to the chart during reconciliation:
 
 ```yaml
 gardener:
+  clusterTypes:
+    gardenRuntimeCluster: true # indicates the deployment targets the garden runtime cluster
+    selfHostedShootCluster: false # true if this garden is also a self-hosted shoot cluster
   runtimeCluster:
     priorityClassName: <Class to be used for extension admission>
   virtualCluster:
-    enabled: true
     namespace: <Extension Namespace name in the virtual cluster (format "extension-<extension-name>")>
 ```
 
@@ -166,8 +175,9 @@ The following values are passed to the chart during reconciliation:
 
 ```yaml
 gardener:
+  clusterTypes:
+    gardenCluster: true # indicates the deployment targets the garden cluster
   virtualCluster:
-    enabled: true
     serviceAccount:
       name: <Name of the service account used to connect to the garden cluster>
       namespace: <Namespace of the service account>

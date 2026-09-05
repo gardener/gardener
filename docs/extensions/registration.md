@@ -277,14 +277,20 @@ In order to allow extension controller deployments to get information about the 
 - Additional properties for garden deployment
   ```yaml
     gardener:
+      clusterTypes:
+        gardenRuntimeCluster: true
+        selfHostedShootCluster: false # true if this garden is also a self-hosted shoot cluster
       runtimeCluster:
-        enabled: true
         priorityClassName: <priority-class-name-for-extension>
   ```
 
 - Additional properties for seed deployment
   ```yaml
   gardener:
+    clusterTypes:
+      gardenRuntimeCluster: false # true if this seed is also serving as the garden runtime cluster
+      seedCluster: true
+      shootCluster: false # true for managed seeds
     version: <gardener-version>
     garden:
       clusterIdentity: <uuid-of-gardener-installation>
@@ -312,6 +318,9 @@ In order to allow extension controller deployments to get information about the 
   In addition, a `.gardener.shoot` section is populated with `name`, `namespace`, `labels`, `annotations`, `spec`, and (if available) `clusterIdentity`.
   If the self-hosted shoot has not yet been promoted to a `Seed`, the `.gardener.seed` section is omitted entirely.
   Extension charts should handle this gracefully (e.g., `{{ if .Values.gardener.seed }}`).
+- The `.gardener.clusterTypes` values identify the roles of the cluster the extension is being deployed to.
+  This mainly helps avoid resource conflicts in case a cluster serves multiple roles at the same time, e.g., the garden runtime cluster also acting as a seed.
+  **IMPORTANT:** `.gardener.clusterTypes` does not reflect the deployment target, i.e., whether the extension controller is being deployed to the garden runtime cluster, a seed cluster, or a self-hosted shoot. This information must instead be derived from `.gardener.runtimeCluster`, `.gardener.seedCluster`, and `.gardener.shoot`.
 
 Extension controller deployments can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.

@@ -300,6 +300,11 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(valuesBytes)).To(Equal(`gardener:
+  clusterTypes:
+    gardenRuntimeCluster: false
+    seedCluster: true
+    selfHostedShootCluster: false
+    shootCluster: false
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
     genericKubeconfigSecretName: ` + genericKubeconfigSecret.Name + `
@@ -829,10 +834,12 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
 
 				gardenerValues := values["gardener"].(map[string]any)
-				Expect(gardenerValues).To(HaveKeyWithValue("selfHostedShootCluster", true))
 				Expect(gardenerValues).To(HaveKeyWithValue("version", "1.2.3"))
 				Expect(gardenerValues).NotTo(HaveKey("seed"))
 				Expect(gardenerValues).To(HaveKey("shoot"))
+				clusterTypes, ok := gardenerValues["clusterTypes"].(map[string]any)
+				Expect(ok).To(BeTrue())
+				Expect(clusterTypes).To(HaveKeyWithValue("selfHostedShootCluster", true))
 
 				By("Ensure deployment has SHOOT_NAME and SHOOT_NAMESPACE env vars but no SEED_NAME")
 				deployment := &appsv1.Deployment{}
@@ -1051,7 +1058,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
 		})
 
-		Context("when seed is garden at the same time", func() {
+		When("seed is garden at the same time", func() {
 			BeforeEach(func() {
 				garden := &operatorv1alpha1.Garden{
 					ObjectMeta: metav1.ObjectMeta{GenerateName: "garden-"},
@@ -1100,6 +1107,65 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					namespace := &corev1.Namespace{}
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
 					g.Expect(namespace.Labels).To(HaveKeyWithValue("networking.gardener.cloud/access-target-apiserver", "allowed"))
+				}).Should(Succeed())
+			})
+
+			It("should set gardener.garden.runtimeCluster.enabled=true in Helm values", func() {
+				By("Ensure chart was deployed with runtimeCluster enabled")
+				Eventually(func(g Gomega) {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+					configMap := &corev1.ConfigMap{}
+					g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+
+					values := make(map[string]any)
+					g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+					gardenerValues, ok := values["gardener"].(map[string]any)
+					g.Expect(ok).To(BeTrue())
+					clusterTypes, ok := gardenerValues["clusterTypes"].(map[string]any)
+					g.Expect(ok).To(BeTrue())
+					g.Expect(clusterTypes).To(HaveKeyWithValue("gardenRuntimeCluster", true))
+				}).Should(Succeed())
+			})
+		})
+
+		Context("when seed is a shoot cluster at the same time", func() {
+			BeforeEach(func() {
+				shootInfoConfigMap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      v1beta1constants.ConfigMapNameShootInfo,
+						Namespace: metav1.NamespaceSystem,
+					},
+				}
+				Expect(testClient.Create(ctx, shootInfoConfigMap)).To(Succeed())
+				DeferCleanup(func() { Expect(testClient.Delete(ctx, shootInfoConfigMap)).To(Succeed()) })
+			})
+
+			It("should set shootCluster=true in Helm values", func() {
+				By("Ensure chart was deployed with shootCluster enabled")
+				Eventually(func(g Gomega) {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+					configMap := &corev1.ConfigMap{}
+					g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+
+					values := make(map[string]any)
+					g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+					gardenerValues, ok := values["gardener"].(map[string]any)
+					g.Expect(ok).To(BeTrue())
+					clusterTypes, ok := gardenerValues["clusterTypes"].(map[string]any)
+					g.Expect(ok).To(BeTrue())
+					g.Expect(clusterTypes).To(HaveKeyWithValue("shootCluster", true))
 				}).Should(Succeed())
 			})
 		})
