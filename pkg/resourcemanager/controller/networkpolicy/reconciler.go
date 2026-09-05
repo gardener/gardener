@@ -167,6 +167,11 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		return nil, nil, nil
 	}
 
+	targetPodSelector, err := networkPolicyPodSelector(service)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	podLabelKeysByNamespace, err := r.podNetworkPolicyLabelKeysByNamespace(ctx, namespaceNames)
 	if err != nil {
 		return nil, nil, err
@@ -186,7 +191,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		) {
 			for _, fns := range []struct {
 				objectMetaFunc func(string, string, string) metav1.ObjectMeta
-				reconcileFunc  func(context.Context, logr.Logger, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, metav1.LabelSelector) error
+				reconcileFunc  func(context.Context, logr.Logger, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, metav1.LabelSelector, metav1.LabelSelector) error
 			}{
 				{objectMetaFunc: ingressObjectMetaFunc, reconcileFunc: r.reconcileIngressPolicy},
 				{objectMetaFunc: egressObjectMetaFunc, reconcileFunc: r.reconcileEgressPolicy},
@@ -195,7 +200,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 				desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
 
 				taskFns = append(taskFns, func(ctx context.Context) error {
-					return fns.reconcileFunc(ctx, log, service, port, objectMeta, namespaceName, podLabelSelector)
+					return fns.reconcileFunc(ctx, log, service, port, objectMeta, namespaceName, podLabelSelector, targetPodSelector)
 				})
 			}
 		}
@@ -262,7 +267,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logg
 		objectMeta := metav1.ObjectMeta{Name: "ingress-to-" + service.Name + "-from-world", Namespace: service.Namespace}
 		desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			return r.reconcileIngressFromWorldPolicy(ctx, service, objectMeta)
+			return r.reconcileIngressFromWorldPolicy(ctx, service, objectMeta, targetPodSelector)
 		})
 	}
 
@@ -312,11 +317,12 @@ func (r *Reconciler) reconcileIngressPolicy(
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
 	podLabelSelector metav1.LabelSelector,
+	targetPodSelector metav1.LabelSelector,
 ) error {
 	return r.reconcilePolicy(ctx, log, service, networkPolicyObjectMeta, podLabelSelector, func(networkPolicy *networkingv1.NetworkPolicy, podLabelSelector metav1.LabelSelector) {
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"ingress %s traffic to port %s for pods selected by the %s service selector from pods running in namespace %s labeled "+
-			"with %s.", *port.Protocol, port.Port.String(), client.ObjectKeyFromObject(service), namespaceName, podLabelSelector))
+			"ingress %s traffic to port %s for pods selected by %s from pods running in namespace %s labeled "+
+			"with %s.", *port.Protocol, port.Port.String(), targetPodSelector, namespaceName, podLabelSelector))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
 			From: []networkingv1.NetworkPolicyPeer{{
@@ -326,7 +332,7 @@ func (r *Reconciler) reconcileIngressPolicy(
 			Ports: []networkingv1.NetworkPolicyPort{port},
 		}}
 		networkPolicy.Spec.Egress = nil
-		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
+		networkPolicy.Spec.PodSelector = targetPodSelector
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 	})
 }
@@ -339,16 +345,17 @@ func (r *Reconciler) reconcileEgressPolicy(
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
 	podLabelSelector metav1.LabelSelector,
+	targetPodSelector metav1.LabelSelector,
 ) error {
 	return r.reconcilePolicy(ctx, log, service, networkPolicyObjectMeta, podLabelSelector, func(networkPolicy *networkingv1.NetworkPolicy, podLabelSelector metav1.LabelSelector) {
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"egress %s traffic to port %s from pods running in namespace %s labeled with %s to pods selected by the %s service "+
-			"selector.", *port.Protocol, port.Port.String(), namespaceName, podLabelSelector, client.ObjectKeyFromObject(service)))
+			"egress %s traffic to port %s from pods running in namespace %s labeled with %s to pods selected by %s.",
+			*port.Protocol, port.Port.String(), namespaceName, podLabelSelector, targetPodSelector))
 
 		networkPolicy.Spec.Ingress = nil
 		networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
 			To: []networkingv1.NetworkPolicyPeer{{
-				PodSelector:       &metav1.LabelSelector{MatchLabels: service.Spec.Selector},
+				PodSelector:       &targetPodSelector,
 				NamespaceSelector: egressNamespaceSelectorFor(service.Namespace, namespaceName),
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{port},
@@ -356,6 +363,23 @@ func (r *Reconciler) reconcileEgressPolicy(
 		networkPolicy.Spec.PodSelector = podLabelSelector
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
 	})
+}
+
+func networkPolicyPodSelector(service *corev1.Service) (metav1.LabelSelector, error) {
+	rawSelector, ok := service.Annotations[resourcesv1alpha1.NetworkingNetworkPolicyPodSelector]
+	if !ok {
+		return metav1.LabelSelector{MatchLabels: service.Spec.Selector}, nil
+	}
+
+	selector := metav1.LabelSelector{}
+	if err := json.Unmarshal([]byte(rawSelector), &selector); err != nil {
+		return metav1.LabelSelector{}, fmt.Errorf("failed unmarshalling %s: %w", rawSelector, err)
+	}
+	if _, err := metav1.LabelSelectorAsSelector(&selector); err != nil {
+		return metav1.LabelSelector{}, fmt.Errorf("invalid network policy pod selector %s: %w", rawSelector, err)
+	}
+
+	return selector, nil
 }
 
 func (r *Reconciler) reconcilePolicy(
@@ -386,7 +410,7 @@ func (r *Reconciler) reconcilePolicy(
 	return err
 }
 
-func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, service *corev1.Service, networkPolicyObjectMeta metav1.ObjectMeta) error {
+func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, service *corev1.Service, networkPolicyObjectMeta metav1.ObjectMeta, targetPodSelector metav1.LabelSelector) error {
 	var ports []networkingv1.NetworkPolicyPort
 	if err := json.Unmarshal([]byte(service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts]), &ports); err != nil {
 		return fmt.Errorf("failed unmarshalling %s: %w", service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts], err)
@@ -398,12 +422,11 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", portAndProtocolOf(ports),
-			client.ObjectKeyFromObject(service)))
+			"ingress traffic from everywhere to ports %v for pods selected by %s.", portAndProtocolOf(ports), targetPodSelector))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{Ports: ports}}
 		networkPolicy.Spec.Egress = nil
-		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
+		networkPolicy.Spec.PodSelector = targetPodSelector
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 
 		return nil
