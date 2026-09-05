@@ -4399,6 +4399,7 @@ func Convert_core_InPlaceUpdates_To_v1beta1_InPlaceUpdates(in *core.InPlaceUpdat
 
 func autoConvert_v1beta1_InPlaceUpdatesStatus_To_core_InPlaceUpdatesStatus(in *InPlaceUpdatesStatus, out *core.InPlaceUpdatesStatus, s conversion.Scope) error {
 	out.PendingWorkerUpdates = (*core.PendingWorkerUpdates)(unsafe.Pointer(in.PendingWorkerUpdates))
+	out.WorkerPoolToHashMap = *(*map[string]string)(unsafe.Pointer(&in.WorkerPoolToHashMap))
 	return nil
 }
 
@@ -4409,6 +4410,7 @@ func Convert_v1beta1_InPlaceUpdatesStatus_To_core_InPlaceUpdatesStatus(in *InPla
 
 func autoConvert_core_InPlaceUpdatesStatus_To_v1beta1_InPlaceUpdatesStatus(in *core.InPlaceUpdatesStatus, out *InPlaceUpdatesStatus, s conversion.Scope) error {
 	out.PendingWorkerUpdates = (*PendingWorkerUpdates)(unsafe.Pointer(in.PendingWorkerUpdates))
+	out.WorkerPoolToHashMap = *(*map[string]string)(unsafe.Pointer(&in.WorkerPoolToHashMap))
 	return nil
 }
 
