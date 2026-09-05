@@ -225,6 +225,42 @@ var _ = Describe("Namespaces", func() {
 			))
 		})
 
+		It("should successfully deploy the namespace with container runtime labels from worker pools", func() {
+			defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+				{
+					Name: "worker-1",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "kata"},
+							{Type: "gvisor"},
+						},
+					},
+				},
+				{
+					Name: "worker-2",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "gvisor"},
+						},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+			defaultExpectations("", 1)
+			Expect(botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"),
+				HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true"),
+			))
+		})
+
 		It("should successfully deploy the namespace when failure tolerance type is zone", func() {
 			defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 				HighAvailability: &gardencorev1beta1.HighAvailability{
@@ -627,6 +663,48 @@ var _ = Describe("Namespaces", func() {
 				HaveKeyWithValue("extensions.gardener.cloud/"+extensionType1, "true"),
 				Not(HaveKeyWithValue("extensions.gardener.cloud/"+extensionType2, "true")),
 				Not(HaveKeyWithValue("extensions.gardener.cloud/"+extensionType3, "true")),
+			))
+		})
+
+		It("should successfully remove container runtime labels from the namespace when container runtimes are removed from worker pools", func() {
+			defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+				{
+					Name: "worker-1",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "kata"},
+						},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(defaultShootInfo)
+
+			Expect(seedClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						"shoot.gardener.cloud/uid": string(uid),
+					},
+					Labels: map[string]string{
+						"gardener.cloud/role":                           "shoot",
+						"seed.gardener.cloud/provider":                  seedProviderType,
+						"shoot.gardener.cloud/provider":                 shootProviderType,
+						"networking.shoot.gardener.cloud/provider":      networkingProviderType,
+						"backup.gardener.cloud/provider":                seedProviderType,
+						"containerruntime.worker.gardener.cloud/kata":   "true",
+						"containerruntime.worker.gardener.cloud/gvisor": "true",
+					},
+				},
+			})).To(Succeed())
+
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+			defaultExpectations("", 1)
+			Expect(botanist.SeedNamespaceObject.Labels).To(And(
+				HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"),
+				Not(HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true")),
 			))
 		})
 

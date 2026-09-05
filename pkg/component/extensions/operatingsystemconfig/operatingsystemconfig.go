@@ -796,8 +796,16 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.osc, func() error {
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
-		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelWorkerPool, d.worker.Name)
-		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook, "true")
+
+		for k := range d.osc.Labels {
+			if strings.HasPrefix(k, extensionsv1alpha1.ContainerRuntimeNameWorkerLabelPrefix) {
+				delete(d.osc.Labels, k)
+			}
+		}
+
+		for k, v := range gardenerutils.OperatingSystemConfigLabelsForWorkerPool(d.worker) {
+			metav1.SetMetaDataLabel(&d.osc.ObjectMeta, k, v)
+		}
 
 		if d.worker.Machine.Image != nil {
 			d.osc.Spec.Type = d.worker.Machine.Image.Name

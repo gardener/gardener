@@ -15,8 +15,10 @@ const (
 	ContainerRuntimeResource = "ContainerRuntime"
 	// CRINameWorkerLabel is the name of the label describing the CRI name used in this node.
 	CRINameWorkerLabel = "worker.gardener.cloud/cri-name"
+	// ContainerRuntimeNameWorkerLabelPrefix is the prefix of the label describing a Container Runtime which should be supported on the node.
+	ContainerRuntimeNameWorkerLabelPrefix = "containerruntime.worker.gardener.cloud/"
 	// ContainerRuntimeNameWorkerLabel is a label describing a Container Runtime which should be supported on the node.
-	ContainerRuntimeNameWorkerLabel = "containerruntime.worker.gardener.cloud/%s"
+	ContainerRuntimeNameWorkerLabel = ContainerRuntimeNameWorkerLabelPrefix + "%s"
 )
 
 // +genclient

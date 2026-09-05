@@ -62,14 +62,21 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkingProvider, *b.Shoot.GetInfo().Spec.Networking.Type)
 		}
 
-		// Remove all old extension labels before reconciling the new extension labels.
+		// Remove all old extension and container runtime labels before reconciling the new labels.
 		for k := range namespace.Labels {
-			if strings.HasPrefix(k, v1beta1constants.LabelExtensionPrefix) {
+			if strings.HasPrefix(k, v1beta1constants.LabelExtensionPrefix) || strings.HasPrefix(k, extensionsv1alpha1.ContainerRuntimeNameWorkerLabelPrefix) {
 				delete(namespace.Labels, k)
 			}
 		}
 		for extensionType := range requiredExtensions {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelExtensionPrefix+extensionType, "true")
+		}
+		for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+			if worker.CRI != nil {
+				for _, cr := range worker.CRI.ContainerRuntimes {
+					metav1.SetMetaDataLabel(&namespace.ObjectMeta, fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type), "true")
+				}
+			}
 		}
 
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, seedProviderType)
