@@ -31,6 +31,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -171,11 +172,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 		return fmt.Errorf("failed adding webhook certificate management to manager: %w", err)
 	}
 
-	log.Info("Adding migrations runnable func to manager")
-	if err := mgr.Add(runMigrations(ctx, mgr.GetClient(), log)); err != nil {
-		return fmt.Errorf("failed adding migrations runnable func to manager: %w", err)
-	}
-
 	log.Info("Adding webhook handlers to manager")
 	if err := webhook.AddToManager(mgr); err != nil {
 		return err
@@ -190,13 +186,22 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 	if err != nil {
 		return fmt.Errorf("failed to build garden ClientMap: %w", err)
 	}
-	if err := mgr.Add(gardenClientMap); err != nil {
-		return err
-	}
 
-	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(cancel, mgr, cfg, gardenClientMap); err != nil {
-		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	log.Info("Adding runnables to manager")
+	if err := mgr.Add(&controllerutils.ControlledRunner{
+		Manager: mgr,
+		BootstrapRunnables: []manager.Runnable{
+			runMigrations(ctx, mgr.GetClient(), log),
+		},
+		ActualRunnables: []manager.Runnable{
+			gardenClientMap,
+			manager.RunnableFunc(func(context.Context) error {
+				log.Info("Adding controllers to manager")
+				return controller.AddToManager(cancel, mgr, cfg, gardenClientMap)
+			}),
+		},
+	}); err != nil {
+		return fmt.Errorf("failed adding runnables to manager: %w", err)
 	}
 
 	log.Info("Starting manager")

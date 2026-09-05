@@ -143,7 +143,7 @@ var _ = Describe("Runtime", func() {
 
 			_, err := runtime.Reconcile(ctx, log, extension)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "garden-extension-test-extension-23b70", Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 			namespace := &corev1.Namespace{}
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "runtime-extension-test-extension"}, namespace)).To(Succeed())
 			Expect(namespace.Labels).To(HaveKeyWithValue("gardener.cloud/role", "extension"))
@@ -179,8 +179,8 @@ var _ = Describe("Runtime", func() {
 			namespace := fmt.Sprintf("runtime-extension-%s", extensionName)
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 			Expect(runtimeClient.Create(ctx, ns)).To(Succeed())
-			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}})).To(Succeed())
-			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: fmt.Sprintf("extension-%s-garden", extensionName)}}}})).To(Succeed())
+			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "garden-extension-test-extension-23b70", Namespace: "garden"}})).To(Succeed())
+			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "garden-extension-test-extension-23b70", Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: "garden-extension-test-extension-23b70"}}}})).To(Succeed())
 
 			_, err := runtime.Delete(ctx, log, extension)
 			Expect(err).NotTo(HaveOccurred())
