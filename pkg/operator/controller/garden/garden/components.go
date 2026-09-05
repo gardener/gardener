@@ -78,6 +78,7 @@ import (
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/perses"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
@@ -154,6 +155,7 @@ type components struct {
 	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              component.DeployWaiter
 	persesOperator                component.DeployWaiter
+	perses                        perses.Interface
 	victoriaOperator              component.DeployWaiter
 	victoriaLogs                  component.DeployWaiter
 	pvcAutoscaler                 component.DeployWaiter
@@ -383,6 +385,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.persesOperator, err = r.newPersesOperator()
+	if err != nil {
+		return
+	}
+	c.perses, err = r.newPerses(garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1713,6 +1719,37 @@ func (r *Reconciler) newPersesOperator() (component.DeployWaiter, error) {
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}
+
+func (r *Reconciler) newPerses(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string, ingressGatewayValues []istio.IngressGatewayValues) (perses.Interface, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the perses config")
+	}
+
+	return sharedcomponent.NewPerses(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		perses.Values{
+			ClusterType: component.ClusterTypeSeed,
+			Replicas:    1,
+			// TODO(rickardsjp): Set PriorityClassNameGardenSystem100 on the Perses pods once perses-operator supports
+			// configuring a pod priority class on the Perses resource (see github.com/perses/perses-operator/pull/456).
+			IsGardenCluster:     true,
+			VPAEnabled:          vpaEnabled(garden.Spec.RuntimeCluster.Settings),
+			VictoriaLogsEnabled: features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			ExternalExposure: &perses.ExposureValues{
+				AuthSecretName:               v1beta1constants.SecretNameObservabilityIngress,
+				AuthSecretManaged:            true,
+				Host:                         "perses-garden." + ingressDomain,
+				IsGardenCluster:              true,
+				IstioIngressGatewayLabels:    ingressGatewayValues[0].Labels,
+				IstioIngressGatewayNamespace: ingressGatewayValues[0].Namespace,
+				SecretsManager:               secretsManager,
+				SigningCA:                    operatorv1alpha1.SecretNameCARuntime,
+				WildcardCertSecretName:       wildcardCertSecretName,
+			},
+		},
 	)
 }
 

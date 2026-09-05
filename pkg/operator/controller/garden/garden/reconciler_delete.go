@@ -99,6 +99,10 @@ func (r *Reconciler) delete(
 			Name: "Destroying Plutono",
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
 		})
+		destroyPerses = g.Add(flow.Task{
+			Name: "Destroying Perses",
+			Fn:   component.OpDestroyAndWait(c.perses).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying Gardener Metrics Exporter",
 			Fn:   component.OpDestroyAndWait(c.gardenerMetricsExporter).Destroy,
@@ -385,8 +389,9 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
 		})
 		destroyPersesOperator = g.Add(flow.Task{
-			Name: "Destroying perses-operator",
-			Fn:   component.OpDestroyAndWait(c.persesOperator).Destroy,
+			Name:         "Destroying perses-operator",
+			Fn:           component.OpDestroyAndWait(c.persesOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyPerses),
 		})
 		destroyVictoriaOperator = g.Add(flow.Task{
 			Name:         "Destroying victoria-operator",
