@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -29,8 +28,6 @@ import (
 
 const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
-
-	localRegistryPattern = "registry.local.gardener.cloud:"
 )
 
 // chartsCABundleFunc is an alias for imagevector.ChartsCABundle. Exposed for testing purposes.
@@ -167,18 +164,7 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 }
 
 func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
-	ref := oci.GetURL()
-
-	opts := []name.Option{
-		name.StrictValidation,
-	}
-
-	// in the local setup we don't want to use TLS
-	if strings.Contains(ref, localRegistryPattern) {
-		opts = append(opts, name.Insecure)
-	}
-
-	return name.ParseReference(ref, opts...)
+	return name.ParseReference(oci.GetURL(), name.StrictValidation)
 }
 
 // cacheKeyFromRef returns "repo@sha256:digest". If the ref is not a digest, the remote repository is queried to

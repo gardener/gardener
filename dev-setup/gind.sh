@@ -48,6 +48,13 @@ case "$COMMAND" in
       docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gardenadm/resources/generated/unmanaged-infra/manifests.yaml"     "$service:/gardenadm/resources/manifests.yaml"
 
       docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/gind/install-gardenadm.sh" "$service:/install-gardenadm.sh"
+
+      # The gardenadm image is pulled over HTTPS from the local registry below, but the node-init script that installs
+      # the registry CA into the node's trust store only runs later during `gardenadm init`. Install the CA now so the
+      # bootstrap `ctr` pull can verify the registry certificate (mirrors the node-init logic).
+      docker compose -f "$GIND_COMPOSE_FILE" cp "$(dirname "$0")/infra/registry/tls/ca.crt" "$service:/usr/local/share/ca-certificates/gardener-local-registry-ca.crt"
+      docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c 'update-ca-certificates && systemctl restart containerd'
+
       docker compose -f "$GIND_COMPOSE_FILE" exec "$service" bash -c '/install-gardenadm.sh $(cat /gardenadm/.skaffold-image)'
     done
 

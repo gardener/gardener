@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
 - gardenlet.yaml
+- secret-registry-ca.yaml
 
 patches:
 - path: patch-helm-ref.yaml

@@ -51,8 +51,6 @@ build:
     - image: local-skaffold/gardener-extension-provider-local/loadbalancer
       context: pkg/provider-local/cloud-provider/loadbalancer/image
       docker: {}
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
