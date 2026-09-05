@@ -12,44 +12,56 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
-// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
-func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
-	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
-		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
-		// Remove once the legacy fields are removed.
+// UsesLegacyClassifications reports whether the given version uses legacy Classifications instead of a Lifecycle.
+func UsesLegacyClassifications(version core.ExpirableVersion) bool {
+	return len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil)
+}
 
-		// Add the configured classification stage, default to Supported if unset.
-		version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
-			Classification: ptr.Deref(version.Classification, core.ClassificationSupported),
+// ToLifecycleStages converts the legacy classification fields of an ExpirableVersion to lifecycle stages.
+// If the version already defines lifecycle stages, they are returned unchanged.
+func ToLifecycleStages(version core.ExpirableVersion) []core.LifecycleStage {
+	if len(version.Lifecycle) > 0 {
+		return version.Lifecycle
+	}
+
+	classification := core.ClassificationSupported
+	if version.Classification != nil {
+		classification = *version.Classification
+	}
+
+	stages := []core.LifecycleStage{
+		{
+			Classification: classification,
+		},
+	}
+
+	if version.ExpirationDate != nil {
+		stages = append(stages, core.LifecycleStage{
+			Classification: core.ClassificationExpired,
+			StartTime:      version.ExpirationDate,
 		})
-
-		// Add an Expired stage if ExpirationDate is set.
-		if version.ExpirationDate != nil {
-			version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{
-				Classification: core.ClassificationExpired,
-				StartTime:      version.ExpirationDate,
-			})
-		}
 	}
 
-	if len(version.Lifecycle) == 0 {
-		return core.ClassificationSupported
-	}
+	return stages
+}
+
+// CurrentLifecycleClassification returns the current Lifecycle Classification of the given version.
+// An empty Classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
+func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionClassification {
+	lifecycle := ToLifecycleStages(version)
 
 	var (
 		currentTime           = time.Now()
 		currentClassification = core.ClassificationUnavailable
 	)
 
-	for _, stage := range version.Lifecycle {
+	for _, stage := range lifecycle {
 		startTime := time.Time{}
 		if stage.StartTime != nil {
 			startTime = stage.StartTime.Time
@@ -90,9 +102,9 @@ func VersionIsDeprecated(version core.ExpirableVersion) bool {
 }
 
 // SupportedLifecycleClassification returns the lifecycle stage in which the version is classified as supported.
-// It returns nil if no such stage exists.
+// It returns an empty LifecycleStage if no such stage exists.
 func SupportedLifecycleClassification(version core.ExpirableVersion) core.LifecycleStage {
-	for _, stage := range version.Lifecycle {
+	for _, stage := range ToLifecycleStages(version) {
 		if stage.Classification == core.ClassificationSupported {
 			return stage
 		}
@@ -286,8 +298,8 @@ func GetMachineImageDiff(oldImages, newImages []core.MachineImage) MachineImageD
 				if removedDiff.Has(version.Version) {
 					continue
 				}
-				for _, existingStage := range version.Lifecycle {
-					if slices.ContainsFunc(newImageVersions[version.Version].Lifecycle, func(newStage core.LifecycleStage) bool {
+				for _, existingStage := range ToLifecycleStages(version.ExpirableVersion) {
+					if slices.ContainsFunc(ToLifecycleStages(newImageVersions[version.Version].ExpirableVersion), func(newStage core.LifecycleStage) bool {
 						return newStage.Classification == existingStage.Classification
 					}) {
 						continue
@@ -323,7 +335,7 @@ func GetMachineImageDiff(oldImages, newImages []core.MachineImage) MachineImageD
 func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
 	var result []core.ExpirableVersion
 	for _, version := range versions {
-		// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+		// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
 		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
 		if (version.Classification == nil || *version.Classification != classification) &&
 			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {
