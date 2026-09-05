@@ -106,6 +106,18 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			})).To(Succeed())
 		})
 
+		It("should not panic when InternalClusterDomain is nil", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+
+			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
+
+			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI).NotTo(BeNil())
+
+			// We call Deploy to trigger the valuesFunc and ensure it doesn't panic.
+			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+		})
+
 		It("should not panic when ExternalClusterDomain is nil", func() {
 			botanist.Shoot.ExternalClusterDomain = nil
 
@@ -126,6 +138,14 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 			// We call Deploy to trigger the valuesFunc and ensure it doesn't panic.
 			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+		})
+	})
+
+	Describe("#ReconcileIstioInternalLoadBalancingConfigMap", func() {
+		It("should not panic when InternalClusterDomain is nil", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+
+			Expect(botanist.ReconcileIstioInternalLoadBalancingConfigMap(context.TODO())).To(Succeed())
 		})
 	})
 })
