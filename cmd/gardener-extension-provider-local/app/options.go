@@ -17,7 +17,6 @@ import (
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	extensionscontrolplanewebhook "github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
-	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/provider-local/controller/bastion"
@@ -28,6 +27,7 @@ import (
 	localextensionshootafterworkercontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shootafterworker"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
+	kubeproxysecretcontroller "github.com/gardener/gardener/pkg/provider-local/controller/kubeproxysecret"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	selfhostedshootexposurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/selfhostedshootexposure"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
@@ -37,7 +37,7 @@ import (
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
 	rolloutspeedupwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/rolloutspeedup"
-	shootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/shoot"
+	seedwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/seed"
 )
 
 // ControllerSwitchOptions are the extensionscmdcontroller.SwitchOptions for the provider controllers.
@@ -57,6 +57,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 		extensionscmdcontroller.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionshootafterworkercontroller.ControllerName, localextensionshootafterworkercontroller.AddToManager),
+		extensionscmdcontroller.Switch(kubeproxysecretcontroller.ControllerName, kubeproxysecretcontroller.AddToManager),
 	)
 }
 
@@ -64,7 +65,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 	return extensionscmdwebhook.NewSwitchOptions(
 		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
-		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
+		extensionscmdwebhook.Switch(seedwebhook.WebhookName, seedwebhook.AddToManager),
 		extensionscmdwebhook.Switch(rolloutspeedupwebhook.WebhookName, rolloutspeedupwebhook.AddToManager),
 		extensionscmdwebhook.Switch(calicoselfhostedshootwebhook.WebhookName, calicoselfhostedshootwebhook.AddToManager),
 		extensionscmdwebhook.Switch(networkpolicywebhook.WebhookName, networkpolicywebhook.AddToManager),
