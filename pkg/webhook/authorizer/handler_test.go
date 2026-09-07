@@ -141,6 +141,14 @@ func (a *fakeAuthorizer) Authorize(ctx context.Context, attrs authorizer.Attribu
 	return a.fn(ctx, attrs)
 }
 
+func (a *fakeAuthorizer) ConditionsAwareAuthorize(ctx context.Context, attrs authorizer.Attributes) authorizer.ConditionsAwareDecision {
+	return authorizer.ConditionsAwareDecisionFromParts(a.Authorize(ctx, attrs))
+}
+
+func (a *fakeAuthorizer) EvaluateConditions(ctx context.Context, decision authorizer.ConditionsAwareDecision, data authorizer.ConditionsData) (authorized authorizer.Decision, reason string, err error) {
+	return authorizer.DecisionDeny, "", authorizer.ErrorConditionEvaluationNotSupported
+}
+
 func allow(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
 	return authorizer.DecisionAllow, "", nil
 }
