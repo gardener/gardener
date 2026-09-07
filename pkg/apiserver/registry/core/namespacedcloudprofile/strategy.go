@@ -49,7 +49,7 @@ func (namespacedCloudProfileStrategy) Validate(_ context.Context, obj runtime.Ob
 func (namespacedCloudProfileStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (namespacedCloudProfileStrategy) AllowCreateOnUpdate() bool {
+func (namespacedCloudProfileStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -79,7 +79,7 @@ func mustIncreaseGeneration(oldNamespacedCloudProfile, newNamespacedCloudProfile
 	return false
 }
 
-func (namespacedCloudProfileStrategy) AllowUnconditionalUpdate() bool {
+func (namespacedCloudProfileStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return true
 }
 

@@ -287,7 +287,7 @@ func maintainIsSelfHostedLabel(shoot *core.Shoot) {
 	}
 }
 
-func (shootStrategy) AllowCreateOnUpdate() bool {
+func (shootStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -302,7 +302,7 @@ func (s shootStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.
 	return allErrs
 }
 
-func (shootStrategy) AllowUnconditionalUpdate() bool {
+func (shootStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 
