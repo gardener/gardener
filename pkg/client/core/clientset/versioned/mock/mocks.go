@@ -71,10 +71,10 @@ func (mr *MockInterfaceMockRecorder) CoreV1beta1() *gomock.Call {
 }
 
 // Discovery mocks base method.
-func (m *MockInterface) Discovery() discovery.DiscoveryInterface {
+func (m *MockInterface) Discovery() discovery.DiscoveryInterfaces {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Discovery")
-	ret0, _ := ret[0].(discovery.DiscoveryInterface)
+	ret0, _ := ret[0].(discovery.DiscoveryInterfaces)
 	return ret0
 }
 

@@ -22,11 +22,39 @@ import (
 )
 
 // WorkloadIdentityInformer provides access to a shared informer and lister for
-// WorkloadIdentities.
+// WorkloadIdentities. Prefer using the type-safe variant (see [TypedWorkloadIdentityInformer]).
 type WorkloadIdentityInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() securityv1alpha1.WorkloadIdentityLister
 }
+
+// TypedWorkloadIdentityInformer provides access to a shared informer and lister for
+// WorkloadIdentities, including the type-safe TypedInformer variant.
+// It is a superset of WorkloadIdentityInformer.
+type TypedWorkloadIdentityInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() WorkloadIdentityIndexInformer
+	Lister() securityv1alpha1.WorkloadIdentityLister
+}
+
+// WorkloadIdentityIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type WorkloadIdentityIndexInformer cache.TypedSharedIndexInformer[*apissecurityv1alpha1.WorkloadIdentity]
+
+// WorkloadIdentityHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for WorkloadIdentity.
+type WorkloadIdentityHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apissecurityv1alpha1.WorkloadIdentity]
+
+// WorkloadIdentityDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for WorkloadIdentity.
+type WorkloadIdentityDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apissecurityv1alpha1.WorkloadIdentity]
+
+// WorkloadIdentityFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for WorkloadIdentity.
+type WorkloadIdentityFilteringHandler = cache.TypedFilteringResourceEventHandler[*apissecurityv1alpha1.WorkloadIdentity]
+
+// WorkloadIdentityIndexers is a specialization of [cache.TypedIndexers] for WorkloadIdentity.
+type WorkloadIdentityIndexers = cache.TypedIndexers[*apissecurityv1alpha1.WorkloadIdentity]
+
+// DeletedWorkloadIdentity is a specialization of [cache.DeletedObject] for WorkloadIdentity.
+type DeletedWorkloadIdentity = cache.DeletedObject[*apissecurityv1alpha1.WorkloadIdentity]
 
 type workloadIdentityInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type workloadIdentityInformer struct {
 // NewWorkloadIdentityInformer constructs a new informer for WorkloadIdentity type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedWorkloadIdentityInformer]).
 func NewWorkloadIdentityInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewWorkloadIdentityInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedWorkloadIdentityInformer constructs a new informer for WorkloadIdentity type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedWorkloadIdentityInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers WorkloadIdentityIndexers) WorkloadIdentityIndexInformer {
+	return NewTypedWorkloadIdentityInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredWorkloadIdentityInformer constructs a new informer for WorkloadIdentity type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredWorkloadIdentityInformer]).
 func NewFilteredWorkloadIdentityInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewWorkloadIdentityInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedWorkloadIdentityInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredWorkloadIdentityInformer constructs a new informer for WorkloadIdentity type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredWorkloadIdentityInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers WorkloadIdentityIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) WorkloadIdentityIndexInformer {
+	return NewTypedWorkloadIdentityInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewWorkloadIdentityInformerWithOptions constructs a new informer for WorkloadIdentity type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedWorkloadIdentityInformerWithOptions]).
 func NewWorkloadIdentityInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedWorkloadIdentityInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedWorkloadIdentityInformerWithOptions constructs a new informer for WorkloadIdentity type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedWorkloadIdentityInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) WorkloadIdentityIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "security.gardener.cloud", Version: "v1alpha1", Resource: "workloadidentitys"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.WorkloadIdentity](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewWorkloadIdentityInformerWithOptions(client versioned.Interface, namespac
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *workloadIdentityInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewWorkloadIdentityInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedWorkloadIdentityInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *workloadIdentityInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apissecurityv1alpha1.WorkloadIdentity{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *workloadIdentityInformer) TypedInformer() WorkloadIdentityIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.WorkloadIdentity](f.factory.InformerFor(&apissecurityv1alpha1.WorkloadIdentity{}, f.defaultInformer))
 }
 
 func (f *workloadIdentityInformer) Lister() securityv1alpha1.WorkloadIdentityLister {
 	return securityv1alpha1.NewWorkloadIdentityLister(f.Informer().GetIndexer())
+}
+
+// ToTypedWorkloadIdentityInformer converts an untyped informer into a TypedWorkloadIdentityInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *WorkloadIdentity. If that is not the case, calling type-safe methods of the returned
+// TypedWorkloadIdentityInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedWorkloadIdentityInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedWorkloadIdentityInformer(informer WorkloadIdentityInformer) TypedWorkloadIdentityInformer {
+	if informer, ok := informer.(TypedWorkloadIdentityInformer); ok {
+		return informer
+	}
+	return &workloadIdentityTypedInformerAdapter{informer}
+}
+
+type workloadIdentityTypedInformerAdapter struct {
+	WorkloadIdentityInformer
+}
+
+func (a *workloadIdentityTypedInformerAdapter) TypedInformer() WorkloadIdentityIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.WorkloadIdentity](a.Informer())
+}
+
+// ToWorkloadIdentityIndexInformer converts an untyped informer into a WorkloadIdentityIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *WorkloadIdentity. If that is not the case, calling type-safe methods of the returned
+// WorkloadIdentityIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a WorkloadIdentityIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToWorkloadIdentityIndexInformer(informer cache.SharedIndexInformer) WorkloadIdentityIndexInformer {
+	if informer, ok := informer.(WorkloadIdentityIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.WorkloadIdentity](informer)
 }

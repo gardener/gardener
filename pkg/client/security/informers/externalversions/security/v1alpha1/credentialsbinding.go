@@ -22,11 +22,39 @@ import (
 )
 
 // CredentialsBindingInformer provides access to a shared informer and lister for
-// CredentialsBindings.
+// CredentialsBindings. Prefer using the type-safe variant (see [TypedCredentialsBindingInformer]).
 type CredentialsBindingInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() securityv1alpha1.CredentialsBindingLister
 }
+
+// TypedCredentialsBindingInformer provides access to a shared informer and lister for
+// CredentialsBindings, including the type-safe TypedInformer variant.
+// It is a superset of CredentialsBindingInformer.
+type TypedCredentialsBindingInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() CredentialsBindingIndexInformer
+	Lister() securityv1alpha1.CredentialsBindingLister
+}
+
+// CredentialsBindingIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type CredentialsBindingIndexInformer cache.TypedSharedIndexInformer[*apissecurityv1alpha1.CredentialsBinding]
+
+// CredentialsBindingHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for CredentialsBinding.
+type CredentialsBindingHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apissecurityv1alpha1.CredentialsBinding]
+
+// CredentialsBindingDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for CredentialsBinding.
+type CredentialsBindingDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apissecurityv1alpha1.CredentialsBinding]
+
+// CredentialsBindingFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for CredentialsBinding.
+type CredentialsBindingFilteringHandler = cache.TypedFilteringResourceEventHandler[*apissecurityv1alpha1.CredentialsBinding]
+
+// CredentialsBindingIndexers is a specialization of [cache.TypedIndexers] for CredentialsBinding.
+type CredentialsBindingIndexers = cache.TypedIndexers[*apissecurityv1alpha1.CredentialsBinding]
+
+// DeletedCredentialsBinding is a specialization of [cache.DeletedObject] for CredentialsBinding.
+type DeletedCredentialsBinding = cache.DeletedObject[*apissecurityv1alpha1.CredentialsBinding]
 
 type credentialsBindingInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type credentialsBindingInformer struct {
 // NewCredentialsBindingInformer constructs a new informer for CredentialsBinding type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedCredentialsBindingInformer]).
 func NewCredentialsBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewCredentialsBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedCredentialsBindingInformer constructs a new informer for CredentialsBinding type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedCredentialsBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers CredentialsBindingIndexers) CredentialsBindingIndexInformer {
+	return NewTypedCredentialsBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredCredentialsBindingInformer constructs a new informer for CredentialsBinding type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredCredentialsBindingInformer]).
 func NewFilteredCredentialsBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewCredentialsBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedCredentialsBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredCredentialsBindingInformer constructs a new informer for CredentialsBinding type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredCredentialsBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers CredentialsBindingIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) CredentialsBindingIndexInformer {
+	return NewTypedCredentialsBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewCredentialsBindingInformerWithOptions constructs a new informer for CredentialsBinding type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedCredentialsBindingInformerWithOptions]).
 func NewCredentialsBindingInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedCredentialsBindingInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedCredentialsBindingInformerWithOptions constructs a new informer for CredentialsBinding type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedCredentialsBindingInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) CredentialsBindingIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "security.gardener.cloud", Version: "v1alpha1", Resource: "credentialsbindings"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.CredentialsBinding](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewCredentialsBindingInformerWithOptions(client versioned.Interface, namesp
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *credentialsBindingInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewCredentialsBindingInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedCredentialsBindingInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *credentialsBindingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apissecurityv1alpha1.CredentialsBinding{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *credentialsBindingInformer) TypedInformer() CredentialsBindingIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.CredentialsBinding](f.factory.InformerFor(&apissecurityv1alpha1.CredentialsBinding{}, f.defaultInformer))
 }
 
 func (f *credentialsBindingInformer) Lister() securityv1alpha1.CredentialsBindingLister {
 	return securityv1alpha1.NewCredentialsBindingLister(f.Informer().GetIndexer())
+}
+
+// ToTypedCredentialsBindingInformer converts an untyped informer into a TypedCredentialsBindingInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *CredentialsBinding. If that is not the case, calling type-safe methods of the returned
+// TypedCredentialsBindingInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedCredentialsBindingInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedCredentialsBindingInformer(informer CredentialsBindingInformer) TypedCredentialsBindingInformer {
+	if informer, ok := informer.(TypedCredentialsBindingInformer); ok {
+		return informer
+	}
+	return &credentialsBindingTypedInformerAdapter{informer}
+}
+
+type credentialsBindingTypedInformerAdapter struct {
+	CredentialsBindingInformer
+}
+
+func (a *credentialsBindingTypedInformerAdapter) TypedInformer() CredentialsBindingIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.CredentialsBinding](a.Informer())
+}
+
+// ToCredentialsBindingIndexInformer converts an untyped informer into a CredentialsBindingIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *CredentialsBinding. If that is not the case, calling type-safe methods of the returned
+// CredentialsBindingIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a CredentialsBindingIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToCredentialsBindingIndexInformer(informer cache.SharedIndexInformer) CredentialsBindingIndexInformer {
+	if informer, ok := informer.(CredentialsBindingIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apissecurityv1alpha1.CredentialsBinding](informer)
 }

@@ -22,11 +22,39 @@ import (
 )
 
 // GardenletInformer provides access to a shared informer and lister for
-// Gardenlets.
+// Gardenlets. Prefer using the type-safe variant (see [TypedGardenletInformer]).
 type GardenletInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() seedmanagementv1alpha1.GardenletLister
 }
+
+// TypedGardenletInformer provides access to a shared informer and lister for
+// Gardenlets, including the type-safe TypedInformer variant.
+// It is a superset of GardenletInformer.
+type TypedGardenletInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() GardenletIndexInformer
+	Lister() seedmanagementv1alpha1.GardenletLister
+}
+
+// GardenletIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type GardenletIndexInformer cache.TypedSharedIndexInformer[*apisseedmanagementv1alpha1.Gardenlet]
+
+// GardenletHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Gardenlet.
+type GardenletHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apisseedmanagementv1alpha1.Gardenlet]
+
+// GardenletDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Gardenlet.
+type GardenletDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apisseedmanagementv1alpha1.Gardenlet]
+
+// GardenletFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Gardenlet.
+type GardenletFilteringHandler = cache.TypedFilteringResourceEventHandler[*apisseedmanagementv1alpha1.Gardenlet]
+
+// GardenletIndexers is a specialization of [cache.TypedIndexers] for Gardenlet.
+type GardenletIndexers = cache.TypedIndexers[*apisseedmanagementv1alpha1.Gardenlet]
+
+// DeletedGardenlet is a specialization of [cache.DeletedObject] for Gardenlet.
+type DeletedGardenlet = cache.DeletedObject[*apisseedmanagementv1alpha1.Gardenlet]
 
 type gardenletInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type gardenletInformer struct {
 // NewGardenletInformer constructs a new informer for Gardenlet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedGardenletInformer]).
 func NewGardenletInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewGardenletInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedGardenletInformer constructs a new informer for Gardenlet type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedGardenletInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers GardenletIndexers) GardenletIndexInformer {
+	return NewTypedGardenletInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredGardenletInformer constructs a new informer for Gardenlet type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredGardenletInformer]).
 func NewFilteredGardenletInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewGardenletInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedGardenletInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredGardenletInformer constructs a new informer for Gardenlet type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredGardenletInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers GardenletIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) GardenletIndexInformer {
+	return NewTypedGardenletInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewGardenletInformerWithOptions constructs a new informer for Gardenlet type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedGardenletInformerWithOptions]).
 func NewGardenletInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedGardenletInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedGardenletInformerWithOptions constructs a new informer for Gardenlet type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedGardenletInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) GardenletIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "seedmanagement.gardener.cloud", Version: "v1alpha1", Resource: "gardenlets"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.Gardenlet](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewGardenletInformerWithOptions(client versioned.Interface, namespace strin
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *gardenletInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewGardenletInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedGardenletInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *gardenletInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apisseedmanagementv1alpha1.Gardenlet{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *gardenletInformer) TypedInformer() GardenletIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.Gardenlet](f.factory.InformerFor(&apisseedmanagementv1alpha1.Gardenlet{}, f.defaultInformer))
 }
 
 func (f *gardenletInformer) Lister() seedmanagementv1alpha1.GardenletLister {
 	return seedmanagementv1alpha1.NewGardenletLister(f.Informer().GetIndexer())
+}
+
+// ToTypedGardenletInformer converts an untyped informer into a TypedGardenletInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Gardenlet. If that is not the case, calling type-safe methods of the returned
+// TypedGardenletInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedGardenletInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedGardenletInformer(informer GardenletInformer) TypedGardenletInformer {
+	if informer, ok := informer.(TypedGardenletInformer); ok {
+		return informer
+	}
+	return &gardenletTypedInformerAdapter{informer}
+}
+
+type gardenletTypedInformerAdapter struct {
+	GardenletInformer
+}
+
+func (a *gardenletTypedInformerAdapter) TypedInformer() GardenletIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.Gardenlet](a.Informer())
+}
+
+// ToGardenletIndexInformer converts an untyped informer into a GardenletIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Gardenlet. If that is not the case, calling type-safe methods of the returned
+// GardenletIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a GardenletIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToGardenletIndexInformer(informer cache.SharedIndexInformer) GardenletIndexInformer {
+	if informer, ok := informer.(GardenletIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.Gardenlet](informer)
 }
