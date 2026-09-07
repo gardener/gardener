@@ -31,7 +31,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 			}
 
 			ItShouldUpdateShootToHighAvailability(s, failureToleranceType)
-			ItShouldWaitForShootToBeReconciledAndHealthyWithCNIRecovery(s)
+			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			highavailability.VerifyHighAvailability(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {

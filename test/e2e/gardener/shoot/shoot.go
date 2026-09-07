@@ -171,60 +171,6 @@ func ItShouldWaitForShootToBeReconciledAndHealthy(s *ShootContext) {
 	}, SpecTimeout(30*time.Minute))
 }
 
-// ItShouldWaitForShootToBeReconciledAndHealthyWithCNIRecovery waits like
-// ItShouldWaitForShootToBeReconciledAndHealthy, but additionally restarts the shoot's calico-typha pod while the
-// reconciliation is still pending, at most once every cniRecoveryRestartInterval.
-//
-// This is an e2e-only band-aid for a Calico watcher-cache stall observed during HA zone updates (issue #14458): when
-// the shoot kube-apiserver is transiently unavailable while the data plane is rolled, Calico's watchersyncer marks the
-// backing API as missing and blocks resync for 30 minutes (MissingAPIRetryTime). During that window it does not detect
-// the new vpn-shoot pods' network interfaces, so those pods never become ready and the reconciliation hangs. Restarting
-// calico-typha (which holds the blocking syncer) expedites the resync, as recommended by Calico itself. Remove this
-// once networking-calico handles the recovery itself.
-func ItShouldWaitForShootToBeReconciledAndHealthyWithCNIRecovery(s *ShootContext) {
-	GinkgoHelper()
-
-	It("Wait for Shoot to be reconciled (restarting Calico to recover from stale CNI state)", func(ctx SpecContext) {
-		// Restart at most once per interval so a freshly restarted calico-typha gets enough uptime to re-establish its
-		// watch and resync before we consider restarting it again. Zero value means "not yet restarted", so the first
-		// restart fires immediately.
-		var lastRestart time.Time
-
-		Eventually(ctx, func(g Gomega) bool {
-			g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
-
-			completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
-			if !completed {
-				s.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", s.Shoot.Status.LastOperation, "reason", reason)
-				if s.ShootClient != nil && time.Since(lastRestart) >= cniRecoveryRestartInterval {
-					restartShootCNIPods(ctx, s)
-					lastRestart = time.Now()
-				}
-			}
-			return completed
-		}).WithPolling(30 * time.Second).Should(BeTrue())
-
-		s.Log.Info("Shoot has been reconciled and is healthy")
-	}, SpecTimeout(30*time.Minute))
-}
-
-// cniRecoveryRestartInterval is the minimum time between calico-typha restarts performed by
-// ItShouldWaitForShootToBeReconciledAndHealthyWithCNIRecovery, giving a restarted pod time to come up and resync.
-const cniRecoveryRestartInterval = 2 * time.Minute
-
-// restartShootCNIPods deletes the shoot's calico-typha pod in the kube-system namespace to expedite a Calico
-// watcher-cache resync. Deleting an already-restarting pod is a harmless no-op, and NotFound is ignored, so this is
-// safe to call repeatedly. See ItShouldWaitForShootToBeReconciledAndHealthyWithCNIRecovery for context.
-func restartShootCNIPods(ctx SpecContext, s *ShootContext) {
-	s.Log.Info("Restarting calico-typha to recover from potential stale CNI state (e2e band-aid)")
-	if err := s.ShootClient.DeleteAllOf(ctx, &corev1.Pod{},
-		client.InNamespace(metav1.NamespaceSystem),
-		client.MatchingLabels{"k8s-app": "calico-typha"},
-	); client.IgnoreNotFound(err) != nil {
-		s.Log.Error(err, "Failed to restart calico-typha (e2e band-aid), will retry on next poll")
-	}
-}
-
 // ItShouldWaitForShootToBeDeleted waits for the shoot to be gone. If an existing shoot is specified, the step is
 // skipped.
 func ItShouldWaitForShootToBeDeleted(s *ShootContext) {
