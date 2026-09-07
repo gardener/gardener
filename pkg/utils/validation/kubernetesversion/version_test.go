@@ -30,7 +30,8 @@ var _ = Describe("Version", func() {
 		Entry("1.34", "1.34", false, Succeed()),
 		Entry("1.35", "1.35", false, Succeed()),
 		Entry("1.36", "1.36", false, Succeed()),
-		Entry("1.37", "1.37", false, MatchError(ContainSubstring("unsupported kubernetes version"))),
+		Entry("1.37", "1.37", false, Succeed()),
+		Entry("1.38", "1.38", false, MatchError(ContainSubstring("unsupported kubernetes version"))),
 
 		// Disabling the version check by setting the env var EXPERIMENTAL_DISABLE_KUBERNETES_VERSION_CHECK to true
 		Entry("1.23", "1.23", true, Succeed()), // too low
