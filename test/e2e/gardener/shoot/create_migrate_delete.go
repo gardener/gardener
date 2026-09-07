@@ -63,7 +63,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		ItShouldWaitForShootToBeReconciledAndHealthy(s)
+		ItShouldWaitForShootToBeReconciledAndHealthyWithCNIRecovery(s)
 		ItShouldGetResponsibleSeed(s)
 		seed.ItShouldInitializeSeedClient(&s.SeedContext)
 
