@@ -16,12 +16,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/etcd/peerexposure"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -73,7 +72,7 @@ var _ = Describe("PeerExposure", func() {
 
 	// decodeManifests decodes YAML manifests into a map keyed by "<Kind>/<name>".
 	decodeManifests := func(manifests []string) map[string]client.Object {
-		decoder := serializer.NewCodecFactory(kubernetes.SeedScheme).UniversalDeserializer()
+		decoder := serializer.NewCodecFactory(kubernetesclient.SeedScheme).UniversalDeserializer()
 		result := make(map[string]client.Object, len(manifests))
 		for _, m := range manifests {
 			obj, gvk, err := decoder.Decode([]byte(m), nil, nil)
@@ -85,7 +84,7 @@ var _ = Describe("PeerExposure", func() {
 	}
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetesclient.SeedScheme).Build()
 
 		values = Values{
 			Role:                         "main",
@@ -134,7 +133,7 @@ var _ = Describe("PeerExposure", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Immutable).To(Equal(new(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
