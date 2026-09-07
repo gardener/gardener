@@ -11,15 +11,16 @@ import (
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -75,8 +76,7 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 	var (
 		gateway        = p.emptyGatewayFor(p.name())
 		virtualService = p.emptyVirtualServiceFor(p.name())
-		networkPolicy  = p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeIngress)
-		istioEgressNP  = p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeEgress)
+		npSvc          = p.emptyServiceFor(p.npServiceName())
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, gateway, gatewayWithPeerTLSPassthrough(gateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, p.values.Members)); err != nil {
@@ -98,13 +98,10 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// Allow the Istio ingress gateway to reach the etcd pods on the peer port.
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, networkPolicy, p.mutateNetworkPolicy(networkPolicy, networkingv1.PolicyTypeIngress, etcdconstants.PortEtcdPeer)); err != nil {
-		return fmt.Errorf("failed to reconcile network policy for etcd peer exposure: %w", err)
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, istioEgressNP, p.mutateNetworkPolicy(istioEgressNP, networkingv1.PolicyTypeEgress, etcdconstants.PortEtcdPeer)); err != nil {
-		return fmt.Errorf("failed to reconcile Istio egress network policy for etcd peer exposure: %w", err)
+	// this service carries the namespace-selectors annotation that instructs the resource-manager NetworkPolicy controller to generate both the
+	// ingress NetworkPolicy in this namespace and the matching egress NetworkPolicy in the istio-ingress namespace — one policy per port (peer + client).
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, npSvc, p.mutateNetworkPolicyTriggerService(npSvc)); err != nil {
+		return fmt.Errorf("failed to reconcile NetworkPolicy service for etcd peer/client exposure: %w", err)
 	}
 
 	if p.values.ClientHost != "" {
@@ -120,8 +117,6 @@ func (p *peerExposure) deployClientExposure(ctx context.Context) error {
 	var (
 		clientGateway        = p.emptyGatewayFor(p.clientName())
 		clientVirtualService = p.emptyVirtualServiceFor(p.clientName())
-		clientNetworkPolicy  = p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeIngress)
-		clientIstioEgressNP  = p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeEgress)
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientGateway, gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})); err != nil {
@@ -137,24 +132,15 @@ func (p *peerExposure) deployClientExposure(ctx context.Context) error {
 		return fmt.Errorf("failed to reconcile Istio service entry for etcd client exposure: %w", err)
 	}
 
-	// Allow the Istio ingress gateway to reach the etcd pods on the client port.
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientNetworkPolicy, p.mutateNetworkPolicy(clientNetworkPolicy, networkingv1.PolicyTypeIngress, etcdconstants.PortEtcdClient)); err != nil {
-		return fmt.Errorf("failed to reconcile network policy for etcd client exposure: %w", err)
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientIstioEgressNP, p.mutateNetworkPolicy(clientIstioEgressNP, networkingv1.PolicyTypeEgress, etcdconstants.PortEtcdClient)); err != nil {
-		return fmt.Errorf("failed to reconcile Istio egress network policy for etcd client exposure: %w", err)
-	}
-
 	return nil
 }
 
 func (p *peerExposure) Destroy(ctx context.Context) error {
-	objects := []client.Object{p.emptyGatewayFor(p.name()), p.emptyVirtualServiceFor(p.name()), p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.name(), networkingv1.PolicyTypeEgress)}
+	objects := []client.Object{p.emptyGatewayFor(p.name()), p.emptyVirtualServiceFor(p.name()), p.emptyServiceFor(p.npServiceName())}
 	for i := range p.values.Members {
 		objects = append(objects, p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i)))
 	}
-	objects = append(objects, p.emptyGatewayFor(p.clientName()), p.emptyVirtualServiceFor(p.clientName()), p.emptyServiceEntryFor(p.clientName()), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeEgress))
+	objects = append(objects, p.emptyGatewayFor(p.clientName()), p.emptyVirtualServiceFor(p.clientName()), p.emptyServiceEntryFor(p.clientName()))
 	return kubernetesutils.DeleteObjects(ctx, p.client, objects...)
 }
 
@@ -173,11 +159,31 @@ func (p *peerExposure) emptyServiceEntryFor(name string) *istionetworkingv1beta1
 	return &istionetworkingv1beta1.ServiceEntry{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
 }
 
-func (p *peerExposure) emptyNetworkPolicyFor(baseName string, policyType networkingv1.PolicyType) *networkingv1.NetworkPolicy {
-	if policyType == networkingv1.PolicyTypeIngress {
-		return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-istio-ingress-to-" + baseName, Namespace: p.namespace}}
+func (p *peerExposure) emptyServiceFor(name string) *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
+}
+
+func (p *peerExposure) npServiceName() string {
+	return fmt.Sprintf("etcd-%s-np", p.values.Role)
+}
+
+func (p *peerExposure) mutateNetworkPolicyTriggerService(svc *corev1.Service) func() error {
+	return func() error {
+		svc.Labels = getLabels(p.values.Role)
+		svc.Spec.Selector = map[string]string{
+			v1beta1constants.LabelApp:  etcdconstants.LabelAppValue,
+			v1beta1constants.LabelRole: p.values.Role,
+		}
+		svc.Spec.Ports = []corev1.ServicePort{
+			{Name: fmt.Sprintf("tcp-%d", etcdconstants.PortEtcdPeer), Port: etcdconstants.PortEtcdPeer, Protocol: corev1.ProtocolTCP},
+			{Name: fmt.Sprintf("tcp-%d", etcdconstants.PortEtcdClient), Port: etcdconstants.PortEtcdClient, Protocol: corev1.ProtocolTCP},
+		}
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(svc,
+			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+		))
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+		return nil
 	}
-	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-istio-ingress-to-" + baseName + "-" + p.namespace, Namespace: p.values.IstioIngressGatewayNamespace}}
 }
 
 func (p *peerExposure) clientName() string {
@@ -192,42 +198,6 @@ func getLabels(role string) map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  "etcd-peer-exposure",
 		v1beta1constants.LabelRole: role,
-	}
-}
-
-func (p *peerExposure) mutateNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy, policyType networkingv1.PolicyType, port int32) func() error {
-	return func() error {
-		networkPolicy.Labels = getLabels(p.values.Role)
-		etcdLabels := map[string]string{
-			v1beta1constants.LabelApp:  etcdconstants.LabelAppValue,
-			v1beta1constants.LabelRole: p.values.Role,
-		}
-		networkPolicyPort := networkingv1.NetworkPolicyPort{
-			Port:     new(intstr.FromInt32(port)),
-			Protocol: new(corev1.ProtocolTCP),
-		}
-
-		networkPolicy.Spec = networkingv1.NetworkPolicySpec{PolicyTypes: []networkingv1.PolicyType{policyType}}
-		if policyType == networkingv1.PolicyTypeIngress {
-			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: etcdLabels}
-			networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
-				From: []networkingv1.NetworkPolicyPeer{{
-					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: p.values.IstioIngressGatewayNamespace}},
-					PodSelector:       &metav1.LabelSelector{MatchLabels: p.values.IstioIngressGatewayLabels},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{networkPolicyPort},
-			}}
-		} else {
-			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: p.values.IstioIngressGatewayLabels}
-			networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{{
-					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: p.namespace}},
-					PodSelector:       &metav1.LabelSelector{MatchLabels: etcdLabels},
-				}},
-				Ports: []networkingv1.NetworkPolicyPort{networkPolicyPort},
-			}}
-		}
-		return nil
 	}
 }
 
