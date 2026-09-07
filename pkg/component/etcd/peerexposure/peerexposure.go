@@ -17,11 +17,12 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	managedresources "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // PeerMember holds the cross-seed routing info for one etcd member.
@@ -72,76 +73,74 @@ func (p *peerExposure) name() string {
 	return fmt.Sprintf("etcd-%s-peer", p.values.Role)
 }
 
+func (p *peerExposure) managedResourceName() string {
+	return fmt.Sprintf("etcd-%s-peer-exposure", p.values.Role)
+}
+
 func (p *peerExposure) Deploy(ctx context.Context) error {
 	var (
-		gateway        = p.emptyGatewayFor(p.name())
-		virtualService = p.emptyVirtualServiceFor(p.name())
-		npSvc          = p.emptyServiceFor(p.npServiceName())
+		err      error
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, gateway, gatewayWithPeerTLSPassthrough(gateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, p.values.Members)); err != nil {
-		return fmt.Errorf("failed to reconcile Istio gateway for etcd peer exposure: %w", err)
+	gateway := p.emptyGatewayFor(p.name())
+	if err = gatewayWithPeerTLSPassthrough(gateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, p.values.Members)(); err != nil {
+		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, virtualService, virtualServiceWithPeerSNIMatch(virtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.Members, gateway.Name)); err != nil {
-		return fmt.Errorf("failed to reconcile Istio virtual service for etcd peer exposure: %w", err)
+	virtualService := p.emptyVirtualServiceFor(p.name())
+	if err = virtualServiceWithPeerSNIMatch(virtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.Members, gateway.Name)(); err != nil {
+		return err
 	}
+
+	networkPolicyTriggerService := p.emptyServiceFor(p.npServiceName())
+	if err = p.mutateNetworkPolicyTriggerService(networkPolicyTriggerService)(); err != nil {
+		return err
+	}
+
+	resources := []client.Object{gateway, virtualService, networkPolicyTriggerService}
 
 	// Gardener seeds set defaultServiceExportTo: ["~"] in the mesh config, so services are self-namespace only by
 	// default. ServiceEntries with resolution: DNS and exportTo pointing at the istio-ingress namespace make each
 	// pod's subdomain discoverable by the ingress proxy without touching the etcd-druid-owned Service (which the druid
 	// admission webhook would reject).
 	for i, m := range p.values.Members {
-		se := p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i))
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, se, serviceEntryForExport(se, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdPeer), etcdconstants.ServicePortNameEtcdPeer)); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
-			return fmt.Errorf("failed to reconcile Istio service entry for etcd peer member %d: %w", i, err)
+		serviceEntry := p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i))
+		if err := serviceEntryForExport(serviceEntry, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdPeer), etcdconstants.ServicePortNameEtcdPeer)(); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
+			return err
 		}
-	}
-
-	// this service carries the namespace-selectors annotation that instructs the resource-manager NetworkPolicy controller to generate both the
-	// ingress NetworkPolicy in this namespace and the matching egress NetworkPolicy in the istio-ingress namespace — one policy per port (peer + client).
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, npSvc, p.mutateNetworkPolicyTriggerService(npSvc)); err != nil {
-		return fmt.Errorf("failed to reconcile NetworkPolicy service for etcd peer/client exposure: %w", err)
+		resources = append(resources, serviceEntry)
 	}
 
 	if p.values.ClientHost != "" {
-		if err := p.deployClientExposure(ctx); err != nil {
+		clientGateway := p.emptyGatewayFor(p.clientName())
+		if err = gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})(); err != nil {
 			return err
 		}
+
+		clientVirtualService := p.emptyVirtualServiceFor(p.clientName())
+		if err = virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, p.clientServiceHost())(); err != nil {
+			return err
+		}
+
+		clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
+		if err = serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)(); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
+			return err
+		}
+
+		resources = append(resources, clientGateway, clientVirtualService, clientServiceEntry)
 	}
 
-	return nil
-}
-
-func (p *peerExposure) deployClientExposure(ctx context.Context) error {
-	var (
-		clientGateway        = p.emptyGatewayFor(p.clientName())
-		clientVirtualService = p.emptyVirtualServiceFor(p.clientName())
-	)
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientGateway, gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})); err != nil {
-		return fmt.Errorf("failed to reconcile Istio gateway for etcd client exposure: %w", err)
+	data, err := registry.AddAllAndSerialize(resources...)
+	if err != nil {
+		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientVirtualService, virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, p.clientServiceHost())); err != nil {
-		return fmt.Errorf("failed to reconcile Istio virtual service for etcd client exposure: %w", err)
-	}
-
-	clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, clientServiceEntry, serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
-		return fmt.Errorf("failed to reconcile Istio service entry for etcd client exposure: %w", err)
-	}
-
-	return nil
+	return managedresources.CreateForSeed(ctx, p.client, p.namespace, p.managedResourceName(), false, data)
 }
 
 func (p *peerExposure) Destroy(ctx context.Context) error {
-	objects := []client.Object{p.emptyGatewayFor(p.name()), p.emptyVirtualServiceFor(p.name()), p.emptyServiceFor(p.npServiceName())}
-	for i := range p.values.Members {
-		objects = append(objects, p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i)))
-	}
-	objects = append(objects, p.emptyGatewayFor(p.clientName()), p.emptyVirtualServiceFor(p.clientName()), p.emptyServiceEntryFor(p.clientName()))
-	return kubernetesutils.DeleteObjects(ctx, p.client, objects...)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.managedResourceName())
 }
 
 func (p *peerExposure) Wait(_ context.Context) error        { return nil }
