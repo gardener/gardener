@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
@@ -37,21 +36,10 @@ import (
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
 	gardensecurityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 )
-
-type fakeAuthorizerType struct{}
-
-func (fakeAuthorizerType) Authorize(_ context.Context, a authorizer.Attributes) (authorizer.Decision, string, error) {
-	username := a.GetUser().GetName()
-
-	if username == "allowed-user" {
-		return authorizer.DecisionAllow, "", nil
-	}
-
-	return authorizer.DecisionDeny, "", nil
-}
 
 var _ = Describe("resourcereferencemanager", func() {
 	Describe("#Admit", func() {
@@ -64,7 +52,6 @@ var _ = Describe("resourcereferencemanager", func() {
 			seedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
 			gardenSecurityClient          *securityclientset.Clientset
 			gardenSecurityInformerFactory gardensecurityinformers.SharedInformerFactory
-			fakeAuthorizer                fakeAuthorizerType
 			scheme                        *runtime.Scheme
 			dynamicClient                 *dynamicfake.FakeDynamicClient
 
@@ -471,8 +458,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			gardenSecurityInformerFactory = gardensecurityinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSecurityInformerFactory(gardenSecurityInformerFactory)
 
-			fakeAuthorizer = fakeAuthorizerType{}
-			admissionHandler.SetAuthorizer(fakeAuthorizer)
+			admissionHandler.SetAuthorizer(&test.FakeAuthorizer{Fn: test.AllowForUser})
 
 			scheme = runtime.NewScheme()
 			Expect(corev1.AddToScheme(scheme)).To(Succeed())
@@ -4365,8 +4351,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			rm.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			rm.SetSeedManagementInformerFactory(seedmanagementinformers.NewSharedInformerFactory(nil, 0))
 
-			fakeAuthorizer := fakeAuthorizerType{}
-			rm.SetAuthorizer(fakeAuthorizer)
+			rm.SetAuthorizer(&test.FakeAuthorizer{Fn: test.AllowForUser})
 
 			kubeInformerFactory := kubeinformers.NewSharedInformerFactory(nil, 0)
 			rm.SetKubeInformerFactory(kubeInformerFactory)

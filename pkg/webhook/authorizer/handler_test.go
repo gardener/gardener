@@ -33,7 +33,7 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
-		handler = &Handler{Logger: log, Authorizer: &fakeAuthorizer{fn: allow}}
+		handler = &Handler{Logger: log, Authorizer: &test.FakeAuthorizer{Fn: test.Allow}}
 		respRecorder = &httptest.ResponseRecorder{
 			Body: bytes.NewBuffer(nil),
 		}
@@ -94,19 +94,19 @@ var _ = Describe("Handler", func() {
 					Body:   nopCloser{Reader: bytes.NewBufferString(`{"apiVersion":"authorization.k8s.io/v1","kind":"SubjectAccessReview"}`)},
 				}
 
-				handler = &Handler{Logger: log, Authorizer: &fakeAuthorizer{fn: fn}}
+				handler = &Handler{Logger: log, Authorizer: &test.FakeAuthorizer{Fn: fn}}
 				handler.ServeHTTP(respRecorder, req)
 
 				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{},"spec":{},"status":{` + expectedStatus + `}}
 `))
 			},
 
-			Entry("error", err, DecisionTimeout, `"allowed":false,"evaluationError":"500 fake-err"`),
-			Entry("allow", allow, DecisionTimeout, `"allowed":true`),
-			Entry("deny", deny, DecisionTimeout, `"allowed":false,"denied":true,"reason":"deny"`),
-			Entry("no opinion", noOpinion, DecisionTimeout, `"allowed":false,"reason":"noopinion"`),
-			Entry("unexpected decision", unexpectedDecision, DecisionTimeout, `"allowed":false,"evaluationError":"500 unexpected decision: -1"`),
-			Entry("timeout", timeout, time.Millisecond, `"allowed":false,"evaluationError":"500 context deadline exceeded"`),
+			Entry("error", test.Err, DecisionTimeout, `"allowed":false,"evaluationError":"500 fake-err"`),
+			Entry("allow", test.Allow, DecisionTimeout, `"allowed":true`),
+			Entry("deny", test.Deny, DecisionTimeout, `"allowed":false,"denied":true,"reason":"deny"`),
+			Entry("no opinion", test.NoOpinion, DecisionTimeout, `"allowed":false,"reason":"noopinion"`),
+			Entry("unexpected decision", test.UnexpectedDecision, DecisionTimeout, `"allowed":false,"evaluationError":"500 unexpected decision: -1"`),
+			Entry("timeout", test.Timeout, time.Millisecond, `"allowed":false,"evaluationError":"500 context deadline exceeded"`),
 		)
 
 		It("should respect the sent apiVersion in the request", func() {
@@ -131,45 +131,4 @@ type errReader struct{ nopCloser }
 
 func (errReader) Read([]byte) (n int, err error) {
 	return 0, fmt.Errorf("fake-err")
-}
-
-type fakeAuthorizer struct {
-	fn func(context.Context, authorizer.Attributes) (authorizer.Decision, string, error)
-}
-
-func (a *fakeAuthorizer) Authorize(ctx context.Context, attrs authorizer.Attributes) (authorizer.Decision, string, error) {
-	return a.fn(ctx, attrs)
-}
-
-func (a *fakeAuthorizer) ConditionsAwareAuthorize(ctx context.Context, attrs authorizer.Attributes) authorizer.ConditionsAwareDecision {
-	return authorizer.ConditionsAwareDecisionFromParts(a.Authorize(ctx, attrs))
-}
-
-func (a *fakeAuthorizer) EvaluateConditions(ctx context.Context, decision authorizer.ConditionsAwareDecision, data authorizer.ConditionsData) (authorized authorizer.Decision, reason string, err error) {
-	return authorizer.DecisionDeny, "", authorizer.ErrorConditionEvaluationNotSupported
-}
-
-func allow(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	return authorizer.DecisionAllow, "", nil
-}
-
-func deny(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	return authorizer.DecisionDeny, "deny", nil
-}
-
-func noOpinion(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	return authorizer.DecisionNoOpinion, "noopinion", nil
-}
-
-func err(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	return -1, "", fmt.Errorf("fake-err")
-}
-
-func unexpectedDecision(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	return -1, "", nil
-}
-
-func timeout(ctx context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	<-ctx.Done()
-	return 0, "", ctx.Err()
 }
