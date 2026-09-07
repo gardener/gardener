@@ -48,7 +48,7 @@ func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
 	gardenerutils.SyncArchitectureCapabilityFields(cloudProfile.Spec, core.CloudProfileSpec{})
 }
 
-func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
+func (cloudProfileStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -60,7 +60,7 @@ func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj r
 	gardenerutils.SyncArchitectureCapabilityFields(newCloudProfile.Spec, oldCloudProfile.Spec)
 }
 
-func (cloudProfileStrategy) AllowUnconditionalUpdate() bool {
+func (cloudProfileStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return true
 }
 
