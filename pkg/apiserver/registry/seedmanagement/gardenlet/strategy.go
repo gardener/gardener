@@ -88,11 +88,11 @@ func (gardenletStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtim
 func (gardenletStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (gardenletStrategy) AllowCreateOnUpdate() bool {
+func (gardenletStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
-func (gardenletStrategy) AllowUnconditionalUpdate() bool {
+func (gardenletStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

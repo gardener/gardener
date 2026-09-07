@@ -47,7 +47,7 @@ func (secretBindingStrategy) Validate(_ context.Context, obj runtime.Object) fie
 func (secretBindingStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (secretBindingStrategy) AllowCreateOnUpdate() bool {
+func (secretBindingStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -56,7 +56,7 @@ func (secretBindingStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj 
 	_ = newObj.(*core.SecretBinding)
 }
 
-func (secretBindingStrategy) AllowUnconditionalUpdate() bool {
+func (secretBindingStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return true
 }
 

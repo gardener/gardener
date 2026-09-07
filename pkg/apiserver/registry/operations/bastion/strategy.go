@@ -110,7 +110,7 @@ func (bastionStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 func (bastionStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (bastionStrategy) AllowCreateOnUpdate() bool {
+func (bastionStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -119,7 +119,7 @@ func (bastionStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.
 	return operationsvalidation.ValidateBastionUpdate(newBastion, oldBastion)
 }
 
-func (bastionStrategy) AllowUnconditionalUpdate() bool {
+func (bastionStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 
