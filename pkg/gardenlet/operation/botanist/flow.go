@@ -976,9 +976,9 @@ func (b *Botanist) ReconcileVPNComponentsTaskGroup(skipReadiness bool) flow.Task
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting until vpn-shoot system component is ready",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.SystemComponents.VPNShoot.Wait(ctx)
-			}).Recover(flow.TaskFn(b.RecoverStaleVPNShootPods).ToRecoverFn()),
+			},
 			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployVPNShoot),
 		})
