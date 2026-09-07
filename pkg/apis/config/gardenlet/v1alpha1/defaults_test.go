@@ -662,10 +662,11 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("SeedConfig defaulting", func() {
-		It("should default the seed configuarion", func() {
+		It("should default the seed configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 			Expect(obj.SeedConfig.Spec.Networks.IPFamilies).To(Equal([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}))
 		})
+
 		It("should not overwrite already set values for the SeedNetworks IPFamilies", func() {
 			expectedIPFamilies := []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 			obj.SeedConfig = &SeedConfig{
