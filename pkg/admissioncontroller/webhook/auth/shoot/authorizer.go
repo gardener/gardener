@@ -320,6 +320,14 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 	return auth.DecisionNoOpinion, "", nil
 }
 
+func (a *authorizer) ConditionsAwareAuthorize(ctx context.Context, attrs auth.Attributes) auth.ConditionsAwareDecision {
+	return auth.ConditionsAwareDecisionFromParts(a.Authorize(ctx, attrs))
+}
+
+func (a *authorizer) EvaluateConditions(_ context.Context, _ auth.ConditionsAwareDecision, _ auth.ConditionsData) (auth.Decision, string, error) {
+	return auth.DecisionDeny, "", auth.ErrorConditionEvaluationNotSupported
+}
+
 func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := authwebhook.CheckVerb(log, attrs, "create", "patch"); !ok {
 		return auth.DecisionNoOpinion, reason, nil
