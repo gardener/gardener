@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -110,10 +111,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 			Expect(actualNamespace).To(Equal(namespace))
 			Expect(actualValues.Role).To(Equal(v1beta1constants.ETCDRoleMain))
 			Expect(actualValues.Members).To(HaveLen(1))
-			Expect(actualValues.Members[0].SNIHost).To(Equal("src-seed-etcd-main-0-shoot--p1--foo.ingress.seed.example.com"))
+			Expect(actualValues.Members[0].SNIHost).To(Equal("etcd-main-peer-0-9bd85b.ingress.seed.example.com"))
 			Expect(actualValues.Members[0].PodFQDN).To(Equal("etcd-main-0.etcd-main-peer.shoot--p1--foo.svc.cluster.local"))
 			Expect(actualValues.Members[0].ExternalPort).To(Equal(uint32(etcdconstants.PortEtcdPeerExternal)))
-			Expect(actualValues.ClientHost).To(Equal("src-seed-shoot--p1--foo-etcd-main-client.ingress.seed.example.com"))
+			Expect(actualValues.ClientHost).To(Equal("etcd-main-client-44d4fb.ingress.seed.example.com"))
 			Expect(actualValues.IstioIngressGatewayNamespace).To(Equal("istio-ingress"))
 			Expect(actualValues.IstioIngressGatewayLabels).To(HaveKeyWithValue("istio", "ingressgateway"))
 		})
@@ -369,25 +370,69 @@ var _ = Describe("Etcd LiveMigration", func() {
 	})
 
 	Describe("#LiveMigrationEtcdPeerHost", func() {
-		It("should compose the cross-seed SNI host from seed name, etcd name, ordinal, shoot namespace and ingress domain", func() {
-			Expect(LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)).To(Equal("src-seed-etcd-main-0-shoot--p1--foo.ingress.seed.example.com"))
-			Expect(LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "events", 2)).To(Equal("src-seed-etcd-events-2-shoot--p1--foo.ingress.seed.example.com"))
+		It("should compose a stable cross-seed SNI host with a hashed left-most label", func() {
+			Expect(LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)).To(Equal("etcd-main-peer-0-9bd85b.ingress.seed.example.com"))
+			Expect(LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "events", 2)).To(Equal("etcd-events-peer-2-3b8ac1.ingress.seed.example.com"))
+		})
+
+		It("should be deterministic across calls (so source and destination seeds agree)", func() {
+			Expect(LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)).
+				To(Equal(LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)))
+		})
+
+		It("should produce distinct labels per ordinal, role, seed and namespace", func() {
+			label := func(host string) string { l, _, _ := strings.Cut(host, "."); return l }
+			hosts := []string{
+				LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "d", "main", 0),
+				LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "d", "main", 1),
+				LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--foo", "d", "events", 0),
+				LiveMigrationEtcdPeerHost("dst-seed", "shoot--p1--foo", "d", "main", 0),
+				LiveMigrationEtcdPeerHost("src-seed", "shoot--p1--bar", "d", "main", 0),
+			}
+			seen := map[string]bool{}
+			for _, h := range hosts {
+				Expect(seen[label(h)]).To(BeFalse(), "label %q must be unique", label(h))
+				seen[label(h)] = true
+			}
+		})
+
+		It("should keep the left-most DNS label within 63 characters even for maximal-length inputs", func() {
+			// Seed names are only bounded by the DNS label limit (63); shoot namespaces can be up to 30 chars.
+			longSeed := strings.Repeat("s", 63)
+			longNamespace := "shoot--" + strings.Repeat("p", 10) + "--" + strings.Repeat("f", 11)
+			host := LiveMigrationEtcdPeerHost(longSeed, longNamespace, "ingress.seed.example.com", "events", 9)
+			label, _, _ := strings.Cut(host, ".")
+			Expect(len(label)).To(BeNumerically("<=", 63))
+		})
+	})
+
+	Describe("#LiveMigrationEtcdClientHost", func() {
+		It("should compose a stable cross-seed client SNI host with a hashed left-most label", func() {
+			Expect(LiveMigrationEtcdClientHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main")).To(Equal("etcd-main-client-44d4fb.ingress.seed.example.com"))
+		})
+
+		It("should keep the left-most DNS label within 63 characters even for maximal-length inputs", func() {
+			longSeed := strings.Repeat("s", 63)
+			longNamespace := "shoot--" + strings.Repeat("p", 10) + "--" + strings.Repeat("f", 11)
+			host := LiveMigrationEtcdClientHost(longSeed, longNamespace, "ingress.seed.example.com", "events")
+			label, _, _ := strings.Cut(host, ".")
+			Expect(len(label)).To(BeNumerically("<=", 63))
 		})
 	})
 
 	Describe("#LiveMigrationEtcdClientHost", func() {
 		It("should compose the cross-seed etcd client SNI host from seed name, shoot namespace, ingress domain and role", func() {
 			Expect(LiveMigrationEtcdClientHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main")).
-				To(Equal("src-seed-shoot--p1--foo-etcd-main-client.ingress.seed.example.com"))
+				To(Equal("etcd-main-client-44d4fb.ingress.seed.example.com"))
 		})
 	})
 
 	Describe("#ComputeMemberPeerURLs", func() {
 		It("should compute one entry per member with distinct peer port URLs", func() {
 			Expect(ComputeMemberPeerURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 3)).To(Equal([]druidcorev1alpha1.MemberPeerURLs{
-				{MemberName: "src-seed-etcd-main-0", URLs: []string{"https://src-seed-etcd-main-0-shoot--p1--foo.ingress.seed.example.com:2380"}},
-				{MemberName: "src-seed-etcd-main-1", URLs: []string{"https://src-seed-etcd-main-1-shoot--p1--foo.ingress.seed.example.com:2381"}},
-				{MemberName: "src-seed-etcd-main-2", URLs: []string{"https://src-seed-etcd-main-2-shoot--p1--foo.ingress.seed.example.com:2382"}},
+				{MemberName: "src-seed-etcd-main-0", URLs: []string{"https://etcd-main-peer-0-9bd85b.ingress.seed.example.com:2380"}},
+				{MemberName: "src-seed-etcd-main-1", URLs: []string{"https://etcd-main-peer-1-18879a.ingress.seed.example.com:2381"}},
+				{MemberName: "src-seed-etcd-main-2", URLs: []string{"https://etcd-main-peer-2-26b70e.ingress.seed.example.com:2382"}},
 			}))
 		})
 
@@ -403,10 +448,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 				"dst-seed", "ingress.dst.example.com",
 				"shoot--p1--foo", "main", 2,
 			)).To(Equal([]string{
-				"src-seed-etcd-main-0-shoot--p1--foo.ingress.src.example.com",
-				"src-seed-etcd-main-1-shoot--p1--foo.ingress.src.example.com",
-				"dst-seed-etcd-main-0-shoot--p1--foo.ingress.dst.example.com",
-				"dst-seed-etcd-main-1-shoot--p1--foo.ingress.dst.example.com",
+				"etcd-main-peer-0-9bd85b.ingress.src.example.com",
+				"etcd-main-peer-1-18879a.ingress.src.example.com",
+				"etcd-main-peer-0-7ba53a.ingress.dst.example.com",
+				"etcd-main-peer-1-20a72c.ingress.dst.example.com",
 			}))
 		})
 
