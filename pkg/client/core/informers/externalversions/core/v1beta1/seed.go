@@ -22,11 +22,39 @@ import (
 )
 
 // SeedInformer provides access to a shared informer and lister for
-// Seeds.
+// Seeds. Prefer using the type-safe variant (see [TypedSeedInformer]).
 type SeedInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.SeedLister
 }
+
+// TypedSeedInformer provides access to a shared informer and lister for
+// Seeds, including the type-safe TypedInformer variant.
+// It is a superset of SeedInformer.
+type TypedSeedInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() SeedIndexInformer
+	Lister() corev1beta1.SeedLister
+}
+
+// SeedIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type SeedIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.Seed]
+
+// SeedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Seed.
+type SeedHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.Seed]
+
+// SeedDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Seed.
+type SeedDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.Seed]
+
+// SeedFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Seed.
+type SeedFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.Seed]
+
+// SeedIndexers is a specialization of [cache.TypedIndexers] for Seed.
+type SeedIndexers = cache.TypedIndexers[*apiscorev1beta1.Seed]
+
+// DeletedSeed is a specialization of [cache.DeletedObject] for Seed.
+type DeletedSeed = cache.DeletedObject[*apiscorev1beta1.Seed]
 
 type seedInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -36,25 +64,49 @@ type seedInformer struct {
 // NewSeedInformer constructs a new informer for Seed type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedSeedInformer]).
 func NewSeedInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedSeedInformer constructs a new informer for Seed type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedSeedInformer(client versioned.Interface, resyncPeriod time.Duration, indexers SeedIndexers) SeedIndexInformer {
+	return NewTypedSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredSeedInformer constructs a new informer for Seed type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredSeedInformer]).
 func NewFilteredSeedInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredSeedInformer constructs a new informer for Seed type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredSeedInformer(client versioned.Interface, resyncPeriod time.Duration, indexers SeedIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) SeedIndexInformer {
+	return NewTypedSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewSeedInformerWithOptions constructs a new informer for Seed type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedSeedInformerWithOptions]).
 func NewSeedInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedSeedInformerWithOptions(client, options)
+}
+
+// NewTypedSeedInformerWithOptions constructs a new informer for Seed type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedSeedInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) SeedIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "seeds"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Seed](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -87,17 +139,57 @@ func NewSeedInformerWithOptions(client versioned.Interface, options internalinte
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *seedInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedSeedInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *seedInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.Seed{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *seedInformer) TypedInformer() SeedIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Seed](f.factory.InformerFor(&apiscorev1beta1.Seed{}, f.defaultInformer))
 }
 
 func (f *seedInformer) Lister() corev1beta1.SeedLister {
 	return corev1beta1.NewSeedLister(f.Informer().GetIndexer())
+}
+
+// ToTypedSeedInformer converts an untyped informer into a TypedSeedInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Seed. If that is not the case, calling type-safe methods of the returned
+// TypedSeedInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedSeedInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedSeedInformer(informer SeedInformer) TypedSeedInformer {
+	if informer, ok := informer.(TypedSeedInformer); ok {
+		return informer
+	}
+	return &seedTypedInformerAdapter{informer}
+}
+
+type seedTypedInformerAdapter struct {
+	SeedInformer
+}
+
+func (a *seedTypedInformerAdapter) TypedInformer() SeedIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Seed](a.Informer())
+}
+
+// ToSeedIndexInformer converts an untyped informer into a SeedIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Seed. If that is not the case, calling type-safe methods of the returned
+// SeedIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a SeedIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToSeedIndexInformer(informer cache.SharedIndexInformer) SeedIndexInformer {
+	if informer, ok := informer.(SeedIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Seed](informer)
 }
