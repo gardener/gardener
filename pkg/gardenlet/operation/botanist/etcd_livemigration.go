@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/etcd/peerexposure"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // NewPeerExposure is the constructor for the peer exposure component. Exposed for testing.
@@ -26,15 +27,24 @@ var NewPeerExposure = func(c client.Client, namespace string, values peerexposur
 	return peerexposure.New(c, namespace, values)
 }
 
+// liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
+// of the cross-seed etcd hostnames.
+const liveMigrationHostLabelHashLength = 6
+
 // LiveMigrationEtcdPeerHost returns the SNI host under which the peer endpoint of the etcd member with the given role
-// and ordinal on the given seed is reachable.
+// and ordinal on the given seed is reachable from other seeds. It is derived from the seed's ingress domain so that it
+// resolves to the seed's shared Istio ingress gateway load balancer.
+// The shoot namespace is also included in the hash to ensure that concurrent migrations of different shoots from the same seed
+// produce distinct SNI hostnames without affecting the etcd member name.
 func LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role string, ordinal int) string {
-	return fmt.Sprintf("%s-%s.%s", liveMigrationEtcdMemberName(seedName, role, ordinal), shootNamespace, ingressDomain)
+	hash := utils.ComputeSHA256Hex(fmt.Appendf(nil, "%s/%s/%s/%d", seedName, shootNamespace, role, ordinal))[:liveMigrationHostLabelHashLength]
+	return fmt.Sprintf("etcd-%s-peer-%d-%s.%s", role, ordinal, hash, ingressDomain)
 }
 
 // LiveMigrationEtcdClientHost returns the SNI host under which the etcd client endpoint of the given seed is reachable.
 func LiveMigrationEtcdClientHost(seedName, shootNamespace, ingressDomain, role string) string {
-	return fmt.Sprintf("%s-%s-%s-client.%s", seedName, shootNamespace, etcd.Name(role), ingressDomain)
+	hash := utils.ComputeSHA256Hex(fmt.Appendf(nil, "%s/%s/%s", seedName, shootNamespace, role))[:liveMigrationHostLabelHashLength]
+	return fmt.Sprintf("etcd-%s-client-%s.%s", role, hash, ingressDomain)
 }
 
 // liveMigrationEtcdMemberName returns the etcd member name for the given seed, role and ordinal. It matches
