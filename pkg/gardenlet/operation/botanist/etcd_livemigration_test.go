@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -311,15 +312,16 @@ var _ = Describe("Etcd LiveMigration", func() {
 			It("should set AdditionalAdvertisePeerURLs, ExtraClientServiceDNSNames, ExtraPeerServiceDNSNames and SkipClientSANVerification", func() {
 				Expect(SetLiveMigrationEtcdValues(b, ctx, values, v1beta1constants.ETCDRoleMain)).To(Succeed())
 
-				Expect(values.SkipClientSANVerification).To(BeTrue())
-				Expect(values.AdditionalAdvertisePeerURLs).To(Equal(ComputeMemberPeerURLs(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain, 1)))
-				Expect(values.ExtraClientServiceDNSNames).To(ConsistOf(
+				Expect(values.LiveMigration).NotTo(BeNil())
+				Expect(values.LiveMigration.SkipClientSANVerification).To(BeTrue())
+				Expect(values.LiveMigration.AdditionalAdvertisePeerURLs).To(Equal(ComputeMemberPeerURLs(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain, 1)))
+				Expect(values.LiveMigration.ExtraClientServiceDNSNames).To(ConsistOf(
 					LiveMigrationEtcdClientHost(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain),
 				))
-				Expect(values.ExtraPeerServiceDNSNames).To(Equal(CrossSeedPeerHostnames(
+				Expect(values.LiveMigration.ExtraPeerServiceDNSNames).To(Equal(CrossSeedPeerHostnames(
 					seedName, ingress, dstSeedName, dstIngress, namespace, v1beta1constants.ETCDRoleMain, 1,
 				)))
-				Expect(values.BootstrapWithExistingCluster).To(BeNil())
+				Expect(values.LiveMigration.BootstrapWithExistingCluster).To(BeNil())
 			})
 
 			It("should return an error when the destination seed cannot be fetched", func() {
@@ -344,16 +346,17 @@ var _ = Describe("Etcd LiveMigration", func() {
 			It("should set BootstrapWithExistingCluster, ExtraPeerServiceDNSNames, AdditionalAdvertisePeerURLs and SkipClientSANVerification", func() {
 				Expect(SetLiveMigrationEtcdValues(b, ctx, values, v1beta1constants.ETCDRoleMain)).To(Succeed())
 
-				Expect(values.SkipClientSANVerification).To(BeTrue())
-				Expect(values.AdditionalAdvertisePeerURLs).To(Equal(ComputeMemberPeerURLs(dstSeedName, namespace, dstIngress, v1beta1constants.ETCDRoleMain, 1)))
-				Expect(values.ExtraPeerServiceDNSNames).To(Equal(CrossSeedPeerHostnames(
+				Expect(values.LiveMigration).NotTo(BeNil())
+				Expect(values.LiveMigration.SkipClientSANVerification).To(BeTrue())
+				Expect(values.LiveMigration.AdditionalAdvertisePeerURLs).To(Equal(ComputeMemberPeerURLs(dstSeedName, namespace, dstIngress, v1beta1constants.ETCDRoleMain, 1)))
+				Expect(values.LiveMigration.ExtraPeerServiceDNSNames).To(Equal(CrossSeedPeerHostnames(
 					seedName, ingress, dstSeedName, dstIngress, namespace, v1beta1constants.ETCDRoleMain, 1,
 				)))
-				Expect(values.ExtraClientServiceDNSNames).To(BeNil())
-				Expect(values.BootstrapWithExistingCluster).NotTo(BeNil())
-				Expect(values.BootstrapWithExistingCluster.Members).To(HaveLen(1))
-				Expect(values.BootstrapWithExistingCluster.Members[0].Name).To(Equal("src-seed-etcd-main-0"))
-				Expect(values.BootstrapWithExistingCluster.ClientEndpoints).To(ConsistOf(
+				Expect(values.LiveMigration.ExtraClientServiceDNSNames).To(BeNil())
+				Expect(values.LiveMigration.BootstrapWithExistingCluster).NotTo(BeNil())
+				Expect(values.LiveMigration.BootstrapWithExistingCluster.Members).To(HaveLen(1))
+				Expect(values.LiveMigration.BootstrapWithExistingCluster.Members[0].Name).To(Equal("src-seed-etcd-main-0"))
+				Expect(values.LiveMigration.BootstrapWithExistingCluster.ClientEndpoints).To(ConsistOf(
 					ContainSubstring(LiveMigrationEtcdClientHost(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain)),
 				))
 			})
@@ -430,9 +433,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 	Describe("#ComputeMemberPeerURLs", func() {
 		It("should compute one entry per member with distinct peer port URLs", func() {
 			Expect(ComputeMemberPeerURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 3)).To(Equal([]druidcorev1alpha1.MemberPeerURLs{
-				{MemberName: "src-seed-etcd-main-0", URLs: []string{"https://etcd-main-peer-0-9bd85b.ingress.seed.example.com:2380"}},
-				{MemberName: "src-seed-etcd-main-1", URLs: []string{"https://etcd-main-peer-1-18879a.ingress.seed.example.com:2381"}},
-				{MemberName: "src-seed-etcd-main-2", URLs: []string{"https://etcd-main-peer-2-26b70e.ingress.seed.example.com:2382"}},
+				{MemberName: "src-seed-etcd-main-0", URLs: []string{fmt.Sprintf("https://etcd-main-peer-0-9bd85b.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal)}},
+				{MemberName: "src-seed-etcd-main-1", URLs: []string{fmt.Sprintf("https://etcd-main-peer-1-18879a.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal+1)}},
+				{MemberName: "src-seed-etcd-main-2", URLs: []string{fmt.Sprintf("https://etcd-main-peer-2-26b70e.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal+2)}},
 			}))
 		})
 

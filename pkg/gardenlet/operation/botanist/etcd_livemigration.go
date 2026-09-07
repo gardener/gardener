@@ -60,7 +60,7 @@ func ComputeMemberPeerURLs(seedName, shootNamespace, ingressDomain, role string,
 	for ordinal := 0; ordinal < int(replicas); ordinal++ {
 		memberPeerURLs = append(memberPeerURLs, druidcorev1alpha1.MemberPeerURLs{
 			MemberName: liveMigrationEtcdMemberName(seedName, role, ordinal),
-			URLs:       []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, ordinal), etcdconstants.PortEtcdPeer+int32(ordinal))},
+			URLs:       []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, ordinal), etcdconstants.PortEtcdPeerExternal+int32(ordinal))}, // #nosec G115 -- Port constants are positive values well within int32 range.
 		})
 	}
 	return memberPeerURLs
@@ -180,8 +180,6 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 		return nil
 	}
 
-	values.SkipClientSANVerification = true
-
 	switch liveMigrationRole {
 	case v1beta1helper.LiveMigrationRoleSource:
 		var (
@@ -189,26 +187,30 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 			localIngressDomain = b.Seed.IngressDomain()
 			destSeedName       = ptr.Deref(shoot.Spec.SeedName, "")
 			destSeed           = &gardencorev1beta1.Seed{}
-			destIngressDomain  = ""
+			destIngressDomain  string
 		)
-
-		values.AdditionalAdvertisePeerURLs = ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas)
-		values.ExtraClientServiceDNSNames = []string{LiveMigrationEtcdClientHost(localSeedName, shootNamespace, localIngressDomain, role)}
 
 		if err := b.GardenAPIReader.Get(ctx, client.ObjectKey{Name: destSeedName}, destSeed); err != nil {
 			return fmt.Errorf("failed to get destination seed %q: %w", destSeedName, err)
 		}
 
-		if destSeed.Spec.Ingress != nil {
-			destIngressDomain = destSeed.Spec.Ingress.Domain
+		if destSeed.Spec.Ingress == nil {
+			return fmt.Errorf("destination seed %q has no ingress domain configured, which is required for live migration", destSeedName)
 		}
-		values.ExtraPeerServiceDNSNames = crossSeedPeerHostnames(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas)
+		destIngressDomain = destSeed.Spec.Ingress.Domain
+
+		values.LiveMigration = &etcd.LiveMigrationValues{
+			SkipClientSANVerification:   true,
+			AdditionalAdvertisePeerURLs: ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
+			ExtraClientServiceDNSNames:  []string{LiveMigrationEtcdClientHost(localSeedName, shootNamespace, localIngressDomain, role)},
+			ExtraPeerServiceDNSNames:    crossSeedPeerHostnames(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas),
+		}
 
 	case v1beta1helper.LiveMigrationRoleDestination:
 		var (
 			sourceSeedName      = ptr.Deref(shoot.Status.SeedName, "")
 			sourceSeed          = &gardencorev1beta1.Seed{}
-			sourceIngressDomain = ""
+			sourceIngressDomain string
 			localSeedName       = b.Seed.GetInfo().Name
 			localIngressDomain  = b.Seed.IngressDomain()
 		)
@@ -216,10 +218,10 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 		if err := b.GardenAPIReader.Get(ctx, client.ObjectKey{Name: sourceSeedName}, sourceSeed); err != nil {
 			return fmt.Errorf("failed to get source seed %q: %w", sourceSeedName, err)
 		}
-
-		if sourceSeed.Spec.Ingress != nil {
-			sourceIngressDomain = sourceSeed.Spec.Ingress.Domain
+		if sourceSeed.Spec.Ingress == nil {
+			return fmt.Errorf("source seed %q has no ingress domain configured, which is required for live migration", sourceSeedName)
 		}
+		sourceIngressDomain = sourceSeed.Spec.Ingress.Domain
 
 		sourcePeerURLs := ComputeMemberPeerURLs(sourceSeedName, shootNamespace, sourceIngressDomain, role, replicas)
 		members := make([]druidcorev1alpha1.BootstrapExistingMember, 0, len(sourcePeerURLs))
@@ -227,16 +229,19 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 			members = append(members, druidcorev1alpha1.BootstrapExistingMember{Name: m.MemberName, PeerURLs: m.URLs})
 		}
 
-		values.BootstrapWithExistingCluster = &druidcorev1alpha1.BootstrapWithExistingCluster{
-			Members: members,
-			ClientEndpoints: []string{
-				fmt.Sprintf("https://%s:%d",
-					LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role),
-					etcdconstants.PortEtcdClient),
+		values.LiveMigration = &etcd.LiveMigrationValues{
+			SkipClientSANVerification: true,
+			BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{
+				Members: members,
+				ClientEndpoints: []string{
+					fmt.Sprintf("https://%s:%d",
+						LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role),
+						etcdconstants.PortEtcdClient),
+				},
 			},
+			ExtraPeerServiceDNSNames:    crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
+			AdditionalAdvertisePeerURLs: ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
 		}
-		values.ExtraPeerServiceDNSNames = crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas)
-		values.AdditionalAdvertisePeerURLs = ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas)
 	}
 
 	return nil

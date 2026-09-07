@@ -154,9 +154,7 @@ func (p *peerExposure) Destroy(ctx context.Context) error {
 	for i := range p.values.Members {
 		objects = append(objects, p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i)))
 	}
-	if p.values.ClientHost != "" {
-		objects = append(objects, p.emptyGatewayFor(p.clientName()), p.emptyVirtualServiceFor(p.clientName()), p.emptyServiceEntryFor(p.clientName()), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeEgress))
-	}
+	objects = append(objects, p.emptyGatewayFor(p.clientName()), p.emptyVirtualServiceFor(p.clientName()), p.emptyServiceEntryFor(p.clientName()), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeIngress), p.emptyNetworkPolicyFor(p.clientName(), networkingv1.PolicyTypeEgress))
 	return kubernetesutils.DeleteObjects(ctx, p.client, objects...)
 }
 

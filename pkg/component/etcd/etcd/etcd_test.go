@@ -1083,20 +1083,20 @@ var _ = Describe("Etcd", func() {
 			}
 
 			etcd = New(log, c, testNamespace, sm, Values{
-				Role:                        role,
-				Class:                       class,
-				Replicas:                    replicas,
-				Autoscaling:                 autoscalingConfig,
-				StorageCapacity:             storageCapacity,
-				StorageClassName:            &storageClassName,
-				DefragmentationSchedule:     &defragmentationSchedule,
-				CARotationPhase:             caRotationPhase,
-				PriorityClassName:           priorityClassName,
-				MaintenanceTimeWindow:       maintenanceTimeWindow,
-				HighAvailabilityEnabled:     highAvailabilityEnabled,
-				BackupConfig:                backupConfig,
-				StaticPodConfig:             staticPodConfig,
-				AdditionalAdvertisePeerURLs: additionalPeerURLs,
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: highAvailabilityEnabled,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				LiveMigration:           &LiveMigrationValues{AdditionalAdvertisePeerURLs: additionalPeerURLs},
 			})
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1115,20 +1115,20 @@ var _ = Describe("Etcd", func() {
 			}
 
 			etcd = New(log, c, testNamespace, sm, Values{
-				Role:                         role,
-				Class:                        class,
-				Replicas:                     replicas,
-				Autoscaling:                  autoscalingConfig,
-				StorageCapacity:              storageCapacity,
-				StorageClassName:             &storageClassName,
-				DefragmentationSchedule:      &defragmentationSchedule,
-				CARotationPhase:              caRotationPhase,
-				PriorityClassName:            priorityClassName,
-				MaintenanceTimeWindow:        maintenanceTimeWindow,
-				HighAvailabilityEnabled:      highAvailabilityEnabled,
-				BackupConfig:                 backupConfig,
-				StaticPodConfig:              staticPodConfig,
-				BootstrapWithExistingCluster: bootstrap,
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: highAvailabilityEnabled,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				LiveMigration:           &LiveMigrationValues{BootstrapWithExistingCluster: bootstrap},
 			})
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1147,20 +1147,20 @@ var _ = Describe("Etcd", func() {
 			})).To(Succeed())
 
 			etcd = New(log, c, testNamespace, sm, Values{
-				Role:                         role,
-				Class:                        class,
-				Replicas:                     replicas,
-				Autoscaling:                  autoscalingConfig,
-				StorageCapacity:              storageCapacity,
-				StorageClassName:             &storageClassName,
-				DefragmentationSchedule:      &defragmentationSchedule,
-				CARotationPhase:              caRotationPhase,
-				PriorityClassName:            priorityClassName,
-				MaintenanceTimeWindow:        maintenanceTimeWindow,
-				HighAvailabilityEnabled:      highAvailabilityEnabled,
-				BackupConfig:                 backupConfig,
-				StaticPodConfig:              staticPodConfig,
-				BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{ClientEndpoints: []string{"https://foo:2379"}},
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: highAvailabilityEnabled,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				LiveMigration:           &LiveMigrationValues{BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{ClientEndpoints: []string{"https://foo:2379"}}},
 			})
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1175,20 +1175,20 @@ var _ = Describe("Etcd", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			etcd = New(log, c, testNamespace, sm, Values{
-				Role:                      role,
-				Class:                     class,
-				Replicas:                  replicas,
-				Autoscaling:               autoscalingConfig,
-				StorageCapacity:           storageCapacity,
-				StorageClassName:          &storageClassName,
-				DefragmentationSchedule:   &defragmentationSchedule,
-				CARotationPhase:           caRotationPhase,
-				PriorityClassName:         priorityClassName,
-				MaintenanceTimeWindow:     maintenanceTimeWindow,
-				HighAvailabilityEnabled:   true,
-				BackupConfig:              backupConfig,
-				StaticPodConfig:           staticPodConfig,
-				SkipClientSANVerification: true,
+				Role:                    role,
+				Class:                   class,
+				Replicas:                replicas,
+				Autoscaling:             autoscalingConfig,
+				StorageCapacity:         storageCapacity,
+				StorageClassName:        &storageClassName,
+				DefragmentationSchedule: &defragmentationSchedule,
+				CARotationPhase:         caRotationPhase,
+				PriorityClassName:       priorityClassName,
+				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				HighAvailabilityEnabled: true,
+				BackupConfig:            backupConfig,
+				StaticPodConfig:         staticPodConfig,
+				LiveMigration:           &LiveMigrationValues{SkipClientSANVerification: true},
 			})
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
