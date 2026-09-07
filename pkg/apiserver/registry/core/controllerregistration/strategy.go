@@ -66,7 +66,7 @@ func (controllerRegistrationStrategy) Validate(_ context.Context, obj runtime.Ob
 func (controllerRegistrationStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (controllerRegistrationStrategy) AllowCreateOnUpdate() bool {
+func (controllerRegistrationStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -76,7 +76,7 @@ func (controllerRegistrationStrategy) ValidateUpdate(_ context.Context, newObj, 
 	return validation.ValidateControllerRegistrationUpdate(newControllerRegistration, oldControllerRegistration)
 }
 
-func (controllerRegistrationStrategy) AllowUnconditionalUpdate() bool {
+func (controllerRegistrationStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

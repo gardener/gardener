@@ -107,7 +107,7 @@ func (backupEntryStrategy) Canonicalize(obj runtime.Object) {
 	gardenerutils.MaintainSeedNameLabels(backupEntry, backupEntry.Spec.SeedName, backupEntry.Status.SeedName)
 }
 
-func (backupEntryStrategy) AllowCreateOnUpdate() bool {
+func (backupEntryStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -116,7 +116,7 @@ func (backupEntryStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runt
 	return validation.ValidateBackupEntryUpdate(newBackupEntry, oldBackupEntry)
 }
 
-func (backupEntryStrategy) AllowUnconditionalUpdate() bool {
+func (backupEntryStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 
