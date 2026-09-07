@@ -166,7 +166,17 @@ type Values struct {
 	TopologyAwareRoutingEnabled bool
 	StaticPodConfig             *StaticPodConfig
 	MemberNamePrefix            string
-	SkipClientSANVerification   bool
+	// LiveMigration groups configuration that is only populated during a live control plane migration (GEP-39).
+	// When nil, none of the live-migration behaviour is active.
+	LiveMigration *LiveMigrationValues
+}
+
+// LiveMigrationValues holds the etcd configuration that is specific to a live control plane migration (GEP-39).
+type LiveMigrationValues struct {
+	// SkipClientSANVerification, when true, configures etcd to skip verification of the Subject Alternative Names of
+	// peer TLS client certificates. It is used during a live control plane migration because cross-seed peer TLS
+	// certificates carry the local service SAN, not the Istio-exposed hostname.
+	SkipClientSANVerification bool
 	// AdditionalAdvertisePeerURLs are extra per-member peer URLs to advertise in addition to the in-cluster peer URLs.
 	// They are used during a live control plane migration so that members residing in a different seed can be
 	// reached across clusters. The member names must follow etcd-druid's CEL constraint (`<memberNamePrefix>-<etcd-name>-<index>`).
@@ -271,9 +281,13 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0]
 	}
 
+	var extraClientDNSNames []string
+	if e.values.LiveMigration != nil {
+		extraClientDNSNames = e.values.LiveMigration.ExtraClientServiceDNSNames
+	}
 	clientServiceDNSNames := append(
 		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil),
-		e.values.ExtraClientServiceDNSNames...,
+		extraClientDNSNames...,
 	)
 	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
 		ctx,
@@ -296,7 +310,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		}
 
-		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, append(e.peerServiceDNSNames(), e.values.ExtraPeerServiceDNSNames...), controlPlaneNodeIP)
+		var extraPeerDNSNames []string
+		if e.values.LiveMigration != nil {
+			extraPeerDNSNames = e.values.LiveMigration.ExtraPeerServiceDNSNames
+		}
+		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, append(e.peerServiceDNSNames(), extraPeerDNSNames...), controlPlaneNodeIP)
 		if err != nil {
 			return fmt.Errorf("failed to generate a peer certificate: %w", err)
 		}
@@ -317,7 +335,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			},
 		}
 
-		if e.values.SkipClientSANVerification {
+		if e.values.LiveMigration != nil && e.values.LiveMigration.SkipClientSANVerification {
 			peerUrlTLS.SkipClientSANVerification = new(true)
 		}
 	}
@@ -394,14 +412,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: clientSecret.Namespace,
 				},
 			},
-			PeerUrlTLS:                  peerUrlTLS,
-			AdditionalAdvertisePeerURLs: e.values.AdditionalAdvertisePeerURLs,
-			ClientPort:                  new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
-			ServerPort:                  new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
-			WrapperPort:                 new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
-			Metrics:                     &metrics,
-			DefragmentationSchedule:     e.computeDefragmentationSchedule(existingEtcd),
-			Quota:                       new(resource.MustParse("8Gi")),
+			PeerUrlTLS: peerUrlTLS,
+			AdditionalAdvertisePeerURLs: func() []druidcorev1alpha1.MemberPeerURLs {
+				if e.values.LiveMigration != nil {
+					return e.values.LiveMigration.AdditionalAdvertisePeerURLs
+				}
+				return nil
+			}(),
+			ClientPort:              new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdClient, etcdconstants.StaticPodPortEtcdEventsClient)),
+			ServerPort:              new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdPeer, etcdconstants.StaticPodPortEtcdEventsPeer)),
+			WrapperPort:             new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortEtcdWrapper, etcdconstants.StaticPodPortEtcdEventsWrapper)),
+			Metrics:                 &metrics,
+			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
+			Quota:                   new(resource.MustParse("8Gi")),
 			ClientService: &druidcorev1alpha1.ClientService{
 				Annotations:         clientService.Annotations,
 				Labels:              clientService.Labels,
@@ -493,7 +516,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		// BootstrapWithExistingCluster is immutable and may only be set at creation time.
 		// On updates, preserve whatever value was already persisted to avoid clearing it.
 		if existingEtcd == nil {
-			e.etcd.Spec.Etcd.BootstrapWithExistingCluster = e.values.BootstrapWithExistingCluster
+			if e.values.LiveMigration != nil {
+				e.etcd.Spec.Etcd.BootstrapWithExistingCluster = e.values.LiveMigration.BootstrapWithExistingCluster
+			}
 		} else {
 			e.etcd.Spec.Etcd.BootstrapWithExistingCluster = existingEtcd.Spec.Etcd.BootstrapWithExistingCluster
 		}
