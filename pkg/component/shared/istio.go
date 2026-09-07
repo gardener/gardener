@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -364,6 +365,11 @@ func commonIstioIngressNetworkPolicyLabels(withShoots bool) map[string]string {
 		for i := range vpnseedserver.HighAvailabilityReplicaCount {
 			labels[gardenerutils.NetworkPolicyLabel(fmt.Sprintf("%s-%s-%d", v1beta1constants.LabelNetworkPolicyShootNamespaceAlias, v1beta1constants.DeploymentNameVPNSeedServer, i), vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 		}
+
+		// Allow reaching etcd peer and client ports during a live control plane migration.
+		// Service created by the peerexposure component carries this service name with the all-shoots alias.
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.ETCDMain+"-np", etcdconstants.PortEtcdPeer)] = v1beta1constants.LabelNetworkPolicyAllowed
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.ETCDMain+"-np", etcdconstants.PortEtcdClient)] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	return labels
