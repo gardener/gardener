@@ -6,16 +6,21 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -252,6 +257,57 @@ var _ = Describe("Reconciler", func() {
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.UTC()).To(Equal(fakeClock.Now()))
 			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
 			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.UTC()).To(Equal(fakeClock.Now()))
+		})
+	})
+
+	Describe("#removeFinalizerFromShoot", func() {
+		BeforeEach(func() {
+			gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
+
+			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
+
+			fakeDateAndTime, _ := time.Parse(time.DateTime, "2024-05-14 19:59:39")
+			fakeClock = testclock.NewFakeClock(fakeDateAndTime)
+
+			reconciler = &Reconciler{
+				GardenClient:  gardenClient,
+				SeedClientSet: seedClientSet,
+				Clock:         fakeClock,
+			}
+
+			deletionTimestamp := metav1.NewTime(fakeClock.Now())
+			shoot.DeletionTimestamp = &deletionTimestamp
+			shoot.Finalizers = []string{gardencorev1beta1.GardenerName}
+		})
+
+		It("should emit an event and return the error if the finalizer removal fails", func() {
+			fakeRecorder := &events.FakeRecorder{Events: make(chan string, 1)}
+
+			gardenClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					// Let the status patch ('Delete Succeeded') through, but fail the subsequent finalizer removal
+					// (a merge patch on the Shoot's metadata) to exercise the failure path.
+					Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						if _, ok := obj.(*gardencorev1beta1.Shoot); ok && patch.Type() == types.MergePatchType {
+							return fmt.Errorf("fake patch error")
+						}
+						return c.Patch(ctx, obj, patch, opts...)
+					},
+				}).
+				Build()
+
+			reconciler.GardenClient = gardenClient
+			reconciler.Recorder = fakeRecorder
+
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+
+			err := reconciler.removeFinalizerFromShoot(ctx, logr.Discard(), shoot)
+			Expect(err).To(MatchError(ContainSubstring("failed to remove finalizer")))
+
+			Eventually(fakeRecorder.Events).Should(Receive(ContainSubstring("failed to remove finalizer")))
 		})
 	})
 })
