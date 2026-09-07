@@ -36,7 +36,6 @@ var (
 	PortEtcdPeerExternal int32 = 12380
 	// PortEtcdClientExternal is the port on the Istio ingress gateway for etcd client traffic.
 	PortEtcdClientExternal int32 = 12379
-
 	// PortBackupRestore is the client port exposed by the backup-restore sidecar container.
 	PortBackupRestore int32 = 8080
 	// PortEtcdWrapper is the port exposed by etcd-wrapper.

@@ -236,9 +236,9 @@ var _ = Describe("Helper", func() {
 		}
 	)
 
-	DescribeTable("#IsLiveMigration",
+	DescribeTable("#IsInLiveMigration",
 		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
-			Expect(IsLiveMigration(shoot)).To(match)
+			Expect(IsInLiveMigration(shoot)).To(match)
 		},
 
 		Entry("annotation set and seed changed", liveMigratingShoot("source", "destination", true), BeTrue()),

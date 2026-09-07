@@ -78,6 +78,9 @@ func (b *Botanist) instantiateComponentsControlPlane(ctx context.Context) (err e
 	if err != nil {
 		return err
 	}
+	if !b.Shoot.IsSelfHosted() {
+		b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+	}
 	b.Shoot.Components.ControlPlane.IstioBasicAuthServer, err = b.DefaultIstioBasicAuthServer()
 	if err != nil {
 		return err

@@ -57,18 +57,20 @@ func liveMigrationEtcdMemberName(seedName, role string, ordinal int) string {
 // Each member is reachable via its SNI hostname on the seed's Istio ingress gateway.
 func ComputeMemberPeerURLs(seedName, shootNamespace, ingressDomain, role string, replicas int32) []druidcorev1alpha1.MemberPeerURLs {
 	memberPeerURLs := make([]druidcorev1alpha1.MemberPeerURLs, 0, replicas)
-	for ordinal := 0; ordinal < int(replicas); ordinal++ {
+	for i := 0; i < int(replicas); i++ {
 		memberPeerURLs = append(memberPeerURLs, druidcorev1alpha1.MemberPeerURLs{
-			MemberName: liveMigrationEtcdMemberName(seedName, role, ordinal),
-			URLs:       []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, ordinal), etcdconstants.PortEtcdPeerExternal+int32(ordinal))}, // #nosec G115 -- Port constants are positive values well within int32 range.
+			MemberName: liveMigrationEtcdMemberName(seedName, role, i),
+			URLs:       []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i), etcdconstants.PortEtcdPeerExternal+int32(i))}, // #nosec G115 -- Port constants are positive values well within int32 range.
 		})
 	}
 	return memberPeerURLs
 }
 
-// DeployEtcdPeerExposure exposes the peer endpoints of this shoot's etcd members across seeds via the seed's shared Istio ingress gateway.
-func (b *Botanist) DeployEtcdPeerExposure(ctx context.Context) error {
+// DefaultEtcdPeerExposure returns a new instance of the component that exposes this shoot's etcd peer endpoints
+// for cross-seed live migration via the seed's shared Istio ingress gateway.
+func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
 	var (
+		clientHost     string
 		role           = v1beta1constants.ETCDRoleMain
 		seedName       = b.Seed.GetInfo().Name
 		shootNamespace = b.Shoot.ControlPlaneNamespace
@@ -77,60 +79,41 @@ func (b *Botanist) DeployEtcdPeerExposure(ctx context.Context) error {
 	)
 
 	members := make([]peerexposure.PeerMember, 0, replicas)
-	for ordinal := 0; ordinal < int(replicas); ordinal++ {
+	for i := 0; i < int(replicas); i++ {
 		members = append(members, peerexposure.PeerMember{
-			SNIHost:      LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, ordinal),
-			PodFQDN:      etcdPodFQDN(role, ordinal, b.Shoot.ControlPlaneNamespace),
-			ExternalPort: uint32(etcdconstants.PortEtcdPeerExternal) + uint32(ordinal), // #nosec G115 -- Port constants are positive values well within uint32 range.
+			SNIHost:      LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i),
+			PodFQDN:      etcdPodFQDN(role, i, shootNamespace),
+			ExternalPort: uint32(etcdconstants.PortEtcdPeerExternal) + uint32(i), // #nosec G115 -- Port constants are positive values well within uint32 range.
 		})
 	}
 
-	peerExposure := NewPeerExposure(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, peerexposure.Values{
+	if v1beta1helper.GetLiveMigrationRole(b.Shoot.GetInfo(), seedName) == v1beta1helper.LiveMigrationRoleSource {
+		clientHost = LiveMigrationEtcdClientHost(seedName, shootNamespace, ingressDomain, role)
+	}
+
+	return NewPeerExposure(b.SeedClientSet.Client(), shootNamespace, peerexposure.Values{
 		Role:                         role,
 		Members:                      members,
-		ClientHost:                   LiveMigrationEtcdClientHost(seedName, shootNamespace, ingressDomain, role),
+		ClientHost:                   clientHost,
 		IstioIngressGatewayNamespace: b.DefaultIstioNamespace(),
 		IstioIngressGatewayLabels:    b.DefaultIstioLabels(),
 	})
+}
 
-	if err := peerExposure.Deploy(ctx); err != nil {
-		return fmt.Errorf("failed to deploy etcd peer exposure for role %q: %w", role, err)
+// DeployEtcdPeerExposure exposes the peer endpoints of this shoot's etcd members across seeds via the seed's shared Istio ingress gateway.
+func (b *Botanist) DeployEtcdPeerExposure(ctx context.Context) error {
+	if b.Shoot.Components.ControlPlane.EtcdPeerExposure == nil {
+		return nil
 	}
-
-	return nil
+	return b.Shoot.Components.ControlPlane.EtcdPeerExposure.Deploy(ctx)
 }
 
 // DestroyEtcdPeerExposure removes the cross-seed peer exposure of this shoot's etcd members.
 func (b *Botanist) DestroyEtcdPeerExposure(ctx context.Context) error {
-	var (
-		role           = v1beta1constants.ETCDRoleMain
-		seedName       = b.Seed.GetInfo().Name
-		shootNamespace = b.Shoot.ControlPlaneNamespace
-		ingressDomain  = b.Seed.IngressDomain()
-		replicas       = getEtcdReplicas(b.Shoot.GetInfo())
-	)
-
-	members := make([]peerexposure.PeerMember, 0, replicas)
-	for ordinal := 0; ordinal < int(replicas); ordinal++ {
-		members = append(members, peerexposure.PeerMember{
-			SNIHost:      LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, ordinal),
-			PodFQDN:      etcdPodFQDN(role, ordinal, b.Shoot.ControlPlaneNamespace),
-			ExternalPort: uint32(etcdconstants.PortEtcdPeerExternal) + uint32(ordinal), // #nosec G115 -- Port constants are positive values well within uint32 range.
-		})
+	if b.Shoot.Components.ControlPlane.EtcdPeerExposure == nil {
+		return nil
 	}
-
-	peerExposure := NewPeerExposure(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, peerexposure.Values{
-		Role:                         role,
-		Members:                      members,
-		IstioIngressGatewayNamespace: b.DefaultIstioNamespace(),
-		IstioIngressGatewayLabels:    b.DefaultIstioLabels(),
-	})
-
-	if err := peerExposure.Destroy(ctx); err != nil {
-		return fmt.Errorf("failed to destroy etcd peer exposure for role %q: %w", role, err)
-	}
-
-	return nil
+	return b.Shoot.Components.ControlPlane.EtcdPeerExposure.Destroy(ctx)
 }
 
 // etcdPodFQDN returns the in-cluster DNS subdomain for an etcd StatefulSet pod through the headless peer Service.
@@ -144,11 +127,11 @@ func etcdPodFQDN(role string, ordinal int, namespace string) string {
 // so the secretsManager returns the already-restored source peer cert without regenerating it.
 func crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, destSeedName, destIngressDomain, shootNamespace, role string, replicas int32) []string {
 	hosts := make([]string, 0, 2*int(replicas))
-	for ordinal := 0; ordinal < int(replicas); ordinal++ {
-		hosts = append(hosts, LiveMigrationEtcdPeerHost(sourceSeedName, shootNamespace, sourceIngressDomain, role, ordinal))
+	for i := 0; i < int(replicas); i++ {
+		hosts = append(hosts, LiveMigrationEtcdPeerHost(sourceSeedName, shootNamespace, sourceIngressDomain, role, i))
 	}
-	for ordinal := 0; ordinal < int(replicas); ordinal++ {
-		hosts = append(hosts, LiveMigrationEtcdPeerHost(destSeedName, shootNamespace, destIngressDomain, role, ordinal))
+	for i := 0; i < int(replicas); i++ {
+		hosts = append(hosts, LiveMigrationEtcdPeerHost(destSeedName, shootNamespace, destIngressDomain, role, i))
 	}
 	return hosts
 }

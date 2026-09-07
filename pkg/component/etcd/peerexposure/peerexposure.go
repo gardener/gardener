@@ -17,12 +17,12 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	managedresources "github.com/gardener/gardener/pkg/utils/managedresources"
+	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // PeerMember holds the cross-seed routing info for one etcd member.
@@ -80,7 +80,7 @@ func (p *peerExposure) managedResourceName() string {
 func (p *peerExposure) Deploy(ctx context.Context) error {
 	var (
 		err      error
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		registry = managedresourcesutils.NewRegistry(kubernetesclient.SeedScheme, kubernetesclient.SeedCodec, kubernetesclient.SeedSerializer)
 	)
 
 	gateway := p.emptyGatewayFor(p.name())
@@ -136,11 +136,11 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, p.client, p.namespace, p.managedResourceName(), false, data)
+	return managedresourcesutils.CreateForSeed(ctx, p.client, p.namespace, p.managedResourceName(), false, data)
 }
 
 func (p *peerExposure) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.managedResourceName())
+	return managedresourcesutils.DeleteForSeed(ctx, p.client, p.namespace, p.managedResourceName())
 }
 
 func (p *peerExposure) Wait(_ context.Context) error        { return nil }

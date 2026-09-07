@@ -285,15 +285,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	if e.values.LiveMigration != nil {
 		extraClientDNSNames = e.values.LiveMigration.ExtraClientServiceDNSNames
 	}
-	clientServiceDNSNames := append(
-		ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil),
-		extraClientDNSNames...,
-	)
+
 	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
 		ctx,
 		e.secretsManager,
 		e.values.Role,
-		clientServiceDNSNames,
+		append(ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil), extraClientDNSNames...),
 		controlPlaneNodeIP,
 	)
 	if err != nil {

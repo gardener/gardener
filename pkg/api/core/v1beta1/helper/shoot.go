@@ -611,7 +611,7 @@ type LiveMigrationRole string
 
 const (
 	// LiveMigrationRoleNone indicates that the seed is not involved in a live control plane migration of the shoot.
-	LiveMigrationRoleNone LiveMigrationRole = ""
+	LiveMigrationRoleNone LiveMigrationRole = "None"
 	// LiveMigrationRoleSource indicates that the seed currently hosts the shoot control plane and is the source of a
 	// live control plane migration.
 	LiveMigrationRoleSource LiveMigrationRole = "Source"
@@ -620,9 +620,9 @@ const (
 	LiveMigrationRoleDestination LiveMigrationRole = "Destination"
 )
 
-// IsLiveMigration returns true if the shoot is undergoing a live control plane migration, i.e. the live-migration
+// IsInLiveMigration returns true if the shoot is undergoing a live control plane migration, i.e. the live-migration
 // intent annotation is set and spec.seedName differs from status.seedName.
-func IsLiveMigration(shoot *gardencorev1beta1.Shoot) bool {
+func IsInLiveMigration(shoot *gardencorev1beta1.Shoot) bool {
 	return HasLiveMigrationAnnotation(shoot.Annotations) && ShouldPrepareShootForMigration(shoot)
 }
 
@@ -630,7 +630,7 @@ func IsLiveMigration(shoot *gardencorev1beta1.Shoot) bool {
 // shoot. It returns LiveMigrationRoleNone if the shoot is not undergoing a live control plane migration or the seed is
 // not involved.
 func GetLiveMigrationRole(shoot *gardencorev1beta1.Shoot, seedName string) LiveMigrationRole {
-	if !IsLiveMigration(shoot) {
+	if !IsInLiveMigration(shoot) {
 		return LiveMigrationRoleNone
 	}
 
