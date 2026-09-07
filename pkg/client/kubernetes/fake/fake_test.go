@@ -6,13 +6,14 @@ package fake_test
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -22,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	mockdiscovery "github.com/gardener/gardener/third_party/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
@@ -135,11 +135,8 @@ var _ = Describe("Fake ClientSet", func() {
 		})
 
 		It("should fail if discovery fails", func() {
-			discovery := mockdiscovery.NewMockDiscoveryInterface(ctrl)
-			discovery.EXPECT().ServerVersion().Return(nil, errors.New("fake"))
-
 			cs := builder.
-				WithKubernetes(test.NewClientSetWithDiscovery(nil, discovery)).
+				WithKubernetes(test.NewClientSetWithDiscovery(nil, &fakeDiscoveryWithFakeErr{})).
 				Build()
 
 			_, err := cs.DiscoverVersion()
@@ -159,3 +156,11 @@ var _ = Describe("Fake ClientSet", func() {
 		Expect(cs.WaitForCacheSync(context.Background())).To(BeTrue())
 	})
 })
+
+type fakeDiscoveryWithFakeErr struct {
+	fakediscovery.FakeDiscovery
+}
+
+func (f *fakeDiscoveryWithFakeErr) ServerVersion() (*version.Info, error) {
+	return nil, fmt.Errorf("fake")
+}
