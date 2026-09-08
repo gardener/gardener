@@ -35,15 +35,7 @@ spec:
             function envoy_on_request(request_handle)
               local streamInfo = request_handle:streamInfo()
               local rsn = streamInfo:requestedServerName()
-
-              if rsn == nil or rsn == "" then
-                return
-              end
-
               local authority = request_handle:headers():get(":authority")
-              if authority == nil then
-                return
-              end
 
               -- Strip trailing 443 port
               authority = authority:gsub(":443$", "")
