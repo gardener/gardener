@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/shoot/namespaces"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -71,12 +72,8 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 		for extensionType := range requiredExtensions {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelExtensionPrefix+extensionType, "true")
 		}
-		for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
-			if worker.CRI != nil {
-				for _, cr := range worker.CRI.ContainerRuntimes {
-					metav1.SetMetaDataLabel(&namespace.ObjectMeta, fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type), "true")
-				}
-			}
+		for k, v := range gardenerutils.ContainerRuntimeLabelsForWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers...) {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, k, v)
 		}
 
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, seedProviderType)

@@ -704,7 +704,7 @@ var _ = Describe("Namespaces", func() {
 			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
 				HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"),
-				Not(HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true")),
+				Not(HaveKey("containerruntime.worker.gardener.cloud/gvisor")),
 			))
 		})
 
