@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -2214,6 +2215,53 @@ var _ = Describe("Shoot", func() {
 			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeTrue())
 		})
 	})
+
+	DescribeTable("IsStorageVersionMigratorFeatureGateEnabled",
+		func(version string, kapiGates, kcmGates, runtimeConfig map[string]bool, expected bool) {
+			kubeAPIServer := &gardencorev1beta1.KubeAPIServerConfig{}
+			kubeControllerManager := &gardencorev1beta1.KubeControllerManagerConfig{}
+
+			if kapiGates != nil {
+				kubeAPIServer.FeatureGates = kapiGates
+			}
+			if kcmGates != nil {
+				kubeControllerManager.FeatureGates = kcmGates
+			}
+			if runtimeConfig != nil {
+				kubeAPIServer.RuntimeConfig = runtimeConfig
+			}
+
+			Expect(IsStorageVersionMigratorFeatureGateEnabled(kubeAPIServer, kubeControllerManager, semver.MustParse(version))).To(Equal(expected))
+		},
+
+		// kapi StorageVersionMigrator gate: active unless explicitly disabled
+		Entry("1.37, kapi StorageVersionMigrator disabled → false", "1.37.0", map[string]bool{"StorageVersionMigrator": false}, nil, nil, false),
+		Entry("1.37, kapi StorageVersionMigrator enabled → true", "1.37.0", map[string]bool{"StorageVersionMigrator": true}, nil, nil, true),
+		Entry("1.37, kapi StorageVersionMigrator absent from populated gates → true", "1.37.0", map[string]bool{"SomeOtherGate": false}, nil, nil, true),
+
+		// kapi storagemigration.k8s.io/v1 runtime config: active unless explicitly disabled
+		Entry("1.37, kapi storagemigration API disabled → false", "1.37.0", nil, nil, map[string]bool{"storagemigration.k8s.io/v1": false}, false),
+		Entry("1.37, kapi storagemigration API enabled → true", "1.37.0", nil, nil, map[string]bool{"storagemigration.k8s.io/v1": true}, true),
+		Entry("1.37, kapi storagemigration API absent from populated runtime config → true", "1.37.0", nil, nil, map[string]bool{"someother.k8s.io/v1": false}, true),
+
+		// kcm StorageVersionMigrator gate: active unless explicitly disabled
+		Entry("1.37, kcm StorageVersionMigrator disabled → false", "1.37.0", nil, map[string]bool{"StorageVersionMigrator": false}, nil, false),
+		Entry("1.37, kcm StorageVersionMigrator enabled → true", "1.37.0", nil, map[string]bool{"StorageVersionMigrator": true}, nil, true),
+		Entry("1.37, kcm StorageVersionMigrator absent from populated gates → true", "1.37.0", nil, map[string]bool{"SomeOtherGate": false}, nil, true),
+
+		// kcm InformerResourceVersion gate: active unless explicitly disabled
+		Entry("1.37, kcm InformerResourceVersion disabled → false", "1.37.0", nil, map[string]bool{"InformerResourceVersion": false}, nil, false),
+		Entry("1.37, kcm InformerResourceVersion enabled → true", "1.37.0", nil, map[string]bool{"InformerResourceVersion": true}, nil, true),
+		Entry("1.37, kcm InformerResourceVersion absent from populated gates → true", "1.37.0", nil, map[string]bool{"SomeOtherGate": false}, nil, true),
+
+		// combined: default true when nothing is set; true when all set true; false when all set false
+		Entry("1.37, nil components → true", "1.37.0", nil, nil, nil, true),
+		Entry("1.37, all inputs enabled → true", "1.37.0", map[string]bool{"StorageVersionMigrator": true}, map[string]bool{"StorageVersionMigrator": true, "InformerResourceVersion": true}, map[string]bool{"storagemigration.k8s.io/v1": true}, true),
+		Entry("1.37, all inputs disabled → false", "1.37.0", map[string]bool{"StorageVersionMigrator": false}, map[string]bool{"StorageVersionMigrator": false, "InformerResourceVersion": false}, map[string]bool{"storagemigration.k8s.io/v1": false}, false),
+
+		// < v1.37: Always false
+		Entry("1.36, nil components → false", "1.36.0", nil, nil, nil, false),
+	)
 
 	DescribeTable("#IsAuthorizeWithSelectorsEnabled",
 		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, match gomegatypes.GomegaMatcher) {

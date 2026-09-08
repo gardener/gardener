@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
@@ -910,6 +911,40 @@ func IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot *gardencorev1b
 	}
 
 	return !valueKubeAPIServer && !valueKubeScheduler
+}
+
+// IsStorageVersionMigratorFeatureGateEnabled returns true if the "StorageVersionMigrator" feature gate is
+// active for the given kube-apiserver and kube-controller-manager configs. In >= v1.37 (GA, default true) it is
+// active unless either component explicitly disables it. Below v1.37 (default false) it is active only if
+// explicitly enabled in both components.
+func IsStorageVersionMigratorFeatureGateEnabled(kubeAPIServer *gardencorev1beta1.KubeAPIServerConfig, kubeControllerManager *gardencorev1beta1.KubeControllerManagerConfig, kubernetesVersion *semver.Version) bool {
+	if !versionutils.ConstraintK8sGreaterEqual137.Check(kubernetesVersion) {
+		return false
+	}
+
+	// k8s >= v1.37: GA, default true — active unless the feature gate is explicitly disabled in either component or the storagemigration API is disabled.
+	var kapiGates, kcmGates, runtimeConfig map[string]bool
+
+	if kubeAPIServer != nil {
+		kapiGates = kubeAPIServer.FeatureGates
+		runtimeConfig = kubeAPIServer.RuntimeConfig
+	}
+
+	if kubeControllerManager != nil {
+		kcmGates = kubeControllerManager.FeatureGates
+	}
+
+	return activeUnlessDisabled(kapiGates, "StorageVersionMigrator") &&
+		activeUnlessDisabled(runtimeConfig, "storagemigration.k8s.io/v1") &&
+		activeUnlessDisabled(kcmGates, "StorageVersionMigrator") &&
+		activeUnlessDisabled(kcmGates, "InformerResourceVersion")
+}
+
+// activeUnlessDisabled reports whether the entry for key defaults to active: true unless
+// it is present in the map and explicitly set to false.
+func activeUnlessDisabled(m map[string]bool, key string) bool {
+	value, present := m[key]
+	return !present || value
 }
 
 // IsAuthorizeWithSelectorsEnabled checks if the feature gate "AuthorizeWithSelectors" is enabled in the kube-apiserver

@@ -28,6 +28,8 @@ var (
 	ConstraintK8sLess136 *Constraints
 	// ConstraintK8sGreaterEqual136 is a version constraint for versions >= 1.36.
 	ConstraintK8sGreaterEqual136 *Constraints
+	// ConstraintK8sGreaterEqual137 is a version constraint for versions >= 1.37.
+	ConstraintK8sGreaterEqual137 *Constraints
 )
 
 func init() {
@@ -39,6 +41,7 @@ func init() {
 	ConstraintK8sGreaterEqual135 = MustNewConstraint(">= 1.35-0")
 	ConstraintK8sLess136 = MustNewConstraint("< 1.36-0")
 	ConstraintK8sGreaterEqual136 = MustNewConstraint(">= 1.36-0")
+	ConstraintK8sGreaterEqual137 = MustNewConstraint(">= 1.37-0")
 }
 
 // CompareVersions returns true if the constraint <version1> compared by <operator> to <version2>
