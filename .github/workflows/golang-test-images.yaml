@@ -26,6 +26,10 @@ jobs:
               {
                 "version": "1.26",
                 "image": "golang:1.26.8-bookworm"
+              },
+              {
+                "version": "1.27",
+                "image": "golang:1.27.1-bookworm"
               }
             ]
           }
