@@ -408,7 +408,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		_ = g.Add(flow.Task{
 			Name: "Cleaning up StorageVersionMigration objects/ Removing label from resources after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, b.Logger, b.SeedClientSet.Client(), b.ShootClientSet, b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.ResourcesToEncrypt, b.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption()); err != nil {
+				if err := secretsrotation.CompleteEncryptedDataRewrite(ctx, b.Logger, b.SeedClientSet.Client(), b.ShootClientSet, b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.ResourcesToEncrypt, b.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption(), b.Shoot.StorageVersionMigratorEnabled); err != nil {
 					return err
 				}
 

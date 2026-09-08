@@ -160,6 +160,21 @@ func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
 	return nil
 }
 
+// CleanupStorageVersionMigrationObjects cleans up all StorageVersionMigration objects that have the rotation label.
+func CleanupStorageVersionMigrationObjects(
+	ctx context.Context,
+	clientSet kubernetes.Interface,
+) error {
+	storageVersionMigrationList := &storagemigrationv1.StorageVersionMigrationList{}
+	if err := clientSet.Client().List(ctx, storageVersionMigrationList, client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists)),
+	}); err != nil {
+		return fmt.Errorf("error while listing StorageVersionMigration objects: %w", err)
+	}
+
+	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, clientSet.Client(), storageVersionMigrationList, nil)
+}
+
 // RewriteEncryptedDataAddLabel patches all encrypted data in all namespaces in the target clusters and adds a label
 // whose value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption
 // key secret rotation which requires all encrypted data to be rewritten to ETCD so that they become encrypted with the
@@ -218,6 +233,38 @@ func RewriteEncryptedDataAddLabel(
 	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
 		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyResourcesLabeled, "true")
 	})
+}
+
+// CompleteEncryptedDataRewrite completes the process of rewriting encrypted data by cleaning up StorageVersionMigration objects if enabled and removing labels from the encrypted data.
+func CompleteEncryptedDataRewrite(
+	ctx context.Context,
+	log logr.Logger,
+	runtimeClient client.Client,
+	targetClientSet kubernetes.Interface,
+	namespace string,
+	name string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGVKs []schema.GroupVersionKind,
+	storageVersionMigratorEnabled bool,
+) error {
+	if storageVersionMigratorEnabled {
+		if err := CleanupStorageVersionMigrationObjects(ctx, targetClientSet); err != nil {
+			return fmt.Errorf("error while cleaning up StorageVersionMigration objects: %w", err)
+		}
+
+		if err := PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
+			delete(meta.Annotations, AnnotationKeyEtcdSnapshotted)
+		}); err != nil {
+			return fmt.Errorf("failed to remove annotations from API Server deployment after cleaning up StorageVersionMigration objects: %w", err)
+		}
+	}
+
+	if err := RewriteEncryptedDataRemoveLabel(ctx, log, runtimeClient, targetClientSet, namespace, name, resourcesToEncrypt, encryptedResources, defaultGVKs); err != nil {
+		return fmt.Errorf("error while removing labels from encrypted data: %w", err)
+	}
+
+	return nil
 }
 
 // RewriteEncryptedDataRemoveLabel patches all encrypted data in all namespaces in the target clusters and removes the
