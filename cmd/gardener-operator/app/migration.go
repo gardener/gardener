@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -60,6 +61,8 @@ func migrateExtensionManagedResources(ctx context.Context, c client.Client, log 
 	return flow.Parallel(taskFns...)(ctx)
 }
 
+const oldResourceIgnoreAnnotation = "old.resources.gardener.cloud/ignore"
+
 func migrateExtensionManagedResource(ctx context.Context, c client.Client, log logr.Logger, mr resourcesv1alpha1.ManagedResource) error {
 	name := mr.Name
 	extensionName := strings.TrimSuffix(strings.TrimPrefix(name, oldExtensionRuntimePrefix), oldExtensionRuntimeSuffix)
@@ -75,16 +78,28 @@ func migrateExtensionManagedResource(ctx context.Context, c client.Client, log l
 	}
 
 	log.Info("Migrating extension ManagedResource", "old", name, "new", newMRName)
+	if len(mr.Spec.SecretRefs) != 1 {
+		return fmt.Errorf("old ManagedResource %q has unexpected number of secret refs: %d", name, len(mr.Spec.SecretRefs))
+	}
 
 	patch := client.MergeFrom(mr.DeepCopy())
+
+	// Check if the old ManagedResource has the ignore annotation set. If so, we will consider it for the new ManagedResource as well.
+	oldMRIgnored := mr.Annotations[resourcesv1alpha1.Ignore] == "true"
+	if oldMRIgnoredVal, ok := mr.Annotations[oldResourceIgnoreAnnotation]; ok {
+		var err error
+		oldMRIgnored, err = strconv.ParseBool(oldMRIgnoredVal)
+		if err != nil {
+			return fmt.Errorf("failed parsing old ignore annotation value %q for ManagedResource %q: %w", oldMRIgnoredVal, name, err)
+		}
+	} else {
+		metav1.SetMetaDataAnnotation(&mr.ObjectMeta, oldResourceIgnoreAnnotation, strconv.FormatBool(oldMRIgnored))
+	}
+
 	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, resourcesv1alpha1.Ignore, "true")
 	mr.Spec.KeepObjects = new(true)
 	if err := c.Patch(ctx, &mr, patch); err != nil {
 		return fmt.Errorf("failed annotating old ManagedResource %q with ignore annotation: %w", name, err)
-	}
-
-	if len(mr.Spec.SecretRefs) != 1 {
-		return fmt.Errorf("old ManagedResource %q has unexpected number of secret refs: %d", name, len(mr.Spec.SecretRefs))
 	}
 
 	oldSecret := &corev1.Secret{}
@@ -93,12 +108,26 @@ func migrateExtensionManagedResource(ctx context.Context, c client.Client, log l
 		return fmt.Errorf("failed getting old secret %q: %w", oldSecretName, err)
 	}
 
-	if err := managedresources.CreateForSeed(ctx, c, v1beta1constants.GardenNamespace, newMRName, false, oldSecret.Data); err != nil {
-		return fmt.Errorf("failed creating new ManagedResource %q: %w", newMRName, err)
+	secretName, secret := managedresources.NewSecret(c, v1beta1constants.GardenNamespace, newMRName, oldSecret.Data, true)
+	managedResource := managedresources.NewForSeed(c, v1beta1constants.GardenNamespace, newMRName, false).WithSecretRef(secretName)
+
+	// Add the ignore annotation to the new ManagedResource if it was present on the old one.
+	if oldMRIgnored {
+		managedResource = managedResource.WithAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
 	}
 
-	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, c, v1beta1constants.GardenNamespace, newMRName); err != nil {
-		return fmt.Errorf("failed waiting for new ManagedResource %q to be healthy: %w", newMRName, err)
+	if err := secret.Reconcile(ctx); err != nil {
+		return fmt.Errorf("could not create or update secret of managed resources: %w", err)
+	}
+
+	if err := managedResource.Reconcile(ctx); err != nil {
+		return fmt.Errorf("could not create or update managed resource: %w", err)
+	}
+
+	if !oldMRIgnored {
+		if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, c, v1beta1constants.GardenNamespace, newMRName); err != nil {
+			return fmt.Errorf("failed waiting for new ManagedResource %q to be healthy: %w", newMRName, err)
+		}
 	}
 
 	if err := client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, c, v1beta1constants.GardenNamespace, name)); err != nil {
