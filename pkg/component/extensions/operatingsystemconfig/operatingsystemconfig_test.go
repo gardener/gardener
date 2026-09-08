@@ -237,10 +237,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 					"worker.gardener.cloud/pool":                                         worker.Name,
 					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 				}
-				if worker.CRI != nil {
-					for _, cr := range worker.CRI.ContainerRuntimes {
-						oscLabels[fmt.Sprintf("containerruntime.worker.gardener.cloud/%s", cr.Type)] = "true"
-					}
+				if worker.Name == worker2Name {
+					oscLabels["containerruntime.worker.gardener.cloud/kata"] = "true"
+					oscLabels["containerruntime.worker.gardener.cloud/gvisor"] = "true"
 				}
 
 				name := key + "-init"

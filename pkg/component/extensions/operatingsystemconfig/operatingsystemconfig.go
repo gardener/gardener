@@ -796,16 +796,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.osc, func() error {
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
-
-		for k := range d.osc.Labels {
-			if strings.HasPrefix(k, extensionsv1alpha1.ContainerRuntimeNameWorkerLabelPrefix) {
-				delete(d.osc.Labels, k)
-			}
-		}
-
-		for k, v := range gardenerutils.OperatingSystemConfigLabelsForWorkerPool(d.worker) {
-			metav1.SetMetaDataLabel(&d.osc.ObjectMeta, k, v)
-		}
+		reconcileOperatingSystemConfigLabels(&d.osc.ObjectMeta, d.worker)
 
 		if d.worker.Machine.Image != nil {
 			d.osc.Spec.Type = d.worker.Machine.Image.Name
@@ -960,4 +951,16 @@ func generateOSCName(
 		return val
 	}
 	return val + suffix
+}
+
+func reconcileOperatingSystemConfigLabels(meta *metav1.ObjectMeta, worker gardencorev1beta1.Worker) {
+	for k := range meta.Labels {
+		if strings.HasPrefix(k, extensionsv1alpha1.ContainerRuntimeNameWorkerLabelPrefix) {
+			delete(meta.Labels, k)
+		}
+	}
+
+	for k, v := range gardenerutils.OperatingSystemConfigLabelsForWorkerPool(worker) {
+		metav1.SetMetaDataLabel(meta, k, v)
+	}
 }
