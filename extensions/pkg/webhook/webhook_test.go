@@ -218,6 +218,36 @@ var _ = Describe("Webhook", func() {
 				},
 			}))
 		})
+
+		It("should return a namespace selector for the container runtime type", func() {
+			selector := BuildContainerRuntimeTypeNamespaceSelector("gvisor")
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "containerruntime.worker.gardener.cloud/gvisor",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
+	})
+
+	Describe("#BuildContainerRuntimeTypeObjectSelector", func() {
+		It("should return an object selector for the container runtime type", func() {
+			selector := BuildContainerRuntimeTypeObjectSelector("gvisor")
+
+			Expect(selector).To(Equal(&metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "containerruntime.worker.gardener.cloud/gvisor",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"true"},
+					},
+				},
+			}))
+		})
 	})
 })
 

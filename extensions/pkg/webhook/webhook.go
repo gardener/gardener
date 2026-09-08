@@ -185,3 +185,21 @@ func BuildExtensionTypeNamespaceSelector(extensionType string, extensionClasses 
 
 	return labelSelector
 }
+
+// BuildContainerRuntimeTypeNamespaceSelector returns a label selector which matches the 'containerruntime.worker.gardener.cloud/<container-runtime-type>' label on shoot control plane namespaces.
+func BuildContainerRuntimeTypeNamespaceSelector(containerRuntimeType string) *metav1.LabelSelector {
+	return &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, containerRuntimeType),
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"true"},
+			},
+		},
+	}
+}
+
+// BuildContainerRuntimeTypeObjectSelector returns a label selector which matches the 'containerruntime.worker.gardener.cloud/<container-runtime-type>' label on OperatingSystemConfig objects.
+func BuildContainerRuntimeTypeObjectSelector(containerRuntimeType string) *metav1.LabelSelector {
+	return BuildContainerRuntimeTypeNamespaceSelector(containerRuntimeType)
+}
