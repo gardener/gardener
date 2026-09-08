@@ -652,7 +652,7 @@ images:
           - type: 'githubTeam'
             teamname: 'gardener/logging-maintainers'
   - name: fluent-bit
-    sourceRepository: github.com/fluent/fluent-operator
+    sourceRepository: github.com/fluent/fluent-bit
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit
     tag: "v5.1.1"
     labels:
