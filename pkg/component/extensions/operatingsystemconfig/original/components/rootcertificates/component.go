@@ -145,12 +145,21 @@ WantedBy=multi-user.target`),
 	return []extensionsv1alpha1.Unit{updateCACertsUnit}, updateCACertsFiles, nil
 }
 
-// UpdateLocalCACertificatesScriptFile returns the file for the update-local-ca-certificates script.
-func UpdateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
+// RenderUpdateLocalCACertificatesScript returns the rendered update-local-ca-certificates script.
+func RenderUpdateLocalCACertificatesScript() ([]byte, error) {
 	var script bytes.Buffer
 	if err := tplUpdateLocalCaCertificates.Execute(&script, map[string]any{
 		"pathLocalSSLCerts": PathLocalSSLCerts,
 	}); err != nil {
+		return nil, err
+	}
+	return script.Bytes(), nil
+}
+
+// UpdateLocalCACertificatesScriptFile returns the file for the update-local-ca-certificates script.
+func UpdateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
+	script, err := RenderUpdateLocalCACertificatesScript()
+	if err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
 
@@ -160,7 +169,7 @@ func UpdateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
-				Data:     utils.EncodeBase64(script.Bytes()),
+				Data:     utils.EncodeBase64(script),
 			},
 		},
 	}, nil
