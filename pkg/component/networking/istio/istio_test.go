@@ -638,7 +638,6 @@ var _ = Describe("istiod", func() {
 				igw[0].Ports = append(igw[0].Ports,
 					corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdPeer, Port: etcdconstants.PortEtcdPeerExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdPeerExternal)},
 					corev1.ServicePort{Name: fmt.Sprintf("%s-1", etcdconstants.ServicePortNameEtcdPeer), Port: etcdconstants.PortEtcdPeerExternal + 1, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdPeerExternal + 1)},
-					corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdClient, Port: etcdconstants.PortEtcdClientExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdClientExternal)},
 				)
 				istiod = NewIstio(
 					c,

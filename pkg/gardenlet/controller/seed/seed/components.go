@@ -372,12 +372,14 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 	// When live control plane migration is enabled, expose the etcd peer and client ports on the ingress gateway so
 	// that etcd members of a shoot can form a joint cluster spanning source and destination seeds.
 	if features.DefaultFeatureGate.Enabled(features.LiveControlPlaneMigration) {
-		servicePorts = append(servicePorts, corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdPeer, Port: etcdconstants.PortEtcdPeerExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdPeerExternal)})
-		for i := int32(1); i < etcdconstants.HAReplicaCount; i++ {
+		for i := int32(0); i < etcdconstants.HAReplicaCount; i++ {
 			port := etcdconstants.PortEtcdPeerExternal + i
-			servicePorts = append(servicePorts, corev1.ServicePort{Name: fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i), Port: port, TargetPort: intstr.FromInt32(port)})
+			name := etcdconstants.ServicePortNameEtcdPeer
+			if i > 0 {
+				name = fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i)
+			}
+			servicePorts = append(servicePorts, corev1.ServicePort{Name: name, Port: port, TargetPort: intstr.FromInt32(port)})
 		}
-		servicePorts = append(servicePorts, corev1.ServicePort{Name: etcdconstants.ServicePortNameEtcdClient, Port: etcdconstants.PortEtcdClientExternal, TargetPort: intstr.FromInt32(etcdconstants.PortEtcdClientExternal)})
 	}
 
 	istioDeployer, err := sharedcomponent.NewIstio(

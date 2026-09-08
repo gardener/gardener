@@ -510,7 +510,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			e.etcd.Spec.MemberNamePrefix = new(e.values.MemberNamePrefix)
 		}
 
-		// BootstrapWithExistingCluster is immutable and may only be set at creation time.
+		// BootstrapWithExistingCluster should only be set at creation time.
 		// On updates, preserve whatever value was already persisted to avoid clearing it.
 		if existingEtcd == nil {
 			if e.values.LiveMigration != nil {
