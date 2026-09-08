@@ -355,6 +355,48 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("#ContainerRuntimeLabelsForWorkerPools", func() {
+		It("should return an empty map when no workers are provided", func() {
+			Expect(ContainerRuntimeLabelsForWorkerPools()).To(BeEmpty())
+		})
+
+		It("should return an empty map when workers have nil CRI or no container runtimes", func() {
+			workers := []gardencorev1beta1.Worker{
+				{Name: "worker-1"},
+				{Name: "worker-2", CRI: &gardencorev1beta1.CRI{Name: "containerd"}},
+			}
+			Expect(ContainerRuntimeLabelsForWorkerPools(workers...)).To(BeEmpty())
+		})
+
+		It("should return the correct container runtime labels across multiple workers", func() {
+			workers := []gardencorev1beta1.Worker{
+				{
+					Name: "worker-1",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "kata"},
+							{Type: "gvisor"},
+						},
+					},
+				},
+				{
+					Name: "worker-2",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "gvisor"},
+						},
+					},
+				},
+			}
+			Expect(ContainerRuntimeLabelsForWorkerPools(workers...)).To(Equal(map[string]string{
+				"containerruntime.worker.gardener.cloud/kata":   "true",
+				"containerruntime.worker.gardener.cloud/gvisor": "true",
+			}))
+		})
+	})
+
 	Describe("#OperatingSystemConfigLabelsForWorkerPool", func() {
 		var workerPool gardencorev1beta1.Worker
 
