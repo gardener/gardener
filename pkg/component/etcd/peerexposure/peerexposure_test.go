@@ -253,7 +253,7 @@ var _ = Describe("PeerExposure", func() {
 				Expect(gw.Spec.Servers).To(HaveLen(1))
 				srv := gw.Spec.Servers[0]
 				Expect(srv.Hosts).To(Equal([]string{clientHost}))
-				Expect(srv.Port.Number).To(Equal(uint32(12379)))
+				Expect(srv.Port.Number).To(Equal(uint32(443)))
 				Expect(srv.Port.Name).To(Equal("tls-etcd-client"))
 				Expect(srv.Port.Protocol).To(Equal("TLS"))
 				Expect(srv.Tls.Mode).To(Equal(istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH))
@@ -267,7 +267,7 @@ var _ = Describe("PeerExposure", func() {
 				Expect(vs.Spec.Gateways).To(Equal([]string{"etcd-main-client"}))
 				Expect(vs.Spec.Tls).To(HaveLen(1))
 				route := vs.Spec.Tls[0]
-				Expect(route.Match[0].Port).To(Equal(uint32(12379)))
+				Expect(route.Match[0].Port).To(Equal(uint32(443)))
 				Expect(route.Match[0].SniHosts).To(Equal([]string{clientHost}))
 				Expect(route.Route[0].Destination.Host).To(Equal(clientServiceFQDN))
 				Expect(route.Route[0].Destination.Port.Number).To(Equal(uint32(2379)))

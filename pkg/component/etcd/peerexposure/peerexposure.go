@@ -283,7 +283,7 @@ func gatewayWithClientTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, la
 			Servers: []*istioapinetworkingv1beta1.Server{{
 				Hosts: hosts,
 				Port: &istioapinetworkingv1beta1.Port{
-					Number:   uint32(etcdconstants.PortEtcdClientExternal), // #nosec G115 -- Port constants are positive values well within uint32 range.
+					Number:   443,
 					Name:     etcdconstants.ServicePortNameEtcdClient,
 					Protocol: "TLS",
 				},
@@ -305,7 +305,7 @@ func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.Vir
 			Gateways: []string{gatewayName},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     uint32(etcdconstants.PortEtcdClientExternal), // #nosec G115 -- Port constants are positive values well within uint32 range.
+					Port:     443,
 					SniHosts: hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
