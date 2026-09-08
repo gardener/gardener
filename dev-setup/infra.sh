@@ -7,7 +7,7 @@ set -o errexit
 set -o pipefail
 
 COMMAND="${1:-up}"
-VALID_COMMANDS=("up" "down" "setup-loopback-devices")
+VALID_COMMANDS=("up" "down" "setup-loopback-devices" "cleanup-registry-ca")
 
 INFRA_COMPOSE_FILE="$(dirname "$0")/infra/docker-compose.yaml"
 DIR_BACKUP_BUCKET="$(dirname "$0")/../dev/local-backupbuckets"
@@ -19,6 +19,23 @@ SUDO=""
 if [[ "$(id -u)" != "0" ]]; then
   SUDO="sudo "
 fi
+
+cleanup_registry_ca() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "> Removing registry CA from macOS login keychain..."
+    security delete-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db 2>/dev/null || true
+  elif [[ "$(uname -s)" == "Linux" ]]; then
+    if command -v update-ca-certificates >/dev/null 2>&1; then
+      echo "> Removing registry CA from /usr/local/share/ca-certificates/..."
+      ${SUDO}rm -f /usr/local/share/ca-certificates/gardener-local-registry-ca.crt
+      ${SUDO}update-ca-certificates --fresh >/dev/null 2>&1 || true
+    elif command -v update-ca-trust >/dev/null 2>&1; then
+      echo "> Removing registry CA from /etc/pki/ca-trust/source/anchors/..."
+      ${SUDO}rm -f /etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem
+      ${SUDO}update-ca-trust extract >/dev/null 2>&1 || true
+    fi
+  fi
+}
 
 case "$COMMAND" in
   up)
@@ -86,17 +103,7 @@ case "$COMMAND" in
           echo "> Registry certificate $cert_file is expired or expiring soon, regenerating..."
           rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
           # Remove the old CA from the system trust store so the new one can be re-added below.
-          if [[ "$(uname -s)" == "Darwin" ]]; then
-            security delete-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db 2>/dev/null || true
-          elif [[ "$(uname -s)" == "Linux" ]]; then
-            if command -v update-ca-certificates >/dev/null 2>&1; then
-              ${SUDO}rm -f /usr/local/share/ca-certificates/gardener-local-registry-ca.crt
-              ${SUDO}update-ca-certificates --fresh >/dev/null 2>&1 || true
-            elif command -v update-ca-trust >/dev/null 2>&1; then
-              ${SUDO}rm -f /etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem
-              ${SUDO}update-ca-trust extract >/dev/null 2>&1 || true
-            fi
-          fi
+          cleanup_registry_ca
           break
         fi
       done
@@ -157,7 +164,7 @@ EOF
       # sign for registry.local.gardener.cloud and localhost, so trusting it here carries negligible risk.
       if [[ "$(uname -s)" == "Darwin" ]]; then
         if ! security find-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db >/dev/null 2>&1; then
-          echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password..."
+          echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password... (run 'make local-registry-cleanup-ca' to undo)"
           security add-trusted-cert -d -r trustRoot \
             -k ~/Library/Keychains/login.keychain-db "$ca_crt"
         fi
@@ -166,7 +173,7 @@ EOF
       # localhost, so trusting it system-wide carries negligible risk.
       elif [[ "$(uname -s)" == "Linux" ]]; then
         if [[ -n "$SUDO" ]]; then
-          echo "> Installing the registry CA into the system trust store may prompt for your sudo password..."
+          echo "> Installing the registry CA into the system trust store may prompt for your sudo password... (run 'make local-registry-cleanup-ca' to undo)"
         fi
         if command -v update-ca-certificates >/dev/null 2>&1; then
           # Debian/Ubuntu
@@ -482,6 +489,12 @@ EOF
 
       echo "Setting up loopback device ${LOOPBACK_DEVICE} with ${ip_func} completed."
     done
+    ;;
+
+  cleanup-registry-ca)
+    cleanup_registry_ca
+    echo "> Removing registry TLS certificate files from $DIR_REGISTRY_TLS..."
+    rm -f "$DIR_REGISTRY_TLS/ca.crt" "$DIR_REGISTRY_TLS/ca.key" "$DIR_REGISTRY_TLS/registry.crt" "$DIR_REGISTRY_TLS/registry.key"
     ;;
 
   *)
