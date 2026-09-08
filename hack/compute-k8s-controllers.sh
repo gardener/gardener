@@ -21,6 +21,17 @@ fi
 
 versions=("$1" "$2")
 
+# Cloud-provider controllers were removed from kube-controller-manager in 1.37 (kubernetes/kubernetes#138002).
+# For older versions, run the script from before this change.
+for version in "${versions[@]}"; do
+  if [ "$version" \< "1.37" ]; then
+    echo "This script only supports Kubernetes 1.37+."
+    echo "To compute controllers for older versions, run the pinned pre-1.37 version of this script:"
+    echo "  https://github.com/gardener/gardener/blob/5c2824f7c33cd698fd644d643220ab7cf5316e64/hack/compute-k8s-controllers.sh"
+    exit 1
+  fi
+done
+
 out_dir=$(mktemp -d)
 function cleanup_output {
     rm -rf "$out_dir"
@@ -31,8 +42,6 @@ trap cleanup_output EXIT
 declare -A path_map=(
   ["persistentvolume-attach-detach-controller"]="pkg/controller/volume/attachdetach/attach_detach_controller.go"
   ["bootstrap-signer-controller"]="pkg/controller/bootstrap/bootstrapsigner.go"
-  ["cloud-node-controller"]="staging/src/k8s.io/cloud-provider/controllers/node/node_controller.go"
-  ["cloud-node-lifecycle-controller"]="staging/src/k8s.io/cloud-provider/controllers/nodelifecycle/node_lifecycle_controller.go"
   ["clusterrole-aggregation-controller"]="pkg/controller/clusterroleaggregation/clusterroleaggregation_controller.go"
   ["cronjob-controller"]="pkg/controller/cronjob/cronjob_controllerv2.go"
   ["certificatesigningrequest-approving-controller"]="pkg/controller/certificates/approver/sarapprove.go"
@@ -67,9 +76,7 @@ declare -A path_map=(
   ["resourcepoolstatusrequest-controller"]="pkg/controller/resourcepoolstatusrequest/controller.go"
   ["resourcequota-controller"]="pkg/controller/resourcequota/resource_quota_controller.go"
   ["root-ca-certificate-publisher-controller"]="pkg/controller/certificates/rootcacertpublisher/publisher.go"
-  ["node-route-controller"]="staging/src/k8s.io/cloud-provider/controllers/route/route_controller.go"
   ["selinux-warning-controller"]="pkg/controller/volume/selinuxwarning/selinux_warning_controller.go"
-  ["service-lb-controller"]="staging/src/k8s.io/cloud-provider/controllers/service/controller.go"
   ["service-cidr-controller"]="pkg/controller/servicecidrs/servicecidrs_controller.go"
   ["serviceaccount-controller"]="pkg/controller/serviceaccount/serviceaccounts_controller.go"
   ["serviceaccount-token-controller"]="pkg/controller/serviceaccount/tokens_controller.go"
@@ -90,10 +97,10 @@ for version in "${versions[@]}"; do
 
   git clone --depth 1 --filter=blob:none --sparse https://github.com/kubernetes/kubernetes -b "release-${version}" "${out_dir}/kubernetes-${version}"
   pushd "${out_dir}/kubernetes-${version}" > /dev/null
-  git sparse-checkout set "cmd/kube-controller-manager" "pkg/controller" "staging/src/k8s.io/cloud-provider"
+  git sparse-checkout set "cmd/kube-controller-manager" "pkg/controller"
   popd > /dev/null
 
-  names=$(awk '/const \(/,/\)/' "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/names/controller_names.go" "${out_dir}/kubernetes-${version}/staging/src/k8s.io/cloud-provider/names/controller_names.go" | sed -n 's/.*"\(.*\)".*/\1/p')
+  names=$(awk '/const \(/,/\)/' "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/names/controller_names.go" | sed -n 's/.*"\(.*\)".*/\1/p')
   
   for name in $names; do
     if [ ! "${path_map[$name]}" ]; then
