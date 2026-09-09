@@ -802,6 +802,18 @@ func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardene
 	}
 }
 
+func gardenerAdmissionControllerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardeneradmissioncontroller.AutoscalingConfig {
+	minReplicas := int32(2)
+	if helper.HighAvailabilityEnabled(garden) {
+		minReplicas = 3
+	}
+
+	return gardeneradmissioncontroller.AutoscalingConfig{
+		MinReplicas: minReplicas,
+		MaxReplicas: 6,
+	}
+}
+
 func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) kubeapiserver.AutoscalingConfig {
 	minReplicas := int32(2)
 	if helper.HighAvailabilityEnabled(garden) {
@@ -1253,6 +1265,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 		LogLevel:                      logger.InfoLevel,
 		RuntimeVersion:                r.RuntimeVersion,
 		AuthorizerRestrictionsEnabled: enableAuthorizerRestrictions,
+		Autoscaling:                   gardenerAdmissionControllerAutoscalingConfig(garden),
 		TopologyAwareRoutingEnabled:   helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
