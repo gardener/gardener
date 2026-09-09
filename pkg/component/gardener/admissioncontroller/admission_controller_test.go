@@ -561,7 +561,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             new(int32(1)),
+			Replicas:             &testValues.Autoscaling.MinReplicas,
 			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
