@@ -27,7 +27,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -295,7 +294,7 @@ var _ = Describe("GardenerAPIServer", func() {
 							Name: corev1.ResourceCPU,
 							Target: autoscalingv2.MetricTarget{
 								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("6")),
+								AverageValue: new(resource.MustParse("6")),
 							},
 						},
 					},
@@ -305,14 +304,14 @@ var _ = Describe("GardenerAPIServer", func() {
 							Name: corev1.ResourceMemory,
 							Target: autoscalingv2.MetricTarget{
 								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("24G")),
+								AverageValue: new(resource.MustParse("24G")),
 							},
 						},
 					},
 				},
 				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
 					ScaleUp: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](60),
+						StabilizationWindowSeconds: new(int32(60)),
 						Policies: []autoscalingv2.HPAScalingPolicy{
 							{
 								Type:          autoscalingv2.PercentScalingPolicy,
@@ -322,7 +321,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					},
 					ScaleDown: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](1800),
+						StabilizationWindowSeconds: new(int32(1800)),
 						Policies: []autoscalingv2.HPAScalingPolicy{
 							{
 								Type:          autoscalingv2.PodsScalingPolicy,
