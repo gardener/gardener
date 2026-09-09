@@ -325,7 +325,8 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 								},
 								InitialDelaySeconds: 30,
 								PeriodSeconds:       30,
-								FailureThreshold:    1,
+								TimeoutSeconds:      5,
+								FailureThreshold:    3,
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
