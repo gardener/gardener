@@ -55,6 +55,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -309,14 +310,15 @@ var _ = Describe("Garden controller tests", func() {
 				},
 			}
 
+			mrName := fmt.Sprintf("garden-extension-%s-%s", extension.Name, utils.ComputeSHA256Hex([]byte(extension.Name))[:5])
 			extensionManagedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "extension-" + extension.Name + "-garden",
+					Name:      mrName,
 					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{
-						{Name: "extension-" + extension.Name + "-garden"},
+						{Name: mrName},
 					},
 				},
 			}

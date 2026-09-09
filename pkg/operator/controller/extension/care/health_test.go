@@ -114,7 +114,7 @@ var _ = Describe("Extension health", func() {
 
 		Context("when all managed resources are deployed successfully and controller installations are healthy", func() {
 			JustBeforeEach(func() {
-				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "garden-extension-foo-2c26b", true))).To(Succeed())
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				Expect(virtualClient.Create(ctx, healthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
@@ -304,7 +304,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all managed resources are unhealthy", func() {
 				JustBeforeEach(func() {
-					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "garden-extension-foo-2c26b", true))).To(Succeed())
 					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
 					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				})
@@ -314,7 +314,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all managed resources are not applied", func() {
 				JustBeforeEach(func() {
-					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "garden-extension-foo-2c26b", true))).To(Succeed())
 					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
 					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				})
@@ -324,7 +324,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all managed resources are still progressing", func() {
 				JustBeforeEach(func() {
-					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "garden-extension-foo-2c26b", true))).To(Succeed())
 					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
 					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				})
@@ -334,7 +334,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all managed resources are deployed but not all required conditions are present", func() {
 				JustBeforeEach(func() {
-					Expect(runtimeClient.Create(ctx, managedResource(gardenNamespace, "extension-foo-garden", true, []gardencorev1beta1.Condition{{
+					Expect(runtimeClient.Create(ctx, managedResource(gardenNamespace, "garden-extension-foo-2c26b", true, []gardencorev1beta1.Condition{{
 						Type:   resourcesv1alpha1.ResourcesApplied,
 						Status: gardencorev1beta1.ConditionTrue}},
 					))).To(Succeed())

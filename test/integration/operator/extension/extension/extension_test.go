@@ -193,14 +193,14 @@ var _ = Describe("Extension controller tests", func() {
 
 		managedResourceRuntimeBar = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "extension-provider-bar-garden",
+				Name:      "garden-extension-provider-bar-4f474",
 				Namespace: testNamespace.Name,
 			},
 		}
 
 		managedResourceRuntimeFoo = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "extension-provider-foo-garden",
+				Name:      "garden-extension-provider-foo-371fc",
 				Namespace: testNamespace.Name,
 			},
 		}

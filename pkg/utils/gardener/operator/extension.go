@@ -5,6 +5,7 @@
 package operator
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -15,13 +16,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
 	extensionAdmissionRuntimePrefix = "extension-admission-runtime-"
 	extensionAdmissionVirtualPrefix = "extension-admission-virtual-"
-	extensionRuntimePrefix          = "extension-"
-	extensionRuntimeSuffix          = "-garden"
+	extensionRuntimePrefix          = "garden-extension-"
 )
 
 // ExtensionAdmissionRuntimeManagedResourceName returns the name of the ManagedResource containing resources for the Garden runtime cluster.
@@ -36,13 +37,14 @@ func ExtensionAdmissionVirtualManagedResourceName(extensionName string) string {
 
 // ExtensionRuntimeManagedResourceName returns the name of the ManagedResource containing resources for the Garden runtime cluster.
 func ExtensionRuntimeManagedResourceName(extensionName string) string {
-	return extensionRuntimePrefix + extensionName + extensionRuntimeSuffix
+	return fmt.Sprintf("%s%s-%s", extensionRuntimePrefix, extensionName, utils.ComputeSHA256Hex([]byte(extensionName))[:5])
 }
 
 // ExtensionForManagedResourceName returns if the given managed resource name belongs to an extension in Garden runtime cluster. If so, it returns the extension name.
 func ExtensionForManagedResourceName(managedResourceName string) (string, bool) {
-	if strings.HasPrefix(managedResourceName, extensionRuntimePrefix) && strings.HasSuffix(managedResourceName, extensionRuntimeSuffix) {
-		return strings.TrimSuffix(strings.TrimPrefix(managedResourceName, extensionRuntimePrefix), extensionRuntimeSuffix), true
+	if strings.HasPrefix(managedResourceName, extensionRuntimePrefix) {
+		withoutPrefix := strings.TrimPrefix(managedResourceName, extensionRuntimePrefix)
+		return withoutPrefix[:len(withoutPrefix)-6], true
 	}
 
 	if after, ok := strings.CutPrefix(managedResourceName, extensionAdmissionRuntimePrefix); ok {

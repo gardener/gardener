@@ -22,7 +22,7 @@ var _ = Describe("Extension Care controller tests", func() {
 
 	When("Extension exists", func() {
 		extensionName := "foo"
-		managedResourceName := "extension-foo-garden"
+		managedResourceName := "garden-extension-" + extensionName + "-2c26b"
 
 		BeforeEach(func() {
 			By("Create Extension")

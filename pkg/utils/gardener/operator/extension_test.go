@@ -32,7 +32,7 @@ var _ = Describe("Extension", func() {
 
 	Describe("#ExtensionRuntimeManagedResourceName", func() {
 		It("should return the expected managed resource name", func() {
-			Expect(ExtensionRuntimeManagedResourceName("provider-test")).To(Equal("extension-provider-test-garden"))
+			Expect(ExtensionRuntimeManagedResourceName("provider-test")).To(Equal("garden-extension-provider-test-6b6dc"))
 		})
 	})
 
@@ -42,7 +42,7 @@ var _ = Describe("Extension", func() {
 		Expect(isExtension).To(Equal(expectedIsExtension))
 	},
 
-		Entry("it should recognize a managed resource of an extension", "extension-foobar-garden", "foobar", true),
+		Entry("it should recognize a managed resource of an extension", "garden-extension-provider-test-12345", "provider-test", true),
 		Entry("it should recognize a managed resource of an extension admission for runtime cluster", "extension-admission-runtime-foobar", "foobar", true),
 		Entry("it should recognize a managed resource of an extension admission for virtual cluster", "extension-admission-virtual-foobar", "foobar", true),
 		Entry("it should not recognize a random managed resource as an extension", "foobar", "", false),
