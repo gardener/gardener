@@ -73,7 +73,7 @@ rules:
 			Expect(statusCode).To(Equal(int32(0)))
 		})
 
-		It("should accept audit policy with namespaces and objectRef", func() {
+		It("should accept audit policy with namespaces and resources", func() {
 			auditPolicy := `
 apiVersion: audit.k8s.io/v1
 kind: Policy
@@ -81,9 +81,9 @@ rules:
 - level: None
   namespaces: ["kube-system", "kube-public"]
 - level: Metadata
-  objectRef:
-    resource: "pods"
-    namespace: "default"
+  resources:
+  - group: ""
+    resources: ["pods"]
 `
 			statusCode, err := AdmitAuditPolicy(auditPolicy)
 			Expect(err).NotTo(HaveOccurred())
@@ -159,6 +159,22 @@ rules:
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("provided invalid audit policy"))
+		})
+
+		It("should reject audit policy with an unknown field", func() {
+			auditPolicy := `
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: None
+  nonResourceURLs:
+  - /
+  verb: ["get"]
+`
+			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			Expect(err).To(HaveOccurred())
+			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
+			Expect(err.Error()).To(ContainSubstring("failed to decode the provided audit policy"))
 		})
 	})
 })
