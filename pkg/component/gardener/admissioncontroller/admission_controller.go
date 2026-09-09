@@ -67,8 +67,6 @@ type Values struct {
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the admission controller.
 type AutoscalingConfig struct {
-	// Replicas is the number of pod replicas for the admission controller.
-	Replicas *int32
 	// MinReplicas are the minimum Replicas for horizontal autoscaling.
 	MinReplicas int32
 	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
