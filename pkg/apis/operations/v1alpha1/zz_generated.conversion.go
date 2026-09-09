@@ -12,11 +12,7 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operations "github.com/gardener/gardener/pkg/apis/operations"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -114,7 +110,7 @@ func Convert_operations_Bastion_To_v1alpha1_Bastion(in *operations.Bastion, out 
 }
 
 func autoConvert_v1alpha1_BastionIngressPolicy_To_operations_BastionIngressPolicy(in *BastionIngressPolicy, out *operations.BastionIngressPolicy, s conversion.Scope) error {
-	out.IPBlock = in.IPBlock
+	*out = *(*operations.BastionIngressPolicy)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -124,7 +120,7 @@ func Convert_v1alpha1_BastionIngressPolicy_To_operations_BastionIngressPolicy(in
 }
 
 func autoConvert_operations_BastionIngressPolicy_To_v1alpha1_BastionIngressPolicy(in *operations.BastionIngressPolicy, out *BastionIngressPolicy, s conversion.Scope) error {
-	out.IPBlock = in.IPBlock
+	*out = *(*BastionIngressPolicy)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -156,11 +152,7 @@ func Convert_operations_BastionList_To_v1alpha1_BastionList(in *operations.Basti
 }
 
 func autoConvert_v1alpha1_BastionSpec_To_operations_BastionSpec(in *BastionSpec, out *operations.BastionSpec, s conversion.Scope) error {
-	out.ShootRef = in.ShootRef
-	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
-	out.ProviderType = (*string)(unsafe.Pointer(in.ProviderType))
-	out.SSHPublicKey = in.SSHPublicKey
-	out.Ingress = *(*[]operations.BastionIngressPolicy)(unsafe.Pointer(&in.Ingress))
+	*out = *(*operations.BastionSpec)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -170,11 +162,7 @@ func Convert_v1alpha1_BastionSpec_To_operations_BastionSpec(in *BastionSpec, out
 }
 
 func autoConvert_operations_BastionSpec_To_v1alpha1_BastionSpec(in *operations.BastionSpec, out *BastionSpec, s conversion.Scope) error {
-	out.ShootRef = in.ShootRef
-	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
-	out.ProviderType = (*string)(unsafe.Pointer(in.ProviderType))
-	out.SSHPublicKey = in.SSHPublicKey
-	out.Ingress = *(*[]BastionIngressPolicy)(unsafe.Pointer(&in.Ingress))
+	*out = *(*BastionSpec)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -184,11 +172,7 @@ func Convert_operations_BastionSpec_To_v1alpha1_BastionSpec(in *operations.Basti
 }
 
 func autoConvert_v1alpha1_BastionStatus_To_operations_BastionStatus(in *BastionStatus, out *operations.BastionStatus, s conversion.Scope) error {
-	out.Ingress = (*v1.LoadBalancerIngress)(unsafe.Pointer(in.Ingress))
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
-	out.LastHeartbeatTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTimestamp))
-	out.ExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ExpirationTimestamp))
-	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
+	*out = *(*operations.BastionStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -198,11 +182,7 @@ func Convert_v1alpha1_BastionStatus_To_operations_BastionStatus(in *BastionStatu
 }
 
 func autoConvert_operations_BastionStatus_To_v1alpha1_BastionStatus(in *operations.BastionStatus, out *BastionStatus, s conversion.Scope) error {
-	out.Ingress = (*v1.LoadBalancerIngress)(unsafe.Pointer(in.Ingress))
-	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
-	out.LastHeartbeatTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTimestamp))
-	out.ExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ExpirationTimestamp))
-	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
+	*out = *(*BastionStatus)(unsafe.Pointer(in))
 	return nil
 }
 

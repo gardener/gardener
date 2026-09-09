@@ -13,11 +13,11 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// Gardenlets returns a GardenletInformer.
-	Gardenlets() GardenletInformer
+	Gardenlets() TypedGardenletInformer
 	// ManagedSeeds returns a ManagedSeedInformer.
-	ManagedSeeds() ManagedSeedInformer
+	ManagedSeeds() TypedManagedSeedInformer
 	// ManagedSeedSets returns a ManagedSeedSetInformer.
-	ManagedSeedSets() ManagedSeedSetInformer
+	ManagedSeedSets() TypedManagedSeedSetInformer
 }
 
 type version struct {
@@ -31,17 +31,17 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// Gardenlets returns a GardenletInformer.
-func (v *version) Gardenlets() GardenletInformer {
+// Gardenlets returns a TypedGardenletInformer.
+func (v *version) Gardenlets() TypedGardenletInformer {
 	return &gardenletInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ManagedSeeds returns a ManagedSeedInformer.
-func (v *version) ManagedSeeds() ManagedSeedInformer {
+// ManagedSeeds returns a TypedManagedSeedInformer.
+func (v *version) ManagedSeeds() TypedManagedSeedInformer {
 	return &managedSeedInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ManagedSeedSets returns a ManagedSeedSetInformer.
-func (v *version) ManagedSeedSets() ManagedSeedSetInformer {
+// ManagedSeedSets returns a TypedManagedSeedSetInformer.
+func (v *version) ManagedSeedSets() TypedManagedSeedSetInformer {
 	return &managedSeedSetInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

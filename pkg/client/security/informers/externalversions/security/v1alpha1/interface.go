@@ -13,9 +13,9 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// CredentialsBindings returns a CredentialsBindingInformer.
-	CredentialsBindings() CredentialsBindingInformer
+	CredentialsBindings() TypedCredentialsBindingInformer
 	// WorkloadIdentities returns a WorkloadIdentityInformer.
-	WorkloadIdentities() WorkloadIdentityInformer
+	WorkloadIdentities() TypedWorkloadIdentityInformer
 }
 
 type version struct {
@@ -29,12 +29,12 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// CredentialsBindings returns a CredentialsBindingInformer.
-func (v *version) CredentialsBindings() CredentialsBindingInformer {
+// CredentialsBindings returns a TypedCredentialsBindingInformer.
+func (v *version) CredentialsBindings() TypedCredentialsBindingInformer {
 	return &credentialsBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// WorkloadIdentities returns a WorkloadIdentityInformer.
-func (v *version) WorkloadIdentities() WorkloadIdentityInformer {
+// WorkloadIdentities returns a TypedWorkloadIdentityInformer.
+func (v *version) WorkloadIdentities() TypedWorkloadIdentityInformer {
 	return &workloadIdentityInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -22,11 +22,39 @@ import (
 )
 
 // ShootInformer provides access to a shared informer and lister for
-// Shoots.
+// Shoots. Prefer using the type-safe variant (see [TypedShootInformer]).
 type ShootInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.ShootLister
 }
+
+// TypedShootInformer provides access to a shared informer and lister for
+// Shoots, including the type-safe TypedInformer variant.
+// It is a superset of ShootInformer.
+type TypedShootInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ShootIndexInformer
+	Lister() corev1beta1.ShootLister
+}
+
+// ShootIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ShootIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.Shoot]
+
+// ShootHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Shoot.
+type ShootHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.Shoot]
+
+// ShootDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Shoot.
+type ShootDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.Shoot]
+
+// ShootFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Shoot.
+type ShootFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.Shoot]
+
+// ShootIndexers is a specialization of [cache.TypedIndexers] for Shoot.
+type ShootIndexers = cache.TypedIndexers[*apiscorev1beta1.Shoot]
+
+// DeletedShoot is a specialization of [cache.DeletedObject] for Shoot.
+type DeletedShoot = cache.DeletedObject[*apiscorev1beta1.Shoot]
 
 type shootInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type shootInformer struct {
 // NewShootInformer constructs a new informer for Shoot type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedShootInformer]).
 func NewShootInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewShootInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedShootInformer constructs a new informer for Shoot type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedShootInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers ShootIndexers) ShootIndexInformer {
+	return NewTypedShootInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredShootInformer constructs a new informer for Shoot type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredShootInformer]).
 func NewFilteredShootInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewShootInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedShootInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredShootInformer constructs a new informer for Shoot type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredShootInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers ShootIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ShootIndexInformer {
+	return NewTypedShootInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewShootInformerWithOptions constructs a new informer for Shoot type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedShootInformerWithOptions]).
 func NewShootInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedShootInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedShootInformerWithOptions constructs a new informer for Shoot type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedShootInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) ShootIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "shoots"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Shoot](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewShootInformerWithOptions(client versioned.Interface, namespace string, o
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *shootInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewShootInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedShootInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *shootInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.Shoot{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *shootInformer) TypedInformer() ShootIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Shoot](f.factory.InformerFor(&apiscorev1beta1.Shoot{}, f.defaultInformer))
 }
 
 func (f *shootInformer) Lister() corev1beta1.ShootLister {
 	return corev1beta1.NewShootLister(f.Informer().GetIndexer())
+}
+
+// ToTypedShootInformer converts an untyped informer into a TypedShootInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Shoot. If that is not the case, calling type-safe methods of the returned
+// TypedShootInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedShootInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedShootInformer(informer ShootInformer) TypedShootInformer {
+	if informer, ok := informer.(TypedShootInformer); ok {
+		return informer
+	}
+	return &shootTypedInformerAdapter{informer}
+}
+
+type shootTypedInformerAdapter struct {
+	ShootInformer
+}
+
+func (a *shootTypedInformerAdapter) TypedInformer() ShootIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Shoot](a.Informer())
+}
+
+// ToShootIndexInformer converts an untyped informer into a ShootIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Shoot. If that is not the case, calling type-safe methods of the returned
+// ShootIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ShootIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToShootIndexInformer(informer cache.SharedIndexInformer) ShootIndexInformer {
+	if informer, ok := informer.(ShootIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Shoot](informer)
 }

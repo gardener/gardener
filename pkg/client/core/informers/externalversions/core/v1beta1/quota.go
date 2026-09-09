@@ -22,11 +22,39 @@ import (
 )
 
 // QuotaInformer provides access to a shared informer and lister for
-// Quotas.
+// Quotas. Prefer using the type-safe variant (see [TypedQuotaInformer]).
 type QuotaInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.QuotaLister
 }
+
+// TypedQuotaInformer provides access to a shared informer and lister for
+// Quotas, including the type-safe TypedInformer variant.
+// It is a superset of QuotaInformer.
+type TypedQuotaInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() QuotaIndexInformer
+	Lister() corev1beta1.QuotaLister
+}
+
+// QuotaIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type QuotaIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.Quota]
+
+// QuotaHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Quota.
+type QuotaHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.Quota]
+
+// QuotaDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Quota.
+type QuotaDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.Quota]
+
+// QuotaFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Quota.
+type QuotaFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.Quota]
+
+// QuotaIndexers is a specialization of [cache.TypedIndexers] for Quota.
+type QuotaIndexers = cache.TypedIndexers[*apiscorev1beta1.Quota]
+
+// DeletedQuota is a specialization of [cache.DeletedObject] for Quota.
+type DeletedQuota = cache.DeletedObject[*apiscorev1beta1.Quota]
 
 type quotaInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type quotaInformer struct {
 // NewQuotaInformer constructs a new informer for Quota type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedQuotaInformer]).
 func NewQuotaInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewQuotaInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedQuotaInformer constructs a new informer for Quota type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedQuotaInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers QuotaIndexers) QuotaIndexInformer {
+	return NewTypedQuotaInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredQuotaInformer constructs a new informer for Quota type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredQuotaInformer]).
 func NewFilteredQuotaInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewQuotaInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedQuotaInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredQuotaInformer constructs a new informer for Quota type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredQuotaInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers QuotaIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) QuotaIndexInformer {
+	return NewTypedQuotaInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewQuotaInformerWithOptions constructs a new informer for Quota type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedQuotaInformerWithOptions]).
 func NewQuotaInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedQuotaInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedQuotaInformerWithOptions constructs a new informer for Quota type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedQuotaInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) QuotaIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "quotas"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Quota](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewQuotaInformerWithOptions(client versioned.Interface, namespace string, o
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *quotaInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewQuotaInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedQuotaInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *quotaInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.Quota{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *quotaInformer) TypedInformer() QuotaIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Quota](f.factory.InformerFor(&apiscorev1beta1.Quota{}, f.defaultInformer))
 }
 
 func (f *quotaInformer) Lister() corev1beta1.QuotaLister {
 	return corev1beta1.NewQuotaLister(f.Informer().GetIndexer())
+}
+
+// ToTypedQuotaInformer converts an untyped informer into a TypedQuotaInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Quota. If that is not the case, calling type-safe methods of the returned
+// TypedQuotaInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedQuotaInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedQuotaInformer(informer QuotaInformer) TypedQuotaInformer {
+	if informer, ok := informer.(TypedQuotaInformer); ok {
+		return informer
+	}
+	return &quotaTypedInformerAdapter{informer}
+}
+
+type quotaTypedInformerAdapter struct {
+	QuotaInformer
+}
+
+func (a *quotaTypedInformerAdapter) TypedInformer() QuotaIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Quota](a.Informer())
+}
+
+// ToQuotaIndexInformer converts an untyped informer into a QuotaIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Quota. If that is not the case, calling type-safe methods of the returned
+// QuotaIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a QuotaIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToQuotaIndexInformer(informer cache.SharedIndexInformer) QuotaIndexInformer {
+	if informer, ok := informer.(QuotaIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Quota](informer)
 }
