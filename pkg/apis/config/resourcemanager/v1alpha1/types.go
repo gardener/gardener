@@ -19,7 +19,7 @@ type ResourceManagerConfiguration struct {
 	// SourceClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the source apiserver.
 	// +optional
-	SourceClientConnection ClientConnection `json:"sourceClientConnection"`
+	SourceClientConnection ClientConnection `json:"sourceClientConnection,omitempty"`
 	// TargetClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the target apiserver.
 	// +optional

@@ -347,10 +347,10 @@ type ShootMaintenanceControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// EnableShootControlPlaneRestarter configures whether adequate pods of the shoot control plane are restarted during maintenance.
 	// +optional
-	EnableShootControlPlaneRestarter *bool `json:"enableShootControlPlaneRestarter"`
+	EnableShootControlPlaneRestarter *bool `json:"enableShootControlPlaneRestarter,omitempty"`
 	// EnableShootCoreAddonRestarter configures whether some core addons to be restarted during maintenance.
 	// +optional
-	EnableShootCoreAddonRestarter *bool `json:"enableShootCoreAddonRestarter"`
+	EnableShootCoreAddonRestarter *bool `json:"enableShootCoreAddonRestarter,omitempty"`
 }
 
 // ShootQuotaControllerConfiguration defines the configuration of the

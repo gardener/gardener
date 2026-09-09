@@ -34,7 +34,7 @@ type BackupBucket struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec BackupBucketSpec `json:"spec"`
 	// +optional
-	Status BackupBucketStatus `json:"status"`
+	Status BackupBucketStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.
