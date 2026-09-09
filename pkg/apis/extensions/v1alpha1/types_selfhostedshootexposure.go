@@ -34,7 +34,7 @@ type SelfHostedShootExposure struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec SelfHostedShootExposureSpec `json:"spec"`
 	// +optional
-	Status SelfHostedShootExposureStatus `json:"status"`
+	Status SelfHostedShootExposureStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.
