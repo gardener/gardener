@@ -7,6 +7,7 @@ package secretsrotation_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -15,20 +16,24 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	storagemigrationv1 "k8s.io/api/storagemigration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ETCD", func() {
@@ -308,6 +313,124 @@ var _ = Describe("ETCD", func() {
 		})
 	})
 
+	Describe("#CleanupStorageVersionMigrationObjects", func() {
+		It("should delete SVMs with the rotation label and preserve SVMs without it", func() {
+			svmWithLabel := &storagemigrationv1.StorageVersionMigration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "svm-with-label",
+					Labels: map[string]string{"credentials.gardener.cloud/key-name": "some-key"},
+				},
+			}
+			svmWithoutLabel := &storagemigrationv1.StorageVersionMigration{
+				ObjectMeta: metav1.ObjectMeta{Name: "svm-without-label"},
+			}
+			Expect(targetClient.Create(ctx, svmWithLabel)).To(Succeed())
+			Expect(targetClient.Create(ctx, svmWithoutLabel)).To(Succeed())
+
+			Expect(CleanupStorageVersionMigrationObjects(ctx, fakeTargetInterface)).To(Succeed())
+
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(svmWithLabel), svmWithLabel)).To(BeNotFoundError())
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(svmWithoutLabel), svmWithoutLabel)).To(Succeed())
+		})
+	})
+
+	Describe("#CreateStorageVersionMigrationResourcesAndWaitForCompletion", func() {
+		var (
+			// "configmaps" and the custom resource "crontabs.stable.example.com" come from resources;
+			// "secrets" comes from defaultGRs. Together they produce three SVMs.
+			resources         = []string{"configmaps", "crontabs.stable.example.com"}
+			defaultGRs        []schema.GroupResource
+			etcdKeySecretName = "kube-apiserver-etcd-encryption-key-current"
+			svmNames          = []string{"gardener-rewrite-configmaps", "gardener-rewrite-secrets", "gardener-rewrite-stable.example.com-crontabs"}
+		)
+
+		BeforeEach(func() {
+			defaultGRs = []schema.GroupResource{corev1.Resource("secrets")}
+			StorageVersionMigrationWaitTimeout = 2 * time.Second
+			StorageVersionMigrationRetryInterval = 10 * time.Millisecond
+		})
+
+		AfterEach(func() {
+			StorageVersionMigrationWaitTimeout = 5 * time.Minute
+			StorageVersionMigrationRetryInterval = 30 * time.Second
+		})
+
+		It("should return error when ETCD encryption key secret is not found", func() {
+			err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)
+			Expect(err).To(MatchError(ContainSubstring("not found")))
+		})
+
+		It("should return error when discovery fails", func() {
+			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      etcdKeySecretName,
+				Namespace: kubeAPIServerNamespace,
+			}})).To(Succeed())
+			fakeDiscoveryClient.err = fmt.Errorf("connection refused")
+
+			err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)
+			Expect(err).To(MatchError(ContainSubstring("error discovering server preferred resources")))
+		})
+
+		Context("with ETCD encryption key secret present", func() {
+			BeforeEach(func() {
+				Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:      etcdKeySecretName,
+					Namespace: kubeAPIServerNamespace,
+				}})).To(Succeed())
+			})
+
+			It("should succeed when SVMs already exist with the current key label and MigrationSucceeded condition", func() {
+				for _, name := range svmNames {
+					svm := &storagemigrationv1.StorageVersionMigration{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   name,
+							Labels: map[string]string{"credentials.gardener.cloud/key-name": etcdKeySecretName},
+						},
+						Status: storagemigrationv1.StorageVersionMigrationStatus{
+							Conditions: []metav1.Condition{
+								{Type: string(storagemigrationv1.MigrationSucceeded), Status: metav1.ConditionTrue},
+							},
+						},
+					}
+					Expect(targetClient.Create(ctx, svm)).To(Succeed())
+				}
+
+				Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)).To(Succeed())
+			})
+
+			It("should create SVMs with rotation label and succeed when migrations complete", func() {
+				// Simulate the storage-version-migrator-controller marking each SVM as succeeded on creation.
+				targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						if svm, ok := obj.(*storagemigrationv1.StorageVersionMigration); ok {
+							svm.Status.Conditions = []metav1.Condition{
+								{Type: string(storagemigrationv1.MigrationSucceeded), Status: metav1.ConditionTrue},
+							}
+						}
+						return c.Create(ctx, obj, opts...)
+					},
+				}).Build()
+				fakeTargetInterface = fakekubernetes.NewClientSetBuilder().WithKubernetes(test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)).WithClient(targetClient).Build()
+
+				Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)).To(Succeed())
+
+				for _, name := range svmNames {
+					svm := &storagemigrationv1.StorageVersionMigration{}
+					Expect(targetClient.Get(ctx, client.ObjectKey{Name: name}, svm)).To(Succeed())
+					Expect(svm.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", etcdKeySecretName))
+				}
+			})
+
+			It("should return error when migration does not complete before context deadline", func() {
+				timeoutCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+				defer cancel()
+
+				err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(timeoutCtx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)
+				Expect(err).To(MatchError(ContainSubstring("error while waiting for StorageVersionMigration")))
+			})
+		})
+	})
+
 	Describe("GetResourcesForRewrite", func() {
 		It("should return the correct GVK list when the resources to encrypt and encrypted resources are equal (encryption key rotation)", func() {
 			var (
@@ -447,6 +570,33 @@ var _ = Describe("ETCD", func() {
 			))
 		})
 	})
+
+	Describe("#GetStorageVersionMigrationNameForGR", func() {
+		DescribeTable("should format the name correctly",
+			func(gr schema.GroupResource, expected string) {
+				Expect(GetStorageVersionMigrationNameForGR(gr)).To(Equal(expected))
+			},
+			Entry("core group (empty)", schema.GroupResource{Group: "", Resource: "secrets"}, "gardener-rewrite-secrets"),
+			Entry("non-empty group", schema.GroupResource{Group: "apps", Resource: "deployments"}, "gardener-rewrite-apps-deployments"),
+			Entry("name exceeding 63 chars is truncated with SHA256 suffix", schema.GroupResource{Group: "very.long.group.example.com", Resource: "verylongresourcename"},
+				func() string {
+					name := "gardener-rewrite-very.long.group.example.com-verylongresourcename"
+					return name[:57] + "-" + gardenerutils.ComputeSHA256Hex([]byte(name))[:5]
+				}(),
+			),
+		)
+	})
+
+	Describe("#GetStorageVersionMigrationNameForGVK", func() {
+		DescribeTable("should format the name correctly",
+			func(gvk schema.GroupVersionKind, expected string) {
+				Expect(GetStorageVersionMigrationNameForGVK(gvk)).To(Equal(expected))
+			},
+			Entry("core group (empty)", schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}, "rewrite-v1-Secret"),
+			Entry("apps group", schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}, "rewrite-apps-v1-Deployment"),
+			Entry("custom group", schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"}, "rewrite-stable.example.com-v1-CronTab"),
+		)
+	})
 })
 
 type fakeDiscoveryWithServerPreferredResources struct {
@@ -454,6 +604,25 @@ type fakeDiscoveryWithServerPreferredResources struct {
 
 	// err is returned alongside the resource lists (simulates partial discovery failures).
 	err error
+}
+
+func (c *fakeDiscoveryWithServerPreferredResources) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
+	lists, err := c.ServerPreferredResources()
+
+	groups := make([]*metav1.APIGroup, 0, len(lists))
+	for _, list := range lists {
+		gv, parseErr := schema.ParseGroupVersion(list.GroupVersion)
+		if parseErr != nil {
+			continue
+		}
+		groups = append(groups, &metav1.APIGroup{
+			Name: gv.Group,
+			Versions: []metav1.GroupVersionForDiscovery{
+				{GroupVersion: list.GroupVersion, Version: gv.Version},
+			},
+		})
+	}
+	return groups, lists, err
 }
 
 func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
@@ -467,6 +636,14 @@ func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() (
 					Group:      corev1.SchemeGroupVersion.Group,
 					Version:    corev1.SchemeGroupVersion.Version,
 					Kind:       "ConfigMap",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:       "secrets",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "Secret",
 					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
 				},
 				{
