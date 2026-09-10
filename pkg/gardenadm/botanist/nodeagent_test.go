@@ -204,128 +204,120 @@ var _ = Describe("NodeAgent", func() {
 			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(MatchError(Equal(fmt.Sprintf("no certificate signing request found for gardener-node-agent from username %q", fooUsername))))
 		})
 
-		It("should approve the CSR when not already approved", func() {
-			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
+		When("a bootstrap token and a gardener-node-agent CSR request exist", func() {
+			var csrData []byte
 
-			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
-			Expect(err).NotTo(HaveOccurred())
-			certificateSubject := &pkix.Name{
-				CommonName: "gardener.cloud:node-agent:machine:" + hostName,
-			}
-			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, []string{}, []net.IP{})
-			Expect(err).NotTo(HaveOccurred())
+			BeforeEach(func() {
+				Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
 
-			csr := &certificatesv1.CertificateSigningRequest{
-				ObjectMeta: metav1.ObjectMeta{Name: "csr"},
-				Spec: certificatesv1.CertificateSigningRequestSpec{
-					Username:   fooUsername,
-					Request:    csrData,
-					SignerName: certificatesv1.KubeAPIServerClientSignerName,
-				},
-			}
-			Expect(fakeSeedClient.Create(ctx, csr)).To(Succeed())
+				privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
+				Expect(err).NotTo(HaveOccurred())
+				certificateSubject := &pkix.Name{
+					CommonName: "gardener.cloud:node-agent:machine:" + hostName,
+				}
+				csrData, err = certutil.MakeCSR(privateKey, certificateSubject, []string{}, []net.IP{})
+				Expect(err).NotTo(HaveOccurred())
+			})
 
-			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
+			It("should approve the CSR when not already approved", func() {
+				csr := &certificatesv1.CertificateSigningRequest{
+					ObjectMeta: metav1.ObjectMeta{Name: "csr"},
+					Spec: certificatesv1.CertificateSigningRequestSpec{
+						Username:   fooUsername,
+						Request:    csrData,
+						SignerName: certificatesv1.KubeAPIServerClientSignerName,
+					},
+				}
+				Expect(fakeSeedClient.Create(ctx, csr)).To(Succeed())
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-			Expect(csr.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
-				Type:    certificatesv1.CertificateApproved,
-				Status:  corev1.ConditionTrue,
-				Reason:  "RequestApproved",
-				Message: "Approving gardener-node-agent client certificate signing request via gardenadm",
-			}))
-		})
+				Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
 
-		It("should approve all pending CSRs and not stop at the first already approved one", func() {
-			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+				Expect(csr.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
+					Type:    certificatesv1.CertificateApproved,
+					Status:  corev1.ConditionTrue,
+					Reason:  "RequestApproved",
+					Message: "Approving gardener-node-agent client certificate signing request via gardenadm",
+				}))
+			})
 
-			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
-			Expect(err).NotTo(HaveOccurred())
-			certificateSubject := &pkix.Name{
-				CommonName: "gardener.cloud:node-agent:machine:" + hostName,
-			}
-			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, []string{}, []net.IP{})
-			Expect(err).NotTo(HaveOccurred())
+			It("should approve all pending CSRs and not stop at the first already approved one", func() {
+				approvedCSR := &certificatesv1.CertificateSigningRequest{
+					ObjectMeta: metav1.ObjectMeta{Name: "csr-approved"},
+					Spec: certificatesv1.CertificateSigningRequestSpec{
+						Username:   fooUsername,
+						Request:    csrData,
+						SignerName: certificatesv1.KubeAPIServerClientSignerName,
+					},
+				}
+				Expect(fakeSeedClient.Create(ctx, approvedCSR)).To(Succeed())
+				approvedCSR.Status.Conditions = []certificatesv1.CertificateSigningRequestCondition{{
+					Type:   certificatesv1.CertificateApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "AlreadyApproved",
+				}}
+				Expect(fakeSeedClient.SubResource("approval").Update(ctx, approvedCSR)).To(Succeed())
 
-			approvedCSR := &certificatesv1.CertificateSigningRequest{
-				ObjectMeta: metav1.ObjectMeta{Name: "csr-approved"},
-				Spec: certificatesv1.CertificateSigningRequestSpec{
-					Username:   fooUsername,
-					Request:    csrData,
-					SignerName: certificatesv1.KubeAPIServerClientSignerName,
-				},
-			}
-			Expect(fakeSeedClient.Create(ctx, approvedCSR)).To(Succeed())
-			approvedCSR.Status.Conditions = []certificatesv1.CertificateSigningRequestCondition{{
-				Type:   certificatesv1.CertificateApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "AlreadyApproved",
-			}}
-			Expect(fakeSeedClient.SubResource("approval").Update(ctx, approvedCSR)).To(Succeed())
+				var pendingCSRs []*certificatesv1.CertificateSigningRequest
+				for _, name := range []string{"csr-pending-1", "csr-pending-2"} {
+					pendingCSR := &certificatesv1.CertificateSigningRequest{
+						ObjectMeta: metav1.ObjectMeta{Name: name},
+						Spec: certificatesv1.CertificateSigningRequestSpec{
+							Username:   fooUsername,
+							Request:    csrData,
+							SignerName: certificatesv1.KubeAPIServerClientSignerName,
+						},
+					}
+					Expect(fakeSeedClient.Create(ctx, pendingCSR)).To(Succeed())
+					pendingCSRs = append(pendingCSRs, pendingCSR)
+				}
 
-			pendingCSR := &certificatesv1.CertificateSigningRequest{
-				ObjectMeta: metav1.ObjectMeta{Name: "csr-pending"},
-				Spec: certificatesv1.CertificateSigningRequestSpec{
-					Username:   fooUsername,
-					Request:    csrData,
-					SignerName: certificatesv1.KubeAPIServerClientSignerName,
-				},
-			}
-			Expect(fakeSeedClient.Create(ctx, pendingCSR)).To(Succeed())
+				Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
 
-			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
+				for _, pendingCSR := range pendingCSRs {
+					Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(pendingCSR), pendingCSR)).To(Succeed())
+					Expect(pendingCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
+						Type:    certificatesv1.CertificateApproved,
+						Status:  corev1.ConditionTrue,
+						Reason:  "RequestApproved",
+						Message: "Approving gardener-node-agent client certificate signing request via gardenadm",
+					}))
+				}
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(pendingCSR), pendingCSR)).To(Succeed())
-			Expect(pendingCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
-				Type:    certificatesv1.CertificateApproved,
-				Status:  corev1.ConditionTrue,
-				Reason:  "RequestApproved",
-				Message: "Approving gardener-node-agent client certificate signing request via gardenadm",
-			}))
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(approvedCSR), approvedCSR)).To(Succeed())
+				Expect(approvedCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
+					Type:   certificatesv1.CertificateApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "AlreadyApproved",
+				}))
+			})
 
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(approvedCSR), approvedCSR)).To(Succeed())
-			Expect(approvedCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
-				Type:   certificatesv1.CertificateApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "AlreadyApproved",
-			}))
-		})
+			It("should return nil when the only matching CSR is already approved", func() {
+				approvedCSR := &certificatesv1.CertificateSigningRequest{
+					ObjectMeta: metav1.ObjectMeta{Name: "csr-approved"},
+					Spec: certificatesv1.CertificateSigningRequestSpec{
+						Username:   fooUsername,
+						Request:    csrData,
+						SignerName: certificatesv1.KubeAPIServerClientSignerName,
+					},
+				}
+				Expect(fakeSeedClient.Create(ctx, approvedCSR)).To(Succeed())
+				approvedCSR.Status.Conditions = []certificatesv1.CertificateSigningRequestCondition{{
+					Type:   certificatesv1.CertificateApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "AlreadyApproved",
+				}}
+				Expect(fakeSeedClient.SubResource("approval").Update(ctx, approvedCSR)).To(Succeed())
 
-		It("should return nil when the only matching CSR is already approved", func() {
-			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
+				Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
 
-			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
-			Expect(err).NotTo(HaveOccurred())
-			certificateSubject := &pkix.Name{
-				CommonName: "gardener.cloud:node-agent:machine:" + hostName,
-			}
-			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, []string{}, []net.IP{})
-			Expect(err).NotTo(HaveOccurred())
-
-			approvedCSR := &certificatesv1.CertificateSigningRequest{
-				ObjectMeta: metav1.ObjectMeta{Name: "csr-approved"},
-				Spec: certificatesv1.CertificateSigningRequestSpec{
-					Username:   fooUsername,
-					Request:    csrData,
-					SignerName: certificatesv1.KubeAPIServerClientSignerName,
-				},
-			}
-			Expect(fakeSeedClient.Create(ctx, approvedCSR)).To(Succeed())
-			approvedCSR.Status.Conditions = []certificatesv1.CertificateSigningRequestCondition{{
-				Type:   certificatesv1.CertificateApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "AlreadyApproved",
-			}}
-			Expect(fakeSeedClient.SubResource("approval").Update(ctx, approvedCSR)).To(Succeed())
-
-			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
-
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(approvedCSR), approvedCSR)).To(Succeed())
-			Expect(approvedCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
-				Type:   certificatesv1.CertificateApproved,
-				Status: corev1.ConditionTrue,
-				Reason: "AlreadyApproved",
-			}))
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(approvedCSR), approvedCSR)).To(Succeed())
+				Expect(approvedCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
+					Type:   certificatesv1.CertificateApproved,
+					Status: corev1.ConditionTrue,
+					Reason: "AlreadyApproved",
+				}))
+			})
 		})
 
 		It("should not approve the CSR and return an error if the CSR is not for gardener-node-agent", func() {
