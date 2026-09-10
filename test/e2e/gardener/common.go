@@ -70,6 +70,10 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		Type: new("calico"),
 		// Must be within 10.0.0.0/16 (subnet of kind pod CIDR 10.0.0.0/15, but disjoint with seed pod CIDR 10.1.0.0/16).
 		Nodes: new("10.0.0.0/16"),
+		// Disable calico-typha: during data plane rolls (e.g. HA zone updates, control plane migration) Typha's
+		// watcher cache can block resync for 30m after a transient kube-apiserver outage, leaving newly rolled pods
+		// with unprogrammed network interfaces. Without Typha, Felix watches the kube-apiserver directly.
+		ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"typha":{"enabled":false}}`)},
 	}
 	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker("local", nil))
 	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{Type: "local-ext-shoot-after-worker"})
@@ -78,7 +82,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 		// Must be within fd00:10:1:100::/56 (subnet of kind pod CIDR fd00:10:1::/48, but disjoint with seed pod CIDR fd00:10:1::/56).
 		shoot.Spec.Networking.Nodes = new("fd00:10:1:100::/56")
-		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
+		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"typha":{"enabled":false},"ipv6":{"sourceNATEnabled":true}}`)}
 	}
 
 	return shoot
