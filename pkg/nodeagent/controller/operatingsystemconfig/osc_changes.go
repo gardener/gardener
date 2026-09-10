@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/afero"
 	"sigs.k8s.io/yaml"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -98,7 +99,7 @@ func (o *operatingSystemConfigChanges) persist() error {
 	if err != nil {
 		return fmt.Errorf("failed marshalling the changes into YAML: %w", err)
 	}
-	return o.fs.WriteFile(lastComputedOperatingSystemConfigChangesFilePath, out, 0600)
+	return o.fs.WriteFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigChecksumFilePath, out, 0600)
 }
 
 func (o *operatingSystemConfigChanges) setMustRestartNodeAgent(restart bool) error {
@@ -291,9 +292,9 @@ func (o *operatingSystemConfigChanges) completedContainerdRegistriesDeleted(upst
 }
 
 func loadOSCChanges(fs afero.Afero) (*operatingSystemConfigChanges, error) {
-	raw, err := fs.ReadFile(lastComputedOperatingSystemConfigChangesFilePath)
+	raw, err := fs.ReadFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigChecksumFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading changes file %s: %w", lastComputedOperatingSystemConfigChangesFilePath, err)
+		return nil, fmt.Errorf("failed reading changes file %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigChecksumFilePath, err)
 	}
 
 	changes := operatingSystemConfigChanges{}

@@ -63,8 +63,6 @@ import (
 )
 
 const (
-	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
-
 	annotationUpdatingOperatingSystemVersion = "node-agent.gardener.cloud/updating-operating-system-version"
 	pathKubeletCPUManagerPolicyState         = kubeletcomponent.PathKubeletDirectory + "/cpu_manager_state"
 )
