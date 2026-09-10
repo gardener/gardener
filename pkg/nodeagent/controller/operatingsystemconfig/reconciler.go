@@ -813,6 +813,18 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return nil
 	}
 
+	// Perform credentials rotation before the OS update, never after.
+	//
+	// A GardenLinux in-place OS update wipes the node's /etc overlay on reboot, which takes
+	// last-applied-osc.yaml and last-computed-osc-changes.yaml with it. That is intentional: it forces
+	// gardener-node-agent to re-apply the whole OperatingSystemConfig from scratch onto the fresh /etc.
+	// The side effect is that any pending credentials rotation recorded in that state is lost across the
+	// reboot. By rotating first, the rotation is completed and its result is captured when the post-update
+	// reconcile writes the new last-applied-osc.yaml, so nothing is dropped by the wipe.
+	if err := r.performCredentialsRotationInPlace(ctx, log, oscChanges, node); err != nil {
+		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
+	}
+
 	// This means that the OS was not updated in-place and it rolled back to the previous version but a newer version is not yet applied.
 	if lastAttemptedUpdateVersion, osUpdateAnnotationExists := node.Annotations[annotationUpdatingOperatingSystemVersion]; osUpdateAnnotationExists && oscChanges.InPlaceUpdates.OperatingSystem {
 		lastAttemptedUpdateVersionIsSameAsDesired, err := versionutils.CompareVersions(lastAttemptedUpdateVersion, "=", osc.Spec.InPlaceUpdates.OperatingSystemVersion)
@@ -853,10 +865,6 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		} else if !osVersionUpToDate {
 			return reconcile.TerminalError(fmt.Errorf("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: %q, Desired version: %q", *currentOSVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion))
 		}
-	}
-
-	if err := r.performCredentialsRotationInPlace(ctx, log, oscChanges, node); err != nil {
-		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
 	}
 
 	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
