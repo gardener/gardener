@@ -9,11 +9,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
@@ -25,6 +27,9 @@ const ControllerName = "lease"
 func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.Predicate) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
+	}
+	if r.APIReader == nil {
+		r.APIReader = mgr.GetAPIReader()
 	}
 	if r.LeaseDurationSeconds == 0 {
 		r.LeaseDurationSeconds = 40
@@ -43,6 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			ReconciliationTimeout:   time.Duration(r.LeaseDurationSeconds) * time.Second,
+			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Millisecond, time.Duration(r.LeaseDurationSeconds)*time.Second/8),
 		}).
 		Complete(r)
 }
