@@ -128,3 +128,32 @@ spec:
           - path: "/spec/units/{{elementIndex}}/dropIns"
             op: add
             value: [{"name":"start-seed-registry-cache.conf","content":"{{startDropIn|base64_decode(@)}}"}]
+  - name: add-registry-etc-setup-hook-to-osc
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    context:
+    - name: etcSetupHook
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."etc-setup-hook.sh"'
+    preconditions:
+      all:
+      # Only relevant for in-place update capable OSCs (those carry an InPlaceUpdates section). This also
+      # keeps the provision OSC (bootstrap userdata, no /etc wipe) untouched.
+      - key: "{{ request.object.spec.inPlaceUpdates || '' }}"
+        operator: NotEquals
+        value: ""
+      - key: "{{ request.object.spec.files[?path=='/var/lib/gardenlinux/etc-setup-hooks/0-registry'] | length(@) }}"
+        operator: Equals
+        value: 0
+    mutate:
+      # The etc-setup hook restores the seed-registry-cache /etc wiring (hosts.toml + the GNA
+      # ExecStartPre drop-in) after the /etc overlay is wiped during an in-place OS upgrade. It is
+      # installed at 0-registry so it runs BEFORE the extension's 00-gardener hook.
+      patchesJson6902: |-
+        - path: "/spec/files/-"
+          op: add
+          value: {"content":{"inline":{"data":"{{etcSetupHook}}","encoding":"b64"}},"path":"/var/lib/gardenlinux/etc-setup-hooks/0-registry","permissions":0755}
