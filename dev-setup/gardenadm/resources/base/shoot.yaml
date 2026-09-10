@@ -55,4 +55,10 @@ spec:
       failSwapOn: false # Swap is not supported in our kindest/node machine pods.
   networking:
     type: calico
+    # Disable calico-typha so Felix watches the kube-apiserver directly. Typha's watcher cache can block resync for
+    # 30m after a transient kube-apiserver outage (e.g. during data plane rolls), leaving newly rolled pods with
+    # unprogrammed network interfaces.
+    providerConfig:
+      typha:
+        enabled: false
   # network ranges get injected via patches in overlays based on scenario
