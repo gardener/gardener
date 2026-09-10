@@ -117,6 +117,39 @@ stringData:
     ctr task kill seed-registry-cache
     ctr task rm seed-registry-cache
     ctr container rm seed-registry-cache
+  etc-setup-hook.sh: |
+    #!/usr/bin/env bash
+    # This etc-setup hook restores the dev-setup seed-registry-cache wiring after GardenLinux wipes the
+    # /etc overlay during an in-place OS version upgrade. It is installed at
+    # /var/lib/gardenlinux/etc-setup-hooks/0-registry so it runs BEFORE the extension's 00-gardener hook.
+    #
+    # The seed registry is password protected and lives behind a local mirror at 127.0.0.1:5000. Both
+    # pieces of /etc wiring that route to and start that mirror are destroyed by the wipe:
+    #   * /etc/containerd/certs.d/<host>/hosts.toml - tells containerd to pull via 127.0.0.1:5000;
+    #   * the start-seed-registry-cache.conf ExecStartPre drop-in on gardener-node-agent.service - it
+    #     runs start-seed-registry-cache.sh (which survives under /var/opt) to (re)start the mirror
+    #     container BEFORE the gardener-node-agent process launches.
+    # Both survive under /var only as inline OSC content; the durable copies live under /var/opt, but the
+    # /etc-side files are gone. We restore them here so that, by the time the 0-gardener hook restarts
+    # gardener-node-agent, systemd's ExecStartPre starts the mirror and containerd routes to it - letting
+    # gardener-node-agent pull its own (ko-built) image from the seed registry cache during its reconcile.
+    #
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    echo "> Restoring seed-registry-cache /etc wiring after overlay wipe"
+
+    mkdir -p "/etc/containerd/certs.d/$registry"
+    printf 'server = "https://$registry"\n\n[host."http://127.0.0.1:5000"]\n  capabilities = ["pull", "resolve"]\n' \
+      > "/etc/containerd/certs.d/$registry/hosts.toml"
+    chmod 0640 "/etc/containerd/certs.d/$registry/hosts.toml"
+
+    mkdir -p /etc/systemd/system/gardener-node-agent.service.d
+    printf '[Service]\nExecStartPre=bash /var/opt/docker/start-seed-registry-cache.sh\n' \
+      > /etc/systemd/system/gardener-node-agent.service.d/start-seed-registry-cache.conf
+
+    echo "> Done restoring seed-registry-cache /etc wiring"
 EOF
 
 echo "Creating pull secret in garden namespace"
