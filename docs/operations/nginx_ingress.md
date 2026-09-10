@@ -244,12 +244,11 @@ spec:
   extensions:
   - type: shoot-traefik
     providerConfig:
-      apiVersion: traefik.extensions.gardener.cloud/v1alpha1
+      apiVersion: traefik.extensions.gardener.cloud/v1alpha2
       kind: TraefikConfig
-      spec:
-        replicas: 2
-        # KubernetesIngressNGINX enables NGINX annotation compatibility
-        ingressProvider: KubernetesIngressNGINX
+      replicas: 2
+      # KubernetesIngressNGINX enables NGINX annotation compatibility
+      ingressProvider: KubernetesIngressNGINX
 ```
 
 Apply the change and wait for the Shoot to reconcile:
