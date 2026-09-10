@@ -17,6 +17,11 @@ spec:
     # Must be within fd00:10:1:100::/56 (subnet of kind pod CIDR fd00:10:1::/48, but disjoint with seed pod CIDR fd00:10:1::/56).
     nodes: fd00:10:1:100::/56
     providerConfig:
+      # Disable calico-typha so Felix watches the kube-apiserver directly. Typha's watcher cache can block resync for
+      # 30m after a transient kube-apiserver outage (e.g. during data plane rolls), leaving newly rolled pods with
+      # unprogrammed network interfaces.
+      typha:
+        enabled: false
       ipv6:
         sourceNATEnabled: true
   provider:
