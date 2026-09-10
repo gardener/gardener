@@ -34,6 +34,41 @@ import (
 )
 
 var _ = Describe("ActuatorReconcile", func() {
+	Describe("#validateMachineDeploymentPoolNames", func() {
+		It("should reject unknown worker pools", func() {
+			worker := &extensionsv1alpha1.Worker{
+				Spec: extensionsv1alpha1.WorkerSpec{
+					Pools: []extensionsv1alpha1.WorkerPool{{Name: "pool1"}},
+				},
+			}
+
+			deployments := extensionsworkercontroller.MachineDeployments{{Name: "machine-deployment", PoolName: "unknown"}}
+			Expect(validateMachineDeploymentPoolNames(worker, deployments)).To(MatchError(`generated MachineDeployment "machine-deployment" references unknown worker pool "unknown"`))
+		})
+
+		It("should reject an unset worker pool", func() {
+			worker := &extensionsv1alpha1.Worker{
+				Spec: extensionsv1alpha1.WorkerSpec{
+					Pools: []extensionsv1alpha1.WorkerPool{{Name: "pool1"}},
+				},
+			}
+
+			deployments := extensionsworkercontroller.MachineDeployments{{Name: "machine-deployment"}}
+			Expect(validateMachineDeploymentPoolNames(worker, deployments)).To(MatchError(`generated MachineDeployment "machine-deployment" references unknown worker pool ""`))
+		})
+
+		It("should accept deployments for defined worker pools", func() {
+			worker := &extensionsv1alpha1.Worker{
+				Spec: extensionsv1alpha1.WorkerSpec{
+					Pools: []extensionsv1alpha1.WorkerPool{{Name: "pool1"}},
+				},
+			}
+
+			deployments := extensionsworkercontroller.MachineDeployments{{Name: "machine-deployment", PoolName: "pool1"}}
+			Expect(validateMachineDeploymentPoolNames(worker, deployments)).To(Succeed())
+		})
+	})
+
 	Describe("#deployMachineDeployments", func() {
 		var (
 			ctx                        context.Context
