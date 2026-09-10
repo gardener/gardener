@@ -1,8 +1,9 @@
 # Envoy proxy and istio do not support HTTP/2 client connection coalescing natively.
 # Clients, especially web browsers, may open a single HTTP/2 connection and send requests
 # targeted at different hosts all backed by the same IP address and wildcard certificate.
-# Returning 421 for requests where the server name and the authority header do not match
-# indicates to the client that it should open a new connection for the request.
+# Returning 421 for requests where the authority header matches the certificate SANs but
+# differs from the requested server name indicates to the client that it should open a new
+# connection for the request.
 # Issues:
 # - https://github.com/envoyproxy/envoy/issues/6767
 # - https://github.com/istio/istio/issues/13589
@@ -37,10 +38,38 @@ spec:
               local rsn = streamInfo:requestedServerName()
               local authority = request_handle:headers():get(":authority")
 
-              -- Strip trailing 443 port
               authority = authority:gsub(":443$", "")
 
-              if rsn ~= authority then
-                request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+              -- If the requested SNI matches the authority, the request is on the expected connection.
+              if rsn == authority then
+                return
+              end
+
+              local sslInfo = streamInfo:downstreamSslConnection()
+              local sans = sslInfo:dnsSansLocalCertificate()
+
+              for _, san in ipairs(sans) do
+                -- Exact match: The certificate covers this exact domain, but the connection was
+                -- opened with a different SNI (rsn). This indicates HTTP/2 connection coalescing.
+                if san == authority then
+                  request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+                  return
+
+                -- Wildcard match: Handle wildcard certificates (e.g. "*.example.com").
+                -- The wildcard only matches a single leftmost label
+                -- (e.g. "foo.example.com" matches, but "sub.foo.example.com" does not).
+                elseif san:sub(1, 2) == "*." then
+                  local wildcardDomain = san:sub(3)
+
+                  -- string:match returns the captured group in parentheses.
+                  -- "^[^.]+%" matches the leftmost label up to the first dot.
+                  -- "(.*)$"   captures the remainder of the domain into a capture group.
+                  local authorityDomain = authority:match("^[^.]+%.(.*)$")
+
+                  if authorityDomain == wildcardDomain then
+                    request_handle:respond({[":status"] = "421"}, "Misdirected Request")
+                    return
+                  end
+                end
               end
             end
