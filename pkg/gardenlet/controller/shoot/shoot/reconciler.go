@@ -503,6 +503,7 @@ func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	operationType := gardencorev1beta1.LastOperationTypeDelete
 
+	// this is necessary because the finalizerremoval admission plugin checks the status
 	if err := r.patchShootStatusOperationSuccess(ctx, shoot, operationType); err != nil {
 		return err
 	}
@@ -510,6 +511,7 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
+			r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
 			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}

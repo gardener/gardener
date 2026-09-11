@@ -26,6 +26,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, name string) error {
 		r.Client = mgr.GetClient()
 	}
 
+	if r.Recorder == nil {
+		r.Recorder = mgr.GetEventRecorder(name + controllerNameSuffix)
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(name+controllerNameSuffix).
