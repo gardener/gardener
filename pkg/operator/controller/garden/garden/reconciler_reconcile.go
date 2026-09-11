@@ -804,10 +804,20 @@ func (r *Reconciler) reconcile(
 			Fn:           c.plutono.Wait,
 			Dependencies: flow.NewTaskIDs(deployPlutono),
 		})
+		deployPerses = g.Add(flow.Task{
+			Name:         "Deploying Perses",
+			Fn:           c.perses.Deploy,
+			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
+		})
+		waitUntilPersesReady = g.Add(flow.Task{
+			Name:         "Waiting until Perses is ready",
+			Fn:           c.perses.Wait,
+			Dependencies: flow.NewTaskIDs(deployPerses),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying istio-basic-auth-server",
 			Fn:           c.istioBasicAuthServer.Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReady, waitUntilPrometheusGardenReady, waitUntilPrometheusLongTermReady, waitUntilPlutonoReady),
+			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReady, waitUntilPrometheusGardenReady, waitUntilPrometheusLongTermReady, waitUntilPlutonoReady, waitUntilPersesReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying perses-operator",
