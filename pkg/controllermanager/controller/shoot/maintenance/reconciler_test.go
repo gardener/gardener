@@ -2433,6 +2433,101 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(failureReason).To(Equal(`Worker pool "gpu-worker": Kubernetes maintenance failure due to: no higher patch version available`))
 		})
 	})
+
+	Describe("#maintainOperation", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateFailed,
+					},
+				},
+			}
+		})
+
+		Context("shoot lastOperation is Failed", func() {
+			It("should not set retry annotation when conditions are absent", func() {
+				maintainOperation(shoot, nil)
+				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			})
+
+			It("should not set retry annotation when at least one condition is not True", func() {
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionFalse},
+				}
+				maintainOperation(shoot, nil)
+				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			})
+
+			It("should set retry annotation when all conditions are True", func() {
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "SystemComponentsHealthy", Status: gardencorev1beta1.ConditionTrue},
+				}
+				maintainOperation(shoot, nil)
+				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
+			})
+
+			It("should set retry annotation when FailedShootNeedsRetryOperation is true, regardless of conditions", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.FailedShootNeedsRetryOperation: "true",
+				}
+				maintainOperation(shoot, nil)
+				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
+				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation))
+			})
+
+			It("should clear FailedShootNeedsRetryOperation annotation when all conditions are True", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.FailedShootNeedsRetryOperation: "true",
+				}
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
+				}
+				maintainOperation(shoot, nil)
+				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
+				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation))
+			})
+		})
+	})
+
+	Describe("#allShootConditionsTrue", func() {
+		It("should return false when conditions slice is empty", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			Expect(allShootConditionsTrue(shoot)).To(BeFalse())
+		})
+
+		It("should return false when at least one condition is not True", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
+						{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionUnknown},
+					},
+				},
+			}
+			Expect(allShootConditionsTrue(shoot)).To(BeFalse())
+		})
+
+		It("should return true when all conditions are True", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
+						{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionTrue},
+					},
+				},
+			}
+			Expect(allShootConditionsTrue(shoot)).To(BeTrue())
+		})
+	})
 })
 
 func assertWorkerMachineImageVersion(worker *gardencorev1beta1.Worker, imageName string, imageVersion string) {
