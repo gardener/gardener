@@ -218,7 +218,9 @@ var _ = Describe("Webhook", func() {
 				},
 			}))
 		})
+	})
 
+	Describe("#BuildContainerRuntimeTypeNamespaceSelector", func() {
 		It("should return a namespace selector for the container runtime type", func() {
 			selector := BuildContainerRuntimeTypeNamespaceSelector("gvisor")
 
