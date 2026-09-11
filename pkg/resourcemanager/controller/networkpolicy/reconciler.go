@@ -378,6 +378,9 @@ func networkPolicyPodSelector(service *corev1.Service) (metav1.LabelSelector, er
 	if _, err := metav1.LabelSelectorAsSelector(&selector); err != nil {
 		return metav1.LabelSelector{}, fmt.Errorf("invalid network policy pod selector %s: %w", rawSelector, err)
 	}
+	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
+		return metav1.LabelSelector{}, fmt.Errorf("network policy pod selector must not be empty")
+	}
 
 	return selector, nil
 }
