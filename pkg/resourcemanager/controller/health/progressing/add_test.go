@@ -115,7 +115,13 @@ var _ = Describe("Add", func() {
 						deploy := obj.(*appsv1.Deployment)
 						deploy.Generation++
 
-						pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{GenerateName: "pod-", Labels: map[string]string{"foo": "bar"}}}
+						replicaSet := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{GenerateName: "replicaset-", Labels: map[string]string{"foo": "bar"}, OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deploy, appsv1.SchemeGroupVersion.WithKind("Deployment"))}}}
+						Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+						DeferCleanup(func() {
+							Expect(fakeClient.Delete(ctx, replicaSet)).To(Succeed())
+						})
+
+						pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{GenerateName: "pod-", Labels: map[string]string{"foo": "bar"}, OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))}}}
 						Expect(fakeClient.Create(ctx, pod)).To(Succeed())
 						DeferCleanup(func() {
 							Expect(fakeClient.Delete(ctx, pod)).To(Succeed())
