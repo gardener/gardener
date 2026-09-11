@@ -22,7 +22,7 @@ func init() {
 	scheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(auditv1.AddToScheme, audit.AddToScheme)
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
-	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+	decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 }
 
 // AdmitAuditPolicy validates the provided audit policy.
