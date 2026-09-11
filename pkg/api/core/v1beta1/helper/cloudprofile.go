@@ -14,7 +14,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -23,37 +22,50 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-// CurrentLifecycleClassification returns the current lifecycle classification of the given version.
-// An empty classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
-func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
-	if len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil) {
-		// Deprecated: legacy classification/expiration fields are used, converting them to lifecycle stages.
-		// Remove once the legacy fields are removed.
+// UsesLegacyClassifications reports whether the given version uses legacy Classifications instead of a Lifecycle.
+func UsesLegacyClassifications(version gardencorev1beta1.ExpirableVersion) bool {
+	return len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil)
+}
 
-		// Add the configured classification stage, default to Supported if unset.
-		version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
-			Classification: ptr.Deref(version.Classification, gardencorev1beta1.ClassificationSupported),
+// ToLifecycleStages converts a legacy Classification of an ExpirableVersion to Lifecycle Classifications.
+// If the version already defines Lifecycle Classifications, they are returned.
+func ToLifecycleStages(version gardencorev1beta1.ExpirableVersion) []gardencorev1beta1.LifecycleStage {
+	if len(version.Lifecycle) > 0 {
+		return version.Lifecycle
+	}
+
+	classification := gardencorev1beta1.ClassificationSupported
+	if version.Classification != nil {
+		classification = *version.Classification
+	}
+
+	stages := []gardencorev1beta1.LifecycleStage{
+		{
+			Classification: classification,
+		},
+	}
+
+	if version.ExpirationDate != nil {
+		stages = append(stages, gardencorev1beta1.LifecycleStage{
+			Classification: gardencorev1beta1.ClassificationExpired,
+			StartTime:      version.ExpirationDate,
 		})
-
-		// Add an Expired stage if ExpirationDate is set.
-		if version.ExpirationDate != nil {
-			version.Lifecycle = append(version.Lifecycle, gardencorev1beta1.LifecycleStage{
-				Classification: gardencorev1beta1.ClassificationExpired,
-				StartTime:      version.ExpirationDate,
-			})
-		}
 	}
 
-	if len(version.Lifecycle) == 0 {
-		return gardencorev1beta1.ClassificationSupported
-	}
+	return stages
+}
+
+// CurrentLifecycleClassification returns the current Lifecycle Classification of the given version.
+// An empty Classification is interpreted as supported. If the version is expired, it returns ClassificationExpired.
+func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) gardencorev1beta1.VersionClassification {
+	lifecycle := ToLifecycleStages(version)
 
 	var (
 		currentTime           = time.Now()
 		currentClassification = gardencorev1beta1.ClassificationUnavailable
 	)
 
-	for _, stage := range version.Lifecycle {
+	for _, stage := range lifecycle {
 		startTime := time.Time{}
 		if stage.StartTime != nil {
 			startTime = stage.StartTime.Time
@@ -113,12 +125,7 @@ func DurationUntilNextVersionTransition(cloudProfileSpec *gardencorev1beta1.Clou
 	}
 
 	evaluateVersion := func(v gardencorev1beta1.ExpirableVersion) {
-		if len(v.Lifecycle) == 0 {
-			evaluate(v.ExpirationDate)
-			return
-		}
-
-		for _, stage := range v.Lifecycle {
+		for _, stage := range ToLifecycleStages(v) {
 			evaluate(stage.StartTime)
 		}
 	}
