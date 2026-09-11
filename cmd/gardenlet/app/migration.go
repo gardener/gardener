@@ -47,6 +47,11 @@ func VerifyRemoveHTTPProxyLegacyPortMigration(ctx context.Context, gardenClient 
 			continue
 		}
 
+		// Skip hibernated Shoots (UsesUnifiedHTTPProxyPort is not set, vpn-shoot will be deployed on wake-up Reconciliation).
+		if helper.HibernationIsEnabled(&shoot) {
+			continue
+		}
+
 		// Skip if not picked up yet or Creating/Deleting.
 		if shoot.Status.LastOperation == nil || ((shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate || shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeDelete) && shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) {
 			continue
