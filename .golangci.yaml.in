@@ -278,7 +278,9 @@ linters:
             disable:
               - "*"
             enable:
+              - defaultorrequired
               - jsontags
+              - nonullable
   exclusions:
     generated: lax
     rules:
