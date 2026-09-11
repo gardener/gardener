@@ -33,7 +33,7 @@ type DNSRecord struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec DNSRecordSpec `json:"spec"`
 	// +optional
-	Status DNSRecordStatus `json:"status"`
+	Status DNSRecordStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.

@@ -318,7 +318,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
 				cm := configMap(namespace, values)
-				Expect(cm.Name).To(Equal("gardener-controller-manager-config-960e3f19"))
+				Expect(cm.Name).To(Equal("gardener-controller-manager-config-25f211e9"))
 				expectedRuntimeObjects = []client.Object{
 					cm,
 					podDisruptionBudget,

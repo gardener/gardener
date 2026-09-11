@@ -50,7 +50,7 @@ type Worker struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec WorkerSpec `json:"spec"`
 	// +optional
-	Status WorkerStatus `json:"status"`
+	Status WorkerStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.
