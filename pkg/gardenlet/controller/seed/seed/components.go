@@ -867,9 +867,10 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
 	}
 
-	var output *fluentbitv1alpha2.ClusterOutput
+	var outputs []*fluentbitv1alpha2.ClusterOutput
 	if gardenlethelper.IsValiEnabled(&r.Config) || features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		output = fluentcustomresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource})
+		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}))
+		outputs = append(outputs, fluentcustomresources.GetDefaultClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}))
 	}
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
@@ -878,7 +879,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		gardenlethelper.IsLoggingEnabled(&r.Config),
 		"",
 		centralLoggingConfigurations,
-		output,
+		outputs,
 	)
 }
 
@@ -986,7 +987,6 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		gardenlethelper.IsLoggingEnabled(&r.Config),
-		gardenlethelper.IsValiEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
