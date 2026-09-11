@@ -20,6 +20,9 @@ spec:
       value:
         typed_config:
           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+          # match the maximum value of timeoutSeconds that is set by the client-go reflector
+          # (https://github.com/kubernetes/kubernetes/blob/3296508af65600d9c348cecfa79e11b9427820e2/staging/src/k8s.io/client-go/tools/cache/reflector.go#L58)
+          stream_idle_timeout: 600s
           http2_protocol_options:
              max_concurrent_streams: 100
              initial_stream_window_size: 65536 # 64 KiB
