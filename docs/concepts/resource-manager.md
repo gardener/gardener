@@ -694,12 +694,15 @@ By default, the controller uses the `Service`'s `.spec.selector` to select the d
 If a policy should target a different or broader set of pods without changing the `Service` endpoints, annotate the `Service` with a JSON-encoded `metav1.LabelSelector`:
 
 ```yaml
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: vpn-seed-server-0
 metadata:
   annotations:
-    networking.resources.gardener.cloud/network-policy-pod-selector: '{"matchLabels":{"app":"example"}}'
+    networking.resources.gardener.cloud/network-policy-pod-selector: '{"matchLabels":{"app":"vpn-seed-server"}}'
 ```
 
-This selector is used only for the generated `NetworkPolicy`s. The `Service` continues to route traffic according to `.spec.selector`.
+For example, this allows a per-pod Service for `vpn-seed-server` to route traffic to `vpn-seed-server-0`, while the generated `NetworkPolicy`s target all pods labeled `app=vpn-seed-server`. The annotation must contain at least one `matchLabels` or `matchExpressions` entry. This selector is used only for the generated `NetworkPolicy`s. The `Service` continues to route traffic according to `.spec.selector`.
 
 #### `Service` Targets In Multiple Namespaces
 
