@@ -151,7 +151,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		b.Shoot.Networks = networks
 	}
 
-	if err := b.SetInPlaceUpdatePendingWorkers(ctx, worker); err != nil {
+	if err := b.SetInPlaceUpdateStatus(ctx, worker); err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 

@@ -1406,6 +1406,11 @@ message InPlaceUpdatesStatus {
   // PendingWorkerUpdates contains information about worker pools pending in-place updates.
   // +optional
   optional PendingWorkerUpdates pendingWorkerUpdates = 1;
+
+  // WorkerPoolToHashMap stores the last-applied in-place update hash per worker pool.
+  // Used for shoots with unmanaged infrastructure (no Worker extension resource).
+  // +optional
+  map<string, string> workerPoolToHashMap = 2;
 }
 
 // Ingress configures the Ingress specific settings of the cluster

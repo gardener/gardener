@@ -5224,6 +5224,18 @@ InPlaceUpdatesStatus contains information about in-place updates for the Shoot w
 <p>PendingWorkerUpdates contains information about worker pools pending in-place updates.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>workerPoolToHashMap</code></br>
+<em>
+object (keys:string, values:string)
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WorkerPoolToHashMap stores the last-applied in-place update hash per worker pool.<br />Used for shoots with unmanaged infrastructure (no Worker extension resource).</p>
+</td>
+</tr>
 
 </tbody>
 </table>
