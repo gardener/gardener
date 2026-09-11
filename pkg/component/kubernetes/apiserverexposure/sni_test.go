@@ -394,6 +394,16 @@ var _ = Describe("#SNI", func() {
 					actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
 					// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
 					envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
+
+					if strings.Contains(mrDataSet, "istio-tls-termination") {
+						idxTimeoutSecondsRoute := strings.Index(mrDataSet, "idle_timeout: 600s")
+						if idxTimeoutSecondsRoute >= 0 {
+							idxFallbackRoute := strings.Index(mrDataSet, "cluster: outbound|443||kube-apiserver-mtls")
+							Expect(idxFallbackRoute).To(BeNumerically(">=", 0))
+							Expect(idxFallbackRoute).To(BeNumerically("<", idxTimeoutSecondsRoute),
+								"fallback route (no idle_timeout) must be emitted before the timeoutSeconds route so INSERT_BEFORE orders the timeoutSeconds route first and it is not shadowed")
+						}
+					}
 				}
 
 				if istioTLSTermination {

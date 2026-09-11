@@ -19,6 +19,10 @@ spec:
       value:
         typed_config:
           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+          # stream_idle_timeout is disabled 'in general', but enabled by an EnvoyFilter patch
+          # if 'timeoutSeconds' query parameter is present in a request,
+          # see pkg/component/kubernetes/apiserverexposure/templates/envoyfilter-istio-tls-termination.yaml.
+          stream_idle_timeout: 0s
           http2_protocol_options:
              max_concurrent_streams: 100
              initial_stream_window_size: 65536 # 64 KiB

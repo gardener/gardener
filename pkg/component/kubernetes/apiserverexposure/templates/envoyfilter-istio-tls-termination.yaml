@@ -19,6 +19,9 @@ spec:
 {{- end }}
   configPatches:
 {{- range $v := .Hosts }}
+  # route A: We have two almost duplicate routes, differing only in their idle_timeout.
+  # This one handles the requests with no query_parameters timeoutSeconds -> no idle_timeout set.
+  # Note that the order in this file is important! The route B condition is checked before route A.
   - applyTo: HTTP_ROUTE
     match:
       context: GATEWAY
@@ -38,6 +41,32 @@ spec:
           prefix: /
         route:
           cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+  # route B: This route is for requests with queryParameter timeoutSeconds.
+  # Here, we set idle_timeout: 600s to match the maximum value of timeoutSeconds that is set by the client-go
+  # reflector (https://github.com/kubernetes/kubernetes/blob/3296508af65600d9c348cecfa79e11b9427820e2/staging/src/k8s.io/client-go/tools/cache/reflector.go#L58)
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ $.RouteConfigurationName }}"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        match:
+          dynamic_metadata:
+          - filter: envoy.filters.http.lua
+            path:
+            - key: {{ $.AuthenticationDynamicMetadataKey }}
+            value:
+              string_match:
+                exact: {{ $v }}
+          prefix: /
+          query_parameters:
+          - name: timeoutSeconds
+            present_match: true
+        route:
+          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+          idle_timeout: 600s
 {{- end }}
 {{- range $v := .WildcardHosts }}
   - applyTo: HTTP_ROUTE
@@ -59,6 +88,30 @@ spec:
           prefix: /
         route:
           cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+  # See the comment on the 'timeoutSeconds' route above; same rationale for wildcard hosts.
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ $.WildcardRouteConfigurationName }}"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        match:
+          dynamic_metadata:
+          - filter: envoy.filters.http.lua
+            path:
+            - key: {{ $.AuthenticationDynamicMetadataKey }}
+            value:
+              string_match:
+                exact: {{ $v }}
+          prefix: /
+          query_parameters:
+          - name: timeoutSeconds
+            present_match: true
+        route:
+          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+          idle_timeout: 600s
 {{- end }}
   - applyTo: CLUSTER
     match:
