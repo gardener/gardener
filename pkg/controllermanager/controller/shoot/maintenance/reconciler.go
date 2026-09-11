@@ -512,7 +512,7 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpda
 
 	switch shoot.Status.LastOperation.State {
 	case gardencorev1beta1.LastOperationStateFailed:
-		if needsRetry(shoot) {
+		if needsRetry(shoot) || allShootConditionsTrue(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
@@ -772,6 +772,18 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 	}
 
 	return needsRetryOperation
+}
+
+func allShootConditionsTrue(shoot *gardencorev1beta1.Shoot) bool {
+	if len(shoot.Status.Conditions) == 0 {
+		return false
+	}
+	for _, condition := range shoot.Status.Conditions {
+		if condition.Status != gardencorev1beta1.ConditionTrue {
+			return false
+		}
+	}
+	return true
 }
 
 func getOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
