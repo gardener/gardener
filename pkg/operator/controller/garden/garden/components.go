@@ -785,9 +785,9 @@ func (r *Reconciler) newKubeAPIServer(
 }
 
 func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardenerapiserver.AutoscalingConfig {
-	replicas := int32(2)
+	minReplicas := int32(2)
 	if helper.HighAvailabilityEnabled(garden) {
-		replicas = 3
+		minReplicas = 3
 	}
 
 	return gardenerapiserver.AutoscalingConfig{
@@ -797,7 +797,20 @@ func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardene
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
-		Replicas: new(replicas),
+		MinReplicas: minReplicas,
+		MaxReplicas: 6,
+	}
+}
+
+func gardenerAdmissionControllerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardeneradmissioncontroller.AutoscalingConfig {
+	minReplicas := int32(2)
+	if helper.HighAvailabilityEnabled(garden) {
+		minReplicas = 3
+	}
+
+	return gardeneradmissioncontroller.AutoscalingConfig{
+		MinReplicas: minReplicas,
+		MaxReplicas: 6,
 	}
 }
 
@@ -1252,6 +1265,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 		LogLevel:                      logger.InfoLevel,
 		RuntimeVersion:                r.RuntimeVersion,
 		AuthorizerRestrictionsEnabled: enableAuthorizerRestrictions,
+		Autoscaling:                   gardenerAdmissionControllerAutoscalingConfig(garden),
 		TopologyAwareRoutingEnabled:   helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 

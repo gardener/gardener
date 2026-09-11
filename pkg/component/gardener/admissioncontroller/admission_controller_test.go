@@ -17,6 +17,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -68,7 +69,9 @@ var _ = Describe("GardenerAdmissionController", func() {
 		testValues        Values
 		consistOf         func(...client.Object) types.GomegaMatcher
 
-		namespace = "some-namespace"
+		namespace            = "some-namespace"
+		hpaMinReplicas int32 = 2
+		hpaMaxReplicas int32 = 6
 	)
 
 	BeforeEach(func() {
@@ -120,6 +123,10 @@ var _ = Describe("GardenerAdmissionController", func() {
 				},
 				AuthorizerRestrictionsEnabled: true,
 				TopologyAwareRoutingEnabled:   false,
+				Autoscaling: AutoscalingConfig{
+					MinReplicas: hpaMinReplicas,
+					MaxReplicas: hpaMaxReplicas,
+				},
 			}
 
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
@@ -450,6 +457,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 		deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues),
 		service(namespace, testValues),
 		vpa(namespace),
+		hpa(namespace, testValues),
 		podDisruptionBudget(namespace),
 		serviceMonitor(namespace),
 	))
@@ -553,7 +561,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             new(int32(1)),
+			Replicas:             &testValues.Autoscaling.MinReplicas,
 			RevisionHistoryLimit: new(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -816,6 +824,73 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 					{
 						ContainerName: "*",
 						Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
+					},
+				},
+			},
+		},
+	}
+}
+
+func hpa(namespace string, testValues Values) *autoscalingv2.HorizontalPodAutoscaler {
+	return &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener-admission-controller-hpa",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":  "gardener",
+				"role": "admission-controller",
+				"high-availability-config.resources.gardener.cloud/type": "server",
+			},
+		},
+		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+			MinReplicas: &testValues.Autoscaling.MinReplicas,
+			MaxReplicas: testValues.Autoscaling.MaxReplicas,
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+				Name:       "gardener-admission-controller",
+			},
+			Metrics: []autoscalingv2.MetricSpec{
+				{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: corev1.ResourceCPU,
+						Target: autoscalingv2.MetricTarget{
+							Type:         autoscalingv2.AverageValueMetricType,
+							AverageValue: new(resource.MustParse("6")),
+						},
+					},
+				},
+				{
+					Type: autoscalingv2.ResourceMetricSourceType,
+					Resource: &autoscalingv2.ResourceMetricSource{
+						Name: corev1.ResourceMemory,
+						Target: autoscalingv2.MetricTarget{
+							Type:         autoscalingv2.AverageValueMetricType,
+							AverageValue: new(resource.MustParse("24G")),
+						},
+					},
+				},
+			},
+			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+				ScaleUp: &autoscalingv2.HPAScalingRules{
+					StabilizationWindowSeconds: new((int32)(60)),
+					Policies: []autoscalingv2.HPAScalingPolicy{
+						{
+							Type:          autoscalingv2.PercentScalingPolicy,
+							Value:         100,
+							PeriodSeconds: 60,
+						},
+					},
+				},
+				ScaleDown: &autoscalingv2.HPAScalingRules{
+					StabilizationWindowSeconds: new((int32)(1800)),
+					Policies: []autoscalingv2.HPAScalingPolicy{
+						{
+							Type:          autoscalingv2.PodsScalingPolicy,
+							Value:         1,
+							PeriodSeconds: 300,
+						},
 					},
 				},
 			},
