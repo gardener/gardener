@@ -7,7 +7,6 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,12 +14,13 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 )
 
-const infraNamespacePrefix = "infra-"
-
 type mutator struct {
 	client client.Client
 }
 
+// Mutate the "allow-to-private-networks" NetworkPolicy to remove the node CIDR from the except list of the IPBlock in
+// the egress rules. Normally, this policy explicitly denies access to seed-specific private networks. But
+// provider-local components needs to access the API-Server of the kind clusters, which is running on the node network.
 func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
 	if newObj.GetName() != "allow-to-private-networks" {
 		return nil
@@ -31,10 +31,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
 		return fmt.Errorf("unexpected object, got %T wanted *networkingv1.NetworkPolicy", newObj)
 	}
 
-	// For infra namespaces (infra-<technicalID>), derive the Cluster name from the shoot namespace.
-	clusterName := strings.TrimPrefix(networkPolicy.Namespace, infraNamespacePrefix)
-
-	cluster, err := extensionscontroller.GetCluster(ctx, m.client, clusterName)
+	cluster, err := extensionscontroller.GetCluster(ctx, m.client, networkPolicy.Namespace)
 	if err != nil {
 		return err
 	}
