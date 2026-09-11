@@ -181,7 +181,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	serialReconciliationLease := newLeaderElectorForSecret(log, r.LeaseClient, r.Clock, secret, r.HostName)
+	serialReconciliationLease := newLeaderElectorForSecret(log, r.LeaseClient, r.APIReader, r.Clock, secret, r.HostName)
 
 	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
