@@ -53,16 +53,16 @@ case "$COMMAND" in
       cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenlet/components/kubeconfigs/seed-root/kubeconfig"
     fi
 
+    if [[ "$SCENARIO" == "remote" ]]; then
+      kubectl apply -k "$SCRIPT_DIR/remote/registry/kyverno-policies"
+    fi
+
     skaffold $skaffold_command \
       -m gardenlet \
       $skaffold_extra_profiles \
       --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
-
-    if [[ "$SCENARIO" == "remote" ]]; then
-      kubectl apply -k "$SCRIPT_DIR/remote/registry/kyverno-policies"
-    fi
     ;;
 
   down)
