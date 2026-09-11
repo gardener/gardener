@@ -233,6 +233,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				originalUnits, originalFiles, _ := originalConfigFn(componentsContext)
 
+				oscLabels := map[string]string{
+					"worker.gardener.cloud/pool":                                         worker.Name,
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
+				}
+				if worker.Name == worker2Name {
+					oscLabels["containerruntime.worker.gardener.cloud/kata"] = "true"
+					oscLabels["containerruntime.worker.gardener.cloud/gvisor"] = "true"
+				}
+
 				name := key + "-init"
 
 				oscInit := &extensionsv1alpha1.OperatingSystemConfig{
@@ -243,10 +252,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
-						Labels: map[string]string{
-							"worker.gardener.cloud/pool":                                         worker.Name,
-							"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
-						},
+						Labels: maps.Clone(oscLabels),
 					},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 						DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -281,10 +287,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
-						Labels: map[string]string{
-							"worker.gardener.cloud/pool":                                         worker.Name,
-							"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
-						},
+						Labels: maps.Clone(oscLabels),
 					},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 						DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -386,6 +389,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					CRI: &gardencorev1beta1.CRI{
 						Name: gardencorev1beta1.CRINameContainerD,
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "kata"},
+							{Type: "gvisor"},
+						},
 					},
 					KubeletDataVolumeName: &kubeletDataVolumeName,
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
@@ -525,6 +532,40 @@ var _ = Describe("OperatingSystemConfig", func() {
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
+				}
+			})
+
+			It("should update container runtime labels when worker pool CRI configuration changes", func() {
+				DeferCleanup(test.WithVars(
+					&TimeNow, fakeClock.Now,
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				))
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				k8sVersion := semver.MustParse(*workers[1].Kubernetes.Version)
+				key := Key(k8sVersion, values.CredentialsRotationStatus, &workers[1], values.NodeLocalDNSEnabled, kubeletConfig, nil)
+
+				for _, suffix := range []string{"-init", "-original"} {
+					osc := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: key + suffix, Namespace: namespace}, osc)).To(Succeed())
+					Expect(osc.Labels).To(HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"))
+					Expect(osc.Labels).To(HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true"))
+				}
+
+				// Remove "kata" and "gvisor", add "other"
+				values.Workers[1].CRI.ContainerRuntimes = []gardencorev1beta1.ContainerRuntime{{Type: "other"}}
+				defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				for _, suffix := range []string{"-init", "-original"} {
+					osc := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: key + suffix, Namespace: namespace}, osc)).To(Succeed())
+					Expect(osc.Labels).To(HaveKeyWithValue("containerruntime.worker.gardener.cloud/other", "true"))
+					Expect(osc.Labels).NotTo(HaveKey("containerruntime.worker.gardener.cloud/kata"))
+					Expect(osc.Labels).NotTo(HaveKey("containerruntime.worker.gardener.cloud/gvisor"))
 				}
 			})
 

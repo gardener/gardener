@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -186,17 +187,41 @@ func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEn
 	// add CRI labels selected by the RuntimeClass
 	if workerPool.CRI != nil {
 		labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)
-		if len(workerPool.CRI.ContainerRuntimes) > 0 {
-			for _, cr := range workerPool.CRI.ContainerRuntimes {
-				key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
-				labels[key] = "true"
-			}
-		}
+		maps.Copy(labels, ContainerRuntimeLabelsForWorkerPools(workerPool))
 	}
 
 	if region != "" {
 		labels[corev1.LabelTopologyRegion] = region
 	}
+
+	return labels
+}
+
+// ContainerRuntimeLabelsForWorkerPools returns a map of all container runtime labels for the given worker pools.
+func ContainerRuntimeLabelsForWorkerPools(workers ...gardencorev1beta1.Worker) map[string]string {
+	labels := make(map[string]string)
+
+	for _, worker := range workers {
+		if worker.CRI != nil {
+			for _, cr := range worker.CRI.ContainerRuntimes {
+				labels[fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)] = "true"
+			}
+		}
+	}
+
+	return labels
+}
+
+// OperatingSystemConfigLabelsForWorkerPool returns a map of all gardener-managed labels for an OperatingSystemConfig resource for the given worker pool.
+// Note: Dynamic labels returned by this function (e.g. container runtime labels) must be cleaned up when reconciling
+// OperatingSystemConfig labels (see reconcileOperatingSystemConfigLabels in pkg/component/extensions/operatingsystemconfig).
+func OperatingSystemConfigLabelsForWorkerPool(workerPool gardencorev1beta1.Worker) map[string]string {
+	labels := map[string]string{
+		v1beta1constants.LabelWorkerPool:                                    workerPool.Name,
+		v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
+	}
+
+	maps.Copy(labels, ContainerRuntimeLabelsForWorkerPools(workerPool))
 
 	return labels
 }

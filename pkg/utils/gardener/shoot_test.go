@@ -355,6 +355,95 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("#ContainerRuntimeLabelsForWorkerPools", func() {
+		It("should return an empty map when no workers are provided", func() {
+			Expect(ContainerRuntimeLabelsForWorkerPools()).To(BeEmpty())
+		})
+
+		It("should return an empty map when workers have nil CRI or no container runtimes", func() {
+			workers := []gardencorev1beta1.Worker{
+				{Name: "worker-1"},
+				{Name: "worker-2", CRI: &gardencorev1beta1.CRI{Name: "containerd"}},
+			}
+			Expect(ContainerRuntimeLabelsForWorkerPools(workers...)).To(BeEmpty())
+		})
+
+		It("should return the correct container runtime labels across multiple workers", func() {
+			workers := []gardencorev1beta1.Worker{
+				{
+					Name: "worker-1",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "kata"},
+							{Type: "gvisor"},
+						},
+					},
+				},
+				{
+					Name: "worker-2",
+					CRI: &gardencorev1beta1.CRI{
+						Name: "containerd",
+						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+							{Type: "gvisor"},
+						},
+					},
+				},
+			}
+			Expect(ContainerRuntimeLabelsForWorkerPools(workers...)).To(Equal(map[string]string{
+				"containerruntime.worker.gardener.cloud/kata":   "true",
+				"containerruntime.worker.gardener.cloud/gvisor": "true",
+			}))
+		})
+	})
+
+	Describe("#OperatingSystemConfigLabelsForWorkerPool", func() {
+		var workerPool gardencorev1beta1.Worker
+
+		BeforeEach(func() {
+			workerPool = gardencorev1beta1.Worker{
+				Name: "worker",
+			}
+		})
+
+		It("should return the base labels when CRI is nil", func() {
+			Expect(OperatingSystemConfigLabelsForWorkerPool(workerPool)).To(Equal(map[string]string{
+				"worker.gardener.cloud/pool":                                         "worker",
+				"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
+			}))
+		})
+
+		It("should return the base labels when CRI has no container runtimes", func() {
+			workerPool.CRI = &gardencorev1beta1.CRI{
+				Name: "containerd",
+			}
+			Expect(OperatingSystemConfigLabelsForWorkerPool(workerPool)).To(Equal(map[string]string{
+				"worker.gardener.cloud/pool":                                         "worker",
+				"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
+			}))
+		})
+
+		It("should correctly add the container runtime labels", func() {
+			workerPool.CRI = &gardencorev1beta1.CRI{
+				Name: "containerd",
+				ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{
+					{
+						Type: "gvisor",
+					},
+					{
+						Type: "kata",
+					},
+				},
+			}
+			Expect(OperatingSystemConfigLabelsForWorkerPool(workerPool)).To(Equal(map[string]string{
+				"worker.gardener.cloud/pool":                                         "worker",
+				"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
+				"containerruntime.worker.gardener.cloud/gvisor":                      "true",
+				"containerruntime.worker.gardener.cloud/kata":                        "true",
+			}))
+		})
+	})
+
 	Describe("#GetShootProjectSecretSuffixes", func() {
 		It("should return the expected list", func() {
 			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("ca-cluster", "ssh-keypair", "ssh-keypair.old", "monitoring"))
