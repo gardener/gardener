@@ -62,6 +62,18 @@ workload_identity_support="${2:-false}"
 cp -f "$KUBECONFIG_REMOTE_CLUSTER" "$KUBECONFIG_RUNTIME_CLUSTER"
 cp -f "$KUBECONFIG_REMOTE_CLUSTER" "$KUBECONFIG_SEED_SECRET_PATH"
 
+# Warn if kubeconfig uses gardenlogin exec credential plugin
+# This leads to error messages such as 'the namespace from the provided object "garden" does not match the namespace "..." ' when using skaffold.
+# Even when kubeconfig context does not explicitly set the namespace.
+if kubectl config view --raw -o jsonpath='{.users[*].user.exec.command}' 2>/dev/null | grep -q "kubectl-gardenlogin"; then
+  echo -e "\033[33mERROR: Runtime kubeconfig $KUBECONFIG_REMOTE_CLUSTER uses the gardenlogin credential plugin (kubectl-gardenlogin).\033[0m"
+  echo -e "\033[33mThis is not compatible with skaffold. It leads to strange errors when skaffold is running kubectl commands.\033[0m"
+  echo -e "\033[33mPlease provide a kubeconfig that does not use the gardenlogin credential plugin.\033[0m"
+  rm -f "$KUBECONFIG_RUNTIME_CLUSTER"
+  rm -f "$KUBECONFIG_SEED_SECRET_PATH"
+  exit 1
+fi
+
 client_certificate_data=$(kubectl config view --raw -o jsonpath='{.users[0].user.client-certificate-data}')
 if [[ -n "$client_certificate_data" ]] && [[ $(echo "$client_certificate_data" | base64 --decode | openssl x509 -noout -checkend 300) == "Certificate will expire" ]]; then
   echo "Runtime kubeconfig $KUBECONFIG_REMOTE_CLUSTER has expired or will expire in 5min. Please provide a valid kubeconfig and try again!"
