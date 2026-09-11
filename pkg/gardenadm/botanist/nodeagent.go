@@ -130,7 +130,10 @@ func (b *GardenadmBotanist) ActivateGardenerNodeAgent(ctx context.Context) error
 	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
 }
 
-// ApproveNodeAgentCertificateSigningRequest approves the node agent certificate signing request.
+// ApproveNodeAgentCertificateSigningRequest approves all not-yet-approved gardener-node-agent client certificate
+// signing requests. It does not stop at the first match: in the `gardenadm restore` flow, an etcd restore brings back a
+// stale already-approved CSR under the same (reissued) bootstrap-token username. Stopping there would skip the new
+// Pending CSR that gardener-node-agent just created, leaving it without a client certificate so the node never joins.
 func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx context.Context) error {
 	alreadyBootstrapped, err := b.FS.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath)
 	if err != nil {
