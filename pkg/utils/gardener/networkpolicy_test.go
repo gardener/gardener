@@ -96,6 +96,18 @@ var _ = Describe("NetworkPolicy", func() {
 		})
 	})
 
+	Describe("#InjectNetworkPolicyPodSelector", func() {
+		It("should inject the annotation", func() {
+			obj := &corev1.Service{}
+
+			Expect(InjectNetworkPolicyPodSelector(obj, metav1.LabelSelector{
+				MatchLabels: map[string]string{"foo": "bar"},
+			})).To(Succeed())
+
+			Expect(obj.Annotations).To(HaveKeyWithValue("networking.resources.gardener.cloud/network-policy-pod-selector", `{"matchLabels":{"foo":"bar"}}`))
+		})
+	})
+
 	Describe("#NetworkPolicyLabel", func() {
 		It("should return the expected value", func() {
 			Expect(NetworkPolicyLabel("foo", 1234)).To(Equal("networking.resources.gardener.cloud/to-foo-tcp-1234"))

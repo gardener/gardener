@@ -654,6 +654,7 @@ var _ = Describe("VpnSeedServer", func() {
 		indexedService = func(idx int) *corev1.Service {
 			svc := expectedService.DeepCopy()
 			svc.Name = fmt.Sprintf("%s-%d", ServiceName, idx)
+			svc.Annotations["networking.resources.gardener.cloud/network-policy-pod-selector"] = `{"matchLabels":{"app":"vpn-seed-server"}}`
 			svc.Spec.Selector = map[string]string{
 				"statefulset.kubernetes.io/pod-name": svc.Name,
 			}

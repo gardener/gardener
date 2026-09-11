@@ -678,6 +678,9 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 				v1beta1constants.LabelApp: deploymentName,
 			}
 		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyPodSelector(service, metav1.LabelSelector{MatchLabels: map[string]string{
+				v1beta1constants.LabelApp: deploymentName,
+			}}))
 			service.Spec.Selector = map[string]string{
 				"statefulset.kubernetes.io/pod-name": v.indexedName(idx),
 			}

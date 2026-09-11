@@ -178,6 +178,7 @@ func (r *Reconciler) ServicePredicate() predicate.Predicate {
 				!apiequality.Semantic.DeepEqual(service.Spec.Selector, oldService.Spec.Selector) ||
 				!apiequality.Semantic.DeepEqual(service.Spec.Ports, oldService.Spec.Ports) ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] != service.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] ||
+				oldService.Annotations[resourcesv1alpha1.NetworkingNetworkPolicyPodSelector] != service.Annotations[resourcesv1alpha1.NetworkingNetworkPolicyPodSelector] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] != service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] ||
 				fromPolicyAnnotationsChanged(oldService.Annotations, service.Annotations)
