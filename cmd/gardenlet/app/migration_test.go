@@ -117,6 +117,14 @@ var _ = Describe("Migration", func() {
 				Expect(verify(shoot)).To(Succeed())
 			})
 
+			It("should ignore hibernated shoots", func() {
+				shoot := shootUsingUnifiedPort("a", seedName)
+				shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: new(true)}
+				shoot.Status.Constraints = nil
+
+				Expect(verify(shoot)).To(Succeed())
+			})
+
 			It("should ignore shoots which were not picked up yet", func() {
 				shoot := shootUsingUnifiedPort("a", seedName)
 				shoot.Status.LastOperation, shoot.Status.Constraints = nil, nil
