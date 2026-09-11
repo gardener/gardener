@@ -737,7 +737,7 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",
 			Fn:           b.DeployClusterAutoscaler,
-			SkipIf:       b.Shoot.HibernationEnabled,
+			SkipIf:       b.isGardenadmBootstrap() || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 		_ = g.Add(flow.Task{

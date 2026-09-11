@@ -177,39 +177,37 @@ gind-machine-0   Ready    control-plane   7m15s   v1.35.0
 gind-machine-1   Ready    worker          8m48s   v1.35.0
 ```
 
+### Tearing Down
+
+When you are done, you can delete the setup by running
+
+```shell
+make gind-down
+```
+
 ## "Managed Infrastructure" Scenario
-
-### Setting Up the KinD Cluster
-
-```shell
-make kind-up
-```
-
-All following steps assume that you are using the kubeconfig for this KinD cluster:
-
-```shell
-export KUBECONFIG=$PWD/dev-setup/kubeconfigs/runtime/kubeconfig
-```
 
 Use the following command to prepare the `gardenadm` managed infrastructure scenario:
 
 ```shell
-make gardenadm-up SCENARIO=managed-infra
+make gink-up # Gardener-in-kind
 ```
 
-This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/managed-infra`](../../dev-setup/gardenadm/resources/generated/managed-infra) directory.
-
-### Bootstrapping the Self-Hosted Shoot Cluster
-
-Use `go run` to execute `gardenadm` commands on your machine:
+This will first setup a kind cluster and then use the cluster to perform `gardenadm bootstrap` to create a self-hosted shoot cluster.
+At first, this will build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./dev-setup/gardenadm/resources/generated/managed-infra`](../../dev-setup/gardenadm/resources/generated/managed-infra) directory.
+The whole process usually takes a couple of minutes, but eventually you should see output like this:
 
 ```shell
-$ export IMAGEVECTOR_OVERWRITE=$PWD/dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml
-$ go run ./cmd/gardenadm bootstrap -d ./dev-setup/gardenadm/resources/generated/managed-infra
-...
 [shoot--garden--root-control-plane-58ffc-2l6s7] Your Shoot cluster control-plane has initialized successfully!
-...
 ```
+
+`make gink-up` supports a `SCENARIO` variable that controls how far the setup proceeds (e.g., `make gink-up SCENARIO=default`):
+
+| `SCENARIO` | Description                                                                                                                                                     |
+|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `default`  | Creates the kind cluster, runs `gardenadm bootstrap` and exports the kubeconfig for the self-hosted shoot. This is the default when no `SCENARIO` is specified. |
+| `connect`  | Like `default`, but also deploys Gardener into the self-hosted shoot and runs `gardenadm connect` to deploy gardenlet which registers the `Shoot`.              |
+| `full`     | Like `connect`, but also registers the self-hosted shoot as a seed via a `ManagedSeed`, enabling it to host shoot clusters.                                     |
 
 ### Connecting to the Self-Hosted Shoot Cluster
 
@@ -224,18 +222,19 @@ NAME                                                    STATUS   ROLES    AGE   
 machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.35.0
 ```
 
-### Tearing Down the KinD Cluster
+### Tearing Down
 
 When you are done, you can delete the setup by running
 
 ```shell
-make kind-down
+make gink-down
 ```
 
 ## Connecting the Self-Hosted Shoot Cluster to Gardener
 
 > [!TIP]
 > For the unmanaged infrastructure scenario, this step is automated when using `make gind-up SCENARIO=connect`.
+> For the managed infrastructure scenario, this step is automated when using `make gink-up SCENARIO=connect`.
 
 After you have successfully bootstrapped a self-hosted shoot cluster (either via the [unmanaged infrastructure](#unmanaged-infrastructure-scenario) or the [managed infrastructure](#managed-infrastructure-scenario) scenario), you can connect it to an existing Gardener system.
 For this, you need to deploy Gardener to your self-hosted shoot cluster.
@@ -310,6 +309,7 @@ garden      root   local          local      local    1.35.0        Awake       
 
 > [!TIP]
 > For the unmanaged infrastructure scenario, this step is automated when using `make gind-up SCENARIO=full`.
+> For the managed infrastructure scenario, this step is automated when using `make gink-up SCENARIO=full`.
 
 After the self-hosted shoot has been connected to Gardener (see above), you can register it as a seed by creating a `ManagedSeed` resource.
 This enables the self-hosted shoot to host other shoot clusters.

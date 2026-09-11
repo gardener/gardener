@@ -11,6 +11,7 @@ components:
 - ../../../../gardenconfig/components/credentials/secret-project-garden
 
 patches:
+- path: patch-cloudprofile.yaml
 - path: patch-shoot.yaml
 - target:
     kind: Shoot

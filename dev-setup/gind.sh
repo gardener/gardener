@@ -91,6 +91,7 @@ case "$COMMAND" in
 
     # Register the self-hosted shoot as a seed via a ManagedSeed
     if (( level >= 5 )); then
+      "$(dirname "$0")/gardenlet/overlays/multi-node-gardenadm/generate-patch-managedseed.sh" unmanaged-infra
       make seed-up KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
     fi
     ;;

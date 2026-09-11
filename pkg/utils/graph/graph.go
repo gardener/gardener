@@ -78,6 +78,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
 		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
+		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
 		{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
 		{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
 		{&securityv1alpha1.CredentialsBinding{}, g.setupCredentialsBindingWatch},
@@ -85,7 +86,6 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 
 	if !g.forSelfHostedShoots {
 		setups = append(setups,
-			resourceSetup{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
 			resourceSetup{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
 		)
 	}

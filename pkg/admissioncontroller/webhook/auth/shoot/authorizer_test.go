@@ -2139,6 +2139,138 @@ var _ = Describe("Shoot", func() {
 				})
 			})
 
+			When("requested for CredentialsBindings", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        securityv1alpha1.SchemeGroupVersion.Group,
+						Resource:        "credentialsbindings",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeCredentialsBinding, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because no allowed verb",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("patch", "patch"),
+					Entry("update", "update"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeCredentialsBinding, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+			})
+
+			When("requested for SecretBindings", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            gardenletUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource:        "secretbindings",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecretBinding, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because no allowed verb",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("patch", "patch"),
+					Entry("update", "update"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because path to shoot does not exist", func() {
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecretBinding, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+			})
+
 			When("requested for Secrets", func() {
 				var (
 					name, namespace string
