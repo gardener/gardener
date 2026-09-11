@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	types "k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -151,11 +150,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_ContextObject_To_security_ContextObject(in *ContextObject, out *security.ContextObject, s conversion.Scope) error {
-	out.Kind = in.Kind
-	out.APIVersion = in.APIVersion
-	out.Name = in.Name
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
-	out.UID = types.UID(in.UID)
+	*out = *(*security.ContextObject)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -165,11 +160,7 @@ func Convert_v1alpha1_ContextObject_To_security_ContextObject(in *ContextObject,
 }
 
 func autoConvert_security_ContextObject_To_v1alpha1_ContextObject(in *security.ContextObject, out *ContextObject, s conversion.Scope) error {
-	out.Kind = in.Kind
-	out.APIVersion = in.APIVersion
-	out.Name = in.Name
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
-	out.UID = types.UID(in.UID)
+	*out = *(*ContextObject)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -231,7 +222,7 @@ func Convert_security_CredentialsBindingList_To_v1alpha1_CredentialsBindingList(
 }
 
 func autoConvert_v1alpha1_CredentialsBindingProvider_To_security_CredentialsBindingProvider(in *CredentialsBindingProvider, out *security.CredentialsBindingProvider, s conversion.Scope) error {
-	out.Type = in.Type
+	*out = *(*security.CredentialsBindingProvider)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -241,7 +232,7 @@ func Convert_v1alpha1_CredentialsBindingProvider_To_security_CredentialsBindingP
 }
 
 func autoConvert_security_CredentialsBindingProvider_To_v1alpha1_CredentialsBindingProvider(in *security.CredentialsBindingProvider, out *CredentialsBindingProvider, s conversion.Scope) error {
-	out.Type = in.Type
+	*out = *(*CredentialsBindingProvider)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -321,8 +312,7 @@ func Convert_security_TokenRequestSpec_To_v1alpha1_TokenRequestSpec(in *security
 }
 
 func autoConvert_v1alpha1_TokenRequestStatus_To_security_TokenRequestStatus(in *TokenRequestStatus, out *security.TokenRequestStatus, s conversion.Scope) error {
-	out.Token = in.Token
-	out.ExpirationTimestamp = in.ExpirationTimestamp
+	*out = *(*security.TokenRequestStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -332,8 +322,7 @@ func Convert_v1alpha1_TokenRequestStatus_To_security_TokenRequestStatus(in *Toke
 }
 
 func autoConvert_security_TokenRequestStatus_To_v1alpha1_TokenRequestStatus(in *security.TokenRequestStatus, out *TokenRequestStatus, s conversion.Scope) error {
-	out.Token = in.Token
-	out.ExpirationTimestamp = in.ExpirationTimestamp
+	*out = *(*TokenRequestStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -443,7 +432,7 @@ func Convert_security_WorkloadIdentitySpec_To_v1alpha1_WorkloadIdentitySpec(in *
 }
 
 func autoConvert_v1alpha1_WorkloadIdentityStatus_To_security_WorkloadIdentityStatus(in *WorkloadIdentityStatus, out *security.WorkloadIdentityStatus, s conversion.Scope) error {
-	out.Sub = in.Sub
+	*out = *(*security.WorkloadIdentityStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -453,7 +442,7 @@ func Convert_v1alpha1_WorkloadIdentityStatus_To_security_WorkloadIdentityStatus(
 }
 
 func autoConvert_security_WorkloadIdentityStatus_To_v1alpha1_WorkloadIdentityStatus(in *security.WorkloadIdentityStatus, out *WorkloadIdentityStatus, s conversion.Scope) error {
-	out.Sub = in.Sub
+	*out = *(*WorkloadIdentityStatus)(unsafe.Pointer(in))
 	return nil
 }
 

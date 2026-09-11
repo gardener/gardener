@@ -13,7 +13,7 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// ControllerDeployments returns a ControllerDeploymentInformer.
-	ControllerDeployments() ControllerDeploymentInformer
+	ControllerDeployments() TypedControllerDeploymentInformer
 }
 
 type version struct {
@@ -27,7 +27,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// ControllerDeployments returns a ControllerDeploymentInformer.
-func (v *version) ControllerDeployments() ControllerDeploymentInformer {
+// ControllerDeployments returns a TypedControllerDeploymentInformer.
+func (v *version) ControllerDeployments() TypedControllerDeploymentInformer {
 	return &controllerDeploymentInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
