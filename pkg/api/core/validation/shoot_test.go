@@ -10945,6 +10945,42 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		It("should fail for memory values that are not a whole number of bytes", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{
+				MinAllowed: map[corev1.ResourceName]resource.Quantity{
+					"cpu":    resource.MustParse("10m"),
+					"memory": resource.MustParse("7118908293120m"),
+				},
+			}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("autoscaling.minAllowed.memory"),
+					"BadValue": Equal("7118908293120m"),
+					"Detail":   Equal("must be a whole number of bytes"),
+				})),
+			))
+		})
+
+		It("should fail for CPU values that are not a whole number of milli CPUs", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{
+				MinAllowed: map[corev1.ResourceName]resource.Quantity{
+					"cpu":    resource.MustParse("100u"),
+					"memory": resource.MustParse("50Mi"),
+				},
+			}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("autoscaling.minAllowed.cpu"),
+					"BadValue": Equal("100u"),
+					"Detail":   Equal("must be a whole number of milli CPUs"),
+				})),
+			))
+		})
+
 		When("minimum required values are configured", func() {
 			var minRequired corev1.ResourceList
 
