@@ -30,9 +30,13 @@ services:
     restart: unless-stopped
     ports:
       - "5001:5001"
+    environment:
+      REGISTRY_HTTP_TLS_CERTIFICATE: /etc/distribution/tls/registry.crt
+      REGISTRY_HTTP_TLS_KEY: /etc/distribution/tls/registry.key
     volumes:
       - ../../dev/local-registry/localhost:/var/lib/registry
       - ./registry/config.yaml:/etc/distribution/config.yml
+      - ./registry/tls:/etc/distribution/tls:ro
     networks:
       kind:
         aliases:

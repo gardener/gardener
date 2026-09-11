@@ -18,11 +18,14 @@ case "$COMMAND" in
     setup_containerd_registry_mirrors() {
       NODES=("$@")
 
+      local ca_crt
+      ca_crt="$(dirname "$0")/infra/registry/tls/ca.crt"
+
       for NODE in "${NODES[@]}"; do
-        # For the local registry, we don't need a mirror config for switching the URL, but only for configuring containerd
-        # to use HTTP instead of HTTPS. Probably, we could use the insecure registries config for this. However, configuring
-        # mirrors is supported by gardener-node-agent via the OSC, so we use the same approach everywhere.
-        setup_containerd_registry_mirror "$NODE" "registry.local.gardener.cloud:5001" "http://registry.local.gardener.cloud:5001" "http://registry.local.gardener.cloud:5001"
+        # The local registry serves its API over HTTPS using a self-signed CA. We configure containerd to trust that CA
+        # via the hosts.toml 'ca' field, pointing to the CA copied into the node. Configuring mirrors is supported by
+        # gardener-node-agent via the OSC, so we use the same approach everywhere.
+        setup_containerd_registry_mirror "$NODE" "registry.local.gardener.cloud:5001" "https://registry.local.gardener.cloud:5001" "https://registry.local.gardener.cloud:5001" "$ca_crt"
         setup_containerd_registry_mirror "$NODE" "gcr.io" "https://gcr.io" "http://gcr.registry-cache.local.gardener.cloud:5001"
         setup_containerd_registry_mirror "$NODE" "registry.k8s.io" "https://registry.k8s.io" "http://k8s.registry-cache.local.gardener.cloud:5001"
         setup_containerd_registry_mirror "$NODE" "quay.io" "https://quay.io" "http://quay.registry-cache.local.gardener.cloud:5001"
@@ -39,15 +42,24 @@ case "$COMMAND" in
       UPSTREAM_HOST=$2
       UPSTREAM_SERVER=$3
       MIRROR_HOST=$4
+      CA_CRT=${5:-}
 
       echo "[${NODE}] Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
       REGISTRY_DIR="/etc/containerd/certs.d/${UPSTREAM_HOST}"
       docker exec "${NODE}" mkdir -p "${REGISTRY_DIR}"
+
+      local ca_line=""
+      if [[ -n "$CA_CRT" ]]; then
+        docker cp "$CA_CRT" "${NODE}:${REGISTRY_DIR}/ca.crt"
+        ca_line="  ca = \"${REGISTRY_DIR}/ca.crt\""
+      fi
+
       cat <<EOF | docker exec -i "${NODE}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
 server = "${UPSTREAM_SERVER}"
 
 [host."${MIRROR_HOST}"]
   capabilities = ["pull", "resolve"]
+${ca_line}
 EOF
     }
 

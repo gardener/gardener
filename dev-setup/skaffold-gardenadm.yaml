@@ -868,8 +868,6 @@ build:
                     }
                   }'
                 )" || true
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
@@ -1176,8 +1174,6 @@ build:
       requires:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'

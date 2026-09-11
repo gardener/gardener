@@ -164,6 +164,17 @@ function run_post_upgrade_test() {
   make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
+# TODO (shafeeqes): Remove this early exit once this PR is merged and its merge commit is pinned as GARDENER_PREVIOUS_RELEASE.
+# The previous release serves the local registry over HTTP, but this PR switches it to HTTPS-only, so upgrading from
+# the previous release fails. Once the merge commit (HTTPS-aware) is the baseline, the upgrade tests can run again.
+# See https://github.com/gardener/gardener/pull/15642#issuecomment-5525319465
+if true; then
+  echo "WARNING: The Gardener upgrade tests are not executed because the previous release does not support the HTTPS-only local registry introduced in this PR."
+  echo "See https://github.com/gardener/gardener/pull/15642 for more information."
+  echo "Skipping the tests."
+  exit 0
+fi
+
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 

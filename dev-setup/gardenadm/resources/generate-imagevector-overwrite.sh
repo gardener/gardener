@@ -30,4 +30,11 @@ images="$(echo "$images" | jq -r \
       . + [{name: $name, ref: $ref}] end' |\
  yq eval -P)"
 
+
+# Trust the local registry's self-signed CA.
+ca_crt="$(dirname "$0")/../../infra/registry/tls/ca.crt"
+if [[ -f "$ca_crt" ]]; then
+  images="$(CA="$(cat "$ca_crt")" yq eval '.caBundle.inline = strenv(CA)' - <<<"$images")"
+fi
+
 yq eval ". = \"$images\"" -i "$patch_file"

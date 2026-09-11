@@ -168,7 +168,7 @@ func (b *GardenadmBotanist) ReconcileExtensionControllerInstallations(ctx contex
 		reconciler = controllerinstallation.Reconciler{
 			GardenClient:              b.GardenClient,
 			SeedClientSet:             b.SeedClientSet,
-			HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
+			HelmRegistry:              oci.NewHelmRegistry(b.GardenClient),
 			Clock:                     b.Clock,
 			Identity:                  &shoot.Status.Gardener,
 			GardenNamespace:           b.Shoot.ControlPlaneNamespace,

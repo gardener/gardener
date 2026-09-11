@@ -1,6 +1,8 @@
-# Enable containerd to reach registry at registry.local.gardener.cloud:5001 via HTTP.
+# Enable containerd to reach registry at registry.local.gardener.cloud:5001 via HTTPS.
+# The registry's self-signed CA is installed into the node's OS trust store by the node-init script (from the
+# registry-ca-bundle ConfigMap), so containerd trusts the TLS certificate without an explicit 'ca' field here.
 # Beware: Port `:5000` cannot be used, as it conflicts with the default port allocation for the `AirPlay Receiver` on MacOS.
-server = "http://registry.local.gardener.cloud:5001"
+server = "https://registry.local.gardener.cloud:5001"
 
-[host."http://registry.local.gardener.cloud:5001"]
+[host."https://registry.local.gardener.cloud:5001"]
   capabilities = ["pull", "resolve"]
