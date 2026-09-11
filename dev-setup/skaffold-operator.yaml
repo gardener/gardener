@@ -377,6 +377,7 @@ build:
             - pkg/utils/version
             - pkg/utils/workloadidentity
             - pkg/webhook/authorizer
+            - third_party/component-helpers/scheduling/corev1/nodeaffinity
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
