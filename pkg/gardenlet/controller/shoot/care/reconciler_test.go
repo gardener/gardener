@@ -589,6 +589,7 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ context.Context,
 		_ logr.Logger,
 		_ client.Client,
+		_ client.Reader,
 		_ kubernetes.Interface,
 		_ clientmap.ClientMap,
 		_ *gardenletconfigv1alpha1.GardenletConfiguration,

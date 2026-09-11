@@ -48,6 +48,7 @@ var (
 // Reconciler reconciles Shoot resources and executes care operations, e.g. health checks or garbage collection.
 type Reconciler struct {
 	GardenClient          client.Client
+	GardenAPIReader       client.Reader
 	SeedClientSet         kubernetes.Interface
 	ShootClientMap        clientmap.ClientMap
 	Config                gardenletconfigv1alpha1.GardenletConfiguration
@@ -147,6 +148,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		careCtx,
 		log,
 		r.GardenClient,
+		r.GardenAPIReader,
 		r.SeedClientSet,
 		r.ShootClientMap,
 		&r.Config,

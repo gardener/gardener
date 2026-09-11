@@ -366,7 +366,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"networking.istio.io"},
-				Resources: []string{"destinationrules", "gateways", "virtualservices", "envoyfilters"},
+				Resources: []string{"destinationrules", "gateways", "virtualservices", "envoyfilters", "serviceentries"},
 				Verbs:     []string{"delete"},
 			},
 			{
@@ -427,7 +427,7 @@ func getManagedIstioClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{"networking.istio.io"},
-				Resources: []string{"destinationrules", "gateways", "virtualservices", "envoyfilters", "sidecars"},
+				Resources: []string{"destinationrules", "gateways", "virtualservices", "envoyfilters", "sidecars", "serviceentries"},
 				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
 			},
 			{

@@ -70,13 +70,16 @@ func (b *Botanist) instantiateComponentsControlPlane(ctx context.Context) (err e
 	if err != nil {
 		return err
 	}
-	b.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
+	b.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(ctx, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
 		return err
 	}
-	b.Shoot.Components.ControlPlane.EtcdEvents, err = b.DefaultEtcd(v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
+	b.Shoot.Components.ControlPlane.EtcdEvents, err = b.DefaultEtcd(ctx, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
 	if err != nil {
 		return err
+	}
+	if !b.Shoot.IsSelfHosted() {
+		b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
 	}
 	b.Shoot.Components.ControlPlane.IstioBasicAuthServer, err = b.DefaultIstioBasicAuthServer()
 	if err != nil {

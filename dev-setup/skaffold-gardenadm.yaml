@@ -79,6 +79,7 @@ build:
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
+            - pkg/component/etcd/peerexposure
             - pkg/component/extensions/backupentry
             - pkg/component/extensions/bastion
             - pkg/component/extensions/containerruntime
@@ -622,6 +623,7 @@ build:
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
+            - pkg/component/etcd/peerexposure
             - pkg/component/extensions
             - pkg/component/extensions/backupentry
             - pkg/component/extensions/bastion
