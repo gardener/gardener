@@ -417,6 +417,9 @@ var _ = Describe("Deployment", func() {
 					Namespace: deployment.Namespace,
 					UID:       "other-deploy-uid",
 				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: deployment.Spec.Selector.MatchLabels},
+				},
 			}
 			Expect(fakeClient.Create(ctx, otherDeployment)).To(Succeed())
 
