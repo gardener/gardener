@@ -128,7 +128,7 @@ func RunForShoot(
 		})
 	}
 
-	fmt.Fprintf(opts.Out, "Fetching required resources for from garden cluster...\n\n")
+	fmt.Fprintf(opts.Out, "Fetching required resources from garden cluster...\n\n")
 
 	return flow.Parallel(taskFns...)(ctx)
 }
