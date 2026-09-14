@@ -5,8 +5,10 @@
 package constants
 
 const (
-	// VictoriaLogsPort is the port exposed by VictoriaLogs.
-	VictoriaLogsPort = 9428
+	// VictoriaLogsHttpPort is the HTTP port exposed by VictoriaLogs.
+	VictoriaLogsHttpPort = 9428
+	// VictoriaLogsPort is the HTTPS port exposed by VictoriaLogs.
+	VictoriaLogsPort = 9429
 	// ServiceName is the name of the logging service.
 	ServiceName = "logging-vl"
 	// PushEndpoint is the endpoint used by VictoriaLogs to receive logs.

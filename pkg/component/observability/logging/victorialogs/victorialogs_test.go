@@ -6,6 +6,7 @@ package victorialogs_test
 
 import (
 	"context"
+	"fmt"
 
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
@@ -117,7 +118,7 @@ var _ = Describe("VictoriaLogs", func() {
 						Repository: "europe-docker.pkg.dev/gardener-project/releases/some-image",
 						Tag:        "some-tag",
 					},
-					Port: "9428",
+					Port: "9429",
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -186,7 +187,7 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 					MatchExpressions: []metav1.LabelSelectorRequirement{{
 						Key:      "operator.victoriametrics.com/additional-service",
-						Operator: metav1.LabelSelectorOpDoesNotExist,
+						Operator: metav1.LabelSelectorOpExists,
 					}},
 				},
 				Endpoints: []monitoringv1.Endpoint{{
@@ -333,7 +334,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9429}]`,
 					},
 				}
 
@@ -381,7 +382,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9429}]`,
 					},
 				}
 
@@ -428,9 +429,24 @@ var _ = Describe("VictoriaLogs", func() {
 
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ExtraArgs = map[string]string{
-					"tls":         "true",
-					"tlsCertFile": "/etc/victorialogs/tls/tls.crt",
-					"tlsKeyFile":  "/etc/victorialogs/tls/tls.key",
+					"httpListenAddr": fmt.Sprintf(":%d,:%d", 9429, 9428),
+					"tls":            "true,false",
+					"tlsCertFile":    "/etc/victorialogs/tls/tls.crt",
+					"tlsKeyFile":     "/etc/victorialogs/tls/tls.key",
+				}
+				expectedVlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
+					{
+						Name:       "https",
+						Port:       9429,
+						TargetPort: intstr.FromInt32(9429),
+						Protocol:   corev1.ProtocolTCP,
+					},
+					{
+						Name:       "http",
+						Port:       9428,
+						TargetPort: intstr.FromInt32(9428),
+						Protocol:   corev1.ProtocolTCP,
+					},
 				}
 				expectedVlSingle.Spec.Volumes = []corev1.Volume{{
 					Name: "vl-server-tls",
@@ -445,6 +461,7 @@ var _ = Describe("VictoriaLogs", func() {
 				}}
 
 				expectedServiceMonitor := serviceMonitor.DeepCopy()
+				expectedServiceMonitor.Spec.Endpoints[0].Port = "https"
 				expectedServiceMonitor.Spec.Endpoints[0].Scheme = new(monitoringv1.SchemeHTTPS)
 				expectedServiceMonitor.Spec.Endpoints[0].HTTPConfigWithProxyAndTLSFiles = monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
@@ -482,7 +499,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9429}]`,
 						resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: "all-shoots",
 						resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 					},
