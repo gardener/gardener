@@ -50,7 +50,11 @@ const (
 	name = "plutono"
 
 	// Port is the port exposed by the plutono.
-	Port                          = 3000
+	Port = 3000
+	// DashboardHealthPort is the port exposed by the dashboard sidecar container.
+	DashboardHealthPort = 8081
+	// DatasourceHealthPort is the port exposed by the datasource sidecar container.
+	DatasourceHealthPort          = 8082
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
 	labelValueTrue                = "true"
 
@@ -679,8 +683,8 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 								AllowPrivilegeEscalation: new(false),
 							},
 						},
-						p.refresherSidecar("dashboard", p.dashboardLabel(), volumeMountPathDashboards, corev1.VolumeMount{Name: volumeNameStorage, MountPath: volumeMountPathStorage}),
-						p.refresherSidecar("datasource", p.dataSourceLabel(), volumeMountPathDataSources, corev1.VolumeMount{Name: volumeNameDataSources, MountPath: volumeMountPathDataSources}),
+						p.refresherSidecar("dashboard", p.dashboardLabel(), volumeMountPathDashboards, DashboardHealthPort, corev1.VolumeMount{Name: volumeNameStorage, MountPath: volumeMountPathStorage}),
+						p.refresherSidecar("datasource", p.dataSourceLabel(), volumeMountPathDataSources, DatasourceHealthPort, corev1.VolumeMount{Name: volumeNameDataSources, MountPath: volumeMountPathDataSources}),
 					},
 					Volumes: []corev1.Volume{
 						{
@@ -746,7 +750,7 @@ func (p *plutono) getDeployment(providerConfigMap *corev1.ConfigMap, plutonoConf
 	return deployment
 }
 
-func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev1.VolumeMount) corev1.Container {
+func (p *plutono) refresherSidecar(what, label, folder string, healthPort int, volumeMount corev1.VolumeMount) corev1.Container {
 	return corev1.Container{
 		Name:            what + "-refresher",
 		Image:           p.values.ImageDataRefresher,
@@ -769,6 +773,7 @@ func (p *plutono) refresherSidecar(what, label, folder string, volumeMount corev
 			{Name: "METHOD", Value: "WATCH"},
 			{Name: "REQ_URL", Value: fmt.Sprintf("http://localhost:%d/api/admin/provisioning/%ss/reload", Port, what)},
 			{Name: "REQ_METHOD", Value: "POST"},
+			{Name: "HEALTH_PORT", Value: strconv.Itoa(healthPort)},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			volumeMount,
