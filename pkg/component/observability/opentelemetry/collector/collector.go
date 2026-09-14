@@ -569,6 +569,7 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							},
 						},
 					},
+					Pipelines: map[string]*otelv1beta1.Pipeline{},
 				},
 			},
 		},
