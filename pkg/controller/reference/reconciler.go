@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,6 +40,7 @@ type Reconciler struct {
 	GetReferencedConfigMapNames        func(client.Object) []string
 	GetReferencedWorkloadIdentityNames func(client.Object) []string
 	ReferenceChangedPredicate          func(oldObj, newObj client.Object) bool
+	Recorder                           events.EventRecorder
 }
 
 // Reconcile performs the check.
@@ -85,6 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName) {
 			log.Info("Removing finalizer")
 			if err := controllerutils.RemoveFinalizers(ctx, r.Client, obj, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+				r.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -123,6 +126,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if !needsFinalizer && hasFinalizer {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.Client, obj, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+			r.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -183,6 +187,7 @@ func (r *Reconciler) releaseUnreferencedResources(
 			if controllerutil.ContainsFinalizer(obj, v1beta1constants.ReferenceProtectionFinalizerName) {
 				log.Info("Removing finalizer from object", "kind", obj.GetObjectKind().GroupVersionKind().Kind, "obj", client.ObjectKeyFromObject(obj))
 				if err := controllerutils.RemoveFinalizers(ctx, r.Client, obj, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
+					r.Recorder.Eventf(obj, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
 					return fmt.Errorf("failed to remove finalizer from %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, client.ObjectKeyFromObject(obj), err)
 				}
 			}
