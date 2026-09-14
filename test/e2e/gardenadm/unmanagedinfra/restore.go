@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -83,21 +84,33 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 
-			// TODO(DobromirNPeev): Check how to eliminate the workarounds for obtaining a ShootState below -
-			// patching the Shoot ".status.lastOperation" and restarting the gardenlet Pods.
-			// These workarounds are no longer needed after the shoot/shoot controller got enabled in Gardener v1.148+.
-
-			By("Patch the Shoot status with a successful create lastOperation")
+			By("Wait until the Shoot is reconciled")
+			// TODO: Wait for the ControlPlaneHealthy, ObservabilityComponentsHealthy and SystemComponentsHealthy conditions as well when they are healthy.
+			// - ControlPlaneHealthy fails with: 'Missing required deployments: [vpa-admission-controller vpa-recommender vpa-updater]'
 			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+			requiredConditions := []gardencorev1beta1.ConditionType{
+				gardencorev1beta1.GardenletReady,
+				gardencorev1beta1.ShootAPIServerAvailable,
+				gardencorev1beta1.ShootObservabilityComponentsHealthy,
+				gardencorev1beta1.ShootEveryNodeReady,
+				gardencorev1beta1.ShootSystemComponentsHealthy,
+				gardencorev1beta1.SeedBackupBucketsReady,
+			}
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type:  gardencorev1beta1.LastOperationTypeCreate,
-					State: gardencorev1beta1.LastOperationStateSucceeded,
+
+				g.Expect(shoot.Status.LastOperation).NotTo(BeNil())
+				g.Expect(shoot.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+
+				for _, conditionType := range requiredConditions {
+					condition := v1beta1helper.GetCondition(shoot.Status.Conditions, conditionType)
+					g.Expect(condition).NotTo(BeNil(), "condition %q should be present", conditionType)
+					g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue), "condition %q should be True", conditionType)
 				}
-				g.Expect(gardenClientSet.Client().Status().Patch(ctx, shoot, patch)).To(Succeed())
 			}).Should(Succeed())
+
+			// Restarting the gardenlet Pods forces a shoot-state controller reconciliation that creates the ShootState.
+			// TODO(DobromirNPeev): Check how to eliminate the workaround.
 
 			By("Roll out the gardenlet Deployment to trigger ShootState creation")
 			gardenletDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNamespace, Name: "gardenlet"}}
