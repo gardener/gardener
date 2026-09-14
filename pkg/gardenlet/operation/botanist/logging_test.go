@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -152,6 +153,8 @@ var _ = Describe("Logging", func() {
 	Describe("#DeployLogging", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, false))
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, false))
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, false))
 		})
 
 		It("should successfully delete the logging stack when shoot is with testing purpose", func() {
@@ -424,5 +427,58 @@ var _ = Describe("Logging", func() {
 		Entry("default volume when the PVC autoscaler is disabled", false, nil, resource.MustParse("30Gi")),
 		Entry("clamped to the seed minimum volume size when the PVC autoscaler is enabled", true, new(resource.MustParse("20Gi")), resource.MustParse("20Gi")),
 		Entry("initial size when it exceeds the seed minimum volume size", true, new(resource.MustParse("2Gi")), resource.MustParse("5Gi")),
+	)
+
+	DescribeTable("#DefaultOtelCollector RemoveVali pipeline",
+		func(removeVali bool) {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, removeVali))
+			gardenletfeatures.RegisterFeatureGates()
+
+			botanist.Config.SNI = &gardenletconfigv1alpha1.SNI{
+				Ingress: &gardenletconfigv1alpha1.SNIIngress{
+					Namespace: new("istio-ingress"),
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCACluster, Namespace: controlPlaneNamespace},
+				Data:       map[string][]byte{"bundle.crt": []byte("ca-bundle")},
+			})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameGenericTokenKubeconfig, Namespace: controlPlaneNamespace},
+			})).To(Succeed())
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					KubernetesVersion: new("1.2.3"),
+				},
+			})
+
+			deployer, err := botanist.DefaultOtelCollector()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployer.Deploy(ctx)).To(Succeed())
+
+			// Inspect the deployed OpenTelemetryCollector CR to confirm the RemoveVali FG was wired into Values.
+			objects, err := managedresources.GetObjects(ctx, fakeClient, controlPlaneNamespace, "opentelemetry-collector")
+			Expect(err).NotTo(HaveOccurred())
+
+			var otelCollector *otelv1beta1.OpenTelemetryCollector
+			for _, obj := range objects {
+				if col, ok := obj.(*otelv1beta1.OpenTelemetryCollector); ok {
+					otelCollector = col
+					break
+				}
+			}
+			Expect(otelCollector).NotTo(BeNil(), "expected an OpenTelemetryCollector resource in the managed resource")
+
+			_, hasValiPipeline := otelCollector.Spec.Config.Service.Pipelines["logs/vali"]
+			if removeVali {
+				Expect(hasValiPipeline).To(BeFalse(), "expected logs/vali pipeline to be absent when RemoveVali is enabled")
+			} else {
+				Expect(hasValiPipeline).To(BeTrue(), "expected logs/vali pipeline to be present when RemoveVali is disabled")
+			}
+		},
+		Entry("should remove logs/vali pipeline when RemoveVali is enabled", true),
+		Entry("should keep logs/vali pipeline when RemoveVali is disabled", false),
 	)
 })
