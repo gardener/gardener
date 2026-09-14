@@ -190,32 +190,6 @@
         "align": false,
         "alignLevel": null
       }
-    },
-    {
-      "datasource": "vali",
-      "gridPos": {
-        "h": 11,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 5,
-      "options": {
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
-      },
-      "targets": [
-        {
-          "expr": "{container_name=~\"$container\"}",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Logs",
-      "type": "logs"
     }
   ],
   "schemaVersion": 25,
@@ -224,36 +198,6 @@
     "extensions",
     "resources"
   ],
-  "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "current": {
-          "selected": true,
-          "text": "",
-          "value": ""
-        },
-        "datasource": "vali",
-        "definition": "label_values(container_name)",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Container",
-        "multi": false,
-        "name": "container",
-        "options": [],
-        "query": "label_values(container_name)",
-        "refresh": 1,
-        "regex": "gardener-extension.*",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      }
-    ]
-  },
   "time": {
     "from": "now-1h",
     "to": "now"
