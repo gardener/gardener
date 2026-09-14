@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -47,12 +46,12 @@ type Values struct {
 	ExternalExposure *ExposureValues
 	// VictoriaLogsEnabled indicates whether VictoriaLogs is enabled as the logging backend.
 	VictoriaLogsEnabled bool
+	// IncludeIstioDashboards specifies whether the istio dashboards should be deployed.
+	IncludeIstioDashboards bool
 	// OnlyDeployDatasourcesAndDashboards only leads to deployment of the PersesDatasource and PersesDashboard CRs.
 	// This is relevant when the Perses instance is already deployed by another component (e.g., gardener-operator),
 	// and the gardenlet wants to contribute seed-specific configuration.
 	OnlyDeployDatasourcesAndDashboards bool
-	// Dashboards is a map of PersesDashboard CRs to deploy, keyed by name.
-	Dashboards map[string]persesv1alpha2.Dashboard
 }
 
 // ExposureValues contains configuration for exposing this Perses instance via a VirtualService resource.
@@ -121,7 +120,12 @@ func (p *perses) Deploy(ctx context.Context) error {
 		objs = append(objs, p.serviceMonitor())
 	}
 	objs = append(objs, p.datasources()...)
-	objs = append(objs, p.dashboards()...)
+
+	dashboards, err := p.dashboards()
+	if err != nil {
+		return err
+	}
+	objs = append(objs, dashboards...)
 
 	resources, err := registry.AddAllAndSerialize(objs...)
 	if err != nil {

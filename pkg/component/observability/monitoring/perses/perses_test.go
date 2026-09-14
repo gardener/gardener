@@ -40,6 +40,7 @@ import (
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -59,8 +60,8 @@ var _ = Describe("Perses", func() {
 		deployer   Interface
 		values     Values
 
-		fakeOps   *retryfake.Ops
-		consistOf func(...client.Object) gomegatypes.GomegaMatcher
+		fakeOps      *retryfake.Ops
+		containsObjs func(...client.Object) gomegatypes.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -94,7 +95,7 @@ var _ = Describe("Perses", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
+		containsObjs = NewManagedResourceContainsObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -313,7 +314,7 @@ var _ = Describe("Perses", func() {
 
 			Context("seed cluster", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(managedResource).To(consistOf(
+					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsAggregate,
 						dsSeed,
@@ -474,7 +475,7 @@ var _ = Describe("Perses", func() {
 				})
 
 				It("should include istio exposure resources", func() {
-					Expect(managedResource).To(consistOf(
+					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsAggregate,
 						dsSeed,
@@ -493,7 +494,7 @@ var _ = Describe("Perses", func() {
 				})
 
 				It("should include VPA resource", func() {
-					Expect(managedResource).To(consistOf(
+					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsAggregate,
 						dsSeed,
@@ -545,7 +546,7 @@ var _ = Describe("Perses", func() {
 				})
 
 				It("should include VictoriaLogs datasource", func() {
-					Expect(managedResource).To(consistOf(
+					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsAggregate,
 						dsSeed,
@@ -591,12 +592,72 @@ var _ = Describe("Perses", func() {
 							}},
 						},
 					}
-					Expect(managedResource).To(consistOf(
+					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsGarden,
 						dsLongterm,
 						gardenServiceMonitor,
 					))
+				})
+			})
+
+			Context("dashboards", func() {
+				var dashboardNames func() []string
+
+				BeforeEach(func() {
+					dashboardNames = func() []string {
+						secret := &corev1.Secret{}
+						secret.Name = managedResource.Spec.SecretRefs[0].Name
+						secret.Namespace = namespace
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+						objs, err := managedresources.ExtractObjectsFromSecret(kubernetes.SeedCodec.UniversalDeserializer(), secret)
+						Expect(err).NotTo(HaveOccurred())
+
+						var names []string
+						for _, obj := range objs {
+							if dashboard, ok := obj.(*persesv1alpha2.PersesDashboard); ok {
+								Expect(dashboard.Spec.Config.Panels).NotTo(BeEmpty(), "dashboard %q should have panels", dashboard.Name)
+								names = append(names, dashboard.Name)
+							}
+						}
+						return names
+					}
+				})
+
+				Context("seed cluster", func() {
+					It("should deploy the seed + common dashboards without istio and vpa", func() {
+						names := dashboardNames()
+						Expect(names).To(ContainElements("gardener-resource-usage", "client-go", "controllers"))
+						Expect(names).NotTo(ContainElement(ContainSubstring("istio")))
+						// The common/vpa dashboards must not be deployed when VPA is disabled. Note vpa-misalignments
+						// is a plain seed dashboard, not a common/vpa one, so it is expected to be present.
+						Expect(names).NotTo(ContainElements("vpa-admission-controller", "vpa-recommender", "vpa-updater"))
+					})
+				})
+
+				Context("seed cluster with istio and VPA enabled", func() {
+					BeforeEach(func() {
+						values.IncludeIstioDashboards = true
+						values.VPAEnabled = true
+					})
+
+					It("should additionally deploy the istio and vpa dashboards", func() {
+						names := dashboardNames()
+						Expect(names).To(ContainElements("istio-mesh", "istio-control-plane", "vpa-admission-controller"))
+					})
+				})
+
+				Context("garden cluster", func() {
+					BeforeEach(func() {
+						values.IsGardenCluster = true
+					})
+
+					It("should deploy the garden + garden-shoot dashboards including istio", func() {
+						names := dashboardNames()
+						Expect(names).To(ContainElements("gardener-controlplane", "apiserver-overview", "virtual-garden-etcd"))
+						Expect(names).To(ContainElements("istio-mesh", "istio-control-plane", "istio-ingress-gateway", "istio-service", "istio-workload"))
+					})
 				})
 			})
 
@@ -633,7 +694,7 @@ var _ = Describe("Perses", func() {
 
 				It("should only deploy seed-specific datasources", func() {
 					dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-garden")
-					Expect(managedResource).To(consistOf(
+					Expect(managedResource).To(containsObjs(
 						dsAggregate,
 						dsSeed,
 					))
