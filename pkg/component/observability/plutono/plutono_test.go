@@ -363,6 +363,7 @@ metadata:
 											{Name: "METHOD", Value: "WATCH"},
 											{Name: "REQ_URL", Value: "http://localhost:3000/api/admin/provisioning/dashboards/reload"},
 											{Name: "REQ_METHOD", Value: "POST"},
+											{Name: "HEALTH_PORT", Value: "8081"},
 										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
@@ -406,6 +407,7 @@ metadata:
 											{Name: "METHOD", Value: "WATCH"},
 											{Name: "REQ_URL", Value: "http://localhost:3000/api/admin/provisioning/datasources/reload"},
 											{Name: "REQ_METHOD", Value: "POST"},
+											{Name: "HEALTH_PORT", Value: "8082"},
 										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
