@@ -252,9 +252,27 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 
 	if vlServerTLSSecretName != "" {
 		vlSingle.Spec.ExtraArgs = map[string]string{
-			"tls":         "true",
-			"tlsCertFile": path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
-			"tlsKeyFile":  path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
+			"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
+			"tls":            "true,false",
+			"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
+			"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
+		}
+
+		// Override Spec.Ports so it also exposes both ports.
+		// The http port is left for extention compatability reasons.
+		vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:       "https",
+				Port:       constants.VictoriaLogsPort,
+				TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
+				Protocol:   corev1.ProtocolTCP,
+			},
+			{
+				Name:       "http",
+				Port:       constants.VictoriaLogsHttpPort,
+				TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
+				Protocol:   corev1.ProtocolTCP,
+			},
 		}
 		vlSingle.Spec.Volumes = []corev1.Volume{{
 			Name: vlServerTLSVolumeName,
@@ -374,6 +392,7 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 	}
 
 	if v.values.SecretNameServerCA != "" {
+		endpoint.Port = "https"
 		endpoint.Scheme = new(monitoringv1.SchemeHTTPS)
 		endpoint.HTTPConfigWithProxyAndTLSFiles = monitoringv1.HTTPConfigWithProxyAndTLSFiles{
 			HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
