@@ -92,6 +92,8 @@ type Values struct {
 	IsGardenCluster bool
 	// VictoriaLogsBackend indicates whether VictoriaLogs should be deployed and used in the pipeline.
 	VictoriaLogsBackend bool
+	// RemoveVali indicates whether Vali should be removed from the pipeline.
+	RemoveVali bool
 }
 
 type otelCollector struct {
@@ -567,25 +569,26 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							},
 						},
 					},
-					Pipelines: map[string]*otelv1beta1.Pipeline{
-						"logs/vali": {
-							Exporters: []string{
-								"loki", "debug/logs",
-							},
-							Receivers: []string{
-								"otlp",
-							},
-							Processors: []string{
-								"memory_limiter",
-								"resource/vali",
-								"attributes/vali",
-								"batch",
-							},
-						},
-					},
 				},
 			},
 		},
+	}
+
+	if !o.values.RemoveVali {
+		obj.Spec.Config.Service.Pipelines["logs/vali"] = &otelv1beta1.Pipeline{
+			Exporters: []string{
+				"loki", "debug/logs",
+			},
+			Receivers: []string{
+				"otlp",
+			},
+			Processors: []string{
+				"memory_limiter",
+				"resource/vali",
+				"attributes/vali",
+				"batch",
+			},
+		}
 	}
 
 	// TODO(rrhubenov): Remove when the `VictoriaLogsBackend` feature gate is promoted to GA and switch to only using VictoriaLogs components.

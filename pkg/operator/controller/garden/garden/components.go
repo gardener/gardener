@@ -1772,6 +1772,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		component.ClusterTypeSeed,
 		true,
 		features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+		features.DefaultFeatureGate.Enabled(features.RemoveVali),
 	)
 }
 
