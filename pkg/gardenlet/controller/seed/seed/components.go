@@ -990,6 +990,7 @@ func (r *Reconciler) newPerses(seed *seedpkg.Seed, secretsManager secretsmanager
 		// configuring a pod priority class on the Perses resource (see github.com/perses/perses-operator/pull/456).
 		VPAEnabled:                         v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 		VictoriaLogsEnabled:                gardenlethelper.IsVictoriaLogsEnabled(&r.Config),
+		IncludeIstioDashboards:             true,
 		OnlyDeployDatasourcesAndDashboards: seedIsGarden,
 	}
 
