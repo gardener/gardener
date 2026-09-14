@@ -7,7 +7,9 @@ package perses
 import (
 	"net/http"
 	"regexp"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 // endpointAllowed reproduces how Perses evaluates the datasource proxy allow-list: it compiles each
@@ -26,40 +28,51 @@ func endpointAllowed(entries []map[string]any, method, path string) bool {
 	return false
 }
 
-func TestAllowedEndpointsForPluginAreAnchored(t *testing.T) {
-	prometheus := allowedEndpointsForPlugin(pluginKindPrometheus)
+var _ = Describe("allowedEndpointsForPlugin", func() {
+	Context("Prometheus plugin", func() {
+		var entries []map[string]any
 
-	allowed := []struct{ method, path string }{
-		{http.MethodGet, "/api/v1/query"},
-		{http.MethodPost, "/api/v1/query"},
-		{http.MethodGet, "/api/v1/query_range"},
-		{http.MethodGet, "/api/v1/label/instance/values"},
-	}
-	for _, tc := range allowed {
-		if !endpointAllowed(prometheus, tc.method, tc.path) {
-			t.Errorf("expected %s %s to be allowed for the Prometheus plugin, but it was rejected", tc.method, tc.path)
-		}
-	}
+		BeforeEach(func() {
+			entries = allowedEndpointsForPlugin(pluginKindPrometheus)
+		})
 
-	// Anchoring must reject paths that merely contain an allowed endpoint. Without "^...$" these would slip through
-	// because Perses matches the pattern as an unanchored substring, letting a caller reach write/admin endpoints.
-	rejected := []struct{ method, path string }{
-		{http.MethodGet, "/api/v1/query/../../admin/tsdb/delete_series"},
-		{http.MethodGet, "/api/v1/metadata/../admin"},
-		{http.MethodPost, "/api/v1/write"},
-		{http.MethodGet, "/prefix/api/v1/query"},
-	}
-	for _, tc := range rejected {
-		if endpointAllowed(prometheus, tc.method, tc.path) {
-			t.Errorf("expected %s %s to be rejected for the Prometheus plugin, but it was allowed", tc.method, tc.path)
-		}
-	}
+		DescribeTable("should allow the read-only query endpoints",
+			func(method, path string) {
+				Expect(endpointAllowed(entries, method, path)).To(BeTrue())
+			},
+			Entry("query via GET", http.MethodGet, "/api/v1/query"),
+			Entry("query via POST", http.MethodPost, "/api/v1/query"),
+			Entry("query_range", http.MethodGet, "/api/v1/query_range"),
+			Entry("label values", http.MethodGet, "/api/v1/label/instance/values"),
+		)
 
-	victoriaLogs := allowedEndpointsForPlugin(pluginKindVictoriaLogs)
-	if !endpointAllowed(victoriaLogs, http.MethodPost, "/select/logsql/query") {
-		t.Error("expected POST /select/logsql/query to be allowed for the VictoriaLogs plugin, but it was rejected")
-	}
-	if endpointAllowed(victoriaLogs, http.MethodPost, "/select/logsql/query/../../admin") {
-		t.Error("expected POST /select/logsql/query/../../admin to be rejected for the VictoriaLogs plugin, but it was allowed")
-	}
-}
+		// Anchoring must reject paths that merely contain an allowed endpoint. Without "^...$" these would slip
+		// through because Perses matches the pattern as an unanchored substring, letting a caller reach write/admin
+		// endpoints.
+		DescribeTable("should reject paths that only contain an allowed endpoint",
+			func(method, path string) {
+				Expect(endpointAllowed(entries, method, path)).To(BeFalse())
+			},
+			Entry("path traversal past query", http.MethodGet, "/api/v1/query/../../admin/tsdb/delete_series"),
+			Entry("path traversal past metadata", http.MethodGet, "/api/v1/metadata/../admin"),
+			Entry("remote-write", http.MethodPost, "/api/v1/write"),
+			Entry("allowed endpoint as a suffix", http.MethodGet, "/prefix/api/v1/query"),
+		)
+	})
+
+	Context("VictoriaLogs plugin", func() {
+		var entries []map[string]any
+
+		BeforeEach(func() {
+			entries = allowedEndpointsForPlugin(pluginKindVictoriaLogs)
+		})
+
+		It("should allow the query endpoint", func() {
+			Expect(endpointAllowed(entries, http.MethodPost, "/select/logsql/query")).To(BeTrue())
+		})
+
+		It("should reject a path that only contains an allowed endpoint", func() {
+			Expect(endpointAllowed(entries, http.MethodPost, "/select/logsql/query/../../admin")).To(BeFalse())
+		})
+	})
+})

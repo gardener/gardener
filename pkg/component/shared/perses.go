@@ -13,12 +13,12 @@ import (
 
 // NewPerses creates a new perses deployer.
 func NewPerses(c client.Client, namespace string, values perses.Values) (perses.Interface, error) {
-	imagePerses, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePerses)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePerses)
 	if err != nil {
 		return nil, err
 	}
 
-	values.Image = imagePerses.String()
+	values.Image = image.String()
 
 	return perses.New(c, namespace, values), nil
 }
