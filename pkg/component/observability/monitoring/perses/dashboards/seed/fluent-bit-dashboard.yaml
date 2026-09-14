@@ -1,0 +1,1643 @@
+kind: Dashboard
+metadata:
+  name: fluent-bit
+  project: garden
+spec:
+  display:
+    name: Fluent Bit
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Pod
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        customAllValue: fluent-bit.+
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers: []
+        name: pod
+    - kind: ListVariable
+      spec:
+        display:
+          name: Host
+          description: Output plugin host target
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        customAllValue: .+
+        sort: numerical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: host
+            matchers:
+              - fluentbit_gardener_incoming_logs_total
+        name: host
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Input plugin total records
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_input_records_total{pod=~"$pod"})
+                  seriesNameFormat: ""
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Input Plugin bytes/s
+          description: Average Input bytes processing rate of all fluent-bits.
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: mean
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 'sum(rate(fluentbit_input_bytes_total{pod=~"$pod"}[$__rate_interval])) by (name) / 1024  '
+                  seriesNameFormat: '{{name}}'
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Output Plugin bytes/s
+          description: Output plugin bytes processing rate of all fluent-bits.
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: mean
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_output_proc_bytes_total{pod=~"$pod"}[$__rate_interval])) by (name) /1024
+                  seriesNameFormat: '{{name}}'
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Output Plugin errors
+          description: Output plugin errors per name
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: mean
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_output_errors_total{pod=~"$pod"}) by (name)
+                  seriesNameFormat: '{{name}}'
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Output Plugin dropped records
+          description: Output plugin dropped records per name
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: mean
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_output_dropped_records_total{pod=~"$pod"}) by (name)
+                  seriesNameFormat: '{{name}}'
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Output Plugin total records
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_output_proc_records_total{pod=~"$pod"})
+                  seriesNameFormat: ""
+    "0_6":
+      kind: Panel
+      spec:
+        display:
+          name: Input Plugin records/s
+          description: Input plugin records rate.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineStyle: solid
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: reads/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_input_records_total{pod=~"$pod"}[$__rate_interval])) by (name)
+                  seriesNameFormat: '{{name}}'
+    "0_7":
+      kind: Panel
+      spec:
+        display:
+          name: Output Plugin records/s
+          description: Output plugin records rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineStyle: solid
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: writes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_output_proc_records_total{pod=~"$pod"}[$__rate_interval])) by (name)
+                  seriesNameFormat: '{{name}}'
+    "0_8":
+      kind: Panel
+      spec:
+        display:
+          name: Input Plugin pods records/s
+          description: Input records processing rate of all fluent-bits.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: reads/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_input_records_total{pod=~"$pod"}[$__rate_interval])) by (pod, name)
+                  seriesNameFormat: '{{ pod }}/{{name}}'
+    "0_9":
+      kind: Panel
+      spec:
+        display:
+          name: Output Plugin pods records/s
+          description: Output records processing rate of all fluent-bits.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: writes/sec
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_output_proc_records_total{pod=~"$pod"}[$__rate_interval])) by (pod, name)
+                  seriesNameFormat: '{{ pod }}/{{name}}'
+    "0_10":
+      kind: Panel
+      spec:
+        display:
+          name: Chunks in memory
+          description: Fluent-bit chunks in memory
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+                - mean
+                - max
+            visual:
+              areaOpacity: 0.02
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: fluentbit_storage_mem_chunks{pod=~"$pod"}
+                  seriesNameFormat: mem-{{pod}}
+    "0_11":
+      kind: Panel
+      spec:
+        display:
+          name: Chunks on filesystem
+          description: Fluent-bit chunks on filesystem
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: fluentbit_storage_fs_chunks{pod=~"$pod"}
+                  seriesNameFormat: '{{pod}}'
+    "0_12":
+      kind: Panel
+      spec:
+        display:
+          name: Chunks on filesystem - up
+          description: Chunks that are stored simultaneously in memory and in filesystem storage
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: fluentbit_storage_fs_chunks_up{pod=~"$pod"}
+                  seriesNameFormat: up-{{pod}}
+    "0_13":
+      kind: Panel
+      spec:
+        display:
+          name: Chunks on filesystem - down
+          description: 'Chunks that are stored only on the filesystem '
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: fluentbit_storage_fs_chunks_down{pod=~"$pod"}
+                  seriesNameFormat: down-{{pod}}
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total incoming records
+          description: Output plugin input records
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_gardener_incoming_logs_total{pod=~"$pod",host=~"$host"})
+                  seriesNameFormat: ""
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Total output records
+          description: Total records send to output plugin clients
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_gardener_output_client_logs_total{pod=~"$pod",host=~".+$host.+"})
+                  seriesNameFormat: ""
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Total sending clients
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (type)(fluentbit_gardener_clients_total{pod=~"$pod"})
+                  seriesNameFormat: '{{type}}'
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Total errors
+          description: Total errors by output plugin
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps:
+                - color: '#73bf69'
+                  value: 0
+                - color: '#EAB839'
+                  value: 10
+                - color: '#ff9830'
+                  value: 20
+                - color: '#f2495c'
+                  value: 30
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_gardener_errors_total{pod=~"$pod",host=~"$host"})
+                  seriesNameFormat: ""
+    "1_4":
+      kind: Panel
+      spec:
+        display:
+          name: Total dropped records
+          description: Total records dropped by output plugin
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(fluentbit_gardener_dropped_logs_total{pod=~"$pod",host=~".*$host.*"})
+                  seriesNameFormat: ""
+    "1_5":
+      kind: Panel
+      spec:
+        display:
+          name: Total OTel SDK exports
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(output_plugin_otel_sdk_exporter_log_exported_total{server_address=~".+$host.*"})
+                  seriesNameFormat: ""
+    "1_6":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming records/s
+          description: Output plugin incoming records rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: reads/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_gardener_incoming_logs_total{pod=~"$pod",host=~"$host"}[$__rate_interval])) by (host)
+                  seriesNameFormat: '{{host}}'
+    "1_7":
+      kind: Panel
+      spec:
+        display:
+          name: Output records/s
+          description: Output plugin record rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: reads/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(fluentbit_gardener_output_client_logs_total{pod=~"$pod",host=~".+$host.*"}[$__rate_interval])) by (host)
+                  seriesNameFormat: '{{host}}'
+    "1_8":
+      kind: Panel
+      spec:
+        display:
+          name: DQue current size
+          description: Dque current buffer size
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: fluentbit_gardener_dque_size{pod=~"$pod",name=~"$host"}
+                  seriesNameFormat: '{{pod}}/{{name}}'
+    "1_9":
+      kind: Panel
+      spec:
+        display:
+          name: DQue buffered records
+          description: DQue  records persisted on the filesystem.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (host)(fluentbit_gardener_buffered_logs{pod=~"$pod",host=~"$host"})
+                  seriesNameFormat: ""
+    "1_10":
+      kind: Panel
+      spec:
+        display:
+          name: Exported records/s
+          description: Output plugin exported records rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (host)(rate(fluentbit_gardener_exported_client_logs_total{pod=~"$pod",host=~"$host"}[$__rate_interval]))
+                  seriesNameFormat: '{{host}}'
+    "1_11":
+      kind: Panel
+      spec:
+        display:
+          name: Throttled records/s
+          description: Logs throttled by output plugin clients
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (host) (rate(fluentbit_gardener_throttled_logs_total{pod=~"$pod",host=~"$host"}[$__rate_interval]))
+                  seriesNameFormat: '{{host}}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: '[Process] CPU Usage'
+          description: Total user and system CPU time spent in seconds.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(process_cpu_seconds_total{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}}'
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: '[Process] Memory Usage'
+          description: Process memory usage - resident and virtual
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: process_resident_memory_bytes{pod=~"$pod"}
+                  seriesNameFormat: '{{pod}} - resident memory'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: process_virtual_memory_bytes{pod=~"$pod"}
+                  seriesNameFormat: '{{pod}} - virtual memory'
+    "2_2":
+      kind: Panel
+      spec:
+        display:
+          name: '[Process] Network I/O Rate'
+          description: Network bytes sent and received
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(process_network_transmit_bytes_total{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}} - TX'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(process_network_receive_bytes_total{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}} - RX'
+    "2_3":
+      kind: Panel
+      spec:
+        display:
+          name: '[Go] Heap memory in-use'
+          description: Memory allocated in heap and currently in use
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: go_memstats_heap_inuse_bytes{pod=~"$pod"}
+                  seriesNameFormat: '{{pod}} - heap in use'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: go_memstats_heap_alloc_bytes{pod=~"$pod"}
+                  seriesNameFormat: '{{pod}} - heap alloc'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: go_memstats_heap_idle_bytes{pod=~"$pod"}
+                  seriesNameFormat: '{{pod}} - heap idle'
+    "2_4":
+      kind: Panel
+      spec:
+        display:
+          name: '[Go] GC average duration'
+          description: GC average duration
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: go_gc_duration_seconds{pod=~"fluent-bit.+",quantile="0.75"}
+                  seriesNameFormat: '{{pod}} - GC 75p'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |
+                    sum by (pod) (
+                      rate(go_gc_duration_seconds_sum{pod=~"fluent-bit.+"}[$__rate_interval])
+                    )
+                    /
+                    sum by (pod) (
+                      rate(go_gc_duration_seconds_count{pod=~"fluent-bit.+"}[$__rate_interval])
+                    )
+                  seriesNameFormat: '{{pod}} - GC avg'
+    "2_5":
+      kind: Panel
+      spec:
+        display:
+          name: '[Go] Heap allocation/free rate'
+          description: 'Heap object allocation/free rates '
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(go_memstats_mallocs_total{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}} - alloc rate'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(go_memstats_frees_total{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}} - free rate'
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total created records
+          description: OTel exporter created records
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decimal
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum (output_plugin_otel_sdk_log_created_total{pod=~"$pod"})
+                  seriesNameFormat: '{{pod}}'
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Current in-flight records
+          description: Records not yet exported
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: last-number
+            format:
+              unit: decimal
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    sum (
+                      output_plugin_otel_sdk_exporter_log_inflight{server_address=~".+$host.+"}
+                    )
+                  seriesNameFormat: '{{server_address}}'
+    "3_2":
+      kind: Panel
+      spec:
+        display:
+          name: Records throughput /s
+          description: Otel exporter records throughput
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (server_address) (  rate(output_plugin_otel_sdk_exporter_log_exported_total{server_address=~".+$host.+"}[$__rate_interval]))
+                  seriesNameFormat: '{{server_address}}'
+    "3_3":
+      kind: Panel
+      spec:
+        display:
+          name: Export duration P50
+          description: OTLP Exporter Duration 50 percentile
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: milliseconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.50,sum by (le, server_address) (    rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket{server_address=~".+$host.+"}[$__rate_interval])))
+                  seriesNameFormat: '{{server_address}} - p50'
+    "3_4":
+      kind: Panel
+      spec:
+        display:
+          name: Network Throughput b/s
+          description: Network throughput for gRPC communication
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(output_plugin_rpc_client_request_size_bytes_sum{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}} - request bytes/sec'
+    "3_5":
+      kind: Panel
+      spec:
+        display:
+          name: Latency per rpc status code
+          description: OTLP Exporter latency per status code
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (rpc_response_status_code,server_address) (rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{server_address=~".+$host.+"}[$__rate_interval]))
+                  seriesNameFormat: '{{server_address}} - {{rpc_response_status_code}}'
+    "3_6":
+      kind: Panel
+      spec:
+        display:
+          name: RPC call Rate
+          description: RPC call rate per second
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+              values:
+                - last-number
+                - mean
+                - max
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: requests/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(output_plugin_rpc_client_call_duration_seconds_count{pod=~"$pod"}[$__rate_interval])
+                  seriesNameFormat: '{{pod}} - {{rpc_method}}'
+    "3_7":
+      kind: Panel
+      spec:
+        display:
+          name: Export errors
+          description: OTLP Exporter rpc error rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: bottom
+            visual:
+              areaOpacity: 0.1
+              connectNulls: true
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: milliseconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    sum by (rpc_response_status_code, server_address) (
+                      rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{rpc_response_status_code!="OK",rpc_response_status_code=~".+",server_address=~".+$host.+"}[$__rate_interval])
+                    )
+                  seriesNameFormat: '{{server_address}} - {{rpc_response_status_code}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Fluent Bit
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 4
+            "y": 1
+            width: 5
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 9
+            "y": 1
+            width: 5
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 14
+            "y": 1
+            width: 5
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 19
+            "y": 1
+            width: 5
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 0
+            "y": 4
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_5'
+          - x: 0
+            "y": 7
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_6'
+          - x: 12
+            "y": 7
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_7'
+          - x: 0
+            "y": 13
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_8'
+          - x: 12
+            "y": 13
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_9'
+          - x: 0
+            "y": 21
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_10'
+          - x: 12
+            "y": 21
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_11'
+          - x: 0
+            "y": 29
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_12'
+          - x: 12
+            "y": 29
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_13'
+    - kind: Grid
+      spec:
+        display:
+          title: Output Plugin
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 38
+            width: 4
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 4
+            "y": 38
+            width: 4
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 8
+            "y": 38
+            width: 6
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 14
+            "y": 38
+            width: 3
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_3'
+          - x: 17
+            "y": 38
+            width: 3
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_4'
+          - x: 20
+            "y": 38
+            width: 4
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_5'
+          - x: 0
+            "y": 43
+            width: 13
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_6'
+          - x: 13
+            "y": 43
+            width: 11
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_7'
+          - x: 0
+            "y": 51
+            width: 13
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_8'
+          - x: 13
+            "y": 51
+            width: 11
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_9'
+          - x: 0
+            "y": 59
+            width: 13
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_10'
+          - x: 13
+            "y": 59
+            width: 11
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_11'
+    - kind: Grid
+      spec:
+        display:
+          title: Output Plugin Go Runtime & Process Metrics
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 39
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 12
+            "y": 39
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_1'
+          - x: 0
+            "y": 47
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_2'
+          - x: 12
+            "y": 47
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_3'
+          - x: 0
+            "y": 55
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_4'
+          - x: 12
+            "y": 55
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_5'
+    - kind: Grid
+      spec:
+        display:
+          title: OTLP Exporter Metrics
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 4
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 6
+            "y": 4
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_1'
+          - x: 12
+            "y": 4
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_2'
+          - x: 0
+            "y": 12
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_3'
+          - x: 12
+            "y": 12
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_4'
+          - x: 0
+            "y": 20
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_5'
+          - x: 12
+            "y": 20
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_6'
+          - x: 12
+            "y": 28
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_7'
+  duration: 1h

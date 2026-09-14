@@ -1,0 +1,395 @@
+kind: Dashboard
+metadata:
+  name: garden-alertmanager
+  project: garden
+spec:
+  display:
+    name: Gardener Alertmanager HA
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Prometheus datasource
+          hidden: false
+        defaultValue: prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          name: Instance
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: instance
+            matchers:
+              - up{job="alertmanager-garden"}
+        name: instance
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Number of Gardener alertmanagers
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#EAB839'
+                  value: 1
+                - color: '#73bf69'
+                  value: 2
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(up{job="alertmanager-garden"})
+                  seriesNameFormat: ""
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Cluster size
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 0
+                - color: '#EAB839'
+                  value: 1
+                - color: '#73bf69'
+                  value: 2
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Generic info
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - format:
+                  unit: seconds
+                header: uptime
+                name: 'value #1'
+              - format:
+                  unit: seconds
+                header: config last success reload
+                name: 'value #2'
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Cluster peers joined
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Peers position
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Configuration HASH (expected to be equal over all instances)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Received alerts by status for $instance
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Active alerts on $instance
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Notifications $instance
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "4_0":
+      kind: Panel
+      spec:
+        display:
+          name: Silences on $instance
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "5_0":
+      kind: Panel
+      spec:
+        display:
+          name: Memory usage for $instance
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "5_1":
+      kind: Panel
+      spec:
+        display:
+          name: CPU usage for $instance
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: General info
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 6
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 12
+            "y": 6
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 0
+            "y": 11
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 12
+            "y": 11
+            width: 11
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_5'
+    - kind: Grid
+      spec:
+        display:
+          title: 'Received alerts '
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 17
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_0'
+            repeatVariable:
+              value: instance
+              alignment: horizontal
+    - kind: Grid
+      spec:
+        display:
+          title: Active alerts
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 26
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+            repeatVariable:
+              value: instance
+              alignment: horizontal
+    - kind: Grid
+      spec:
+        display:
+          title: Notifications
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 35
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+            repeatVariable:
+              value: instance
+              alignment: horizontal
+    - kind: Grid
+      spec:
+        display:
+          title: Silences
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 44
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/4_0'
+            repeatVariable:
+              value: instance
+              alignment: horizontal
+    - kind: Grid
+      spec:
+        display:
+          title: Resources
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 53
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/5_0'
+            repeatVariable:
+              value: instance
+              alignment: horizontal
+          - x: 0
+            "y": 61
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/5_1'
+            repeatVariable:
+              value: instance
+              alignment: horizontal
+  duration: 1h

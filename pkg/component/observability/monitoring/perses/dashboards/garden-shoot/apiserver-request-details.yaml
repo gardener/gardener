@@ -1,0 +1,135 @@
+kind: Dashboard
+metadata:
+  name: apiserver-request-details
+  project: garden
+spec:
+  display:
+    name: API Server (Request Details)
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: API Server
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - apiserver_request_total
+        name: apiserver
+    - kind: ListVariable
+      spec:
+        display:
+          name: Verb
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - GET
+              - LIST
+              - WATCH
+              - CREATE
+              - UPDATE
+              - PATCH
+              - DELETE
+              - DELETECOLLECTION
+              - PUT
+              - POST
+              - CONNECT
+        name: verb
+    - kind: ListVariable
+      spec:
+        display:
+          name: Resource
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: resource
+            matchers:
+              - apiserver_response_sizes_bucket
+        name: resource
+    - kind: ListVariable
+      spec:
+        display:
+          name: Subresource
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: subresource
+            matchers:
+              - apiserver_response_sizes_bucket
+        name: subresource
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: $resource
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: $subresource
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Response Size Per Resource
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 1
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Response Size Per Subresource
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 2
+            width: 8
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_0'
+  duration: 1h

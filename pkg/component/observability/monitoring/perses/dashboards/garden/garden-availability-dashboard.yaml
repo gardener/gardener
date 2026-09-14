@@ -1,0 +1,292 @@
+kind: Dashboard
+metadata:
+  name: garden-availability
+  project: garden
+spec:
+  display:
+    name: Garden Availability
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Cluster Purpose
+          hidden: false
+        defaultValue: production
+        allowAllValue: true
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: purpose
+            matchers:
+              - garden_shoot_condition
+        name: purpose
+    - kind: ListVariable
+      spec:
+        display:
+          name: Infrastructure
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: iaas
+            matchers:
+              - garden_shoot_info
+        name: iaas
+    - kind: ListVariable
+      spec:
+        display:
+          name: Seed
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: seed
+            matchers:
+              - garden_shoot_info{iaas=~"$iaas"}
+        name: seed
+    - kind: ListVariable
+      spec:
+        display:
+          name: Region
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: region
+            matchers:
+              - garden_shoot_info{iaas=~"$iaas", seed=~"$seed"}
+        name: region
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Kube API Server
+          description: Current Availability of the Kube API Server.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: probe_success{purpose="availability",job="blackbox-apiserver"}
+                  seriesNameFormat: ""
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Gardener API Server
+          description: Current Availability of the Gardener API Server.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: probe_success{purpose="availability", job="blackbox-gardener-apiserver"}
+                  seriesNameFormat: ""
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: Gardener Controller Manager
+          description: Current Availability of the Gardener Controller Manager.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: up{job="gardener-controller-manager"}
+                  seriesNameFormat: ""
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Gardener Dashboard
+          description: Current Availability of the Gardener Dashboard.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: probe_success{purpose="availability", job="blackbox-dashboard"}
+                  seriesNameFormat: ""
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: Terminal Controller Manager
+          description: Current Availability of the Terminal Controller Manager
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: up{job="terminal-controller-manager"}
+                  seriesNameFormat: ""
+    "5":
+      kind: Panel
+      spec:
+        display:
+          name: Landscape Components Availability (Health Check Responses)
+          description: "### State Meaning\n1 : Up  \n0 : Down (Http health probe for component failed or returned with unhealthy status code)"
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: label_replace(probe_success{purpose="availability"}, "component", "$1", "job", "blackbox-(.*)")
+                  seriesNameFormat: '{{component}}'
+    "6":
+      kind: Panel
+      spec:
+        display:
+          name: Landscape Components Health Check Response Times
+          description: Health check response times of the Garden cluster or Gardener components.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: label_replace(sum(probe_http_duration_seconds{purpose="availability"}) by (job), "component", "$1", "job", "blackbox-(.*)")
+                  seriesNameFormat: '{{component}}'
+    "7_0":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot/Seed Cluster API Server/ETCD Availability/Health Check
+          description: "### State Meaning\n1 : Up  \n2 : Progressing (in transition to down)  \n0 :  Down  \n-1 :  Unknown"
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_info{iaas=~"${iaas:pipe}",seed=~"${seed:pipe}",region=~"${region:pipe}"} + on(name, project) garden_shoot_condition{condition="APIServerAvailable", purpose=~"${purpose:pipe}"}
+                  seriesNameFormat: '{{project}}/{{name}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 4
+            "y": 0
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 8
+            "y": 0
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 12
+            "y": 0
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 16
+            "y": 0
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/4'
+          - x: 0
+            "y": 3
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/5'
+          - x: 12
+            "y": 3
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/6'
+    - kind: Grid
+      spec:
+        display:
+          title: Shoots and Seeds
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 12
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/7_0'
+  duration: 1h

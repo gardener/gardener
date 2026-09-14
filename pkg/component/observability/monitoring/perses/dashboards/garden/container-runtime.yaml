@@ -1,0 +1,92 @@
+kind: Dashboard
+metadata:
+  name: container-runtime
+  project: garden
+spec:
+  display:
+    name: Container Runtimes
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: cri
+            matchers:
+              - garden_shoot_node_info
+        name: cri
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Total Container Runtimes
+          description: Shoots that are configured with listed runtimes
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count by (cri) (count by (cri, name, project) (garden_shoot_node_info))
+                  seriesNameFormat: '{{ cri }}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total Container Runtimes
+          description: Shoots that are configured with listed runtimes
+        plugin:
+          kind: Table
+          spec:
+            columnSettings: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 'topk(10,(count by (cri, project, image) (count by (cri, name, project, image) (garden_shoot_node_info{cri=~"$cri"})))) '
+                  seriesNameFormat: ""
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/0'
+    - kind: Grid
+      spec:
+        display:
+          title: $cri
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 9
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_0'
+        repeatVariable: cri
+  duration: 1h

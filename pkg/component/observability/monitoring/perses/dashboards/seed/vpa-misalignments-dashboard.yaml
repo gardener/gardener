@@ -1,0 +1,205 @@
+kind: Dashboard
+metadata:
+  name: vpa-misalignments
+  project: garden
+spec:
+  display:
+    name: VPA Recommendations Misalignments
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Namespace
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: namespace
+            matchers:
+              - kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu
+        name: namespace
+    - kind: ListVariable
+      spec:
+        display:
+          name: Kind
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: target_kind
+            matchers:
+              - kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~"$namespace"}
+        name: targetKind
+    - kind: ListVariable
+      spec:
+        display:
+          name: Target
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: target_name
+            matchers:
+              - kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~"$namespace", target_kind=~"$targetKind"}
+        name: targetName
+    - kind: ListVariable
+      spec:
+        display:
+          name: Container
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: container
+            matchers:
+              - kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~"$namespace", target_kind=~"$targetKind",target_name=~"$targetName"}
+        name: container
+    - kind: ListVariable
+      spec:
+        display:
+          name: Deviation Duration
+          hidden: false
+        defaultValue: "30"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - label: 1m
+                value: "1"
+              - label: 5m
+                value: "5"
+              - label: 10m
+                value: "10"
+              - label: 15m
+                value: "15"
+              - label: 30m
+                value: "30"
+              - label: 1h
+                value: "60"
+              - label: 6h
+                value: "360"
+              - label: 12h
+                value: "720"
+              - label: 1d
+                value: "1440"
+              - ""
+        name: deviationDuration
+    - kind: ListVariable
+      spec:
+        display:
+          name: Deviation Tolerance
+          hidden: false
+        defaultValue: "0.2"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "0"
+              - "0.2"
+              - "0.4"
+              - "0.6"
+              - "0.8"
+        name: deviationTolerance
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: 'Continuous Underutilization '
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    sum(sum_over_time(
+                      (
+                        sum by (pod, cluster, namespace) (
+                          rate(container_cpu_usage_seconds_total{
+                          namespace=~"$namespace",pod=~"(?i:$targetKind-)?$targetName-(.+)",container=~"$container"}[5m])
+                        )
+                        < bool on(cluster, namespace)
+                        group_left
+                        kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{
+                          namespace=~"$namespace",target_kind=~"$targetKind",target_name=~"$targetName",container=~"$container"
+                        } * (1 - $deviationTolerance)
+                      )[${deviationDuration:text}:1m]
+                    ) >= bool $deviationDuration)
+                  seriesNameFormat: Sum of $targetName targets using less than VPA recommendation with a minimum duration of ${deviationDuration:text} and a tolerance of $deviationTolerance
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: 'Continuous Overutilization '
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    sum(sum_over_time(
+                      (
+                        sum by (pod, cluster, namespace) (
+                          rate(container_cpu_usage_seconds_total{
+                          namespace=~"$namespace",pod=~"(?i:$targetKind-)?$targetName-(.+)",container=~"$container"}[5m])
+                        )
+                        > bool on(cluster, namespace)
+                        group_left
+                        kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{
+                          namespace=~"$namespace",target_kind=~"$targetKind",target_name=~"$targetName",container=~"$container"
+                        } * (1 + $deviationTolerance)
+                      )[${deviationDuration:text}:1m]
+                    ) >= bool $deviationDuration)
+                  seriesNameFormat: Sum of $targetName targets using more than VPA recommendation with a minimum duration of ${deviationDuration:text} and a tolerance of $deviationTolerance
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 12
+            "y": 0
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1'
+  duration: 1h

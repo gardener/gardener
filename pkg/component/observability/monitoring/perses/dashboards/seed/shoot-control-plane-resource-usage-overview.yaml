@@ -1,0 +1,691 @@
+kind: Dashboard
+metadata:
+  name: shoot-control-plane-resource-usage-overview
+  project: garden
+spec:
+  display:
+    name: Shoot control plane resource usage overview
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: namespace
+            matchers:
+              - metering:working_set_memory:sum_by_namespace{shoot_uid!=""}
+        name: namespace
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot Cluster Count
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(metering:memory_usage_seconds{shoot_uid!=""})
+                  seriesNameFormat: Current
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(metering:memory_usage_seconds:this_month{shoot_uid!=""}) by (year, month)
+                  seriesNameFormat: Total in {{year}}/{{month}}
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Average CPU Usage per Shoot Cluster
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    min(
+                        (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Minimum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    quantile(0.5,
+                        (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Median
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    max(
+                        (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Maximum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    avg(
+                        (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Average
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: Average Memory Usage per Shoot Cluster
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: bytes
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    min(
+                        (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Minimum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    quantile(0.5,
+                        (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Median
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    max(
+                        (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Maximum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    avg(
+                        (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Average
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Average Network Usage per Shoot Cluster
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: decbytes/sec
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    min(
+                        (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""}
+                         +
+                         metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Minimum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    quantile(0.5,
+                        (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""}
+                         +
+                         metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Median
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    max(
+                        (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""}
+                         +
+                         metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Maximum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    avg(
+                        (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""}
+                         +
+                         metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Average
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: Average Working Set Memory Usage per Shoot Cluster
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            format:
+              unit: bytes
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    min(
+                        (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Minimum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    quantile(0.5,
+                        (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Median
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    max(
+                        (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Maximum
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    avg(
+                        (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!=""} > 0)
+                      +
+                        0 * (metering:memory_usage_seconds:this_month > 300)
+                    )
+                  seriesNameFormat: Average
+    "5":
+      kind: Panel
+      spec:
+        display:
+          name: Average monthly shoot resource usage of currently existing shoot clusters
+          description: 'Note: Memory usage time is identical to the CPU and Network usage time. For simplicity''s sake, only memory usage time is listed in this table.'
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - name: shoot_uid
+                width: 292
+              - name: namespace
+              - header: Memory Usage Time
+                name: 'value #9'
+              - header: Disk Usage Time
+                name: 'value #10'
+              - header: CPU Usage
+                name: 'value #1'
+              - header: CPU Requests
+                name: 'value #2'
+              - header: Working Set Memory Usage
+                name: 'value #3'
+                width: 224
+              - header: Memory Usage
+                name: 'value #4'
+              - header: Memory Requests
+                name: 'value #5'
+              - header: Disk Usage
+                name: 'value #6'
+              - header: Disk Requests
+                name: 'value #7'
+              - header: Network
+                name: 'value #8'
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (namespace, shoot_uid) (metering:cpu_usage:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: CPU usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:cpu_requests:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: CPU requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:working_set_memory:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Working Set Memory usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:memory_usage:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Memory Usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:memory_requests:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Memory requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:persistent_volume_usage:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Disk usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:persistent_volume_claims:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Disk requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:network_receive:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"} + metering:network_transmit:sum_by_namespace:avg_over_time{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Network
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:memory_usage_seconds{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Memory Usage Time
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:disk_usage_seconds{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Disk Usage Time
+    "6":
+      kind: Panel
+      spec:
+        display:
+          name: Calendar month average shoot resource usage including deleted shoot clusters
+          description: 'Note: Memory usage time is identical to the CPU and Network usage time. For simplicity''s sake, only memory usage time is listed in this table.'
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - name: shoot_uid
+                width: 292
+              - name: namespace
+              - header: Memory Usage Time
+                name: 'value #9'
+              - header: Disk Usage Time
+                name: 'value #10'
+              - header: CPU Usage
+                name: 'value #1'
+              - header: CPU Requests
+                name: 'value #2'
+              - header: Working Set Memory Usage
+                name: 'value #3'
+                width: 224
+              - header: Memory Usage
+                name: 'value #4'
+              - header: Memory Requests
+                name: 'value #5'
+              - header: Disk Usage
+                name: 'value #6'
+              - header: Disk Requests
+                name: 'value #7'
+              - header: Network
+                name: 'value #8'
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (namespace, shoot_uid) (metering:cpu_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: CPU usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:cpu_requests:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: CPU requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:working_set_memory:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Working Set Memory usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:memory_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Memory Usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:memory_requests:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Memory requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:persistent_volume_usage:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Disk usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:persistent_volume_claims:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Disk requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:network_receive:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"} + metering:network_transmit:sum_by_namespace:avg_over_time:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Network
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:memory_usage_seconds:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Memory Usage Time
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum by (shoot_uid) (metering:disk_usage_seconds:this_month{shoot_uid!="",namespace=~"$namespace"})
+                  seriesNameFormat: Disk Usage Time
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 5
+            height: 8
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 5
+            "y": 0
+            width: 10
+            height: 4
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 15
+            "y": 0
+            width: 9
+            height: 4
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 5
+            "y": 4
+            width: 10
+            height: 4
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 15
+            "y": 4
+            width: 9
+            height: 4
+            content:
+              $ref: '#/spec/panels/4'
+          - x: 0
+            "y": 8
+            width: 24
+            height: 11
+            content:
+              $ref: '#/spec/panels/5'
+          - x: 0
+            "y": 19
+            width: 24
+            height: 11
+            content:
+              $ref: '#/spec/panels/6'
+  duration: 1h

@@ -1,0 +1,252 @@
+kind: Dashboard
+metadata:
+  name: webhook-details
+  project: garden
+spec:
+  display:
+    name: Controller Runtime / Webhook Details
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: seed-prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: provider-local
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - controller_runtime_webhook_requests_total{}
+        name: job
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers:
+              - controller_runtime_webhook_requests_total{job="$job"}
+        name: pod
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: /controlplane
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: webhook
+            matchers:
+              - controller_runtime_webhook_requests_total{job="$job",pod=~"$pod"}
+        name: webhook
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: code
+            matchers:
+              - controller_runtime_webhook_requests_total{job="$job",pod=~"$pod",webhook="$webhook"}
+        name: code
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by pod
+          description: Shows the total number of admission requests being served.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by code
+          description: Shows the total number of admission requests being served.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Inflight Requests by pod
+          description: Shows the current number of admission requests being served.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Latency (P50, P90, P99)
+          description: Shows the latency of processing admission requests.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Requests
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 0
+            "y": 10
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 19
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 0
+            "y": 28
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/0_3'
+  duration: 1h

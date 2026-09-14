@@ -1,0 +1,87 @@
+kind: Dashboard
+metadata:
+  name: apiserver-storage-details
+  project: garden
+spec:
+  display:
+    name: API Server (Storage Details)
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: API Server
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - apiserver_request_total
+        name: apiserver
+    - kind: ListVariable
+      spec:
+        display:
+          name: Type
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: type
+            matchers:
+              - etcd_request_duration_seconds_bucket
+        name: type
+    - kind: ListVariable
+      spec:
+        display:
+          name: Operation
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: operation
+            matchers:
+              - etcd_request_duration_seconds_bucket
+        name: operation
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: $type
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: ETCD Request Duration Per Type And Operation
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+  duration: 1h

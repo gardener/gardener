@@ -1,0 +1,425 @@
+kind: Dashboard
+metadata:
+  name: virtual-garden-etcd-backup
+  project: garden
+spec:
+  display:
+    name: Virtual Garden ETCD Backup Dashboard
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: virtual-garden-etcd-main
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: role
+            matchers:
+              - etcdbr_network_received_bytes
+        name: cluster
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Latest Snapshot Timestamp
+          description: Timestamp of the latest snapshot successfully uploaded to the snapstore.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(etcdbr_snapshot_latest_timestamp{role="$cluster"})*1000
+                  seriesNameFormat: ""
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Maximum Possible Data Loss
+          description: Maximum duration worth of possible data loss in the event that etcd data gets corrupted at this moment.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: time()-max(etcdbr_snapshot_latest_timestamp{role="$cluster"})
+                  seriesNameFormat: ""
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Latest Snapshot Revision
+          description: Latest revision of the data from the latest snapshot uploaded to the snapstore.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(etcdbr_snapshot_latest_revision{role="$cluster"})
+                  seriesNameFormat: ""
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Full Snapshots
+          description: Total number of full snapshots successfully uploaded to the snapstore, as well as total number of failed attempts for the same, over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_snapshot_duration_seconds_count{role="$cluster",kind="Full",succeeded="true"}
+                  seriesNameFormat: Succeeded
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_snapshot_duration_seconds_count{role="$cluster",kind="Full",succeeded="false"}
+                  seriesNameFormat: Failed
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Delta Snapshots
+          description: Total number of delta snapshots successfully uploaded to the snapstore, as well as total number of failed attempts for the same, over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_snapshot_duration_seconds_count{role="$cluster",kind="Incr",succeeded="true"}
+                  seriesNameFormat: Succeeded
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_snapshot_duration_seconds_count{role="$cluster",kind="Incr",succeeded="false"}
+                  seriesNameFormat: Failed
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Snapshot Garbage Collection
+          description: Total number of snapshots successfully garbage-collected from the snapstore, as well as total number of failed attempts for the same, over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(etcdbr_snapshot_gc_total{role="$cluster",succeeded="true",kind=~"Full|Incr"})
+                  seriesNameFormat: Succeeded
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(etcdbr_snapshot_gc_total{role="$cluster",succeeded="false",kind=~"Full|Incr"})
+                  seriesNameFormat: Failed
+    "0_6":
+      kind: Panel
+      spec:
+        display:
+          name: Etcd Defragmentation
+          description: Total number of successful and failed attempts to defragment the etcd data store over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_defragmentation_duration_seconds_count{role="$cluster",succeeded="true"}
+                  seriesNameFormat: Succeeded
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_defragmentation_duration_seconds_count{role="$cluster",succeeded="false"}
+                  seriesNameFormat: Failed
+    "0_7":
+      kind: Panel
+      spec:
+        display:
+          name: Snapshot Duration
+          description: Duration of taking full and delta snapshots over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role="$cluster",kind="Full"}[2h])) by (le))
+                  seriesNameFormat: Full
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role="$cluster",kind="Incr"}[10m])) by (le))
+                  seriesNameFormat: Delta
+    "0_8":
+      kind: Panel
+      spec:
+        display:
+          name: Etcd Data Validation
+          description: Total number of successful and failed attempts at etcd data validations over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_validation_duration_seconds_count{role="$cluster",succeeded="true"}
+                  seriesNameFormat: Succeeded
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_validation_duration_seconds_count{role="$cluster",succeeded="false"}
+                  seriesNameFormat: Failed
+    "0_9":
+      kind: Panel
+      spec:
+        display:
+          name: Etcd Data Restoration
+          description: Total number of successful and failed attempts at etcd data restorations over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_restoration_duration_seconds_count{role="$cluster",succeeded="true"}
+                  seriesNameFormat: Succeeded
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcdbr_restoration_duration_seconds_count{role="$cluster",succeeded="false"}
+                  seriesNameFormat: Failed
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Memory
+          description: Memory consumed by etcd-backup-restore process over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: process_resident_memory_bytes{role="$cluster",job="virtual-garden-etcd-backup"}
+                  seriesNameFormat: Memory
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: CPU
+          description: Total CPU usage by etcd-backup-restore process as a percentage of total available CPU to the container, over time.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(process_cpu_seconds_total{role="$cluster",job="virtual-garden-etcd-backup"}[5m]) * 100
+                  seriesNameFormat: CPU
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: General
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 11
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 11
+            "y": 1
+            width: 6
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 17
+            "y": 1
+            width: 7
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 0
+            "y": 6
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 12
+            "y": 6
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 0
+            "y": 11
+            width: 8
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_5'
+          - x: 8
+            "y": 11
+            width: 8
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_6'
+          - x: 16
+            "y": 11
+            width: 8
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_7'
+          - x: 0
+            "y": 16
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_8'
+          - x: 12
+            "y": 16
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_9'
+    - kind: Grid
+      spec:
+        display:
+          title: Resource Consumption
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 22
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 22
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_1'
+  duration: 1h

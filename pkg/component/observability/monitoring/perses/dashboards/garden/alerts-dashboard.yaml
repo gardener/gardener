@@ -1,0 +1,345 @@
+kind: Dashboard
+metadata:
+  name: alerts
+  project: garden
+spec:
+  display:
+    name: Alerts
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: severity
+            matchers:
+              - ALERTS
+        name: Severity
+    - kind: ListVariable
+      spec:
+        display:
+          name: Alert State
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: alertstate
+            matchers:
+              - ALERTS
+        name: AlertState
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: alertname
+            matchers:
+              - ALERTS
+        name: Alertname
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: shoot_infra
+            matchers:
+              - ALERTS
+        name: Infra
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Alerts by Infrastructure  ($Severity|$AlertState|$Alertname|$Infra)
+          description: Shows the number of alerts by infrastructure.
+        plugin:
+          kind: BarChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{severity=~"$Severity", alertstate=~"$AlertState", alertname=~"$Alertname", shoot_infra=~"$Infra"}) by (shoot_infra)
+                  seriesNameFormat: '{{shoot_infra}}'
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Firing Alerts
+          description: Shows how many alerts are currently firing for shoots using this seed.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{alertstate="firing"})
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Pending Alerts
+          description: Shows how many alerts are currently pending for shoots using this seed.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{alertstate="pending"})
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: '% of Clusters with Alerts'
+          description: Shows the percentage of clusters that have at least 1 firing or pending alert.
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(count(ALERTS) by (shoot_name)) / count(count(shoot:availability) by (shoot_name)) * 100
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Clusters with Firing Alerts
+          description: Shows how many clusters have at least 1 firing alert.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(count(ALERTS{alertstate="firing"}) by (shoot_name))
+                  seriesNameFormat: ""
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Clusters with Pending Alerts
+          description: Shows how many clusters currently have at least 1 pending alert.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(count(ALERTS{alertstate="pending"}) by (shoot_name))
+                  seriesNameFormat: ""
+    "0_6":
+      kind: Panel
+      spec:
+        display:
+          name: Clusters Total
+          description: Shows the total number of shoots with a control plane on this seed.
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(count(shoot:availability) by (shoot_name))
+                  seriesNameFormat: ""
+    "0_7":
+      kind: Panel
+      spec:
+        display:
+          name: Active Alerts ($Severity|$AlertState|$Alertname|$Infra)
+          description: Shows alerts that are/were active with the selected severity and alert state from the selected clusters. Includes the alertnames of the alerts.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{alertname=~"$Alertname", severity=~"$Severity", alertstate=~"$AlertState", shoot_infra=~"$Infra"}) by (alertname)
+                  seriesNameFormat: '{{ alertname }}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Cluster Alert Count ($Severity|$AlertState|$Alertname|$Infra)
+          description: Shows the number of alerts in each cluster.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{alertname=~"$Alertname", severity=~"$Severity", alertstate=~"$AlertState", shoot_infra=~"$Infra"}) by (project,name)
+                  seriesNameFormat: '{{ project }}/{{ name }}'
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Cluster Alerts ($Severity|$AlertState|$Alertname|$Infra)
+          description: Shows all alerts that are currently active from the selected clusters, severity, and alert state.
+        plugin:
+          kind: Table
+          spec:
+            columnSettings: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{severity=~"$Severity",alertname=~"$Alertname", alertstate=~"$AlertState",shoot_infra=~"$Infra"}) by (alertname, project,shoot_name, severity, alertstate, shoot_infra)
+                  seriesNameFormat: ""
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Total Alerts Overview
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 9
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 9
+            "y": 1
+            width: 5
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 14
+            "y": 1
+            width: 5
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 19
+            "y": 1
+            width: 5
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 9
+            "y": 5
+            width: 5
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 14
+            "y": 5
+            width: 5
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_5'
+          - x: 19
+            "y": 5
+            width: 5
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_6'
+          - x: 0
+            "y": 9
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_7'
+    - kind: Grid
+      spec:
+        display:
+          title: Alerts by Cluster
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 18
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 0
+            "y": 28
+            width: 24
+            height: 12
+            content:
+              $ref: '#/spec/panels/1_1'
+  duration: 1h

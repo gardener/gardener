@@ -1,0 +1,124 @@
+kind: Dashboard
+metadata:
+  name: seed-resource-usage
+  project: garden
+spec:
+  display:
+    name: Seed Resource Usage
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Usage
+          description: The CPU Usage of the seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_cpu_usage_seconds_total:sum)
+                  seriesNameFormat: CPU
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Usage
+          description: Shows the total memory usage of the seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_memory_working_set_bytes:sum)
+                  seriesNameFormat: Memory
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Usage Control Planes
+          description: Shows how many CPU cores are required for the control planes on the seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_cpu_usage_seconds_total:sum_cp)
+                  seriesNameFormat: CPU
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Usage Control Plane
+          description: Shows the total memory usage of all control planes on the seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_memory_working_set_bytes:sum_cp)
+                  seriesNameFormat: Memory
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Overview
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/0_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Control Planes
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 11
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 11
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_1'
+  duration: 1h

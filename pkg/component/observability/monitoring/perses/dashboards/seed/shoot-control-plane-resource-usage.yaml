@@ -1,0 +1,281 @@
+kind: Dashboard
+metadata:
+  name: shoot-control-plane-resource-usage
+  project: garden
+spec:
+  display:
+    name: Shoot control plane resource usage
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: namespace
+            matchers:
+              - metering:working_set_memory:sum_by_namespace{shoot_uid!=""}
+        name: namespace
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: CPU usage
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:cpu_usage:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: CPU requests
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:cpu_requests:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Memory usage
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:memory_usage:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Working Set Memory usage
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:working_set_memory:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Memory requests
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:memory_requests:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Network Receive
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:network_receive:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Network Transmit
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:network_transmit:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Persistent Volume Usage
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:persistent_volume_usage:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Persistent Volume Claims
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: metering:persistent_volume_claims:sum_by_namespace{shoot_uid!="",namespace=~"$namespace"}
+                  seriesNameFormat: '{{namespace}} {{shoot_uid}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: CPU
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 13
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 13
+            content:
+              $ref: '#/spec/panels/0_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Memory
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 15
+            width: 8
+            height: 13
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 8
+            "y": 15
+            width: 8
+            height: 13
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 16
+            "y": 15
+            width: 8
+            height: 13
+            content:
+              $ref: '#/spec/panels/1_2'
+    - kind: Grid
+      spec:
+        display:
+          title: Network
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 29
+            width: 12
+            height: 13
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 12
+            "y": 29
+            width: 12
+            height: 13
+            content:
+              $ref: '#/spec/panels/2_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Disk
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 43
+            width: 12
+            height: 13
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 12
+            "y": 43
+            width: 12
+            height: 13
+            content:
+              $ref: '#/spec/panels/3_1'
+  duration: 1h

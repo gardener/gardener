@@ -1,0 +1,204 @@
+kind: Dashboard
+metadata:
+  name: client-go
+  project: garden
+spec:
+  display:
+    name: Controller Runtime / Client-Go
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: seed-prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: gardenlet
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - controller_runtime_reconcile_total{}
+        name: job
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers:
+              - controller_runtime_reconcile_total{job="$job"}
+        name: pod
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: method
+            matchers:
+              - rest_client_requests_total
+        name: verb
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: code
+            matchers:
+              - rest_client_requests_total
+        name: code
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: "90"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "50"
+              - "90"
+              - "99"
+        name: percentile
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by pod
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: requests/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by code
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: requests/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by verb
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: requests/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Request Rate by pod
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 9
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_2'
+  duration: 1h

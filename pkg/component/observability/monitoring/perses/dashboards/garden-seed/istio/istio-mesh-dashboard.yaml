@@ -1,0 +1,420 @@
+kind: Dashboard
+metadata:
+  name: istio-mesh
+  project: garden
+spec:
+  display:
+    name: Istio Mesh Dashboard
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          name: TCP Service
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: destination_service
+            matchers:
+              - istio_tcp_received_bytes_total
+        name: tcp_service
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Data Transfer
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Connections
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Workloads per second
+        plugin:
+          kind: Table
+          spec:
+            columnSettings: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Virtual Services
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Destination Rules
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Gateways
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Peer Authentication
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_4":
+      kind: Panel
+      spec:
+        display:
+          name: EnvoyFilter
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Global Request Volume
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Global Success Rate (non-5xx responses)
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_2":
+      kind: Panel
+      spec:
+        display:
+          name: 4xxs
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_3":
+      kind: Panel
+      spec:
+        display:
+          name: 5xxs
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_4":
+      kind: Panel
+      spec:
+        display:
+          name: HTTP/GRPC Workloads
+        plugin:
+          kind: Table
+          spec:
+            columnSettings: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Istio Components by Version
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: TCP
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 7
+            width: 24
+            height: 18
+            content:
+              $ref: '#/spec/panels/0_2'
+    - kind: Grid
+      spec:
+        display:
+          title: Istio Resources
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 26
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 6
+            "y": 26
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 12
+            "y": 26
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 0
+            "y": 29
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_3'
+          - x: 6
+            "y": 29
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_4'
+    - kind: Grid
+      spec:
+        display:
+          title: HTTP/GRPC
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 28
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 6
+            "y": 28
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/2_1'
+          - x: 12
+            "y": 28
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/2_2'
+          - x: 18
+            "y": 28
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/2_3'
+          - x: 0
+            "y": 31
+            width: 24
+            height: 21
+            content:
+              $ref: '#/spec/panels/2_4'
+    - kind: Grid
+      spec:
+        display:
+          title: Istio Versions
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 34
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/3_0'
+  duration: 1h

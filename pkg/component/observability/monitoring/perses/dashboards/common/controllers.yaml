@@ -1,0 +1,590 @@
+kind: Dashboard
+metadata:
+  name: controllers
+  project: garden
+spec:
+  display:
+    name: Controller Runtime / Controllers
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: seed-prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: gardenlet
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - controller_runtime_reconcile_total{}
+        name: job
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: controller
+            matchers:
+              - controller_runtime_reconcile_total{job="$job"}
+        name: controller
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: "90"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "50"
+              - "90"
+              - "99"
+        name: percentile
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Reconciliation Rate
+        plugin:
+          kind: BarChart
+          spec:
+            calculation: last-number
+            format:
+              unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Total Workers by controller
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - name: value
+                width: 80
+              - dataLink:
+                  openNewTab: false
+                  title: ""
+                  url: /d/controller-details/controller-runtime-controllers-controller-details?var-datasource=$datasource&var-job=$job&var-controller=${__data.fields.controller}
+                name: controller
+              - hide: true
+                name: timestamp
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Reconciliation Time Distribution
+        plugin:
+          kind: PieChart
+          spec:
+            calculation: last-number
+            legend:
+              mode: table
+              position: right
+            radius: 50
+            showLabels: true
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Reconciliation Rate by controller
+          description: Shows the rate of reconciliations per controller.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                decimalPlaces: 4
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Reconciliation Rate by result
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Error Rate by controller
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                decimalPlaces: 3
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Reconciliation Time by controller (P$percentile)
+          description: Shows the length per reconciliation per controller.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Active workers by controller
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineStyle: solid
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Total workers by controllers
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - name: value
+                width: 80
+              - hide: true
+                name: timestamp
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_2":
+      kind: Panel
+      spec:
+        display:
+          name: Longest Running Worker by controller
+          description: Shows for how many seconds the longest running worker for a workqueue has been running.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_3":
+      kind: Panel
+      spec:
+        display:
+          name: Unfinished Work by controller
+          description: Rate of unfinished work per second not observed in work duration metrics. A constant value of 1 could indicate 1 stuck worker routine.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+              max: 2
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Enqueue Rate by controller
+          description: Shows the enqueue rate of the work queue.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                decimalPlaces: 3
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Retry Rate by controller
+          description: Shows the retry rate of the workqueue.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                decimalPlaces: 3
+                unit: ops/sec
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_2":
+      kind: Panel
+      spec:
+        display:
+          name: Queue Duration by controller (P$percentile)
+          description: Shows how long an item stays in the workqueue before being requested.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_3":
+      kind: Panel
+      spec:
+        display:
+          name: Work Duration by controller (P$percentile)
+          description: Shows how long it takes to process an item.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_4":
+      kind: Panel
+      spec:
+        display:
+          name: Queue Length by controller
+          description: Shows the current length of the workqueue.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Headlines (over time range)
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 10
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 10
+            "y": 1
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 16
+            "y": 1
+            width: 8
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_2'
+    - kind: Grid
+      spec:
+        display:
+          title: Reconciliations
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 10
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 0
+            "y": 20
+            width: 12
+            height: 10
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 12
+            "y": 20
+            width: 12
+            height: 10
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 0
+            "y": 30
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_3'
+    - kind: Grid
+      spec:
+        display:
+          title: Workers
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 40
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 12
+            "y": 40
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_1'
+          - x: 0
+            "y": 48
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_2'
+          - x: 12
+            "y": 48
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_3'
+    - kind: Grid
+      spec:
+        display:
+          title: Work Queue
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 57
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 12
+            "y": 57
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_1'
+          - x: 0
+            "y": 65
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_2'
+          - x: 12
+            "y": 65
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_3'
+          - x: 0
+            "y": 73
+            width: 24
+            height: 7
+            content:
+              $ref: '#/spec/panels/3_4'
+  duration: 1h

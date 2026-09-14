@@ -1,0 +1,126 @@
+kind: Dashboard
+metadata:
+  name: apiserver-admission-details
+  project: garden
+spec:
+  display:
+    name: API Server (Admission Details)
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: API Server
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - apiserver_request_total
+        name: apiserver
+    - kind: ListVariable
+      spec:
+        display:
+          name: Operation
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - CREATE
+              - UPDATE
+              - DELETE
+        name: operation
+    - kind: ListVariable
+      spec:
+        display:
+          name: Plugin Name
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: name
+            matchers:
+              - apiserver_admission_controller_admission_duration_seconds_bucket
+        name: plugin_name
+    - kind: ListVariable
+      spec:
+        display:
+          name: Webhook Name
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: name
+            matchers:
+              - apiserver_admission_webhook_admission_duration_seconds_bucket
+        name: webhook_name
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: $plugin_name
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: $webhook_name
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Duration Per Plugin
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 1
+            width: 6
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Duration Per Webhook
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 32
+            width: 6
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_0'
+  duration: 1h

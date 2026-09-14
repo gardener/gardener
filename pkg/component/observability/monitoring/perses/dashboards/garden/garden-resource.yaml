@@ -1,0 +1,149 @@
+kind: Dashboard
+metadata:
+  name: garden-resource
+  project: garden
+spec:
+  display:
+    name: Garden Resource
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: ObservabilityComponentsHealthy
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: garden_garden_condition{condition="ObservabilityComponentsHealthy"}
+                  seriesNameFormat: '{{status}}'
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: RuntimeComponentsHealthy
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: garden_garden_condition{condition="RuntimeComponentsHealthy"}
+                  seriesNameFormat: '{{status}}'
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: VirtualComponentsHealthy
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: garden_garden_condition{condition="VirtualComponentsHealthy"}
+                  seriesNameFormat: '{{status}}'
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: VirtualGardenAPIServerAvailable
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: garden_garden_condition{condition="VirtualGardenAPIServerAvailable"}
+                  seriesNameFormat: '{{status}}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Last Operation (Type and State)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: garden_garden_last_operation
+                  seriesNameFormat: '{{type}} - {{state}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Garden conditions
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 0
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 0
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 8
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 12
+            "y": 8
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_3'
+    - kind: Grid
+      spec:
+        display:
+          title: Operation
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 16
+            width: 24
+            height: 12
+            content:
+              $ref: '#/spec/panels/1_0'
+  duration: 1h

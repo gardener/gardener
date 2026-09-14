@@ -1,0 +1,126 @@
+kind: Dashboard
+metadata:
+  name: shoot-operation-duration
+  project: garden
+spec:
+  display:
+    name: Shoot Operation Duration
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Operation
+          hidden: false
+        defaultValue: Create
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: operation
+            matchers:
+              - gardenlet_shoot_operation_duration_seconds_sum{}
+        name: operation_type
+    - kind: ListVariable
+      spec:
+        display:
+          name: Workerless
+          hidden: false
+        defaultValue:
+          - "false"
+        allowAllValue: true
+        allowMultiple: true
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "true"
+              - "false"
+        name: workerless
+    - kind: ListVariable
+      spec:
+        display:
+          name: Hibernated
+          hidden: false
+        defaultValue:
+          - "false"
+        allowAllValue: true
+        allowMultiple: true
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "false"
+              - "true"
+        name: hibernated
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: "99"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "50"
+              - "90"
+              - "99"
+        name: percentile
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Average Shoot $operation_type Time
+          description: The average time it takes for shoot $operation_type operation.
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: last-number
+            format:
+              unit: decimal
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: rate(gardenlet_shoot_operation_duration_seconds_sum{operation=~"$operation_type",workerless=~"$workerless",hibernated=~"$hibernated"}[$__rate_interval]) / rate(gardenlet_shoot_operation_duration_seconds_count{operation=~"$operation_type",workerless=~"$workerless",hibernated=~"$hibernated"}[$__rate_interval])
+                  seriesNameFormat: ""
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot $operation_type Duration Over Time P($percentile)
+          description: The histogram provides a visual representation of the distribution of create and delete shoot operations. Currently displaying P($percentile).
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 0
+            "y": 9
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/1'
+  duration: 1h

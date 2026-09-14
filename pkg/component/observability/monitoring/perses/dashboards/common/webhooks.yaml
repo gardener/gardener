@@ -1,0 +1,257 @@
+kind: Dashboard
+metadata:
+  name: webhooks
+  project: garden
+spec:
+  display:
+    name: Controller Runtime / Webhooks
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: seed-prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: gardener-resource-manager
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - controller_runtime_webhook_requests_total{}
+        name: job
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: webhook
+            matchers:
+              - controller_runtime_webhook_requests_total{job="$job"}
+        name: webhook
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: "50"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "50"
+              - "90"
+              - "99"
+        name: percentile
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate
+        plugin:
+          kind: BarChart
+          spec:
+            calculation: last-number
+            format:
+              unit: requests/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by webhook
+          description: Shows the total number of admission requests being served.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: requests/sec
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rate by code
+          description: Shows the total number of admission requests being served.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: requests/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Inflight Requests by webhook
+          description: Shows the current number of admission requests being served.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: decimal
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Latency (P${percentile})
+          description: Shows the latency of processing admission requests.
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: table
+              position: right
+              values:
+                - max
+                - mean
+                - last
+            visual:
+              areaOpacity: 0.3
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              format:
+                unit: seconds
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Headlines (over time range)
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 24
+            height: 7
+            content:
+              $ref: '#/spec/panels/0_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Requests
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 9
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 0
+            "y": 18
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 0
+            "y": 27
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 0
+            "y": 36
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/1_3'
+  duration: 1h

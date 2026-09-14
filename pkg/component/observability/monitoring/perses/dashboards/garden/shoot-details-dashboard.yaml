@@ -1,0 +1,380 @@
+kind: Dashboard
+metadata:
+  name: shoot-details
+  project: garden
+spec:
+  display:
+    name: Shoot Details
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Project
+          hidden: false
+        defaultValue: garden
+        allowAllValue: false
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: project
+            matchers:
+              - garden_shoot_info
+        name: project
+    - kind: ListVariable
+      spec:
+        display:
+          name: Shoot
+          hidden: false
+        defaultValue: alicloud
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: name
+            matchers:
+              - garden_shoot_info{project="$project"}
+        name: shoot
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Infrastructure
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_info{project="$project", name="$shoot"}
+                  seriesNameFormat: '{{iaas}}'
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Region
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_info{project="$project", name="$shoot"}
+                  seriesNameFormat: '{{region}}'
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Seed
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_info{project="$project", name="$shoot"}
+                  seriesNameFormat: '{{seed}}'
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: K8S Version
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_info{project="$project", name="$shoot"}
+                  seriesNameFormat: '{{version}}'
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Node Count
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: shoot:kube_node_info:count{project=~"$project", shoot_name=~"$shoot"}
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot Availability
+          description: Shows if the API Server is reachable from the shoot cluster.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: shoot:availability{project=~"$project", shoot_name="$shoot"}
+                  seriesNameFormat: '{{ project }}/{{ shoot_name }}'
+    "0_6":
+      kind: Panel
+      spec:
+        display:
+          name: K8s Versions
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(garden_shoot_info{project="$project", name="$shoot"}) by (name,project,version) + 1
+                  seriesNameFormat: '{{project}}/{{name}}: {{version}}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Conditions (0=false, 1=ok, -1=unknown)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_condition{project="$project", name="$shoot"}
+                  seriesNameFormat: '{{condition}}'
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Gardener Operation Status
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: garden_shoot_operation_states{project="$project", name="$shoot"}
+                  seriesNameFormat: '{{operation}}'
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: empty
+        plugin:
+          kind: Markdown
+          spec:
+            text: "##### State legend\n0 = operation not active  \n1 = succeeded  \n2 = processing  \n3 = pending  \n4 = error  \n5 = failed  \n"
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Kube-apiservers
+          description: The number of kube-apiservers running in the control plane of cluster $project / $shoot.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(shoot:kube_apiserver:sum_by_pod{project=~"$project", shoot_name=~"$shoot"})
+                  seriesNameFormat: Kube APIServers
+    "1_4":
+      kind: Panel
+      spec:
+        display:
+          name: Cluster Nodes
+          description: Shows the number of active nodes in the shoot cluster $project / $shoot.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: shoot:kube_node_info:count{project=~"$project", shoot_name=~"$shoot"}
+                  seriesNameFormat: nodes
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Alerts
+          description: Shows pending and firing alerts in the cluster.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(ALERTS{project=~"$project", shoot_name=~"$shoot"}) by (alertname, alertstate)
+                  seriesNameFormat: '{{ alertname }}/{{ alertstate }}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Information
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 4
+            "y": 1
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 10
+            "y": 1
+            width: 6
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 16
+            "y": 1
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 20
+            "y": 1
+            width: 4
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 0
+            "y": 4
+            width: 18
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_5'
+          - x: 18
+            "y": 4
+            width: 6
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_6'
+    - kind: Grid
+      spec:
+        display:
+          title: State
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 9
+            width: 10
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 10
+            "y": 9
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 21
+            "y": 9
+            width: 3
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 0
+            "y": 16
+            width: 12
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_3'
+          - x: 12
+            "y": 16
+            width: 12
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_4'
+    - kind: Grid
+      spec:
+        display:
+          title: Alerts
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 11
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/2_0'
+  duration: 1h

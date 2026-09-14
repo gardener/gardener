@@ -1,0 +1,432 @@
+kind: Dashboard
+metadata:
+  name: vpa-updater
+  project: garden
+spec:
+  display:
+    name: VPA Updater
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          name: pod
+          hidden: false
+        allowAllValue: false
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers:
+              - vpa_updater_controlled_pods_total
+        name: pod
+    - kind: ListVariable
+      spec:
+        display:
+          name: VPA object namespace
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: alphabetical-asc
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - grafana
+              - migration
+              - not
+              - supported
+        name: vpa_namespace
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: In-place Pod resource updates
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Pod evictions
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total Controlled Pods
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Current update mode distribution by Pods
+        plugin:
+          kind: PieChart
+          spec:
+            calculation: last-number
+            legend:
+              mode: table
+              position: bottom
+            radius: 50
+            showLabels: true
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Pods pending in-place update
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: VPAs with in-place updatable Pods
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_4":
+      kind: Panel
+      spec:
+        display:
+          name: Pods pending eviction
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_5":
+      kind: Panel
+      spec:
+        display:
+          name: VPAs with evictable Pods
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Successful Pod in-place updates by VPA
+          description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Failed Pod in-place updates by VPA
+          description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Successful Pod evictions by VPA
+          description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Failed Pod evictions by VPA
+          description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Aggregation
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Scale
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 8
+            width: 17
+            height: 11
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 17
+            "y": 8
+            width: 7
+            height: 11
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 0
+            "y": 19
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 12
+            "y": 19
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/1_3'
+          - x: 0
+            "y": 30
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/1_4'
+          - x: 12
+            "y": 30
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/1_5'
+    - kind: Grid
+      spec:
+        display:
+          title: Pod in-place resource updates
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 42
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 0
+            "y": 50
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Pod evictions
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 59
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 0
+            "y": 67
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_1'
+  duration: 1h

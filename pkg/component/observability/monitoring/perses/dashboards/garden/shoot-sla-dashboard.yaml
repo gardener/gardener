@@ -1,0 +1,331 @@
+kind: Dashboard
+metadata:
+  name: shoot-sla
+  project: garden
+spec:
+  display:
+    name: Shoot SLA
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: openstack
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: iaas
+            matchers:
+              - garden_shoot_condition
+        name: iaas
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: project
+            matchers:
+              - garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas"}
+        name: project
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: name
+            matchers:
+              - garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas", project=~"$project"}
+        name: name
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: purpose
+            matchers:
+              - garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile"}
+        name: purpose
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: SLA (over the last 7 days)
+        plugin:
+          kind: Markdown
+          spec:
+            text: |+
+              [99.95%][] allows for 5 minutes of downtime per week
+
+              [99.95%]: https://uptime.is/99.95
+
+
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: '# of shoots'
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: mean
+            colorMode: value
+            format:
+              unit: decimal
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    count(
+                      count_over_time(
+                        garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",project=~"$project",name=~"$name",iaas="$iaas", purpose=~"$purpose"}[7d:]
+                      )
+                    )
+                  seriesNameFormat: ""
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: '# with > 5 down minutes'
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: mean
+            colorMode: value
+            format:
+              unit: decimal
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    count(
+                      count_over_time(
+                        (garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",project=~"$project",name=~"$name",iaas="$iaas", purpose=~"$purpose"} < 1)[7d:]
+                      ) > 5
+                    )
+                  seriesNameFormat: ""
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: '% with > 5 down minutes'
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: mean
+            colorMode: value
+            format:
+              decimalPlaces: 2
+              unit: percent-decimal
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 0.02
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    count(
+                      count_over_time(
+                        (garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas",project=~"$project",name=~"$name",purpose=~"$purpose"} < 1)[7d:]
+                      ) > 5
+                    )
+                    /
+                    count(
+                      count_over_time(
+                        (garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas",project=~"$project",name=~"$name",purpose=~"$purpose"})[7d :]
+                      )
+                    )
+                  seriesNameFormat: ""
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: Shoots with > 5 down minutes during the last 7 days
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - name: project
+              - name: name
+              - format:
+                  unit: minutes
+                header: down minutes
+                name: value
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    sum by (project, name) (
+                      count_over_time(
+                        (garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas",project=~"$project",name=~"$name",purpose=~"$purpose"} < 1)[7d:]
+                      ) > 5
+                    )
+                  seriesNameFormat: ""
+    "5":
+      kind: Panel
+      spec:
+        display:
+          name: Down minutes
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+              max: 30
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: 1h
+                  query: |-
+                    min_over_time(
+                      garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas",project=~"$project",name=~"$name",purpose=~"$purpose"}[$__interval:]
+                    ) < 1
+                  seriesNameFormat: '{{project}} {{name}}'
+    "6":
+      kind: Panel
+      spec:
+        display:
+          name: Cumulative down minutes of the trailing 7 days (filtered for >3), >5 violates 99.95% SLO
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: 1h
+                  query: |-
+                    count_over_time(
+                      (sum without (instance)
+                         (garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas",project=~"$project",name=~"$name",purpose=~"$purpose"} < 1)
+                      )[7d:]
+                    ) > 3
+                  seriesNameFormat: '{{project}} {{name}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 22
+            height: 2
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 0
+            "y": 2
+            width: 3
+            height: 5
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 3
+            "y": 2
+            width: 4
+            height: 5
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 7
+            "y": 2
+            width: 4
+            height: 5
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 11
+            "y": 2
+            width: 13
+            height: 5
+            content:
+              $ref: '#/spec/panels/4'
+          - x: 0
+            "y": 7
+            width: 11
+            height: 15
+            content:
+              $ref: '#/spec/panels/5'
+          - x: 11
+            "y": 7
+            width: 13
+            height: 15
+            content:
+              $ref: '#/spec/panels/6'
+  duration: 1h

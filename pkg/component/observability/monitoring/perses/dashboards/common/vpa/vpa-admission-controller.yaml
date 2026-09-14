@@ -1,0 +1,94 @@
+kind: Dashboard
+metadata:
+  name: vpa-admission-controller
+  project: garden
+spec:
+  display:
+    name: VPA Admission Controller
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: seed-prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Admitted Pods rate
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Execution latency step=total
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: Total admission time for Pods
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Total admission time for VPAs
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 12
+            "y": 0
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 12
+            "y": 9
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 12
+            "y": 18
+            width: 12
+            height: 9
+            content:
+              $ref: '#/spec/panels/3'
+  duration: 1h

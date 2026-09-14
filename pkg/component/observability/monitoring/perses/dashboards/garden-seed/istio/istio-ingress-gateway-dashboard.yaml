@@ -1,0 +1,243 @@
+kind: Dashboard
+metadata:
+  name: istio-ingress-gateway
+  project: garden
+spec:
+  display:
+    name: Istio Ingress Gateway
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - grafana
+              - migration
+              - not
+              - supported
+        name: istio_proxy_pod
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - grafana
+              - migration
+              - not
+              - supported
+        name: istio_proxy_namespace
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: vCPU by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Memory by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: vCPU by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Memory by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Received by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "5":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Sent by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "6":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Received by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "7":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Sent by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 11
+            "y": 0
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 0
+            "y": 7
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 11
+            "y": 7
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 0
+            "y": 14
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/4'
+          - x: 11
+            "y": 14
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/5'
+          - x: 0
+            "y": 21
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/6'
+          - x: 11
+            "y": 21
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/7'
+  duration: 1h

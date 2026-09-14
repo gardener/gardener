@@ -1,0 +1,660 @@
+kind: Dashboard
+metadata:
+  name: shoot-sli
+  project: garden
+spec:
+  display:
+    name: Shoot SLI
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: (.+)
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: iaas
+            matchers:
+              - probe_failure
+        name: iaas
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: (.+)
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: purpose
+            matchers:
+              - probe_failure
+        name: purpose
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: (.+)
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: project
+            matchers:
+              - probe_failure
+        name: project
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: fixed
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: window
+            matchers:
+              - probe_failure:run:time:total:percent
+        name: window
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: day
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: term
+            matchers:
+              - probe_failure:run:time:total:percent
+        name: term
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: "99.95"
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - "99.95"
+              - "99.9"
+              - "99"
+              - "95"
+              - "50"
+              - :)
+        name: SLO
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Welcome
+        plugin:
+          kind: Markdown
+          spec:
+            text: |-
+              This dashboard is one possible
+              visualisation for the error budgets
+              of the shoots, grouped by the infrastructure.
+
+              Questions/comments: #gardener-monitoring
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Min over past 24h, excluding worst 10%
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            colorMode: value
+            format:
+              unit: percent-decimal
+            sparkline: {}
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: min_over_time((1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas"}) by (iaas))[24h:10m])
+                  seriesNameFormat: '{{iaas}}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot SLIs
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - header: IaaS
+                name: iaas
+                width: 118
+              - format:
+                  unit: decimal
+                header: '# of Shoots'
+                name: 'value #2'
+                width: 94
+              - header: Worst Shoot SLI
+                name: 'value #1'
+                width: auto
+              - header: Excluding worst 10%
+                name: 'value #3'
+              - header: Average Shoot SLI
+                name: 'value #4'
+              - header: Best Shoot SLI :)
+                name: 'value #5'
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1 - max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
+                  seriesNameFormat: ""
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"}) by (iaas)
+                  seriesNameFormat: ""
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1 - quantile(0.9,probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
+                  seriesNameFormat: ""
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1 - avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
+                  seriesNameFormat: ""
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1 - min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
+                  seriesNameFormat: ""
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Top 10 Shoots exceeding the SLO
+          description: No data means that no shoot cluster exceeds the SLO
+        plugin:
+          kind: Table
+          spec:
+            columnSettings:
+              - name: project
+              - name: name
+              - name: iaas
+              - header: Error Budget
+                name: value
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: topk(10,probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project", term=~"$term", window="$window"} > 1-$SLO/100) * 100
+                  seriesNameFormat: ""
+    "2_2":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot SLI + Error Budget, excluding worst 10%)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"}) by (iaas)
+                  seriesNameFormat: '{{iaas}}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: $SLO/100
+                  seriesNameFormat: SLO
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: "1"
+                  seriesNameFormat: 100%
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Funnel
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            querySettings:
+              - format:
+                  unit: decimal
+                queryIndex: 7
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: min
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: $SLO/100
+                  seriesNameFormat: SLO
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: max
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 90%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 10%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 50%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: avg
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"})
+                  seriesNameFormat: '# of shoots'
+    "4_0":
+      kind: Panel
+      spec:
+        display:
+          name: Tiny Funnel for $iaas
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            querySettings:
+              - format:
+                  unit: decimal
+                queryIndex: 7
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: min
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: $SLO/100
+                  seriesNameFormat: SLO
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: max
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 90%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 10%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 50%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: avg
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"})
+                  seriesNameFormat: '# of shoots'
+    "5_0":
+      kind: Panel
+      spec:
+        display:
+          name: Funnel for $iaas
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            querySettings:
+              - format:
+                  unit: decimal
+                queryIndex: 7
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: min
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: $SLO/100
+                  seriesNameFormat: SLO
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: max
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 90%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 10%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: 50%
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 1- avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
+                  seriesNameFormat: avg
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"})
+                  seriesNameFormat: '# of shoots'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 4
+            height: 5
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 4
+            "y": 0
+            width: 20
+            height: 5
+            content:
+              $ref: '#/spec/panels/1'
+    - kind: Grid
+      spec:
+        display:
+          title: Overview
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 5
+            width: 24
+            height: 11
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 0
+            "y": 16
+            width: 24
+            height: 12
+            content:
+              $ref: '#/spec/panels/2_1'
+          - x: 0
+            "y": 28
+            width: 24
+            height: 12
+            content:
+              $ref: '#/spec/panels/2_2'
+    - kind: Grid
+      spec:
+        display:
+          title: Funnel
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 2
+            width: 24
+            height: 12
+            content:
+              $ref: '#/spec/panels/3_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Tiny Funnels
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 3
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/4_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Funnel for $iaas
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 28
+            width: 24
+            height: 12
+            content:
+              $ref: '#/spec/panels/5_0'
+        repeatVariable: iaas
+  duration: 1h

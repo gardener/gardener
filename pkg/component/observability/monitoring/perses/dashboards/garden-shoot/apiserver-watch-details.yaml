@@ -1,0 +1,69 @@
+kind: Dashboard
+metadata:
+  name: apiserver-watch-details
+  project: garden
+spec:
+  display:
+    name: API Server (Watch Details)
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: API Server
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - apiserver_request_total
+        name: apiserver
+    - kind: ListVariable
+      spec:
+        display:
+          name: Kind
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: kind
+            matchers:
+              - apiserver_watch_events_sizes_bucket
+        name: kind
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: $kind
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Event Size Per Kind
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 1
+            width: 6
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+  duration: 1h

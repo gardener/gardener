@@ -1,0 +1,427 @@
+kind: Dashboard
+metadata:
+  name: virtual-garden-etcd
+  project: garden
+spec:
+  display:
+    name: Virtual Garden ETCD
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: virtual-garden-etcd-main
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: role
+            matchers:
+              - etcd_cluster_version
+        name: cluster
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Up
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(etcd_server_has_leader{role=~"$cluster"})
+                  seriesNameFormat: ""
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: RPC Rate
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(grpc_server_started_total{role=~"$cluster",grpc_type="unary"}[5m]))
+                  seriesNameFormat: RPC Rate
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(grpc_server_handled_total{role=~"$cluster",grpc_type="unary",grpc_code!="OK"}[5m]))
+                  seriesNameFormat: RPC Failed Rate
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Active Streams
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(grpc_server_started_total{role=~"$cluster",grpc_service="etcdserverpb.Watch",grpc_type="bidi_stream"}) - sum(grpc_server_handled_total{role=~"$cluster",grpc_service="etcdserverpb.Watch",grpc_type="bidi_stream"})
+                  seriesNameFormat: Watch Streams
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(grpc_server_started_total{role=~"$cluster",grpc_service="etcdserverpb.Lease",grpc_type="bidi_stream"}) - sum(grpc_server_handled_total{role=~"$cluster",grpc_service="etcdserverpb.Lease",grpc_type="bidi_stream"})
+                  seriesNameFormat: Lease Streams
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Memory
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: process_resident_memory_bytes{role=~"$cluster"}
+                  seriesNameFormat: '{{instance}} Resident Memory'
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Disk Sync Duration
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~"$cluster"}[5m])) by (instance, le))
+                  seriesNameFormat: '{{instance}} WAL fsync'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~"$cluster"}[5m])) by (instance, le))
+                  seriesNameFormat: '{{instance}} DB fsync'
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Client Traffic In
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: rate(etcd_network_client_grpc_received_bytes_total{role=~"$cluster"}[5m])
+                  seriesNameFormat: '{{instance}} Client Traffic In'
+    "0_6":
+      kind: Panel
+      spec:
+        display:
+          name: Client Traffic Out
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: rate(etcd_network_client_grpc_sent_bytes_total{role=~"$cluster"}[5m])
+                  seriesNameFormat: '{{instance}} Client Traffic Out'
+    "0_7":
+      kind: Panel
+      spec:
+        display:
+          name: Etcd Object Count
+          description: Only shows gardener objects (no crds)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(apiserver_storage_objects) by (resource)
+                  seriesNameFormat: '{{ resource }}'
+    "0_8":
+      kind: Panel
+      spec:
+        display:
+          name: DB Size
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: etcd_mvcc_db_total_size_in_bytes{role=~"$cluster"}
+                  seriesNameFormat: '{{instance}} DB Size'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Container Disk Read Operations (1m rate)
+          description: |-
+            One minute rates for all filesystem read operations executed within the container(s).
+
+            The data has the following designation scheme: <pod-name> / <container-name>
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(container_fs_reads_bytes_total{namespace="kube-system", pod=~"etcd-(${cluster:pipe}).*"}[1m])) by(pod, container)
+                  seriesNameFormat: '{{pod}} / {{container}}'
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Container Disk Write Operations (1m rate)
+          description: |-
+            One minute rates for all filesystem write operations executed within the container(s).
+
+            The data has the following designation scheme: <pod-name> / <container-name>
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(container_fs_writes_bytes_total{namespace="kube-system", pod=~"etcd-(${cluster:pipe}).*"}[1m])) by(pod, container)
+                  seriesNameFormat: '{{pod}} / {{container}}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total Leader Elections Per Day
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: changes(etcd_server_leader_changes_seen_total{role=~"$cluster"}[1d])
+                  seriesNameFormat: '{{instance}} Total Leader Elections Per Day'
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Raft Proposals
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(etcd_server_proposals_failed_total{role=~"$cluster"}[5m]))
+                  seriesNameFormat: Proposal Failure Rate
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(etcd_server_proposals_pending{role=~"$cluster"})
+                  seriesNameFormat: Proposal Pending Total
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(etcd_server_proposals_committed_total{role=~"$cluster"}[5m]))
+                  seriesNameFormat: Proposal Commit Rate
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(etcd_server_proposals_applied_total{role=~"$cluster"}[5m]))
+                  seriesNameFormat: Proposal Apply Rate
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: General
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 5
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 5
+            "y": 1
+            width: 9
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 14
+            "y": 1
+            width: 10
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 0
+            "y": 6
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 12
+            "y": 6
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 0
+            "y": 11
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_5'
+          - x: 12
+            "y": 11
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_6'
+          - x: 0
+            "y": 17
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_7'
+          - x: 12
+            "y": 17
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_8'
+    - kind: Grid
+      spec:
+        display:
+          title: Container Disk I/O
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 24
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 24
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Cluster
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 25
+            width: 12
+            height: 4
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 12
+            "y": 25
+            width: 12
+            height: 4
+            content:
+              $ref: '#/spec/panels/2_1'
+  duration: 1h

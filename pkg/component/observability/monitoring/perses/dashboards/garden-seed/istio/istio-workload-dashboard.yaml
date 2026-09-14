@@ -1,0 +1,436 @@
+kind: Dashboard
+metadata:
+  name: istio-workload
+  project: garden
+spec:
+  display:
+    name: Istio Workload Dashboard
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          name: Namespace
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            expr: sum(istio_requests_total) by (destination_workload_namespace) or sum(istio_tcp_sent_bytes_total) by (destination_workload_namespace)
+            labelName: destination_workload_namespace
+        name: namespace
+    - kind: ListVariable
+      spec:
+        display:
+          name: Workload
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            expr: (sum(istio_requests_total{destination_workload_namespace=~"$namespace"}) by (destination_workload) or sum(istio_requests_total{source_workload_namespace=~"$namespace"}) by (source_workload)) or (sum(istio_tcp_sent_bytes_total{destination_workload_namespace=~"$namespace"}) by (destination_workload) or sum(istio_tcp_sent_bytes_total{source_workload_namespace=~"$namespace"}) by (source_workload))
+            labelName: source_workload
+        name: workload
+    - kind: ListVariable
+      spec:
+        display:
+          name: Inbound Workload Namespace
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: alphabetical-desc
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            expr: sum(istio_requests_total{reporter=~"source", destination_workload="$workload", destination_workload_namespace=~"$namespace"}) by (source_workload_namespace) or sum(istio_tcp_sent_bytes_total{reporter=~"source", destination_workload="$workload", destination_workload_namespace=~"$namespace"}) by (source_workload_namespace)
+            labelName: source_workload_namespace
+        name: srcns
+    - kind: ListVariable
+      spec:
+        display:
+          name: Inbound Workload
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: numerical-asc
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            expr: sum(istio_requests_total{reporter=~"source", destination_workload="$workload", destination_workload_namespace=~"$namespace", source_workload_namespace=~"$srcns"}) by (source_workload) or sum(istio_tcp_sent_bytes_total{reporter=~"source", destination_workload="$workload", destination_workload_namespace=~"$namespace", source_workload_namespace=~"$srcns"}) by (source_workload)
+            labelName: source_workload
+        name: srcwl
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: empty
+        plugin:
+          kind: Markdown
+          spec:
+            text: |-
+              <div class="dashboard-header text-center">
+              <span>WORKLOAD: $workload.$namespace</span>
+              </div>
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming Request Volume
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: none
+            format:
+              unit: ops/sec
+            mappings:
+              - kind: Misc
+                spec:
+                  result:
+                    value: N/A
+                  value: "null"
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming Success Rate (non-5xx responses)
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: mean
+            colorMode: none
+            format:
+              unit: percent-decimal
+            mappings:
+              - kind: Misc
+                spec:
+                  result:
+                    value: N/A
+                  value: "null"
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: rgba(237, 129, 40, 0.89)
+                  value: 95
+                - color: rgba(245, 54, 54, 0.9)
+                  value: 99
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Server Traffic
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: mean
+            colorMode: none
+            format:
+              unit: bytes/sec
+            mappings:
+              - kind: Misc
+                spec:
+                  result:
+                    value: N/A
+                  value: "null"
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Client Traffic
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: mean
+            colorMode: none
+            format:
+              unit: bytes/sec
+            mappings:
+              - kind: Misc
+                spec:
+                  result:
+                    value: N/A
+                  value: "null"
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: empty
+        plugin:
+          kind: Markdown
+          spec:
+            text: |-
+              <div class="dashboard-header text-center">
+              <span>INBOUND WORKLOADS</span>
+              </div>
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming Requests By Source And Response Code
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming Success Rate (non-5xx responses) By Source
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming Requests By Source And Upstream Address
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: ops/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_4":
+      kind: Panel
+      spec:
+        display:
+          name: Incoming Success Rate (non-5xx responses) By Source and Upstream Address
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_5":
+      kind: Panel
+      spec:
+        display:
+          name: Bytes Received from Incoming TCP Connection
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+    "1_6":
+      kind: Panel
+      spec:
+        display:
+          name: Bytes Sent to Incoming TCP Connection
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  query: migration_from_grafana_not_supported
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: General
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 24
+            height: 3
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 0
+            "y": 4
+            width: 8
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 8
+            "y": 4
+            width: 8
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 0
+            "y": 8
+            width: 12
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 12
+            "y": 8
+            width: 12
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_4'
+    - kind: Grid
+      spec:
+        display:
+          title: Inbound Workloads
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 13
+            width: 24
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 0
+            "y": 16
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 12
+            "y": 16
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 0
+            "y": 22
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_3'
+          - x: 12
+            "y": 22
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_4'
+          - x: 0
+            "y": 28
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_5'
+          - x: 12
+            "y": 28
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/1_6'
+  duration: 1h

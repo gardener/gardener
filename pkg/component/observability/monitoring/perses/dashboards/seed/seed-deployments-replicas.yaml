@@ -1,0 +1,217 @@
+kind: Dashboard
+metadata:
+  name: seed-deployments-replicas
+  project: garden
+spec:
+  display:
+    name: Seed Deployments Replicas
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Deployment
+          hidden: false
+        defaultValue: auditlog-seed-controller-manager
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: deployment
+            matchers:
+              - kube_deployment_metadata_generation{namespace!="garden", namespace!="kube-system"}
+        name: deployment_name
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Desired Replicas
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(kube_deployment_spec_replicas{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}'
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Available Replicas
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: min(kube_deployment_status_replicas_available{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}'
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: Observed Generation
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(kube_deployment_status_observed_generation{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}'
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Metadata Generation
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            thresholds:
+              steps: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(kube_deployment_metadata_generation{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}'
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: Replicas
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(kube_deployment_status_replicas{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}: current replicas'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: min(kube_deployment_status_replicas_available{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}: available'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(kube_deployment_status_replicas_unavailable{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}: unavailable'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: min(kube_deployment_status_replicas_updated{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}: updated'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(kube_deployment_spec_replicas{deployment="$deployment_name"}) without (instance, pod)
+                  seriesNameFormat: '{{namespace}}: desired'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 6
+            height: 4
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 6
+            "y": 0
+            width: 6
+            height: 4
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 12
+            "y": 0
+            width: 6
+            height: 4
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 18
+            "y": 0
+            width: 6
+            height: 4
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 0
+            "y": 4
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/4'
+  duration: 1h

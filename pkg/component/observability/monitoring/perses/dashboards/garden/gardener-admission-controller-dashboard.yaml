@@ -1,0 +1,213 @@
+kind: Dashboard
+metadata:
+  name: gardener-admission-controller
+  project: garden
+spec:
+  display:
+    name: Gardener Admission Controller
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: namespace
+            matchers:
+              - gardener_admission_controller_rejected_resources_total
+        name: Namespace
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: kind
+            matchers:
+              - gardener_admission_controller_rejected_resources_total
+        name: Kind
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: operation
+            matchers:
+              - gardener_admission_controller_rejected_resources_total
+        name: Operation
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: reason
+            matchers:
+              - gardener_admission_controller_rejected_resources_total
+        name: Reason
+    - kind: ListVariable
+      spec:
+        display:
+          name: Kind
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: kind
+            matchers:
+              - gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket
+        name: kind
+    - kind: ListVariable
+      spec:
+        display:
+          name: Graph Operation
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: operation
+            matchers:
+              - gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket
+        name: graph_operation
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Graph Update Duration Per Kind And Graph Operation
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(.9,sum(rate(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket{operation=~"$graph_operation",kind=~"$kind"}[$__rate_interval])) by(le,kind,operation))
+                  seriesNameFormat: '{{operation}} {{kind}}'
+        links:
+          - name: Drill Down
+            url: /d/gardener-admission-ctr-seedauth-details/gardener-admission-controller-seedauthorizer-details
+            targetBlank: true
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Graph Path Check Duration To Seed Per FromKind
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(.9,sum(rate(gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds_bucket{fromKind=~"$kind"}[$__rate_interval])) by(le,fromKind))
+                  seriesNameFormat: '{{fromKind}}'
+        links:
+          - name: Drill Down
+            url: /d/gardener-admission-ctr-seedauth-details/gardener-admission-controller-seedauthorizer-details
+            targetBlank: true
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Rejected Resources
+          description: Number of resources rejected by the Gardener Admission Controller.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: "sum by (namespace, reason, kind, operation) (\n  clamp_min(\n    sum without (instance) (\n      gardener_admission_controller_rejected_resources_total{namespace=~\"$Namespace\", kind=~\"$Kind\", operation=~\"$Operation\", reason=~\"$Reason\"}\n    )\n    - \n    (sum without (instance) (\n      gardener_admission_controller_rejected_resources_total{namespace=~\"$Namespace\", kind=~\"$Kind\", operation=~\"$Operation\", reason=~\"$Reason\"} offset $__interval\n    ) \n    or\n    sum without (instance) (\n      gardener_admission_controller_rejected_resources_total{namespace=~\"$Namespace\", kind=~\"$Kind\", operation=~\"$Operation\", reason=~\"$Reason\"}\n    ) * 0)\n    , 0\n  )\n)"
+                  seriesNameFormat: '{{ namespace }}/{{ kind }}/{{ operation }}/{{ reason }}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: SeedAuthorizer
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Admission Webhooks
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 10
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_0'
+  duration: 1h

@@ -1,0 +1,407 @@
+kind: Dashboard
+metadata:
+  name: vpa-recommender
+  project: garden
+spec:
+  display:
+    name: VPA Recommender
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: seed-prometheus
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          name: step
+          hidden: false
+        defaultValue: UpdateVPAs
+        allowAllValue: true
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: step
+            matchers: []
+        name: step
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers:
+              - vpa_recommender_vpa_objects_count{}
+        name: pod
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total VPA objects
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+            yAxis:
+              min: 0
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(vpa_recommender_vpa_objects_count{unsupported_config="true", pod=~"$pod"})
+                  seriesNameFormat: Unsupported config
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(vpa_recommender_vpa_objects_count{api="v1",matches_pods="false", pod=~"$pod"})
+                  seriesNameFormat: Not matching Pods
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(vpa_recommender_vpa_objects_count{api="v1",matches_pods="true", pod=~"$pod"})
+                  seriesNameFormat: Matching Pods
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Total VPA objects
+          description: Number of VPA objects present in the cluster
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(vpa_recommender_vpa_objects_count{pod=~"$pod"})
+                  seriesNameFormat: ""
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Aggregate container states
+          description: Number of aggregate container states being tracked by the recommender
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last-number
+            colorMode: value
+            sparkline: {}
+            thresholds:
+              steps:
+                - color: '#f2495c'
+                  value: 80
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(vpa_recommender_aggregate_container_states_count{pod=~"$pod"})
+                  seriesNameFormat: ""
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Recommender execution latency, Step=$step
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Time to first recommendation
+          description: ' Time elapsed from creating a valid VPA configuration to the first recommendation.'
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Missing memory recommendations
+          description: Count of usage samples when a recommendation should be present but is missing
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    rate(vpa_quality_usage_sample_missing_recommendation_count{resource="memory", pod=~"$pod"}
+                    [$__rate_interval])
+                  seriesNameFormat: OOM={{is_oom}}, Update Mode={{update_mode}}
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Memory usage recommendation relative diffs
+          description: Diffs between recommendation and usage, normalized by recommendation value
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "3_2":
+      kind: Panel
+      spec:
+        display:
+          name: Absolute memory diff when recommendation > usage
+          description: Absolute diffs between recommendation and usage for memory when recommendation > usage
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "3_3":
+      kind: Panel
+      spec:
+        display:
+          name: Absolute memory diff when recommendation <= usage
+          description: Absolute diffs between recommendation and usage for memory when recommendation <= usage
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "4_0":
+      kind: Panel
+      spec:
+        display:
+          name: Missing CPU recommendations
+          description: Count of usage samples when a recommendation should be present but is missing
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              mode: list
+              position: bottom
+            visual:
+              areaOpacity: 0
+              connectNulls: false
+              display: line
+              lineWidth: 1
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |-
+                    rate(vpa_quality_usage_sample_missing_recommendation_count{resource="cpu", pod=~"$pod"}
+                    [$__rate_interval])
+                  seriesNameFormat: Update Mode={{update_mode}}
+    "4_1":
+      kind: Panel
+      spec:
+        display:
+          name: CPU usage recommendation relative diffs
+          description: Diffs between recommendation and usage, normalized by recommendation value
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "4_2":
+      kind: Panel
+      spec:
+        display:
+          name: Absolute CPU diff when recommendation > usage
+          description: Absolute diffs between recommendation and usage for CPU when recommendation >  usage
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "4_3":
+      kind: Panel
+      spec:
+        display:
+          name: Absolute CPU diff when recommendation <= usage
+          description: Absolute diffs between recommendation and usage for CPU when recommendation <= usage
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Scale
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 9
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 12
+            "y": 5
+            width: 9
+            height: 4
+            content:
+              $ref: '#/spec/panels/0_2'
+    - kind: Grid
+      spec:
+        display:
+          title: Execution Latency
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 10
+            width: 24
+            height: 14
+            content:
+              $ref: '#/spec/panels/1_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Recommendation general
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 25
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Memory Recommendations
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 34
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 12
+            "y": 34
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/3_1'
+          - x: 0
+            "y": 45
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/3_2'
+          - x: 12
+            "y": 45
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/3_3'
+    - kind: Grid
+      spec:
+        display:
+          title: CPU Recommendations
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 35
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/4_0'
+          - x: 12
+            "y": 35
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/4_1'
+          - x: 0
+            "y": 46
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/4_2'
+          - x: 12
+            "y": 46
+            width: 12
+            height: 11
+            content:
+              $ref: '#/spec/panels/4_3'
+  duration: 1h

@@ -1,0 +1,191 @@
+kind: Dashboard
+metadata:
+  name: shoot-availability
+  project: garden
+spec:
+  display:
+    name: Shoot Availability
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: Shoots by Infrastructure
+        plugin:
+          kind: BarChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_info) by (iaas)
+                  seriesNameFormat: '{{ iaas }}'
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot Availability
+          description: Shows the current % of available shoots.
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_condition{condition="APIServerAvailable"} == 1) / count(garden_shoot_info) * 100
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: Total number of shoots
+          description: Shows the total number of shoot clusters (including shooted seeds).
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_info)
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Unavailable Shoots
+          description: Shows the total number of unavailable shoot clusters (including shooted seeds).
+        plugin:
+          kind: GaugeChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_condition{condition="APIServerAvailable"} == 0)
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: Total Availability
+          description: Shows the availability of all shoot clusters.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_condition{condition="APIServerAvailable"} == 1) / count(garden_shoot_info) * 100
+                  seriesNameFormat: Availability
+    "5":
+      kind: Panel
+      spec:
+        display:
+          name: Shoot Availability
+          description: Shows the availability of all shoots.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: garden_shoot_condition{condition="APIServerAvailable"}
+                  seriesNameFormat: '{{ iaas }}/shoot--{{ project }}--{{ name }}/{{ seed }}'
+    "6":
+      kind: Panel
+      spec:
+        display:
+          name: Unavailable Shoots
+          description: List of shoots that are unavailable.
+        plugin:
+          kind: Table
+          spec:
+            columnSettings: []
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_condition{condition="APIServerAvailable"} == 0) by (name, project, seed, iaas)
+                  seriesNameFormat: ""
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Panel Group 1
+        items:
+          - x: 0
+            "y": 0
+            width: 11
+            height: 6
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 11
+            "y": 0
+            width: 5
+            height: 6
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 16
+            "y": 0
+            width: 4
+            height: 6
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 20
+            "y": 0
+            width: 4
+            height: 6
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 0
+            "y": 6
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/4'
+          - x: 11
+            "y": 6
+            width: 13
+            height: 7
+            content:
+              $ref: '#/spec/panels/5'
+          - x: 0
+            "y": 13
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/6'
+  duration: 1h

@@ -1,0 +1,91 @@
+kind: Dashboard
+metadata:
+  name: apiserver-request-duration-and-response-size
+  project: garden
+spec:
+  display:
+    name: API Server Request Duration and Response Size
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers:
+              - apiserver_audit_event_total
+        name: ApiServer
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .+
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: resource
+            matchers:
+              - apiserver_request_duration_seconds_bucket
+        name: resource
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: $ApiServer $resource
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: $ApiServer $resource
+        plugin:
+          kind: Markdown
+          spec:
+            text: '**Migration from Grafana not supported !**'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Request Duration ($resource)
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/0_0'
+        repeatVariable: resource
+    - kind: Grid
+      spec:
+        display:
+          title: Response Size ($resource)
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 30
+            width: 24
+            height: 9
+            content:
+              $ref: '#/spec/panels/1_0'
+        repeatVariable: resource
+  duration: 1h

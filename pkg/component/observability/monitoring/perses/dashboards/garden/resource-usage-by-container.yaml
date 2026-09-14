@@ -1,0 +1,197 @@
+kind: Dashboard
+metadata:
+  name: resource-usage-by-container
+  project: garden
+spec:
+  display:
+    name: Resource usage by container
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: $__all
+        allowAllValue: true
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: seed
+            matchers:
+              - seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
+        name: seed
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: kube-apiserver
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: container
+            matchers:
+              - seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
+        name: container
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Usage
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:container_cpu_usage_seconds_total:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:kube_pod_container_resource_limits_cpu_cores:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Limits
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Utilization
+          description: How many percent of the CPU requests are used.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 100 * sum(seed:container_cpu_usage_seconds_total:sum_by_container{container="$container", seed=~"$seed"}) / sum(seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Utilization
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Usage
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:container_memory_working_set_bytes:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Usage
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Requests
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Limits
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Utilization
+          description: How many percent of the memory requests are used.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: 100 * sum(seed:container_memory_working_set_bytes:sum_by_container{container="$container", seed=~"$seed"}) / sum(seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container{container="$container", seed=~"$seed"})
+                  seriesNameFormat: Utilization
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: CPU
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Memory
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 10
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 10
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_1'
+  duration: 1h

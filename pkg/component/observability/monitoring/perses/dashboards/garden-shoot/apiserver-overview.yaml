@@ -1,0 +1,967 @@
+kind: Dashboard
+metadata:
+  name: apiserver-overview
+  project: garden
+spec:
+  display:
+    name: API Server
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Scrape Job
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: job
+            matchers:
+              - apiserver_request_total
+        name: job
+    - kind: ListVariable
+      spec:
+        display:
+          name: API Server Pod
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: pod
+            matchers:
+              - apiserver_request_total{job=~"$job"}
+        name: pod
+    - kind: ListVariable
+      spec:
+        display:
+          name: Verbs
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - DELETE
+              - PUT
+              - POST
+              - DELETECOLLECTION
+              - WATCH
+              - GET
+              - LIST
+              - PATCH
+              - CONNECT
+              - UPDATE
+              - CREATE
+        name: verb
+    - kind: ListVariable
+      spec:
+        display:
+          name: Admission Operation
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        customAllValue: .*
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - CREATE
+              - UPDATE
+              - DELETE
+        name: operation
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue: "0.99"
+        allowAllValue: false
+        allowMultiple: false
+        sort: none
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: quantile
+            matchers:
+              - shoot:apiserver_latency_seconds:quantile
+        name: quantile
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Duration Per In-Tree Plugin
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(.9,sum(rate(apiserver_admission_controller_admission_duration_seconds_bucket{job=~"$job",pod=~"$pod",operation=~"$operation"}[$__rate_interval])) by(le,name))
+                  seriesNameFormat: '{{name}}'
+        links:
+          - name: Drill Down
+            url: /d/apiserver-admission-details/apiserver-admission-details
+            targetBlank: true
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Duration Per Webhook
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.90,sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket{job=~"$job",pod=~"$pod",operation=~"$operation"}[$__rate_interval])) by(le,name))
+                  seriesNameFormat: '{{name}}'
+        links:
+          - name: Drill Down
+            url: /d/apiserver-admission-details/apiserver-admission-details
+            targetBlank: true
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: Duration Per Step
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.90,sum(rate(apiserver_admission_step_admission_duration_seconds_bucket{job=~"$job",pod=~"$pod",operation=~"$operation"}[$__rate_interval])) by(le,type))
+                  seriesNameFormat: '{{type}}'
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Rejection Count Per Webhook
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_admission_webhook_rejection_count{job=~"$job",pod=~"$pod",operation=~"$operation"}[$__rate_interval])) by (name,error_type)
+                  seriesNameFormat: '{{name}} ({{error_type}})'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total Events
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_audit_event_total{job=~"$job",pod=~"$pod"}[$__rate_interval]))
+                  seriesNameFormat: Events
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Rejected Events
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_audit_requests_rejected_total{job=~"$job",pod=~"$pod"}[$__rate_interval]))
+                  seriesNameFormat: Events
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Total Authenticated User Requests
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(authenticated_user_requests{job=~"$job",pod=~"$pod"}[$__rate_interval]))
+                  seriesNameFormat: Requests
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Authentication Attempts By Result
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(authentication_attempts{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(result)
+                  seriesNameFormat: '{{result}}'
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Overall Request Rates
+          description: Shows the rate of all API server requests.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_request_total{job=~"$job",pod=~"$pod"}[$__rate_interval]))
+                  seriesNameFormat: Request Rate
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Request Latency
+          description: Shows the request latency of each verb for the API server.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max by(verb, quantile) (shoot:apiserver_latency_seconds:quantile{job=~"$job",pod=~"$pod", verb=~"$verb",quantile=~"$quantile",subresource!~"log|portforward|exec|proxy|attach"})
+                  seriesNameFormat: '{{verb}}'
+    "3_2":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rates Per Verb
+          description: Shows the request rate per verb for the API server.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_request_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(verb)
+                  seriesNameFormat: '{{verb}}'
+    "3_3":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rates Per Verb (Avg)
+          description: Shows the average rate of requests to the API server.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: avg(rate(apiserver_request_total{job=~"$job",pod=~"$pod",verb=~"$verb"}[$__rate_interval])) by (verb)
+                  seriesNameFormat: '{{verb}}'
+    "3_4":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rates Per Scope
+          description: Shows the request rate per scope for the API server.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_request_total{job=~"$job",pod=~"$pod",scope!=""}[$__rate_interval])) by(scope)
+                  seriesNameFormat: '{{scope}}-scope'
+    "3_5":
+      kind: Panel
+      spec:
+        display:
+          name: Request Rates Per Resource
+          description: Shows the request rate per resource for the API server.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_request_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(resource)
+                  seriesNameFormat: '{{resource}}'
+    "3_6":
+      kind: Panel
+      spec:
+        display:
+          name: API Server Request Rates Per Verb And Resource
+          description: Shows the request rate per verb and resource for the API server.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_request_total{verb=~"$verb",pod=~"$pod"}[$__rate_interval])) by(resource,verb,subresource)
+                  seriesNameFormat: '{{verb}} /{{resource}}/{{subresource}}'
+    "3_7":
+      kind: Panel
+      spec:
+        display:
+          name: Inflight Requests By Request Kind
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(max_over_time(apiserver_current_inflight_requests{job=~"$job",pod=~"$pod"}[1m])) by (request_kind)
+                  seriesNameFormat: '{{request_kind}}'
+    "3_8":
+      kind: Panel
+      spec:
+        display:
+          name: Inqueue Requests By Request Kind
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(max_over_time(apiserver_current_inqueue_requests{job=~"$job",pod=~"$pod"}[1m])) by (request_kind)
+                  seriesNameFormat: '{{request_kind}}'
+    "3_9":
+      kind: Panel
+      spec:
+        display:
+          name: Response Sizes Per Resource
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.90,sum(rate(apiserver_response_sizes_bucket{job=~"$job",pod=~"$pod",verb=~"$verb"}[$__rate_interval])) by(le,resource,subresource))
+                  seriesNameFormat: '{{resource}}{{subresource}}'
+        links:
+          - name: Drill Down
+            url: /d/apiserver-request-details/apiserver-request-details
+            targetBlank: true
+    "3_10":
+      kind: Panel
+      spec:
+        display:
+          name: Request Terminations By Resource And Code
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_request_terminations_total{job=~"$job",pod=~"$pod",verb=~"$verb"}[$__rate_interval])) by (resource,subresource,code)
+                  seriesNameFormat: '{{ resource }}{{subresource}} ({{code}})'
+    "3_11":
+      kind: Panel
+      spec:
+        display:
+          name: Response Size Rate Per Resource and Verb
+          description: |-
+            This panel shows the rate of response sizes by resource and verb.
+
+            Outstandingly high values could give a hint for shoot operators on where
+            to start on the journey of reducing the load on the API servers,
+            by making sure to use WATCH requests instead of periodic LIST and
+            GET requests in the various controllers.
+
+            High values for WATCH requests could hint at reducing the rate of change for the specific resource.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_response_sizes_sum{job=~"$job",pod=~"$pod",verb=~"$verb"}[$__rate_interval])) by(resource, verb) > 0
+                  seriesNameFormat: '{{resource}} {{verb}}'
+    "4_0":
+      kind: Panel
+      spec:
+        display:
+          name: ETCD Total Size
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(apiserver_storage_size_bytes{job=~"$job",pod=~"$pod"}) by (endpoint)
+                  seriesNameFormat: '{{endpoint}}'
+    "4_1":
+      kind: Panel
+      spec:
+        display:
+          name: ETCD Object Counts By Resource
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: max(etcd_object_counts{job=~"$job",pod=~"$pod"}) by (resource) or max(apiserver_storage_objects{job=~"$job",pod=~"$pod"}) by (resource)
+                  seriesNameFormat: '{{resource}}'
+    "4_2":
+      kind: Panel
+      spec:
+        display:
+          name: Storage Transformation Duration By Type
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.90,sum(rate(apiserver_storage_transformation_duration_seconds_bucket{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(le,transformation_type))
+                  seriesNameFormat: '{{transformation_type}}'
+    "4_3":
+      kind: Panel
+      spec:
+        display:
+          name: Total Storage Transformation Operations By Type And Prefix
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_storage_transformation_operations_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by (transformation_type,transformer_prefix)
+                  seriesNameFormat: '{{transformation_type}},{{transformer_prefix}}'
+    "4_4":
+      kind: Panel
+      spec:
+        display:
+          name: ETCD Request Duration Per Type
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(le,type))
+                  seriesNameFormat: '{{type}}'
+        links:
+          - name: Drill Down
+            url: /d/apiserver-storage-details/apiserver-storage-details
+            targetBlank: true
+    "5_0":
+      kind: Panel
+      spec:
+        display:
+          name: Registered Watches Per Kind
+          description: Panel shows how many watches are open (including the API Server's in-tree admission plug-ins).
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: |2-
+                        sum by (kind) (apiserver_registered_watchers{job=~"$job",pod=~"$pod",kind!=""})
+                      + on () group_left ()
+                        absent(apiserver_longrunning_requests) * 0
+                    or
+                      sum by (resource) (apiserver_longrunning_requests{job=~"$job",pod=~"$pod",verb="WATCH"})
+                  seriesNameFormat: '{{resource}}{{kind}}'
+    "5_1":
+      kind: Panel
+      spec:
+        display:
+          name: Init Event Count Per Resource
+          description: Counter of init events processed in watch cache.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_init_events_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(resource)
+                  seriesNameFormat: '{{resource}}'
+    "5_2":
+      kind: Panel
+      spec:
+        display:
+          name: Event Size Per Kind
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(le,resource))
+                  seriesNameFormat: '{{kind}}'
+        links:
+          - name: Drill Down
+            url: /d/apiserver-watch-details/apiserver-watch-details
+            targetBlank: true
+    "5_3":
+      kind: Panel
+      spec:
+        display:
+          name: Event Count Per Kind
+          description: Shows the watch event count per kind
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(rate(apiserver_watch_events_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(kind)
+                  seriesNameFormat: '{{kind}}'
+    "5_4":
+      kind: Panel
+      spec:
+        display:
+          name: Cache Capacity Increases By Resource
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(increase(watch_cache_capacity_increase_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by (group,resource)
+                  seriesNameFormat: '{{resource}}'
+    "5_5":
+      kind: Panel
+      spec:
+        display:
+          name: Cache Capacity Decreases By Resource
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(increase(watch_cache_capacity_decrease_total{job=~"$job",pod=~"$pod"}[$__rate_interval])) by (group,resource)
+                  seriesNameFormat: '{{resource}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: API Server Admission
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 7
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 12
+            "y": 7
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/0_3'
+    - kind: Grid
+      spec:
+        display:
+          title: API Server Auditing
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 14
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 14
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_1'
+    - kind: Grid
+      spec:
+        display:
+          title: API Server Authentication
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 20
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 12
+            "y": 20
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/2_1'
+    - kind: Grid
+      spec:
+        display:
+          title: API Server Request and Responses
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 26
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 12
+            "y": 26
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_1'
+          - x: 0
+            "y": 34
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_2'
+          - x: 12
+            "y": 34
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_3'
+          - x: 0
+            "y": 42
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_4'
+          - x: 0
+            "y": 50
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_5'
+          - x: 0
+            "y": 58
+            width: 24
+            height: 10
+            content:
+              $ref: '#/spec/panels/3_6'
+          - x: 0
+            "y": 68
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_7'
+          - x: 12
+            "y": 68
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_8'
+          - x: 0
+            "y": 76
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_9'
+          - x: 12
+            "y": 76
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_10'
+          - x: 0
+            "y": 84
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_11'
+    - kind: Grid
+      spec:
+        display:
+          title: API Server Storage
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 93
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/4_0'
+          - x: 12
+            "y": 93
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/4_1'
+          - x: 0
+            "y": 99
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/4_2'
+          - x: 12
+            "y": 99
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/4_3'
+          - x: 0
+            "y": 105
+            width: 24
+            height: 6
+            content:
+              $ref: '#/spec/panels/4_4'
+    - kind: Grid
+      spec:
+        display:
+          title: API Server Watches
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 112
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/5_0'
+          - x: 12
+            "y": 112
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/5_1'
+          - x: 0
+            "y": 120
+            width: 12
+            height: 7
+            content:
+              $ref: '#/spec/panels/5_2'
+          - x: 12
+            "y": 120
+            width: 12
+            height: 7
+            content:
+              $ref: '#/spec/panels/5_3'
+          - x: 0
+            "y": 127
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/5_4'
+          - x: 12
+            "y": 127
+            width: 12
+            height: 6
+            content:
+              $ref: '#/spec/panels/5_5'
+  duration: 1h

@@ -1,0 +1,527 @@
+kind: Dashboard
+metadata:
+  name: seed-resource-usage
+  project: garden
+spec:
+  display:
+    name: Seed Resource Usage
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: alphabetical-asc
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            labelName: seed
+            matchers:
+              - seed:container_cpu_usage_seconds_total:sum
+        name: seed
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Shoots per Seed
+          description: Shows the number of shoots per seed (does not count hibernated shoots).
+        plugin:
+          kind: BarChart
+          spec:
+            calculation: last
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sort_desc(count(garden_shoot_info{seed=~"$seed"}) by (seed))
+                  seriesNameFormat: '{{ seed }}'
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Shoots per Seed
+          description: Shows the number of shoots per seed (does not count hibernated shoots).
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: count(garden_shoot_info{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Control Plane Utilization
+          description: How much of the seed CPU is utilized for control planes.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_cpu_usage_seconds_total:sum_cp{seed=~"$seed"}/seed:container_cpu_usage_seconds_total:sum{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Control Plane Utilization
+          description: How much of the seed memory is utilized for control planes.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_memory_working_set_bytes:sum_cp{seed=~"$seed"}/seed:container_memory_working_set_bytes:sum{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: Total CPU Utilization (Requests)
+          description: How much of the seed CPU is utilized based on requests.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:kube_pod_container_resource_requests_cpu_cores:sum{seed=~"$seed"}/seed:kube_node_status_allocatable_cpu_cores:sum{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Total Memory Utilization (Requests)
+          description: How much of the seed memory is utilized based on requests.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  minStep: ""
+                  query: sum(seed:kube_pod_container_resource_requests_memory_bytes:sum{seed=~"$seed"}/seed:kube_node_status_allocatable_memory_bytes:sum{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Seed CPU Usage
+          description: Shows the total CPU usage of each seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_cpu_usage_seconds_total:sum{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Seed Memory Usage
+          description: Shows the total memory usage of each seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_memory_working_set_bytes:sum{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "1_2":
+      kind: Panel
+      spec:
+        display:
+          name: Nodes
+          description: Shows the total number of nodes for each seed.
+        plugin:
+          kind: BarChart
+          spec:
+            calculation: mean
+            format:
+              decimalPlaces: 0
+              unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(shoot:kube_node_info:count{project="garden", shoot_name=~"$seed"}) by (shoot_name)
+                  seriesNameFormat: '{{ shoot_name }}'
+    "1_3":
+      kind: Panel
+      spec:
+        display:
+          name: Nodes
+          description: Shows the total number of nodes for each seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(shoot:kube_node_info:count{project="garden", shoot_name=~"$seed"}) by (shoot_name)
+                  seriesNameFormat: '{{ shoot_name }}'
+    "1_4":
+      kind: Panel
+      spec:
+        display:
+          name: Control Planes per Node
+          description: Shows how many controlplanes are hosted on each node on average.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(label_replace(sum(seed:active_shoots_total:sum) by (seed), 'shoot_name', '$1', 'seed', '(.+)')) by (shoot_name) / sum(shoot:kube_node_info:count{project='garden'}) by (shoot_name)
+                  seriesNameFormat: '{{ shoot_name }}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Image Count
+          description: Shows the current count of each image on the seeds.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: seed:images:count{seed=~"$seed"}
+                  seriesNameFormat: '{{image}}'
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Seed Control Plane CPU Usage
+          description: Shows the control plance CPU usage of each seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_cpu_usage_seconds_total:sum_cp{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Seed Control Plane Memory Usage
+          description: Shows the control plane memory usage of each seed.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_memory_working_set_bytes:sum_cp{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "4_0":
+      kind: Panel
+      spec:
+        display:
+          name: Seed System CPU Usage
+          description: Shows the system CPU usage of each seed. (Extensions, kube-system, and garden)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_cpu_usage_seconds_total:sum{seed=~"$seed"} - seed:container_cpu_usage_seconds_total:sum_cp{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "4_1":
+      kind: Panel
+      spec:
+        display:
+          name: Seed System Memory Usage
+          description: Shows the system memory usage of each seed. (Extensions, kube-system and garden)
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(seed:container_memory_working_set_bytes:sum{seed=~"$seed"} - seed:container_memory_working_set_bytes:sum_cp{seed=~"$seed"}) by (seed)
+                  seriesNameFormat: '{{ seed }}'
+    "5_0":
+      kind: Panel
+      spec:
+        display:
+          name: Extension CPU Usage
+          description: Shows how many CPU cores each extension uses.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(metering:cpu_usage:sum_by_namespace_owner_container{container=~".+extension.+",seed=~"$seed"}) by (seed,namespace)
+                  seriesNameFormat: '{{seed}}/{{ namespace }}'
+    "5_1":
+      kind: Panel
+      spec:
+        display:
+          name: Extension Memory Usage
+          description: Shows how much memory each extension is using.
+        plugin:
+          kind: TimeSeriesChart
+          spec: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(metering:memory_usage:sum_by_namespace_owner_container{container=~".+extension.+",seed=~"$seed"}) by (seed,namespace)
+                  seriesNameFormat: '{{ seed }}/{{namespace}}'
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Overview
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 1
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 9
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 12
+            "y": 9
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 0
+            "y": 14
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 12
+            "y": 14
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/0_5'
+    - kind: Grid
+      spec:
+        display:
+          title: Total Seed Usage
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 20
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 20
+            width: 12
+            height: 5
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 0
+            "y": 25
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_2'
+          - x: 12
+            "y": 25
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_3'
+          - x: 0
+            "y": 33
+            width: 24
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_4'
+    - kind: Grid
+      spec:
+        display:
+          title: Images
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 36
+            width: 24
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+    - kind: Grid
+      spec:
+        display:
+          title: Control Plane Usage
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 29
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 12
+            "y": 29
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_1'
+    - kind: Grid
+      spec:
+        display:
+          title: System Usage
+          collapse:
+            open: false
+        items:
+          - x: 0
+            "y": 30
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/4_0'
+          - x: 12
+            "y": 30
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/4_1'
+    - kind: Grid
+      spec:
+        display:
+          title: Extensions
+          collapse:
+            open: true
+        items:
+          - x: 0
+            "y": 44
+            width: 12
+            height: 10
+            content:
+              $ref: '#/spec/panels/5_0'
+          - x: 12
+            "y": 44
+            width: 12
+            height: 10
+            content:
+              $ref: '#/spec/panels/5_1'
+  duration: 1h
