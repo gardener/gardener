@@ -31,6 +31,12 @@ type AdmissionControllerConfiguration struct {
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
+	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
+	// features. This field modifies piecemeal the built-in default values from
+	// "github.com/gardener/gardener/pkg/admissioncontroller/features/features.go".
+	// Default: nil
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

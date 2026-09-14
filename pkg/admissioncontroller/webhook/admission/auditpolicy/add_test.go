@@ -132,7 +132,7 @@ rules:
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = NewHandler(fakeClient, fakeClient, decoder)
+		handler = NewHandler(fakeClient, fakeClient, decoder, true)
 
 		request = admission.Request{}
 
@@ -287,7 +287,7 @@ rules:
 						return c.Get(ctx, key, obj, opts...)
 					},
 				}).Build()
-				handler = NewHandler(errClient, fakeClient, decoder)
+				handler = NewHandler(errClient, fakeClient, decoder, true)
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve audit policy ConfigMap fake-cm-namespace/fake-cm-name: fake", "")
 			})
 
@@ -409,6 +409,35 @@ rules:
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
 				})
 			})
+		})
+	})
+
+	Context("strictAuditPolicyValidation", func() {
+		auditPolicyWithUnknownField := `
+---
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  - level: None
+    verb: ["get"]
+`
+
+		BeforeEach(func() {
+			request.Kind = metav1.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "Shoot"}
+			Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+				Data:       map[string]string{"policy": auditPolicyWithUnknownField},
+			})).To(Succeed())
+		})
+
+		It("rejects an audit policy with an unknown field when enabled", func() {
+			handler = NewHandler(fakeClient, fakeClient, decoder, true)
+			test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "failed to decode the provided audit policy", "")
+		})
+
+		It("accepts an audit policy with an unknown field when disabled", func() {
+			handler = NewHandler(fakeClient, fakeClient, decoder, false)
+			test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced audit policy is valid", "")
 		})
 	})
 })

@@ -60,6 +60,8 @@ func NewHandler(apiReader, c client.Reader, decoderAdmission admission.Decoder, 
 			}
 			return configMapNames
 		},
-		AdmitGardenConfig: configvalidator.AdmitAuditPolicy,
+		AdmitGardenConfig: func(auditPolicyRaw string) (int32, error) {
+			return configvalidator.AdmitAuditPolicy(auditPolicyRaw, true)
+		},
 	}
 }

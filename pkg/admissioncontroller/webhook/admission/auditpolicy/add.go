@@ -24,12 +24,13 @@ const (
 )
 
 // AddToManager adds the webhook to the given manager.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(mgr manager.Manager, strictAuditPolicyValidation bool) error {
 	webhook := &admission.Webhook{
 		Handler: NewHandler(
 			mgr.GetAPIReader(),
 			mgr.GetClient(),
 			admission.NewDecoder(mgr.GetScheme()),
+			strictAuditPolicyValidation,
 		),
 		RecoverPanic: new(true),
 	}
@@ -38,8 +39,9 @@ func AddToManager(mgr manager.Manager) error {
 	return nil
 }
 
-// NewHandler returns a new handler for validating audit policies.
-func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission.Handler {
+// NewHandler returns a new handler for validating audit policies. If strictAuditPolicyValidation is true, unknown
+// or misspelled fields in the audit policy are rejected instead of being silently dropped.
+func NewHandler(apiReader, c client.Reader, decoder admission.Decoder, strictAuditPolicyValidation bool) admission.Handler {
 	return &configvalidator.Handler{
 		APIReader: apiReader,
 		Client:    c,
@@ -51,10 +53,8 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 			return gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
 		ShootFieldSelector: gardencore.ShootAuditPolicyConfigMapName,
-		AdmitConfig:        admitConfig,
+		AdmitConfig: func(_ context.Context, auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
+			return configvalidator.AdmitAuditPolicy(auditPolicyRaw, strictAuditPolicyValidation)
+		},
 	}
-}
-
-func admitConfig(_ context.Context, auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
-	return configvalidator.AdmitAuditPolicy(auditPolicyRaw)
 }

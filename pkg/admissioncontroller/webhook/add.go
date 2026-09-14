@@ -27,6 +27,7 @@ import (
 	shootauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/shoot"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -40,7 +41,7 @@ func AddToManager(
 		return fmt.Errorf("failed setting up Kubernetes client: %w", err)
 	}
 
-	if err := auditpolicy.AddToManager(mgr); err != nil {
+	if err := auditpolicy.AddToManager(mgr, features.DefaultFeatureGate.Enabled(features.StrictAuditPolicyValidation)); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", auditpolicy.HandlerName, err)
 	}
 

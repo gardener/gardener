@@ -26,6 +26,13 @@ func (in *AdmissionControllerConfiguration) DeepCopyInto(out *AdmissionControlle
 		*out = new(configv1alpha1.DebuggingConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.FeatureGates != nil {
+		in, out := &in.FeatureGates, &out.FeatureGates
+		*out = make(map[string]bool, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

@@ -43,6 +43,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | BackupEntryForGarden           | `false` | `Alpha` | `1.142` | `1.146` |
 | BackupEntryForGarden           | `true`  | `Beta`  | `1.147` |         |
 | RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.148` |         |
+| StrictAuditPolicyValidation    | `false` | `Alpha` | `1.152` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -294,3 +295,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | LiveControlPlaneMigration      | `gardener-apiserver`                                | Enables setting the `migration.gardener.cloud/live-migrate=true` annotation on a Shoot together with a `spec.seedName` change via the `shoots/binding` subresource to trigger live control-plane migration. See [Live Control Plane Migration](../operations/live_control_plane_migration.md) and [GEP-0039](https://github.com/gardener/enhancements/tree/main/geps/0039-live-control-plane-migration).                                                                                                                                                                                                                     |
 | BackupEntryForGarden           | `gardener-operator`                                 | Enables deploying a `BackupEntry` extension object in the garden controller alongside the `BackupBucket` when etcd backup is configured, aligning the garden with the same extension contract that shoot clusters use for backup credential management.                                                                                                                                                                                                                                                                                                  |
 | RemoveHTTPProxyLegacyPort      | `gardenlet`                                         | Disables the unused legacy `tls-tunnel` port (8132) - and its supporting Gateway and EnvoyFilter resources - on the `istio-ingressgateway` Services. Operators can choose to remove the legacy HTTP proxy port as soon as all shoots have switched to the unified `http-proxy` port (8443), i.e. report the `UsesUnifiedHTTPProxyPort` constraint with status `True`. |
+| StrictAuditPolicyValidation    | `gardener-admission-controller`                     | Rejects a Shoot's referenced audit policy ConfigMap if it contains unknown or misspelled fields, instead of silently dropping them. |
