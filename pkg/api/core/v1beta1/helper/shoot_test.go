@@ -45,6 +45,34 @@ var _ = Describe("Helper", func() {
 		}, true),
 	)
 
+	DescribeTable("#IsShootInHibernation",
+		func(shoot *gardencorev1beta1.Shoot, hibernated bool) {
+			Expect(IsShootInHibernation(shoot)).To(Equal(hibernated))
+		},
+		Entry("no hibernation section and status.isHibernated is false", &gardencorev1beta1.Shoot{}, false),
+		Entry("no hibernation section and status.isHibernated is true", &gardencorev1beta1.Shoot{
+			Status: gardencorev1beta1.ShootStatus{IsHibernated: true},
+		}, true),
+		Entry("hibernation.enabled = false and status.isHibernated is false", &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Hibernation: &gardencorev1beta1.Hibernation{Enabled: &falseVar},
+			},
+		}, false),
+		Entry("hibernation.enabled = false and status.isHibernated is true", &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Hibernation: &gardencorev1beta1.Hibernation{Enabled: &falseVar},
+			},
+			Status: gardencorev1beta1.ShootStatus{
+				IsHibernated: true,
+			},
+		}, true),
+		Entry("hibernation.enabled = true", &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Hibernation: &gardencorev1beta1.Hibernation{Enabled: &trueVar},
+			},
+		}, true),
+	)
+
 	DescribeTable("#ShootWantsClusterAutoscaler",
 		func(shoot *gardencorev1beta1.Shoot, wantsAutoscaler bool) {
 			Expect(ShootWantsClusterAutoscaler(shoot)).To(Equal(wantsAutoscaler))
