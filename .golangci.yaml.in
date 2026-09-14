@@ -315,7 +315,7 @@ linters:
         text: '".*" imported but not used'
       # allow non-capitalized messages if they start with technical terms
       - path: (.+)\.go$
-        text: 'structured logging message should be capitalized: "garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let)'
+        text: 'structured logging message should be capitalized: "garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let|adm)'
       # kubeapilinter only applies to files directly in the versioned API type packages (pkg/apis/<group>/<version>/).
       # Internal (unversioned) API packages and nested subpackages (e.g. .../constants) carry no JSON-tagged API types
       # and are excluded. New versioned packages are covered automatically. To lint API types in other locations
