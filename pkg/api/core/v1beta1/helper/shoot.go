@@ -28,6 +28,15 @@ func HibernationIsEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
 }
 
+// IsShootInHibernation checks if the given shoot is in hibernation or is waking up.
+func IsShootInHibernation(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
+		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
+	}
+
+	return shoot.Status.IsHibernated
+}
+
 // ShootWantsClusterAutoscaler checks if the given Shoot needs a cluster autoscaler.
 // This is determined by checking whether one of the Shoot workers has a different
 // Maximum than Minimum.
