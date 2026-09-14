@@ -142,7 +142,8 @@ func IsDeploymentUpdated(reader client.Reader, deployment *appsv1.Deployment) fu
 // DeploymentHasExactNumberOfPods returns true when there are exactly as many pods owned by the deployment (via its
 // ReplicaSets) as the .spec.replicas field of the deployment mandates.
 func DeploymentHasExactNumberOfPods(ctx context.Context, reader client.Reader, deployment *appsv1.Deployment) (bool, error) {
-	replicaSetList := &appsv1.ReplicaSetList{}
+	replicaSetList := &metav1.PartialObjectMetadataList{}
+	replicaSetList.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("ReplicaSetList"))
 	if err := reader.List(ctx, replicaSetList, client.InNamespace(deployment.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
 		return false, err
 	}
@@ -161,8 +162,7 @@ func DeploymentHasExactNumberOfPods(ctx context.Context, reader client.Reader, d
 
 	var numberOfRelevantPods int32
 	for _, pod := range podList.Items {
-		controller := metav1.GetControllerOf(&pod)
-		if controller == nil || !ownedReplicaSetUIDs.Has(controller.UID) {
+		if controller := metav1.GetControllerOf(&pod); controller == nil || !ownedReplicaSetUIDs.Has(controller.UID) {
 			continue
 		}
 
