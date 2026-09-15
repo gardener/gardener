@@ -37,6 +37,8 @@ const (
 	ZoneFilePath = BaseDir + "/zone"
 	// LastAppliedOperatingSystemConfigFilePath is the file path on the worker node that contains the last applied OSC information.
 	LastAppliedOperatingSystemConfigFilePath = BaseDir + "/last-applied-osc.yaml"
+	// LastComputedOperatingSystemConfigChangesFilePath is the file path on the worker node that contains the last computed OSC changes.
+	LastComputedOperatingSystemConfigChangesFilePath = BaseDir + "/last-computed-osc-changes.yaml"
 
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"
