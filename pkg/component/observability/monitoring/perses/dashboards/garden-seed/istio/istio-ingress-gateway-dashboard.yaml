@@ -61,7 +61,10 @@ spec:
           name: vCPU by Pod
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -82,7 +85,10 @@ spec:
           name: Memory by Pod
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -103,7 +109,10 @@ spec:
           name: vCPU by Namespace
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -118,7 +127,10 @@ spec:
           name: Memory by Namespace
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -133,7 +145,10 @@ spec:
           name: TCP Received by Pod
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -148,7 +163,10 @@ spec:
           name: TCP Sent by Pod
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -163,7 +181,10 @@ spec:
           name: TCP Received by Namespace
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -178,7 +199,10 @@ spec:
           name: TCP Sent by Namespace
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:

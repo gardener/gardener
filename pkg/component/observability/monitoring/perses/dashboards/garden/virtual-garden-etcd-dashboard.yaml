@@ -48,7 +48,10 @@ spec:
           name: RPC Rate
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: ops/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -75,7 +78,10 @@ spec:
           name: Active Streams
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -102,7 +108,10 @@ spec:
           name: Memory
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -120,7 +129,10 @@ spec:
           name: Disk Sync Duration
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -147,7 +159,10 @@ spec:
           name: Client Traffic In
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -165,7 +180,10 @@ spec:
           name: Client Traffic Out
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -184,7 +202,10 @@ spec:
           description: Only shows gardener objects (no crds)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -203,7 +224,10 @@ spec:
           name: DB Size
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -226,7 +250,10 @@ spec:
             The data has the following designation scheme: <pod-name> / <container-name>
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -249,7 +276,10 @@ spec:
             The data has the following designation scheme: <pod-name> / <container-name>
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -268,7 +298,10 @@ spec:
           name: Total Leader Elections Per Day
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -286,7 +319,10 @@ spec:
           name: Raft Proposals
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -14,7 +14,10 @@ spec:
           description: The CPU Usage of the seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -33,7 +36,10 @@ spec:
           description: Shows the total memory usage of the seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -52,7 +58,10 @@ spec:
           description: Shows how many CPU cores are required for the control planes on the seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -71,7 +80,10 @@ spec:
           description: Shows the total memory usage of all control planes on the seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -109,7 +109,10 @@ spec:
           name: Duration Per In-Tree Plugin
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -132,7 +135,10 @@ spec:
           name: Duration Per Webhook
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -155,7 +161,10 @@ spec:
           name: Duration Per Step
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -174,7 +183,10 @@ spec:
           name: Rejection Count Per Webhook
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -193,7 +205,10 @@ spec:
           name: Total Events
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -212,7 +227,10 @@ spec:
           name: Rejected Events
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -231,7 +249,10 @@ spec:
           name: Total Authenticated User Requests
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -250,7 +271,10 @@ spec:
           name: Authentication Attempts By Result
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -270,7 +294,10 @@ spec:
           description: Shows the rate of all API server requests.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -290,7 +317,10 @@ spec:
           description: Shows the request latency of each verb for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -310,7 +340,10 @@ spec:
           description: Shows the request rate per verb for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -330,7 +363,10 @@ spec:
           description: Shows the average rate of requests to the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -350,7 +386,10 @@ spec:
           description: Shows the request rate per scope for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -370,7 +409,10 @@ spec:
           description: Shows the request rate per resource for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -390,7 +432,10 @@ spec:
           description: Shows the request rate per verb and resource for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -409,7 +454,10 @@ spec:
           name: Inflight Requests By Request Kind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -428,7 +476,10 @@ spec:
           name: Inqueue Requests By Request Kind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -447,7 +498,10 @@ spec:
           name: Response Sizes Per Resource
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -470,7 +524,10 @@ spec:
           name: Request Terminations By Resource And Code
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -498,7 +555,10 @@ spec:
             High values for WATCH requests could hint at reducing the rate of change for the specific resource.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -517,7 +577,10 @@ spec:
           name: ETCD Total Size
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -536,7 +599,10 @@ spec:
           name: ETCD Object Counts By Resource
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -555,7 +621,10 @@ spec:
           name: Storage Transformation Duration By Type
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -574,7 +643,10 @@ spec:
           name: Total Storage Transformation Operations By Type And Prefix
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -593,7 +665,10 @@ spec:
           name: ETCD Request Duration Per Type
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -617,7 +692,10 @@ spec:
           description: Panel shows how many watches are open (including the API Server's in-tree admission plug-ins).
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -642,7 +720,10 @@ spec:
           description: Counter of init events processed in watch cache.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -661,7 +742,10 @@ spec:
           name: Event Size Per Kind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -685,7 +769,10 @@ spec:
           description: Shows the watch event count per kind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -704,7 +791,10 @@ spec:
           name: Cache Capacity Increases By Resource
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -723,7 +813,10 @@ spec:
           name: Cache Capacity Decreases By Resource
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

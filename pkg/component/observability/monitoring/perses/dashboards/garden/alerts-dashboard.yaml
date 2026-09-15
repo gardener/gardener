@@ -217,7 +217,10 @@ spec:
           description: Shows alerts that are/were active with the selected severity and alert state from the selected clusters. Includes the alertnames of the alerts.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -236,7 +239,10 @@ spec:
           description: Shows the number of alerts in each cluster.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

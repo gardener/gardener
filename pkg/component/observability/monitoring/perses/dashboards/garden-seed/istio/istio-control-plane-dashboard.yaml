@@ -59,7 +59,10 @@ spec:
           name: Pilot Versions
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -74,7 +77,10 @@ spec:
           name: Memory
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -131,7 +137,10 @@ spec:
           name: CPU
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -152,7 +161,10 @@ spec:
           name: Disk
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -173,7 +185,10 @@ spec:
           name: Goroutines
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -189,7 +204,10 @@ spec:
           description: Shows the rate of pilot pushes
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: ops/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -235,7 +253,10 @@ spec:
           description: Captures a variety of pilot errors
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -299,7 +320,10 @@ spec:
           description: Shows the total time it takes to push a config update to a proxy
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -332,7 +356,10 @@ spec:
           name: Conflicts
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -365,7 +392,10 @@ spec:
           name: ADS Monitoring
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -393,7 +423,10 @@ spec:
           description: Shows details about Envoy proxies in the mesh
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: ops/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -420,7 +453,10 @@ spec:
           name: XDS Active Connections
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -436,7 +472,10 @@ spec:
           description: Shows the size of XDS requests and responses
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -469,7 +508,10 @@ spec:
           name: Configuration Validation
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -490,7 +532,10 @@ spec:
           name: Sidecar Injection
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

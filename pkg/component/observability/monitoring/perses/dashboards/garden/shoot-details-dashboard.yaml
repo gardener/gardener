@@ -141,7 +141,10 @@ spec:
           description: Shows if the API Server is reachable from the shoot cluster.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -181,7 +184,10 @@ spec:
           name: Conditions (0=false, 1=ok, -1=unknown)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -199,7 +205,10 @@ spec:
           name: Gardener Operation Status
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -228,7 +237,10 @@ spec:
           description: The number of kube-apiservers running in the control plane of cluster $project / $shoot.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -247,7 +259,10 @@ spec:
           description: Shows the number of active nodes in the shoot cluster $project / $shoot.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -266,7 +281,10 @@ spec:
           description: Shows pending and firing alerts in the cluster.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

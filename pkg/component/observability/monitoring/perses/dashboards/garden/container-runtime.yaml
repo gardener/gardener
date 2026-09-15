@@ -30,7 +30,10 @@ spec:
           description: Shoots that are configured with listed runtimes
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -44,7 +44,10 @@ spec:
           name: CPU Usage
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -84,7 +87,10 @@ spec:
           description: How many percent of the CPU requests are used.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -103,7 +109,10 @@ spec:
           name: Memory Usage
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -143,7 +152,10 @@ spec:
           description: How many percent of the memory requests are used.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent
         queries:
           - kind: TimeSeriesQuery
             spec:

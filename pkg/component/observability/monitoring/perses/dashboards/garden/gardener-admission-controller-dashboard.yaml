@@ -118,7 +118,10 @@ spec:
           name: Graph Update Duration Per Kind And Graph Operation
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -141,7 +144,10 @@ spec:
           name: Graph Path Check Duration To Seed Per FromKind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -165,7 +171,10 @@ spec:
           description: Number of resources rejected by the Gardener Admission Controller.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

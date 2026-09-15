@@ -42,7 +42,10 @@ spec:
           name: Data Transfer
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -63,7 +66,10 @@ spec:
           name: TCP Connections
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -296,7 +302,10 @@ spec:
           name: Istio Components by Version
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

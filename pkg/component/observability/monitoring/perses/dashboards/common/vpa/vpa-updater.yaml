@@ -181,7 +181,10 @@ spec:
           name: VPAs with in-place updatable Pods
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -226,7 +229,10 @@ spec:
           name: VPAs with evictable Pods
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -248,7 +254,10 @@ spec:
           description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -270,7 +279,10 @@ spec:
           description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -292,7 +304,10 @@ spec:
           description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -314,7 +329,10 @@ spec:
           description: Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

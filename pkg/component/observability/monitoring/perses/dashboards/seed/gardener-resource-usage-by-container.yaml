@@ -121,7 +121,10 @@ spec:
           name: Memory usage
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -150,7 +153,10 @@ spec:
           name: Working Set Memory usage
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -179,7 +185,10 @@ spec:
           name: Memory requests
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -208,7 +217,10 @@ spec:
           name: Network Receive
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -237,7 +249,10 @@ spec:
           name: Network Transmit
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes/sec
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -266,7 +281,10 @@ spec:
           name: Persistent Volume Usage
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -295,7 +313,10 @@ spec:
           name: Persistent Volume Claims
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:

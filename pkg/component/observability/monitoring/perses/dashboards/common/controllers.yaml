@@ -454,7 +454,10 @@ spec:
           description: Shows the current length of the workqueue.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -179,7 +179,10 @@ spec:
           description: "### State Meaning\n1 : Up  \n0 : Down (Http health probe for component failed or returned with unhealthy status code)"
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -198,7 +201,10 @@ spec:
           description: Health check response times of the Garden cluster or Gardener components.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: milliseconds
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -217,7 +223,10 @@ spec:
           description: "### State Meaning\n1 : Up  \n2 : Progressing (in transition to down)  \n0 :  Down  \n-1 :  Unknown"
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

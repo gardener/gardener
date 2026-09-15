@@ -263,7 +263,10 @@ spec:
           name: Shoot SLI + Error Budget, excluding worst 10%)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -307,6 +310,9 @@ spec:
               - format:
                   unit: decimal
                 queryIndex: 7
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -400,6 +406,9 @@ spec:
               - format:
                   unit: decimal
                 queryIndex: 7
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -493,6 +502,9 @@ spec:
               - format:
                   unit: decimal
                 queryIndex: 7
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

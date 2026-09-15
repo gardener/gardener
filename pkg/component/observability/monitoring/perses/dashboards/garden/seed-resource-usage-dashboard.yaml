@@ -52,7 +52,10 @@ spec:
           description: Shows the number of shoots per seed (does not count hibernated shoots).
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -71,7 +74,10 @@ spec:
           description: How much of the seed CPU is utilized for control planes.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -90,7 +96,10 @@ spec:
           description: How much of the seed memory is utilized for control planes.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -109,7 +118,10 @@ spec:
           description: How much of the seed CPU is utilized based on requests.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -129,7 +141,10 @@ spec:
           description: How much of the seed memory is utilized based on requests.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: percent-decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -149,7 +164,10 @@ spec:
           description: Shows the total CPU usage of each seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -168,7 +186,10 @@ spec:
           description: Shows the total memory usage of each seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -210,7 +231,10 @@ spec:
           description: Shows the total number of nodes for each seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -229,7 +253,10 @@ spec:
           description: Shows how many controlplanes are hosted on each node on average.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -248,7 +275,10 @@ spec:
           description: Shows the current count of each image on the seeds.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -267,7 +297,10 @@ spec:
           description: Shows the control plance CPU usage of each seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -286,7 +319,10 @@ spec:
           description: Shows the control plane memory usage of each seed.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -305,7 +341,10 @@ spec:
           description: Shows the system CPU usage of each seed. (Extensions, kube-system, and garden)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -324,7 +363,10 @@ spec:
           description: Shows the system memory usage of each seed. (Extensions, kube-system and garden)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: bytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -343,7 +385,10 @@ spec:
           description: Shows how many CPU cores each extension uses.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -362,7 +407,10 @@ spec:
           description: Shows how much memory each extension is using.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              format:
+                unit: decbytes
         queries:
           - kind: TimeSeriesQuery
             spec:
