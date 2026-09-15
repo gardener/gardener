@@ -93,6 +93,8 @@ For reference, check out Gardener API server admission plugins that accepts conf
   - An admission plugin should wait the cache of the informers (from which the listers are obtained from) to be synced. Example: [`SeedValidator` wait until cache sync](https://github.com/gardener/gardener/blob/f6fb7e2ca019fdd2a09c0a5da6475bf5d6bd2430/plugin/pkg/seed/validator/admission.go#L95-L109).
 - Perform validation in a validating admission plugin. Do not use a mutating admission plugin for validation purposes. Example: https://github.com/gardener/gardener/pull/12786
 - An admission plugin can only be added for resources served by the corresponding API server. Gardener API server can have an admission plugin only for resources it serves. For validation of resources served by the Kubernetes API server, use a validating webhook.
+- An admission plugin should return `admission.Forbidden` in case of a policy decision, so it takes one reason ("you can't schedule onto a seed marked for deletion", "not yet ready to handle request"). You are either allowed or not to perform the operation.
+- An admission plugin should return `apierrors.Invalid` in case of invalid fields, if e.g. an error list is present. Invalid is the reason for object validation failures. A submitted object can have many independently-wrong fields at once (and a validator naturally produces all of them in one pass).
 
 ### Validation for CustomResourceDefinitions
 
