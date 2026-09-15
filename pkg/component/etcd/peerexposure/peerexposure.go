@@ -79,24 +79,17 @@ func (p *peerExposure) managedResourceName() string {
 
 func (p *peerExposure) Deploy(ctx context.Context) error {
 	var (
-		err      error
 		registry = managedresourcesutils.NewRegistry(kubernetesclient.SeedScheme, kubernetesclient.SeedCodec, kubernetesclient.SeedSerializer)
 	)
 
 	gateway := p.emptyGatewayFor(p.name())
-	if err = gatewayWithPeerTLSPassthrough(gateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, p.values.Members)(); err != nil {
-		return err
-	}
+	gatewayWithPeerTLSPassthrough(gateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, p.values.Members)()
 
 	virtualService := p.emptyVirtualServiceFor(p.name())
-	if err = virtualServiceWithPeerSNIMatch(virtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.Members, gateway.Name)(); err != nil {
-		return err
-	}
+	virtualServiceWithPeerSNIMatch(virtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.Members, gateway.Name)()
 
 	networkPolicyTriggerService := p.emptyServiceFor(p.npServiceName())
-	if err = p.mutateNetworkPolicyTriggerService(networkPolicyTriggerService)(); err != nil {
-		return err
-	}
+	p.mutateNetworkPolicyTriggerService(networkPolicyTriggerService)()
 
 	resources := []client.Object{gateway, virtualService, networkPolicyTriggerService}
 
@@ -106,27 +99,19 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 	// admission webhook would reject).
 	for i, m := range p.values.Members {
 		serviceEntry := p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.name(), i))
-		if err := serviceEntryForExport(serviceEntry, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdPeer), etcdconstants.ServicePortNameEtcdPeer)(); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
-			return err
-		}
+		serviceEntryForExport(serviceEntry, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdPeer), etcdconstants.ServicePortNameEtcdPeer)() // #nosec G115 -- Port constants are positive values well within uint32 range.
 		resources = append(resources, serviceEntry)
 	}
 
 	if p.values.ClientHost != "" {
 		clientGateway := p.emptyGatewayFor(p.clientName())
-		if err = gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})(); err != nil {
-			return err
-		}
+		gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})()
 
 		clientVirtualService := p.emptyVirtualServiceFor(p.clientName())
-		if err = virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, p.clientServiceHost())(); err != nil {
-			return err
-		}
+		virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, p.clientServiceHost())()
 
 		clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
-		if err = serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)(); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
-			return err
-		}
+		serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
 
 		resources = append(resources, clientGateway, clientVirtualService, clientServiceEntry)
 	}
@@ -166,8 +151,8 @@ func (p *peerExposure) npServiceName() string {
 	return fmt.Sprintf("etcd-%s-np", p.values.Role)
 }
 
-func (p *peerExposure) mutateNetworkPolicyTriggerService(svc *corev1.Service) func() error {
-	return func() error {
+func (p *peerExposure) mutateNetworkPolicyTriggerService(svc *corev1.Service) func() {
+	return func() {
 		svc.Labels = getLabels(p.values.Role)
 		svc.Spec.Selector = map[string]string{
 			v1beta1constants.LabelApp:  etcdconstants.LabelAppValue,
@@ -181,7 +166,6 @@ func (p *peerExposure) mutateNetworkPolicyTriggerService(svc *corev1.Service) fu
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 		))
 		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-		return nil
 	}
 }
 
@@ -200,8 +184,8 @@ func getLabels(role string) map[string]string {
 	}
 }
 
-func serviceEntryForExport(serviceEntry *istionetworkingv1beta1.ServiceEntry, labels map[string]string, host, ingressNamespace string, port uint32, portName string) func() error {
-	return func() error {
+func serviceEntryForExport(serviceEntry *istionetworkingv1beta1.ServiceEntry, labels map[string]string, host, ingressNamespace string, port uint32, portName string) func() {
+	return func() {
 		serviceEntry.Labels = labels
 		serviceEntry.Spec = istioapinetworkingv1beta1.ServiceEntry{
 			Hosts:    []string{host},
@@ -213,12 +197,11 @@ func serviceEntryForExport(serviceEntry *istionetworkingv1beta1.ServiceEntry, la
 			}},
 			Resolution: istioapinetworkingv1beta1.ServiceEntry_DNS,
 		}
-		return nil
 	}
 }
 
-func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, members []PeerMember) func() error {
-	return func() error {
+func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, members []PeerMember) func() {
+	return func() {
 		gateway.Labels = labels
 		servers := make([]*istioapinetworkingv1beta1.Server, len(members))
 
@@ -239,12 +222,11 @@ func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labe
 			Selector: istioLabels,
 			Servers:  servers,
 		}
-		return nil
 	}
 }
 
-func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, members []PeerMember, gatewayName string) func() error {
-	return func() error {
+func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, members []PeerMember, gatewayName string) func() {
+	return func() {
 		virtualService.Labels = labels
 		routes := make([]*istioapinetworkingv1beta1.TLSRoute, len(members))
 		allHosts := make([]string, len(members))
@@ -271,12 +253,11 @@ func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.Virtu
 			Gateways: []string{gatewayName},
 			Tls:      routes,
 		}
-		return nil
 	}
 }
 
-func gatewayWithClientTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, hosts []string) func() error {
-	return func() error {
+func gatewayWithClientTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, hosts []string) func() {
+	return func() {
 		gateway.Labels = labels
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
 			Selector: istioLabels,
@@ -292,12 +273,11 @@ func gatewayWithClientTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, la
 				},
 			}},
 		}
-		return nil
 	}
 }
 
-func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo, hosts []string, gatewayName, destinationHost string) func() error {
-	return func() error {
+func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo, hosts []string, gatewayName, destinationHost string) func() {
+	return func() {
 		virtualService.Labels = labels
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
 			ExportTo: exportTo,
@@ -316,6 +296,5 @@ func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.Vir
 				}},
 			}},
 		}
-		return nil
 	}
 }

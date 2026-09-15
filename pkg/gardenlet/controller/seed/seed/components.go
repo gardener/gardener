@@ -380,10 +380,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 	if features.DefaultFeatureGate.Enabled(features.LiveControlPlaneMigration) {
 		for i := int32(0); i < etcdconstants.HAReplicaCount; i++ {
 			port := etcdconstants.PortEtcdPeerExternal + i
-			name := etcdconstants.ServicePortNameEtcdPeer
-			if i > 0 {
-				name = fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i)
-			}
+			name := fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i)
 			servicePorts = append(servicePorts, corev1.ServicePort{Name: name, Port: port, TargetPort: intstr.FromInt32(port)})
 		}
 	}
