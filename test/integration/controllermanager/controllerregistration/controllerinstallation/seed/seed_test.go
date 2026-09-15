@@ -20,8 +20,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerinstallation"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -33,6 +35,8 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 	)
 
 	BeforeEach(func() {
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
