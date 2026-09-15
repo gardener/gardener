@@ -73,6 +73,8 @@ spec:
               steps:
                 - color: '#f2495c'
                   value: 80
+            format:
+              unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -53,6 +53,8 @@ spec:
           kind: StatChart
           spec:
             calculation: last
+            format:
+              unit: seconds
         queries:
           - kind: TimeSeriesQuery
             spec:

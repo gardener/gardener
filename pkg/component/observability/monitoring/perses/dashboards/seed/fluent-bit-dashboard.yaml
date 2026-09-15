@@ -78,6 +78,8 @@ spec:
             calculation: mean
             thresholds:
               steps: []
+            format:
+              unit: decbytes
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -101,6 +103,8 @@ spec:
             calculation: mean
             thresholds:
               steps: []
+            format:
+              unit: decbytes
         queries:
           - kind: TimeSeriesQuery
             spec:
