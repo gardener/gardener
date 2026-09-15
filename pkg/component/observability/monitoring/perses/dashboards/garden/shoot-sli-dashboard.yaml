@@ -735,4 +735,4 @@ spec:
             content:
               $ref: '#/spec/panels/5_0'
         repeatVariable: iaas
-  duration: 1h
+  duration: 2d

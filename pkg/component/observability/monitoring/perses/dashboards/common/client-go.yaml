@@ -202,3 +202,4 @@ spec:
             content:
               $ref: '#/spec/panels/0_2'
   duration: 1h
+  refreshInterval: 30s

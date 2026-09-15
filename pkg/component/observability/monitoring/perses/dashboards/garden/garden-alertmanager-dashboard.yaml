@@ -441,4 +441,4 @@ spec:
             repeatVariable:
               value: instance
               alignment: horizontal
-  duration: 1h
+  duration: 5m

@@ -1645,3 +1645,4 @@ spec:
             content:
               $ref: '#/spec/panels/3_7'
   duration: 1h
+  refreshInterval: 5s

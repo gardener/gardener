@@ -465,4 +465,5 @@ spec:
             height: 4
             content:
               $ref: '#/spec/panels/2_1'
-  duration: 1h
+  duration: 30m
+  refreshInterval: 30s

@@ -255,3 +255,4 @@ spec:
             content:
               $ref: '#/spec/panels/1_3'
   duration: 1h
+  refreshInterval: 30s

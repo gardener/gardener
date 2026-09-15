@@ -484,4 +484,4 @@ spec:
             height: 13
             content:
               $ref: '#/spec/panels/3_1'
-  duration: 1h
+  duration: 30m

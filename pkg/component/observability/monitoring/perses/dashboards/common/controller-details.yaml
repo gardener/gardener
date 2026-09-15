@@ -596,3 +596,4 @@ spec:
             content:
               $ref: '#/spec/panels/2_4'
   duration: 1h
+  refreshInterval: 30s

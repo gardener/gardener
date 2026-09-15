@@ -95,4 +95,4 @@ spec:
             height: 9
             content:
               $ref: '#/spec/panels/3'
-  duration: 1h
+  duration: 6h
