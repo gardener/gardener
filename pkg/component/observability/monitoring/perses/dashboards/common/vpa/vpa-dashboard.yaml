@@ -102,7 +102,6 @@ spec:
                 value: "720"
               - label: 1d
                 value: "1440"
-              - ""
         name: deviationDuration
     - kind: ListVariable
       spec:
