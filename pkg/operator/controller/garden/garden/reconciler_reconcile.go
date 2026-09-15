@@ -1230,6 +1230,14 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prom
 
 	prometheus.SetIngressAuthSecret(v1beta1constants.SecretNameObservabilityIngress, true)
 
+	additionalAlertRelabelConfigs, err := r.getAdditionalAlertRelabelConfigSecret(ctx)
+	if err != nil {
+		return err
+	}
+	if additionalAlertRelabelConfigs != nil {
+		prometheus.SetAdditionalAlertRelabelConfigsSecret(additionalAlertRelabelConfigs)
+	}
+
 	// fetch global monitoring secret for prometheus-aggregate scrape config
 	globalMonitoringSecretRuntime, err := r.getGlobalObservabilitySecret(ctx)
 	if err != nil {

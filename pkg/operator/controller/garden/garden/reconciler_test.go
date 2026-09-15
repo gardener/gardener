@@ -157,4 +157,54 @@ var _ = Describe("Reconciler", func() {
 			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(seedReplica), &corev1.Secret{})).To(Succeed())
 		})
 	})
+
+	Describe("#getAdditionalAlertRelabelConfigSecret", func() {
+		newRelabelConfigSecret := func(name string) *corev1.Secret {
+			return &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: gardenNamespace,
+					Labels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleAdditionalAlertRelabelConfigs,
+					},
+				},
+				Data: map[string][]byte{"config.yaml": []byte("- action: drop")},
+			}
+		}
+
+		It("should return nil when no secret exists", func() {
+			secret, err := reconciler.getAdditionalAlertRelabelConfigSecret(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret).To(BeNil())
+		})
+
+		It("should return the secret when one exists", func() {
+			relabelSecret := newRelabelConfigSecret("custom-relabel-config")
+			Expect(runtimeClient.Create(ctx, relabelSecret)).To(Succeed())
+
+			secret, err := reconciler.getAdditionalAlertRelabelConfigSecret(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret).NotTo(BeNil())
+			Expect(secret.Name).To(Equal("custom-relabel-config"))
+		})
+
+		It("should ignore secrets that do not carry the right role label", func() {
+			relabelSecret := newRelabelConfigSecret("custom-relabel-config")
+			relabelSecret.Labels[v1beta1constants.GardenRole] = "some-other-role"
+			Expect(runtimeClient.Create(ctx, relabelSecret)).To(Succeed())
+
+			secret, err := reconciler.getAdditionalAlertRelabelConfigSecret(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret).To(BeNil())
+		})
+
+		It("should return an error when more than one secret with the right label exists", func() {
+			Expect(runtimeClient.Create(ctx, newRelabelConfigSecret("custom-relabel-config-1"))).To(Succeed())
+			Expect(runtimeClient.Create(ctx, newRelabelConfigSecret("custom-relabel-config-2"))).To(Succeed())
+
+			secret, err := reconciler.getAdditionalAlertRelabelConfigSecret(ctx)
+			Expect(err).To(MatchError("there can be at most one additional alert relabel config secret but found multiple: custom-relabel-config-1, custom-relabel-config-2"))
+			Expect(secret).To(BeNil())
+		})
+	})
 })

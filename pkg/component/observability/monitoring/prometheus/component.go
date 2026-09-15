@@ -76,6 +76,8 @@ type Interface interface {
 	SetNamespaceUID(name types.UID)
 	// SetAlertRelabelConfigs sets the additional alert relabel configs.
 	SetAlertRelabelConfigs([]monitoringv1.RelabelConfig)
+	// SetAdditionalAlertRelabelConfigsSecret sets the secret containing additional alert relabel configurations.
+	SetAdditionalAlertRelabelConfigsSecret(*corev1.Secret)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -158,6 +160,8 @@ type AlertingValues struct {
 	AdditionalAlertmanager map[string][]byte
 	// AlertRelabelConfigs contains alert relabel configurations.
 	AlertRelabelConfigs []monitoringv1.RelabelConfig
+	// AdditionalAlertRelabelConfigsSecret is a secret containing additional alert relabel configurations.
+	AdditionalAlertRelabelConfigsSecret *corev1.Secret
 }
 
 // Alertmanager contains the name and namespace of an alertmanager to which alerts should be sent.
@@ -287,6 +291,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		gardenRoleBinding,
 		p.secretAdditionalScrapeConfigs(),
 		p.secretAdditionalAlertmanagerConfigs(),
+		p.secretAdditionalAlertRelabelConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
 		p.prometheus(cortexConfigMap),
@@ -383,6 +388,12 @@ func (p *prometheus) name() string {
 func (p *prometheus) SetAlertRelabelConfigs(configs []monitoringv1.RelabelConfig) {
 	if p.values.Alerting != nil {
 		p.values.Alerting.AlertRelabelConfigs = configs
+	}
+}
+
+func (p *prometheus) SetAdditionalAlertRelabelConfigsSecret(secret *corev1.Secret) {
+	if p.values.Alerting != nil {
+		p.values.Alerting.AdditionalAlertRelabelConfigsSecret = secret
 	}
 }
 
