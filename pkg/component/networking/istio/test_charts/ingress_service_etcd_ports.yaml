@@ -23,7 +23,7 @@ spec:
   - name: foo
     port: 999
     targetPort: 999
-  - name: tls-etcd-peer
+  - name: tls-etcd-peer-0
     port: 12380
     targetPort: 12380
   - name: tls-etcd-peer-1

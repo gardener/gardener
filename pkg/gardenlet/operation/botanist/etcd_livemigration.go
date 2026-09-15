@@ -27,6 +27,14 @@ var NewPeerExposure = func(c client.Client, namespace string, values peerexposur
 	return peerexposure.New(c, namespace, values)
 }
 
+// CrossSeedPeerHostnames is the crossSeedPeerHostnames function. Exposed for testing.
+var CrossSeedPeerHostnames = crossSeedPeerHostnames
+
+// SetLiveMigrationEtcdValues is the setLiveMigrationEtcdValues method. Exposed for testing.
+var SetLiveMigrationEtcdValues = func(b *Botanist, ctx context.Context, values *etcd.Values, role string) error {
+	return b.setLiveMigrationEtcdValues(ctx, values, role)
+}
+
 // liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
 // of the cross-seed etcd hostnames.
 const liveMigrationHostLabelHashLength = 6
