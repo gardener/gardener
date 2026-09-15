@@ -1,6 +1,6 @@
 kind: Dashboard
 metadata:
-  name: seed-resource-usage
+  name: garden-seed-resource-usage
   project: garden
 spec:
   display:

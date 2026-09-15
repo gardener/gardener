@@ -1,6 +1,6 @@
 kind: Dashboard
 metadata:
-  name: alerts
+  name: garden-alerts
   project: garden
 spec:
   display:
