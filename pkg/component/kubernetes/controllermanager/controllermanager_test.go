@@ -781,7 +781,7 @@ namespace: kube-system
 				configWithNodeMonitorGracePeriod,
 				nil,
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
 			),
 			Entry("with disabled APIs (workerless)",
 				configWithNodeMonitorGracePeriod,
@@ -789,7 +789,7 @@ namespace: kube-system
 					"apps/v1": false,
 				},
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-replicaset,-statefulset,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-daemonset,-deployment,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-replicaset,-statefulset,-ttl",
 			),
 			Entry("with non-disabled APIs (workerless)",
 				configWithNodeMonitorGracePeriod,
@@ -797,7 +797,7 @@ namespace: kube-system
 					"apps/v1": true,
 				},
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-device-taint-eviction-controller,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
 			),
 			Entry("with disabled APIs",
 				configWithNodeMonitorGracePeriod,
@@ -1066,7 +1066,6 @@ func commandForKubernetesVersion(
 	} else {
 		controllers = append(controllers,
 			"-attachdetach",
-			"-cloud-node-lifecycle",
 		)
 
 		if versionutils.ConstraintK8sGreaterEqual133.Check(version) {
