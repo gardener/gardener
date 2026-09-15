@@ -88,8 +88,7 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 	virtualService := p.emptyVirtualServiceFor(p.name())
 	virtualServiceWithPeerSNIMatch(virtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.Members, gateway.Name)()
 
-	networkPolicyTriggerService := p.emptyServiceFor(p.npServiceName())
-	p.mutateNetworkPolicyTriggerService(networkPolicyTriggerService)()
+	networkPolicyTriggerService := p.networkPolicyTriggerService()
 
 	resources := []client.Object{gateway, virtualService, networkPolicyTriggerService}
 
@@ -143,30 +142,27 @@ func (p *peerExposure) emptyServiceEntryFor(name string) *istionetworkingv1beta1
 	return &istionetworkingv1beta1.ServiceEntry{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
 }
 
-func (p *peerExposure) emptyServiceFor(name string) *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
-}
-
-func (p *peerExposure) npServiceName() string {
-	return fmt.Sprintf("etcd-%s-np", p.values.Role)
-}
-
-func (p *peerExposure) mutateNetworkPolicyTriggerService(svc *corev1.Service) func() {
-	return func() {
-		svc.Labels = getLabels(p.values.Role)
-		svc.Spec.Selector = map[string]string{
-			v1beta1constants.LabelApp:  etcdconstants.LabelAppValue,
-			v1beta1constants.LabelRole: p.values.Role,
-		}
-		svc.Spec.Ports = []corev1.ServicePort{
-			{Name: fmt.Sprintf("tcp-%d", etcdconstants.PortEtcdPeer), Port: etcdconstants.PortEtcdPeer, Protocol: corev1.ProtocolTCP},
-			{Name: fmt.Sprintf("tcp-%d", etcdconstants.PortEtcdClient), Port: etcdconstants.PortEtcdClient, Protocol: corev1.ProtocolTCP},
-		}
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(svc,
-			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-		))
-		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+// networkPolicyTriggerService returns a Service that is not used for actual traffic routing but exists solely to
+// satisfy Gardener's network-policy controller: the controller reads the pod selector and ports from this Service and
+// injects the corresponding allow-rules into the etcd pods' NetworkPolicy, permitting inbound connections from the
+// Istio ingress-gateway namespace on both the peer and client ports.
+// The actual etcd Service cannot be used for this purpose because it is managed by etcd-druid and changes to it are rejected by the etcd webhook.
+func (p *peerExposure) networkPolicyTriggerService() *corev1.Service {
+	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("etcd-%s-netpol", p.values.Role), Namespace: p.namespace}}
+	svc.Labels = getLabels(p.values.Role)
+	svc.Spec.Selector = map[string]string{
+		v1beta1constants.LabelApp:  etcdconstants.LabelAppValue,
+		v1beta1constants.LabelRole: p.values.Role,
 	}
+	svc.Spec.Ports = []corev1.ServicePort{
+		{Name: fmt.Sprintf("tcp-%d", etcdconstants.PortEtcdPeer), Port: etcdconstants.PortEtcdPeer, Protocol: corev1.ProtocolTCP},
+		{Name: fmt.Sprintf("tcp-%d", etcdconstants.PortEtcdClient), Port: etcdconstants.PortEtcdClient, Protocol: corev1.ProtocolTCP},
+	}
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(svc,
+		metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+	))
+	metav1.SetMetaDataAnnotation(&svc.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+	return svc
 }
 
 func (p *peerExposure) clientName() string {

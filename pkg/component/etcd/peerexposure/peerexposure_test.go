@@ -184,8 +184,8 @@ var _ = Describe("PeerExposure", func() {
 		})
 
 		It("should include a Service with both peer and client ports and namespace-selectors pointing to istio-ingress", func() {
-			svc, ok := objs["Service/etcd-main-np"].(*corev1.Service)
-			Expect(ok).To(BeTrue(), "Service/etcd-main-np not found in MR")
+			svc, ok := objs["Service/etcd-main-netpol"].(*corev1.Service)
+			Expect(ok).To(BeTrue(), "Service/etcd-main-netpol not found in MR")
 			Expect(svc.Labels).To(HaveKeyWithValue("app", "etcd-peer-exposure"))
 			Expect(svc.Spec.Selector).To(HaveKeyWithValue("app", "etcd-statefulset"))
 			Expect(svc.Spec.Selector).To(HaveKeyWithValue("role", "main"))
