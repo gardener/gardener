@@ -2223,7 +2223,7 @@ func validateProvider(shootNamespace string, provider core.Provider, kubernetes 
 			}
 		}
 
-		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
+		allErrs = append(allErrs, ValidateWorkers(provider.Workers, hasManagedInfrastructure, fldPath.Child("workers"))...)
 		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, fldPath.Child("workers"))...)
 	}
 
@@ -2878,11 +2878,12 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 }
 
 // ValidateWorkers validates worker objects.
-func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
+func ValidateWorkers(workers []core.Worker, hasManagedInfrastructure bool, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs               = field.ErrorList{}
 		workerNames           = sets.New[string]()
 		foundControlPlanePool bool
+		isShootSelfHosted     = helper.IsShootSelfHosted(workers)
 	)
 
 	for i, worker := range workers {
@@ -2896,6 +2897,10 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("controlPlane"), worker.ControlPlane, "cannot have more than one worker pool marked for control plane components"))
 			}
 			foundControlPlanePool = true
+		}
+
+		if isShootSelfHosted && !hasManagedInfrastructure && worker.UpdateStrategy != nil && *worker.UpdateStrategy != core.AutoInPlaceUpdate {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("updateStrategy"), worker.UpdateStrategy, "only AutoInPlaceUpdate update strategy is allowed for self-hosted shoots with unmanaged infrastructure"))
 		}
 	}
 
