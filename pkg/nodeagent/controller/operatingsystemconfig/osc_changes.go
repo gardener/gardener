@@ -99,7 +99,7 @@ func (o *operatingSystemConfigChanges) persist() error {
 	if err != nil {
 		return fmt.Errorf("failed marshalling the changes into YAML: %w", err)
 	}
-	return o.fs.WriteFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigChecksumFilePath, out, 0600)
+	return o.fs.WriteFile(nodeagentconfigv1alpha1.LastComputedOperatingSystemConfigChangesFilePath, out, 0600)
 }
 
 func (o *operatingSystemConfigChanges) setMustRestartNodeAgent(restart bool) error {
@@ -292,9 +292,9 @@ func (o *operatingSystemConfigChanges) completedContainerdRegistriesDeleted(upst
 }
 
 func loadOSCChanges(fs afero.Afero) (*operatingSystemConfigChanges, error) {
-	raw, err := fs.ReadFile(nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigChecksumFilePath)
+	raw, err := fs.ReadFile(nodeagentconfigv1alpha1.LastComputedOperatingSystemConfigChangesFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading changes file %s: %w", nodeagentconfigv1alpha1.LastAppliedOperatingSystemConfigChecksumFilePath, err)
+		return nil, fmt.Errorf("failed reading changes file %s: %w", nodeagentconfigv1alpha1.LastComputedOperatingSystemConfigChangesFilePath, err)
 	}
 
 	changes := operatingSystemConfigChanges{}

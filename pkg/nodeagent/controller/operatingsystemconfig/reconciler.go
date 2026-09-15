@@ -813,7 +813,7 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 
 	// Perform credentials rotation before the OS update, never after.
 	//
-	// A GardenLinux in-place OS update wipes the node's /etc overlay on reboot, which takes
+	// An in-place OS update is supposed to wipe the node's /etc overlay on reboot, which takes
 	// last-applied-osc.yaml and last-computed-osc-changes.yaml with it. That is intentional: it forces
 	// gardener-node-agent to re-apply the whole OperatingSystemConfig from scratch onto the fresh /etc.
 	// The side effect is that any pending credentials rotation recorded in that state is lost across the
