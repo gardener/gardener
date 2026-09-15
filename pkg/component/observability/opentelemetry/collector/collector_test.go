@@ -430,7 +430,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 								"verbosity": "basic",
 							},
 							"otlphttp/victorialogs": map[string]any{
-								"logs_endpoint": "https://logging-vl:9428/insert/opentelemetry/v1/logs",
+								"logs_endpoint": "https://logging-vl:9429/insert/opentelemetry/v1/logs",
 								"headers": map[string]any{
 									"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
 								},
@@ -1152,7 +1152,7 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelRole:                           "observability",
 		v1beta1constants.GardenRole:                          "observability",
 		gardenerutils.NetworkPolicyLabel("logging", 3100):    "allowed",
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428): "allowed",
+		gardenerutils.NetworkPolicyLabel("logging-vl", 9429): "allowed",
 		v1beta1constants.LabelNetworkPolicyToDNS:             "allowed",
 		v1beta1constants.LabelObservabilityApplication:       "opentelemetry-collector",
 	}
