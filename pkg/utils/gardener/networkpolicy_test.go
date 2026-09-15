@@ -104,7 +104,7 @@ var _ = Describe("NetworkPolicy", func() {
 				MatchLabels: map[string]string{"foo": "bar"},
 			})).To(Succeed())
 
-			Expect(obj.Annotations).To(HaveKeyWithValue("networking.resources.gardener.cloud/network-policy-pod-selector", `{"matchLabels":{"foo":"bar"}}`))
+			Expect(obj.Annotations).To(HaveKeyWithValue("networking.resources.gardener.cloud/networkpolicy-pod-selector", `{"matchLabels":{"foo":"bar"}}`))
 		})
 	})
 

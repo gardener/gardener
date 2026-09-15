@@ -699,7 +699,7 @@ spec:
     statefulset.kubernetes.io/pod-name: vpn-seed-server-0
 metadata:
   annotations:
-    networking.resources.gardener.cloud/network-policy-pod-selector: '{"matchLabels":{"app":"vpn-seed-server"}}'
+    networking.resources.gardener.cloud/networkpolicy-pod-selector: '{"matchLabels":{"app":"vpn-seed-server"}}'
 ```
 
 For example, this allows a per-pod Service for `vpn-seed-server` to route traffic to `vpn-seed-server-0`, while the generated `NetworkPolicy`s target all pods labeled `app=vpn-seed-server`. The annotation must contain at least one `matchLabels` or `matchExpressions` entry. This selector is used only for the generated `NetworkPolicy`s. The `Service` continues to route traffic according to `.spec.selector`.
