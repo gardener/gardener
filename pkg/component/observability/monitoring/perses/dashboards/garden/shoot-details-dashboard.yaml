@@ -194,6 +194,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: Condition State
             legend:
               position: bottom
               mode: list
@@ -218,6 +219,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: Shoot State
             legend:
               position: bottom
               mode: list

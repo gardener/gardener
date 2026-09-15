@@ -161,6 +161,7 @@ spec:
             yAxis:
               format:
                 unit: bytes
+              label: Bytes
             legend:
               position: bottom
               mode: table
@@ -240,6 +241,7 @@ spec:
             yAxis:
               format:
                 unit: bytes
+              label: Bytes
             legend:
               position: bottom
               mode: table
@@ -289,6 +291,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: Cores
             legend:
               position: bottom
               mode: table
@@ -368,6 +371,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: Cores
             legend:
               position: bottom
               mode: table

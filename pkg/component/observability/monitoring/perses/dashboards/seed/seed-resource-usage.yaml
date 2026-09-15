@@ -18,6 +18,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: Cores
             legend:
               position: bottom
               mode: list
@@ -43,6 +44,7 @@ spec:
             yAxis:
               format:
                 unit: bytes
+              label: Memory
             legend:
               position: bottom
               mode: list
@@ -68,6 +70,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: Cores
             legend:
               position: bottom
               mode: list
@@ -93,6 +96,7 @@ spec:
             yAxis:
               format:
                 unit: bytes
+              label: Memory
             legend:
               position: bottom
               mode: list

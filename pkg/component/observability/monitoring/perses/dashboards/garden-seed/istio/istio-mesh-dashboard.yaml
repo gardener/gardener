@@ -73,6 +73,7 @@ spec:
             yAxis:
               format:
                 unit: decimal
+              label: connections/second
             legend:
               position: bottom
               mode: list
