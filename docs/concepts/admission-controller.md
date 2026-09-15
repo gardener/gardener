@@ -124,6 +124,12 @@ Please refer to [Scoped API Access for Gardenlets](../deployment/gardenlet_api_a
 This handler restricts requests made by gardenlets running in self-hosted shoots.
 It ensures that shoot gardenlets can only access resources that belong to their own shoot, preventing unauthorized access to other shoots' resources.
 
+### ShootServiceAccounts
+
+`ServiceAccount` names starting with `extension-shoot--` are reserved for extensions running on self-hosted shoots.
+This handler ensures that only a self-hosted shoot gardenlet may create such `ServiceAccount`s or request tokens for them in project namespaces.
+Any other caller receives a `403 Forbidden` response.
+
 ### UpdateRestriction
 
 Gardener stores public data regarding shoot clusters, i.e. certificate authority bundles, OIDC discovery documents, etc.

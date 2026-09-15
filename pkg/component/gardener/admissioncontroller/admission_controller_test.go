@@ -1312,6 +1312,37 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				},
 				SideEffects: &sideEffectsNone,
 			},
+			admissionregistrationv1.ValidatingWebhook{
+				Name:                    "self-hosted-shoot-extension-serviceaccounts.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				TimeoutSeconds:          new(int32(10)),
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{""},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"serviceaccounts", "serviceaccounts/token"},
+					},
+				}},
+				FailurePolicy: &failurePolicyFail,
+				MatchPolicy:   &matchPolicyEquivalent,
+				MatchConditions: []admissionregistrationv1.MatchCondition{{
+					Name:       "self-hosted-shoot-extension-serviceaccount-prefix",
+					Expression: "request.name.startsWith('extension-shoot--')",
+				}},
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      "gardener.cloud/role",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"project"},
+					}},
+				},
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/admission/shootserviceaccounts"),
+					CABundle: caBundle,
+				},
+				SideEffects: &sideEffectsNone,
+			},
 		)
 	}
 
