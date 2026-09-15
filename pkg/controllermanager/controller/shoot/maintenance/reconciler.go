@@ -771,7 +771,17 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 		needsRetryOperation, _ = strconv.ParseBool(val)
 	}
 
-	return needsRetryOperation
+	return needsRetryOperation || (allShootConditionsTrue(shoot) && !v1beta1helper.HasNonRetryableErrorCode(shoot.Status.LastErrors...))
+}
+
+func allShootConditionsTrue(shoot *gardencorev1beta1.Shoot) bool {
+	if len(shoot.Status.Conditions) == 0 {
+		return false
+	}
+
+	return !slices.ContainsFunc(shoot.Status.Conditions, func(c gardencorev1beta1.Condition) bool {
+		return c.Status != gardencorev1beta1.ConditionTrue
+	})
 }
 
 func getOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
