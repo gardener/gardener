@@ -838,6 +838,7 @@ build:
             - pkg/admissioncontroller/webhook/admission/seedrestriction
             - pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref
             - pkg/admissioncontroller/webhook/admission/shootrestriction
+            - pkg/admissioncontroller/webhook/admission/shootserviceaccounts
             - pkg/admissioncontroller/webhook/admission/updaterestriction
             - pkg/admissioncontroller/webhook/auth
             - pkg/admissioncontroller/webhook/auth/seed
