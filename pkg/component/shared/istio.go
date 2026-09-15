@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -366,10 +367,12 @@ func commonIstioIngressNetworkPolicyLabels(withShoots bool) map[string]string {
 			labels[gardenerutils.NetworkPolicyLabel(fmt.Sprintf("%s-%s-%d", v1beta1constants.LabelNetworkPolicyShootNamespaceAlias, v1beta1constants.DeploymentNameVPNSeedServer, i), vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 		}
 
-		// Allow reaching etcd peer and client ports during a live control plane migration.
-		// Service created by the peerexposure component carries this service name with the all-shoots alias.
-		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.ETCDMain+"-np", etcdconstants.PortEtcdPeer)] = v1beta1constants.LabelNetworkPolicyAllowed
-		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.ETCDMain+"-np", etcdconstants.PortEtcdClient)] = v1beta1constants.LabelNetworkPolicyAllowed
+		if features.DefaultFeatureGate.Enabled(features.LiveControlPlaneMigration) {
+			// Allow reaching etcd peer and client ports during a live control plane migration.
+			// Service created by the peerexposure component carries this service name with the all-shoots alias.
+			labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.ETCDMain+"-netpol", etcdconstants.PortEtcdPeer)] = v1beta1constants.LabelNetworkPolicyAllowed
+			labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.ETCDMain+"-netpol", etcdconstants.PortEtcdClient)] = v1beta1constants.LabelNetworkPolicyAllowed
+		}
 	}
 
 	return labels
