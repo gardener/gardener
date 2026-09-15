@@ -22,6 +22,9 @@ spec:
             labelName: iaas
             matchers:
               - probe_failure
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: iaas
     - kind: ListVariable
       spec:
@@ -39,6 +42,9 @@ spec:
             labelName: purpose
             matchers:
               - probe_failure
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: purpose
     - kind: ListVariable
       spec:
@@ -56,6 +62,9 @@ spec:
             labelName: project
             matchers:
               - probe_failure
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: project
     - kind: ListVariable
       spec:
@@ -71,6 +80,9 @@ spec:
             labelName: window
             matchers:
               - probe_failure:run:time:total:percent
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: window
     - kind: ListVariable
       spec:
@@ -86,6 +98,9 @@ spec:
             labelName: term
             matchers:
               - probe_failure:run:time:total:percent
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: term
     - kind: ListVariable
       spec:
@@ -127,6 +142,7 @@ spec:
                 kind: PrometheusTimeSeriesQuery
                 spec:
                   query: migration_from_grafana_not_supported
+                  datasource: null
     "1":
       kind: Panel
       spec:
@@ -150,6 +166,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: min_over_time((1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas"}) by (iaas))[24h:10m])
                   seriesNameFormat: '{{iaas}}'
@@ -187,6 +204,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1 - max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
                   seriesNameFormat: ""
@@ -197,6 +215,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"}) by (iaas)
                   seriesNameFormat: ""
@@ -207,6 +226,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1 - quantile(0.9,probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
                   seriesNameFormat: ""
@@ -217,6 +237,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1 - avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
                   seriesNameFormat: ""
@@ -227,6 +248,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1 - min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term="$term",window="$window"}) by (iaas)
                   seriesNameFormat: ""
@@ -253,6 +275,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: topk(10,probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project", term=~"$term", window="$window"} > 1-$SLO/100) * 100
                   seriesNameFormat: ""
@@ -275,6 +298,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"}) by (iaas)
                   seriesNameFormat: '{{iaas}}'
@@ -285,6 +309,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: $SLO/100
                   seriesNameFormat: SLO
@@ -295,6 +320,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: "1"
                   seriesNameFormat: 100%
@@ -321,6 +347,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: min
@@ -331,6 +358,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: $SLO/100
                   seriesNameFormat: SLO
@@ -341,6 +369,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: max
@@ -351,6 +380,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 90%
@@ -361,6 +391,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 10%
@@ -371,6 +402,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 50%
@@ -381,6 +413,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: avg
@@ -391,6 +424,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"})
                   seriesNameFormat: '# of shoots'
@@ -417,6 +451,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: min
@@ -427,6 +462,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: $SLO/100
                   seriesNameFormat: SLO
@@ -437,6 +473,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: max
@@ -447,6 +484,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 90%
@@ -457,6 +495,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 10%
@@ -467,6 +506,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 50%
@@ -477,6 +517,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: avg
@@ -487,6 +528,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"})
                   seriesNameFormat: '# of shoots'
@@ -513,6 +555,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- max(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: min
@@ -523,6 +566,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: $SLO/100
                   seriesNameFormat: SLO
@@ -533,6 +577,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- min(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: max
@@ -543,6 +588,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 90%
@@ -553,6 +599,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 10%
@@ -563,6 +610,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: 50%
@@ -573,6 +621,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 1- avg(probe_failure:run:time:total:percent{iaas=~"$iaas",purpose=~"$purpose",project=~"$project",term=~"$term",window="$window"})
                   seriesNameFormat: avg
@@ -583,6 +632,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: count(probe_failure:run{iaas=~"$iaas",purpose=~"$purpose",project=~"$project"})
                   seriesNameFormat: '# of shoots'

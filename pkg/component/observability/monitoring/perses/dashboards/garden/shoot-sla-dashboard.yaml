@@ -20,6 +20,9 @@ spec:
             labelName: iaas
             matchers:
               - garden_shoot_condition
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: iaas
     - kind: ListVariable
       spec:
@@ -37,6 +40,9 @@ spec:
             labelName: project
             matchers:
               - garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas"}
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: project
     - kind: ListVariable
       spec:
@@ -54,6 +60,9 @@ spec:
             labelName: name
             matchers:
               - garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile",iaas="$iaas", project=~"$project"}
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: name
     - kind: ListVariable
       spec:
@@ -70,6 +79,9 @@ spec:
             labelName: purpose
             matchers:
               - garden_shoot_condition{condition="APIServerAvailable",operation="Reconcile"}
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: purpose
   panels:
     "0":
@@ -93,6 +105,7 @@ spec:
                 kind: PrometheusTimeSeriesQuery
                 spec:
                   query: migration_from_grafana_not_supported
+                  datasource: null
     "1":
       kind: Panel
       spec:
@@ -116,6 +129,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: |-
                     count(
@@ -147,6 +161,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: |-
                     count(
@@ -181,6 +196,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: |-
                     count(
@@ -218,6 +234,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: |-
                     sum by (project, name) (
@@ -247,6 +264,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: 1h
                   query: |-
                     min_over_time(
@@ -272,6 +290,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: 1h
                   query: |-
                     count_over_time(

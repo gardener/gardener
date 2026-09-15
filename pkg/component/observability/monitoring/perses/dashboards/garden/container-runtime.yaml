@@ -20,6 +20,9 @@ spec:
             labelName: cri
             matchers:
               - garden_shoot_node_info
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-longterm
         name: cri
   panels:
     "0":
@@ -42,6 +45,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: count by (cri) (count by (cri, name, project) (garden_shoot_node_info))
                   seriesNameFormat: '{{ cri }}'
@@ -63,6 +67,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-longterm
                   minStep: ""
                   query: 'topk(10,(count by (cri, project, image) (count by (cri, name, project, image) (garden_shoot_node_info{cri=~"$cri"})))) '
                   seriesNameFormat: ""
