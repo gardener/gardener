@@ -133,7 +133,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 						Regex:        `true`,
 						Action:       "drop",
 					}},
-					p.values.AdditionalAlertRelabelConfigs...,
+					p.values.Alerting.AlertRelabelConfigs...,
 				),
 			})
 		}

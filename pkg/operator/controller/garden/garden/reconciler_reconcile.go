@@ -1272,7 +1272,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prom
 		managedSeedNames = append(managedSeedNames, managedSeed.Name)
 	}
 
-	additionalAlertRelabelConfigs := []monitoringv1.RelabelConfig{
+	alertRelabelConfigs := []monitoringv1.RelabelConfig{
 		{
 			SourceLabels: []monitoringv1.LabelName{"project", "name"},
 			Regex:        "(.+);(.+)",
@@ -1295,7 +1295,7 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prom
 			TargetLabel:  "dashboard_url",
 		},
 	}
-	prometheus.SetAdditionalAlertRelabelConfigs(additionalAlertRelabelConfigs)
+	prometheus.SetAlertRelabelConfigs(alertRelabelConfigs)
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, prometheusAggregateIngressTargets, globalMonitoringSecretRuntime))
 

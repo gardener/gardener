@@ -1127,18 +1127,6 @@ tls_config:
 						})
 					})
 				})
-
-				When("additional alert relabel configs are provided", func() {
-					BeforeEach(func() {
-						values.AdditionalAlertRelabelConfigs = []monitoringv1.RelabelConfig{{
-							SourceLabels: []monitoringv1.LabelName{"project", "name"},
-							Regex:        "(.+);(.+)",
-							Action:       "replace",
-							Replacement:  new("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
-							TargetLabel:  "shoot_dashboard_url",
-						}}
-					})
-				})
 			})
 
 			When("there is more than 1 replica", func() {
