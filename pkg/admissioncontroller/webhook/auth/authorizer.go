@@ -49,12 +49,18 @@ func CheckNamespace(log logr.Logger, attrs auth.Attributes, allowedNamespaces ..
 	return true, ""
 }
 
+type verbSubresourcePair struct {
+	verbs        sets.Set[string]
+	subresources sets.Set[string]
+}
+
 type authzRequest struct {
-	allowedVerbs        sets.Set[string]
-	alwaysAllowedVerbs  sets.Set[string]
-	allowedSubresources sets.Set[string]
-	allowedNamespaces   sets.Set[string]
-	listWatchSelector   selector
+	allowedVerbs         sets.Set[string]
+	alwaysAllowedVerbs   sets.Set[string]
+	allowedSubresources  sets.Set[string]
+	allowedNamespaces    sets.Set[string]
+	listWatchSelector    selector
+	verbsForSubresources []verbSubresourcePair
 }
 
 func newAuthzRequest() *authzRequest {
@@ -92,6 +98,19 @@ func WithAlwaysAllowedVerbs(verbs ...string) configFunc {
 func WithAllowedSubresources(resources ...string) configFunc {
 	return func(req *authzRequest) {
 		req.allowedSubresources.Insert(resources...)
+	}
+}
+
+// WithVerbsForSubresources is a config function that restricts the given verbs to only be
+// allowed when one of the given subresources is present in the request. Unlike
+// WithAllowedVerbs, these verbs are not allowed on the root resource — only on the specified
+// subresources. The verbs provided here must not also appear in WithAllowedVerbs.
+func WithVerbsForSubresources(verbs []string, subresources ...string) configFunc {
+	return func(req *authzRequest) {
+		req.verbsForSubresources = append(req.verbsForSubresources, verbSubresourcePair{
+			verbs:        sets.New(verbs...),
+			subresources: sets.New(subresources...),
+		})
 	}
 }
 
@@ -157,8 +176,31 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	if ok, reason := CheckSubresource(log, attrs, sets.List(req.allowedSubresources)...); !ok {
-		return auth.DecisionNoOpinion, reason, nil
+	// Check subresource: allowed either via WithAllowedSubresources, or via a WithVerbsForSubresources pair
+	// that includes both the current verb and subresource. The empty string is a valid subresource value
+	// representing the root resource — pairs containing "" cover requests without a subresource.
+	// We only enter this check when a subresource is present in the request, or when at least one pair
+	// explicitly covers "" (root resource), so that plain root-resource requests are not gated.
+	subresource := attrs.GetSubresource()
+	pairsCoversRootResource := func() bool {
+		for _, pair := range req.verbsForSubresources {
+			if pair.subresources.Has("") {
+				return true
+			}
+		}
+		return false
+	}
+	if len(subresource) > 0 || pairsCoversRootResource() {
+		if !req.allowedSubresources.Has(subresource) && !verbSubresourcePairCovers(req.verbsForSubresources, attrs.GetVerb(), subresource) {
+			allowedSubresources := sets.List(req.allowedSubresources)
+			for _, pair := range req.verbsForSubresources {
+				allowedSubresources = append(allowedSubresources, sets.List(pair.subresources)...)
+			}
+			slices.Sort(allowedSubresources)
+			allowedSubresources = slices.Compact(allowedSubresources)
+			log.Info("Denying authorization because subresource is not allowed for this resource type", "allowedSubresources", allowedSubresources)
+			return auth.DecisionNoOpinion, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources), nil
+		}
 	}
 
 	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
@@ -168,7 +210,24 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		return auth.DecisionAllow, "", nil
 	}
 
-	if ok, reason := CheckVerb(log, attrs, sets.List(req.alwaysAllowedVerbs.Union(req.allowedVerbs))...); !ok {
+	// Compute the effective set of allowed verbs for this specific request:
+	// - allowedVerbs are always available
+	// - verbs from WithVerbsForSubresources pairs are available only when their subresource (including "") matches
+	effectiveAllowedVerbs := sets.List(req.allowedVerbs)
+	for _, pair := range req.verbsForSubresources {
+		if pair.subresources.Has(subresource) {
+			effectiveAllowedVerbs = append(effectiveAllowedVerbs, sets.List(pair.verbs)...)
+		}
+	}
+	slices.Sort(effectiveAllowedVerbs)
+	effectiveAllowedVerbs = slices.Compact(effectiveAllowedVerbs)
+
+	allAllowedVerbs := sets.List(req.alwaysAllowedVerbs)
+	allAllowedVerbs = append(allAllowedVerbs, effectiveAllowedVerbs...)
+	slices.Sort(allAllowedVerbs)
+	allAllowedVerbs = slices.Compact(allAllowedVerbs)
+
+	if ok, reason := CheckVerb(log, attrs, allAllowedVerbs...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
@@ -254,4 +313,14 @@ func (a *RequestAuthorizer) hasPathFrom(log logr.Logger, fromType graph.VertexTy
 	}
 
 	return auth.DecisionAllow, "", nil
+}
+
+// verbSubresourcePairCovers returns true if any of the pairs covers the given verb and subresource combination.
+func verbSubresourcePairCovers(pairs []verbSubresourcePair, verb, subresource string) bool {
+	for _, pair := range pairs {
+		if pair.verbs.Has(verb) && pair.subresources.Has(subresource) {
+			return true
+		}
+	}
+	return false
 }
