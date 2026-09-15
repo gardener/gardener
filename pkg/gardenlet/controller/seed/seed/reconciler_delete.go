@@ -259,10 +259,15 @@ func (r *Reconciler) runDeleteSeedFlow(
 				return gardenerutils.DeleteVPAForGardenerComponent(ctx, r.SeedClientSet.Client(), v1beta1constants.DeploymentNameGardenlet, r.GardenNamespace)
 			},
 		})
+		destroyPerses = g.Add(flow.Task{
+			Name: "Destroying Perses",
+			Fn:   component.OpDestroyAndWait(c.perses).Destroy,
+		})
 		destroyPersesOperator = g.Add(flow.Task{
-			Name:   "Destroy Perses Operator",
-			Fn:     component.OpDestroyAndWait(c.persesOperator).Destroy,
-			SkipIf: seedIsGarden,
+			Name:         "Destroy Perses Operator",
+			Fn:           component.OpDestroyAndWait(c.persesOperator).Destroy,
+			SkipIf:       seedIsGarden,
+			Dependencies: flow.NewTaskIDs(destroyPerses),
 		})
 		destroyVictoriaOperator = g.Add(flow.Task{
 			Name:         "Destroy Victoria Operator",

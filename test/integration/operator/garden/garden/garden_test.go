@@ -587,6 +587,7 @@ spec:
 			"fluent-operator-custom-resources-garden",
 			"vali",
 			"plutono",
+			"perses",
 			"prometheus-operator",
 			"alertmanager-garden",
 			"perses-operator",
