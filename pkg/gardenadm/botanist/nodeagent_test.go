@@ -201,7 +201,7 @@ var _ = Describe("NodeAgent", func() {
 		It("should return an error when no CSR was found for the node", func() {
 			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
 
-			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(MatchError(Equal(fmt.Sprintf("no certificate signing request found for gardener-node-agent from username %q", fooUsername))))
+			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(MatchError(Equal(fmt.Sprintf("no certificate signing request found to approve for gardener-node-agent from username %q", fooUsername))))
 		})
 
 		When("a bootstrap token and a gardener-node-agent CSR request exist", func() {
@@ -292,7 +292,7 @@ var _ = Describe("NodeAgent", func() {
 				}))
 			})
 
-			It("should return nil when the only matching CSR is already approved", func() {
+			It("should return an error when the only matching CSR is already approved", func() {
 				approvedCSR := &certificatesv1.CertificateSigningRequest{
 					ObjectMeta: metav1.ObjectMeta{Name: "csr-approved"},
 					Spec: certificatesv1.CertificateSigningRequestSpec{
@@ -309,14 +309,7 @@ var _ = Describe("NodeAgent", func() {
 				}}
 				Expect(fakeSeedClient.SubResource("approval").Update(ctx, approvedCSR)).To(Succeed())
 
-				Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
-
-				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(approvedCSR), approvedCSR)).To(Succeed())
-				Expect(approvedCSR.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
-					Type:   certificatesv1.CertificateApproved,
-					Status: corev1.ConditionTrue,
-					Reason: "AlreadyApproved",
-				}))
+				Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(MatchError(Equal(fmt.Sprintf("no certificate signing request found to approve for gardener-node-agent from username %q", fooUsername))))
 			})
 		})
 
@@ -341,7 +334,7 @@ var _ = Describe("NodeAgent", func() {
 			}
 			Expect(fakeSeedClient.Create(ctx, csr)).To(Succeed())
 
-			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(MatchError(Equal(fmt.Sprintf("no certificate signing request found for gardener-node-agent from username %q", fooUsername))))
+			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(MatchError(Equal(fmt.Sprintf("no certificate signing request found to approve for gardener-node-agent from username %q", fooUsername))))
 
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 			Expect(csr.Status.Conditions).To(BeEmpty())
