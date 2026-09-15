@@ -2475,6 +2475,18 @@ var _ = Describe("Shoot Maintenance", func() {
 				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 			})
 
+			It("should not set retry annotation when all conditions are True but a non-retryable error code is present", func() {
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{
+					{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
+					{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionTrue},
+				}
+				shoot.Status.LastErrors = []gardencorev1beta1.LastError{
+					{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem}},
+				}
+				maintainOperation(shoot, nil)
+				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			})
+
 			It("should set retry annotation when FailedShootNeedsRetryOperation is true, regardless of conditions", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.FailedShootNeedsRetryOperation: "true",
