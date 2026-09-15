@@ -12,7 +12,6 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	local "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -125,7 +124,7 @@ func Convert_local_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *local.C
 }
 
 func autoConvert_v1alpha1_LoadBalancer_To_local_LoadBalancer(in *LoadBalancer, out *local.LoadBalancer, s conversion.Scope) error {
-	out.Image = in.Image
+	*out = *(*local.LoadBalancer)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -135,7 +134,7 @@ func Convert_v1alpha1_LoadBalancer_To_local_LoadBalancer(in *LoadBalancer, out *
 }
 
 func autoConvert_local_LoadBalancer_To_v1alpha1_LoadBalancer(in *local.LoadBalancer, out *LoadBalancer, s conversion.Scope) error {
-	out.Image = in.Image
+	*out = *(*LoadBalancer)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -145,10 +144,7 @@ func Convert_local_LoadBalancer_To_v1alpha1_LoadBalancer(in *local.LoadBalancer,
 }
 
 func autoConvert_v1alpha1_MachineImage_To_local_MachineImage(in *MachineImage, out *local.MachineImage, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Version = in.Version
-	out.Image = in.Image
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*local.MachineImage)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -158,10 +154,7 @@ func Convert_v1alpha1_MachineImage_To_local_MachineImage(in *MachineImage, out *
 }
 
 func autoConvert_local_MachineImage_To_v1alpha1_MachineImage(in *local.MachineImage, out *MachineImage, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Version = in.Version
-	out.Image = in.Image
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*MachineImage)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -171,8 +164,7 @@ func Convert_local_MachineImage_To_v1alpha1_MachineImage(in *local.MachineImage,
 }
 
 func autoConvert_v1alpha1_MachineImageFlavor_To_local_MachineImageFlavor(in *MachineImageFlavor, out *local.MachineImageFlavor, s conversion.Scope) error {
-	out.Image = in.Image
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*local.MachineImageFlavor)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -182,8 +174,7 @@ func Convert_v1alpha1_MachineImageFlavor_To_local_MachineImageFlavor(in *Machine
 }
 
 func autoConvert_local_MachineImageFlavor_To_v1alpha1_MachineImageFlavor(in *local.MachineImageFlavor, out *MachineImageFlavor, s conversion.Scope) error {
-	out.Image = in.Image
-	out.Capabilities = *(*v1beta1.Capabilities)(unsafe.Pointer(&in.Capabilities))
+	*out = *(*MachineImageFlavor)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -193,9 +184,7 @@ func Convert_local_MachineImageFlavor_To_v1alpha1_MachineImageFlavor(in *local.M
 }
 
 func autoConvert_v1alpha1_MachineImageVersion_To_local_MachineImageVersion(in *MachineImageVersion, out *local.MachineImageVersion, s conversion.Scope) error {
-	out.Version = in.Version
-	out.Image = in.Image
-	out.CapabilityFlavors = *(*[]local.MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
+	*out = *(*local.MachineImageVersion)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -205,9 +194,7 @@ func Convert_v1alpha1_MachineImageVersion_To_local_MachineImageVersion(in *Machi
 }
 
 func autoConvert_local_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *local.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
-	out.Version = in.Version
-	out.Image = in.Image
-	out.CapabilityFlavors = *(*[]MachineImageFlavor)(unsafe.Pointer(&in.CapabilityFlavors))
+	*out = *(*MachineImageVersion)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -217,8 +204,7 @@ func Convert_local_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *local
 }
 
 func autoConvert_v1alpha1_MachineImages_To_local_MachineImages(in *MachineImages, out *local.MachineImages, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Versions = *(*[]local.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	*out = *(*local.MachineImages)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -228,8 +214,7 @@ func Convert_v1alpha1_MachineImages_To_local_MachineImages(in *MachineImages, ou
 }
 
 func autoConvert_local_MachineImages_To_v1alpha1_MachineImages(in *local.MachineImages, out *MachineImages, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	*out = *(*MachineImages)(unsafe.Pointer(in))
 	return nil
 }
 

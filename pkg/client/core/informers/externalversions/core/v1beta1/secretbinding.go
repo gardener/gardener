@@ -22,11 +22,39 @@ import (
 )
 
 // SecretBindingInformer provides access to a shared informer and lister for
-// SecretBindings.
+// SecretBindings. Prefer using the type-safe variant (see [TypedSecretBindingInformer]).
 type SecretBindingInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.SecretBindingLister
 }
+
+// TypedSecretBindingInformer provides access to a shared informer and lister for
+// SecretBindings, including the type-safe TypedInformer variant.
+// It is a superset of SecretBindingInformer.
+type TypedSecretBindingInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() SecretBindingIndexInformer
+	Lister() corev1beta1.SecretBindingLister
+}
+
+// SecretBindingIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type SecretBindingIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.SecretBinding]
+
+// SecretBindingHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for SecretBinding.
+type SecretBindingHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.SecretBinding]
+
+// SecretBindingDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for SecretBinding.
+type SecretBindingDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.SecretBinding]
+
+// SecretBindingFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for SecretBinding.
+type SecretBindingFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.SecretBinding]
+
+// SecretBindingIndexers is a specialization of [cache.TypedIndexers] for SecretBinding.
+type SecretBindingIndexers = cache.TypedIndexers[*apiscorev1beta1.SecretBinding]
+
+// DeletedSecretBinding is a specialization of [cache.DeletedObject] for SecretBinding.
+type DeletedSecretBinding = cache.DeletedObject[*apiscorev1beta1.SecretBinding]
 
 type secretBindingInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type secretBindingInformer struct {
 // NewSecretBindingInformer constructs a new informer for SecretBinding type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedSecretBindingInformer]).
 func NewSecretBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewSecretBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedSecretBindingInformer constructs a new informer for SecretBinding type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedSecretBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers SecretBindingIndexers) SecretBindingIndexInformer {
+	return NewTypedSecretBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredSecretBindingInformer constructs a new informer for SecretBinding type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredSecretBindingInformer]).
 func NewFilteredSecretBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewSecretBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedSecretBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredSecretBindingInformer constructs a new informer for SecretBinding type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredSecretBindingInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers SecretBindingIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) SecretBindingIndexInformer {
+	return NewTypedSecretBindingInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewSecretBindingInformerWithOptions constructs a new informer for SecretBinding type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedSecretBindingInformerWithOptions]).
 func NewSecretBindingInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedSecretBindingInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedSecretBindingInformerWithOptions constructs a new informer for SecretBinding type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedSecretBindingInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) SecretBindingIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "secretbindings"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.SecretBinding](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewSecretBindingInformerWithOptions(client versioned.Interface, namespace s
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *secretBindingInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewSecretBindingInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedSecretBindingInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *secretBindingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.SecretBinding{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *secretBindingInformer) TypedInformer() SecretBindingIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.SecretBinding](f.factory.InformerFor(&apiscorev1beta1.SecretBinding{}, f.defaultInformer))
 }
 
 func (f *secretBindingInformer) Lister() corev1beta1.SecretBindingLister {
 	return corev1beta1.NewSecretBindingLister(f.Informer().GetIndexer())
+}
+
+// ToTypedSecretBindingInformer converts an untyped informer into a TypedSecretBindingInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *SecretBinding. If that is not the case, calling type-safe methods of the returned
+// TypedSecretBindingInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedSecretBindingInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedSecretBindingInformer(informer SecretBindingInformer) TypedSecretBindingInformer {
+	if informer, ok := informer.(TypedSecretBindingInformer); ok {
+		return informer
+	}
+	return &secretBindingTypedInformerAdapter{informer}
+}
+
+type secretBindingTypedInformerAdapter struct {
+	SecretBindingInformer
+}
+
+func (a *secretBindingTypedInformerAdapter) TypedInformer() SecretBindingIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.SecretBinding](a.Informer())
+}
+
+// ToSecretBindingIndexInformer converts an untyped informer into a SecretBindingIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *SecretBinding. If that is not the case, calling type-safe methods of the returned
+// SecretBindingIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a SecretBindingIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToSecretBindingIndexInformer(informer cache.SharedIndexInformer) SecretBindingIndexInformer {
+	if informer, ok := informer.(SecretBindingIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.SecretBinding](informer)
 }
