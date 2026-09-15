@@ -122,6 +122,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -148,6 +154,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -175,6 +187,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:

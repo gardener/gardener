@@ -113,6 +113,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -139,6 +145,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -165,6 +177,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -187,6 +205,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -275,6 +299,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -321,6 +351,13 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -344,6 +381,13 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -367,6 +411,11 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -390,6 +439,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -413,6 +468,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -436,6 +497,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -458,6 +525,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -480,6 +553,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -502,6 +578,12 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -528,6 +610,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -559,6 +647,12 @@ spec:
             yAxis:
               format:
                 unit: decbytes/sec
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -603,6 +697,11 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -625,6 +724,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -647,6 +752,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -669,6 +780,12 @@ spec:
             yAxis:
               format:
                 unit: seconds
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -696,6 +813,11 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -724,6 +846,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -746,6 +874,12 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -773,6 +907,13 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -795,6 +936,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -817,6 +964,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -65,6 +65,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -89,6 +92,9 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -113,6 +119,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -131,6 +140,9 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -149,6 +161,9 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -167,6 +182,9 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -185,6 +203,9 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -203,6 +224,9 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:

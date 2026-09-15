@@ -316,7 +316,14 @@ spec:
           name: CPU usage
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -345,7 +352,14 @@ spec:
           name: CPU requests
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -378,6 +392,13 @@ spec:
             yAxis:
               format:
                 unit: decbytes
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -410,6 +431,13 @@ spec:
             yAxis:
               format:
                 unit: decbytes
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -442,6 +470,13 @@ spec:
             yAxis:
               format:
                 unit: decbytes
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -474,6 +509,13 @@ spec:
             yAxis:
               format:
                 unit: bytes/sec
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -506,6 +548,13 @@ spec:
             yAxis:
               format:
                 unit: bytes/sec
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -538,6 +587,13 @@ spec:
             yAxis:
               format:
                 unit: decbytes
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -570,6 +626,13 @@ spec:
             yAxis:
               format:
                 unit: decbytes
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - last
+                - mean
+                - max
         queries:
           - kind: TimeSeriesQuery
             spec:

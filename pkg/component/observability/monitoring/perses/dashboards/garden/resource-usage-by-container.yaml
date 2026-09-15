@@ -48,6 +48,12 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -91,6 +97,12 @@ spec:
             yAxis:
               format:
                 unit: percent
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -113,6 +125,12 @@ spec:
             yAxis:
               format:
                 unit: bytes
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -156,6 +174,12 @@ spec:
             yAxis:
               format:
                 unit: percent
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - mean
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -183,6 +183,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -205,6 +208,9 @@ spec:
             yAxis:
               format:
                 unit: milliseconds
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -227,6 +233,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
         queries:
           - kind: TimeSeriesQuery
             spec:

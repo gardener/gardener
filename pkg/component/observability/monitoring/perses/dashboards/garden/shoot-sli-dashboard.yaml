@@ -290,6 +290,12 @@ spec:
             yAxis:
               format:
                 unit: percent-decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - min
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -339,6 +345,12 @@ spec:
             yAxis:
               format:
                 unit: percent-decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - min
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -547,6 +559,12 @@ spec:
             yAxis:
               format:
                 unit: percent-decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
+                - min
         queries:
           - kind: TimeSeriesQuery
             spec:

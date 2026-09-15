@@ -250,6 +250,11 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -272,6 +277,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: right
+              mode: table
         queries:
           - kind: TimeSeriesQuery
             spec:

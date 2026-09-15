@@ -227,6 +227,9 @@ spec:
             yAxis:
               format:
                 unit: ops/sec
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -245,6 +248,9 @@ spec:
             yAxis:
               format:
                 unit: percent-decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -263,6 +269,9 @@ spec:
             yAxis:
               format:
                 unit: ops/sec
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -281,6 +290,9 @@ spec:
             yAxis:
               format:
                 unit: percent-decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -299,6 +311,9 @@ spec:
             yAxis:
               format:
                 unit: bytes/sec
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -317,6 +332,9 @@ spec:
             yAxis:
               format:
                 unit: bytes/sec
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:

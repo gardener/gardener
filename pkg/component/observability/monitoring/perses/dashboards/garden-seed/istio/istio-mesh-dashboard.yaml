@@ -46,6 +46,9 @@ spec:
             yAxis:
               format:
                 unit: decbytes
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -70,6 +73,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -306,6 +312,9 @@ spec:
             yAxis:
               format:
                 unit: decimal
+            legend:
+              position: bottom
+              mode: list
         queries:
           - kind: TimeSeriesQuery
             spec:
