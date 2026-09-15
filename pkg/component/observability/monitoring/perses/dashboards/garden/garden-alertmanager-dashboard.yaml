@@ -188,7 +188,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Received alerts by status for $instance
+          name: Received alerts by status per Instance
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -211,7 +211,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Active alerts on $instance
+          name: Active alerts per Instance
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -232,7 +232,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Notifications $instance
+          name: Notifications per Instance
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -255,7 +255,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Silences on $instance
+          name: Silences per Instance
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -276,7 +276,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Memory usage for $instance
+          name: Memory usage per Instance
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -294,7 +294,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: CPU usage for $instance
+          name: CPU usage per Instance
         plugin:
           kind: TimeSeriesChart
           spec:

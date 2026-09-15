@@ -202,7 +202,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Active Alert Count ($Severity/$AlertState)
+          name: Active Alert Count by Severity and State
           description: Shows the count of alerts with selected severity and alert state from all clusters.
         plugin:
           kind: Table
@@ -222,7 +222,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Cluster Alerts ($Severity/$AlertState)
+          name: Cluster Alerts by Severity and State
           description: Shows all alerts that are currently active from the selected clusters, severity, and alert state.
         plugin:
           kind: Table
@@ -242,7 +242,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Cluster Alert Count ($Severity/$AlertState)
+          name: Cluster Alert Count by Severity and State
           description: Shows the number of ($Severity) alerts in Alert State ($AlertState) for the selected clusters.
         plugin:
           kind: TimeSeriesChart
@@ -269,7 +269,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Active Alerts ($Severity/$AlertState)
+          name: Active Alerts by Severity and State
           description: Shows alerts that are/were active with the selected severity and alert state from the selected clusters. Includes the alertnames of the alerts.
         plugin:
           kind: TimeSeriesChart

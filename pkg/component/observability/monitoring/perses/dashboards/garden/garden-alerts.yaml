@@ -76,7 +76,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Alerts by Infrastructure  ($Severity|$AlertState|$Alertname|$Infra)
+          name: Alerts by Infrastructure
           description: Shows the number of alerts by infrastructure.
         plugin:
           kind: BarChart
@@ -213,7 +213,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Active Alerts ($Severity|$AlertState|$Alertname|$Infra)
+          name: Active Alerts by Severity and State
           description: Shows alerts that are/were active with the selected severity and alert state from the selected clusters. Includes the alertnames of the alerts.
         plugin:
           kind: TimeSeriesChart
@@ -240,7 +240,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Cluster Alert Count ($Severity|$AlertState|$Alertname|$Infra)
+          name: Cluster Alert Count by Severity and State
           description: Shows the number of alerts in each cluster.
         plugin:
           kind: TimeSeriesChart
@@ -267,7 +267,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Cluster Alerts ($Severity|$AlertState|$Alertname|$Infra)
+          name: Cluster Alerts by Severity and State
           description: Shows all alerts that are currently active from the selected clusters, severity, and alert state.
         plugin:
           kind: Table

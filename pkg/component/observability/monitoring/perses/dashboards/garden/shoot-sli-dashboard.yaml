@@ -444,7 +444,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Tiny Funnel for $iaas
+          name: Tiny Funnel by IaaS
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -548,7 +548,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Funnel for $iaas
+          name: Funnel by IaaS
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -724,7 +724,7 @@ spec:
     - kind: Grid
       spec:
         display:
-          title: Funnel for $iaas
+          title: Funnel by IaaS
           collapse:
             open: false
         items:

@@ -127,7 +127,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: Number of Reconciliations For Result "$result"
+          name: Number of Reconciliations by Result
           description: Shows the total number of reconciliations per controller.
         plugin:
           kind: TimeSeriesChart
