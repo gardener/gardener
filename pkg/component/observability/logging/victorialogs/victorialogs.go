@@ -259,7 +259,7 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 		}
 
 		// Override Spec.Ports so it also exposes both ports.
-		// The http port is left for extention compatability reasons.
+		// The http port is left for extension compatibility reasons.
 		vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       "https",
@@ -406,15 +406,12 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app.kubernetes.io/name":      "vlsingle",
-					"app.kubernetes.io/instance":  constants.VLSingleResourceName,
-					"app.kubernetes.io/component": "monitoring",
-					"managed-by":                  "vm-operator",
+					"app.kubernetes.io/name":                          "vlsingle",
+					"app.kubernetes.io/instance":                      constants.VLSingleResourceName,
+					"app.kubernetes.io/component":                     "monitoring",
+					"managed-by":                                      "vm-operator",
+					"operator.victoriametrics.com/additional-service": "managed",
 				},
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      "operator.victoriametrics.com/additional-service",
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				}},
 			},
 			Endpoints: []monitoringv1.Endpoint{endpoint},
 		},
