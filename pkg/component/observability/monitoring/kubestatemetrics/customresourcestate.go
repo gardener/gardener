@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/third_party/kube-state-metrics/pkg/customresourcestate"
-	"github.com/gardener/gardener/third_party/kube-state-metrics/pkg/metric"
+	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
+	"k8s.io/kube-state-metrics/v2/pkg/metric"
 )
 
 const (
