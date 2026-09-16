@@ -89,7 +89,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
-                  query: probe_success{purpose="availability",job="blackbox-apiserver"}
+                  query: min(probe_success{purpose="availability",job="blackbox-apiserver"})
                   seriesNameFormat: ""
     "1":
       kind: Panel
