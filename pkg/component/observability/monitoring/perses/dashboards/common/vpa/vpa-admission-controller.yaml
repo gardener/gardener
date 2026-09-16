@@ -39,9 +39,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(vpa_admission_controller_admission_pods_total[$__rate_interval])) by (applied)
                   seriesNameFormat: Applied recommendation "{{ applied }}"

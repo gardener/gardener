@@ -72,9 +72,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(istio_build{component="pilot", pod=~"$istiod"}) by (tag)
                   seriesNameFormat: '{{ tag }}'
@@ -98,9 +96,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(process_virtual_memory_bytes{job="istiod"})
                   seriesNameFormat: Virtual Memory
@@ -109,9 +105,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(process_resident_memory_bytes{job="istiod"})
                   seriesNameFormat: Resident Memory
@@ -120,9 +114,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(go_memstats_heap_sys_bytes{job="istiod"})
                   seriesNameFormat: heap sys
@@ -131,9 +123,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(go_memstats_heap_alloc_bytes{job="istiod"})
                   seriesNameFormat: heap alloc
@@ -142,9 +132,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(go_memstats_alloc_bytes{job="istiod"})
                   seriesNameFormat: Alloc
@@ -153,9 +141,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(go_memstats_heap_inuse_bytes{job="istiod"})
                   seriesNameFormat: Heap in-use
@@ -164,9 +150,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(go_memstats_stack_inuse_bytes{job="istiod"})
                   seriesNameFormat: Stack in-use
@@ -175,9 +159,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: seed:container_memory_working_set_bytes:sum_by_container{container="discovery"}
                   seriesNameFormat: Discovery (container)
@@ -201,9 +183,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: |
                     seed:container_cpu_usage_seconds_total:sum_by_container{container="discovery"}
@@ -213,9 +193,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(irate(process_cpu_seconds_total{job="istiod"}[$__rate_interval]))
                   seriesNameFormat: Discovery (process)
@@ -239,9 +217,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(container_fs_usage_bytes{container="discovery", pod=~"$istiod"})
                   seriesNameFormat: Discovery
@@ -250,9 +226,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(container_fs_usage_bytes{container="istio-proxy", pod=~"$istiod"})
                   seriesNameFormat: Sidecar
@@ -273,9 +247,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(go_goroutines{job="istiod", pod=~"$istiod"})
                   seriesNameFormat: Number of Goroutines
@@ -300,9 +272,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(pilot_xds_pushes{type="cds", pod=~"$istiod"} - pilot_xds_pushes{type="cds", pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Cluster
@@ -311,9 +281,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(pilot_xds_pushes{type="eds", pod=~"$istiod"} - pilot_xds_pushes{type="eds", pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Endpoints
@@ -322,9 +290,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(pilot_xds_pushes{type="lds", pod=~"$istiod"} - pilot_xds_pushes{type="lds", pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Listeners
@@ -333,9 +299,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(pilot_xds_pushes{type="rds", pod=~"$istiod"} - pilot_xds_pushes{type="rds", pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Routes
@@ -344,9 +308,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(pilot_xds_pushes{type="sds", pod=~"$istiod"} - pilot_xds_pushes{type="sds", pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Secrets
@@ -355,9 +317,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(pilot_xds_pushes{type="nds", pod=~"$istiod"} - pilot_xds_pushes{type="nds", pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Nametables
@@ -382,9 +342,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(pilot_xds_cds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_cds_reject{job="istiod", pod=~"$istiod"}) - 1)
                   seriesNameFormat: Rejected CDS Configs
@@ -393,9 +351,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(pilot_xds_eds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_eds_reject{job="istiod", pod=~"$istiod"}) - 1)
                   seriesNameFormat: Rejected EDS Configs
@@ -404,9 +360,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(pilot_xds_rds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_rds_reject{job="istiod", pod=~"$istiod"}) - 1)
                   seriesNameFormat: Rejected RDS Configs
@@ -415,9 +369,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(pilot_xds_lds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_lds_reject{job="istiod", pod=~"$istiod"}) - 1)
                   seriesNameFormat: Rejected LDS Configs
@@ -426,9 +378,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(pilot_xds_write_timeout{job="istiod", pod=~"$istiod"}[$__rate_interval]))
                   seriesNameFormat: Write Timeouts
@@ -437,9 +387,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(pilot_total_xds_internal_errors{job="istiod", pod=~"$istiod"}[$__rate_interval]))
                   seriesNameFormat: Internal Errors
@@ -448,9 +396,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(pilot_total_xds_rejects{job="istiod", pod=~"$istiod"}[$__rate_interval]))
                   seriesNameFormat: Config Rejection Rate
@@ -459,9 +405,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(pilot_xds_push_context_errors{job="istiod", pod=~"$istiod"}[$__rate_interval]))
                   seriesNameFormat: Push Context Errors
@@ -470,9 +414,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(pilot_xds_write_timeout{job="istiod", pod=~"$istiod"}[$__rate_interval]))
                   seriesNameFormat: Push Timeouts
@@ -497,9 +439,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: histogram_quantile(0.5, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
                   seriesNameFormat: 'p50 '
           - kind: TimeSeriesQuery
@@ -507,9 +447,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: histogram_quantile(0.9, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
                   seriesNameFormat: p90
           - kind: TimeSeriesQuery
@@ -517,9 +455,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: histogram_quantile(0.99, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
                   seriesNameFormat: p99
           - kind: TimeSeriesQuery
@@ -527,9 +463,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: histogram_quantile(0.999, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
                   seriesNameFormat: p99.9
     "2_3":
@@ -552,9 +486,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: pilot_conflict_inbound_listener{job="istiod"}
                   seriesNameFormat: Inbound Listeners
           - kind: TimeSeriesQuery
@@ -562,9 +494,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: pilot_conflict_outbound_listener_http_over_current_tcp{job="istiod"}
                   seriesNameFormat: Outbound Listeners (http over current tcp)
           - kind: TimeSeriesQuery
@@ -572,9 +502,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: pilot_conflict_outbound_listener_tcp_over_current_tcp{job="istiod"}
                   seriesNameFormat: Outbound Listeners (tcp over current tcp)
           - kind: TimeSeriesQuery
@@ -582,9 +510,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: pilot_conflict_outbound_listener_tcp_over_current_http{job="istiod"}
                   seriesNameFormat: Outbound Listeners (tcp over current http)
     "2_4":
@@ -607,9 +533,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: avg(pilot_virt_services{job="istiod"})
                   seriesNameFormat: Virtual Services
@@ -618,9 +542,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: avg(pilot_services{job="istiod"})
                   seriesNameFormat: Services
@@ -629,9 +551,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(pilot_xds{job="istiod"}) by (pod)
                   seriesNameFormat: Connected Endpoints {{pod}}
@@ -656,9 +576,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(envoy_cluster_upstream_cx_total{cluster_name="xds-grpc", pod=~"$igw"} - envoy_cluster_upstream_cx_total{cluster_name="xds-grpc", pod=~"$igw"} offset $__interval, 0))
                   seriesNameFormat: XDS Connections
@@ -667,9 +585,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(envoy_cluster_upstream_cx_connect_fail{cluster_name="xds-grpc", pod=~"$igw"} - envoy_cluster_upstream_cx_connect_fail{cluster_name="xds-grpc", pod=~"$igw"} offset $__interval, 0))
                   seriesNameFormat: XDS Connection Failures
@@ -678,9 +594,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(envoy_server_hot_restart_epoch{pod=~"$igw"} - envoy_server_hot_restart_epoch{pod=~"$igw"} offset $__interval, 0))
                   seriesNameFormat: Envoy Restarts
@@ -704,9 +618,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(envoy_cluster_upstream_cx_active{cluster_name="xds-grpc"})
                   seriesNameFormat: XDS Active Connections
@@ -731,9 +643,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: max(rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
                   seriesNameFormat: XDS Response Bytes Max
@@ -742,9 +652,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: quantile(0.5, rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
                   seriesNameFormat: XDS Response Bytes Average
@@ -753,9 +661,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: max(rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
                   seriesNameFormat: XDS Request Bytes Max
@@ -764,9 +670,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: quantile(.5, rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
                   seriesNameFormat: XDS Request Bytes Average
@@ -790,9 +694,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(galley_validation_passed{pod=~"$istiod"} - galley_validation_passed{pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Validations (Success)
@@ -801,9 +703,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(clamp_min(galley_validation_failed{pod=~"$istiod"} - galley_validation_failed{pod=~"$istiod"} offset $__interval, 0))
                   seriesNameFormat: Validation (Failure)
@@ -827,9 +727,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: (sum(rate(sidecar_injection_success_total{pod=~"$istiod"}[$__rate_interval]))) or absent(sidecar_injection_success_total{pod=~"$istiod"})-1
                   seriesNameFormat: Injections (Success)
@@ -838,9 +736,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: (sum(rate(sidecar_injection_failure_total{pod=~"$istiod"}[$__rate_interval]))) or absent(sidecar_injection_failure_total{pod=~"$istiod"})-1
                   seriesNameFormat: Injections (Failure)

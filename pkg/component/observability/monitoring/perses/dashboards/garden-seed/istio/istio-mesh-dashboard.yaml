@@ -55,9 +55,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(istio_tcp_received_bytes_total{destination_service=~"$tcp_service"}[$__rate_interval]))
                   seriesNameFormat: Received
@@ -66,9 +64,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(istio_tcp_sent_bytes_total{destination_service=~"$tcp_service"}[$__rate_interval]))
                   seriesNameFormat: Sent
@@ -93,9 +89,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(irate(istio_tcp_connections_opened_total{destination_service=~"$tcp_service"}[$__rate_interval]))
                   seriesNameFormat: opened
@@ -104,9 +98,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(irate(istio_tcp_connections_closed_total{destination_service=~"$tcp_service"}[$__rate_interval]))
                   seriesNameFormat: closed
@@ -131,9 +123,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: label_join(sum(rate(istio_tcp_received_bytes_total{reporter="source"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), "destination_workload_var", ".", "destination_workload", "destination_workload_namespace")
                   seriesNameFormat: '{{ destination_workload }}'
@@ -142,9 +132,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: label_join(sum(rate(istio_tcp_sent_bytes_total{reporter="source"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), "destination_workload_var", ".", "destination_workload", "destination_workload_namespace")
                   seriesNameFormat: '{{ destination_workload }}'
     "1_0":
@@ -164,9 +152,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: max(pilot_k8s_cfg_events{type="VirtualService", event="add"}) - (max(pilot_k8s_cfg_events{type="VirtualService", event="delete"}) or max(up * 0))
     "1_1":
       kind: Panel
@@ -185,9 +171,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: max(pilot_k8s_cfg_events{type="DestinationRule", event="add"}) - (max(pilot_k8s_cfg_events{type="DestinationRule", event="delete"}) or max(up * 0))
     "1_2":
       kind: Panel
@@ -206,9 +190,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: max(pilot_k8s_cfg_events{type="Gateway", event="add"}) - (max(pilot_k8s_cfg_events{type="Gateway", event="delete"}) or max(up * 0))
     "1_3":
       kind: Panel
@@ -227,9 +209,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: max(pilot_k8s_cfg_events{type="PeerAuthentication", event="add"}) - (max(pilot_k8s_cfg_events{type="PeerAuthentication", event="delete"}) or max(up * 0))
                   seriesNameFormat: ""
@@ -250,9 +230,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: max(pilot_k8s_cfg_events{type="EnvoyFilter", event="add"}) - (max(pilot_k8s_cfg_events{type="EnvoyFilter", event="delete"}) or max(up * 0))
                   seriesNameFormat: ""
@@ -273,9 +251,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: round(sum(irate(istio_requests_total{reporter="source"}[$__rate_interval])), 0.001)
     "2_1":
       kind: Panel
@@ -294,9 +270,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: sum(rate(istio_requests_total{reporter="source", response_code!~"5.*"}[$__rate_interval])) / sum(rate(istio_requests_total{reporter="source"}[$__rate_interval]))
     "2_2":
       kind: Panel
@@ -315,9 +289,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: 'sum(irate(istio_requests_total{reporter="source", response_code=~"4.*"}[$__rate_interval])) '
     "2_3":
       kind: Panel
@@ -336,9 +308,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: 'sum(irate(istio_requests_total{reporter="source", response_code=~"5.*"}[$__rate_interval])) '
     "2_4":
       kind: Panel
@@ -361,9 +331,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: label_join(sum(rate(istio_requests_total{reporter="source", response_code="200"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), "destination_workload_var", ".", "destination_workload", "destination_workload_namespace")
                   seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace }}'
           - kind: TimeSeriesQuery
@@ -371,9 +339,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: label_join(sum(rate(istio_request_duration_milliseconds_sum{reporter="source"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_request_duration_milliseconds_count{reporter="source"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / 1000, "destination_workload_var", ".", "destination_workload", "destination_workload_namespace")
                   seriesNameFormat: '{{ destination_workload}}.{{ destination_workload_namespace }}'
           - kind: TimeSeriesQuery
@@ -381,9 +347,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: label_join((sum(rate(istio_requests_total{reporter="source", response_code!~"5.*"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter="source"}[$__rate_interval])) by (destination_workload, destination_workload_namespace)), "destination_workload_var", ".", "destination_workload", "destination_workload_namespace")
                   seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace }}'
@@ -407,9 +371,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   query: sum(istio_build) by (component, tag)
                   seriesNameFormat: '{{ component }}: {{ tag }}'
   layouts:

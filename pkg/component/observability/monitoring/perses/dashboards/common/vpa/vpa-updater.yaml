@@ -72,9 +72,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_in_place_updated_pods_total{pod=~"$pod"}[$__range])))
                   seriesNameFormat: 'Successful '
@@ -83,9 +81,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~"$pod"}[$__range])))
                   seriesNameFormat: Failed
@@ -108,9 +104,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_evicted_pods_total{pod=~"$pod"}[$__range])))
                   seriesNameFormat: 'Successful '
@@ -119,9 +113,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_failed_eviction_attempts_total{pod=~"$pod"}[$__range])))
                   seriesNameFormat: Failed
@@ -147,9 +139,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_controlled_pods_total{pod=~"$pod"}) by (update_mode)
                   seriesNameFormat: '{{update_mode}}'
@@ -158,9 +148,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_controlled_pods_total{pod=~"$pod"})
                   seriesNameFormat: Total
@@ -184,9 +172,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_controlled_pods_total{pod=~"$pod"}) by (update_mode)
                   seriesNameFormat: '{{update_mode}}'
@@ -212,9 +198,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_in_place_updatable_pods_total{pod=~"$pod"})
                   seriesNameFormat: Pending in-place update
@@ -223,9 +207,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_controlled_pods_total{pod=~"$pod", update_mode="InPlaceOrRecreate"})
                   seriesNameFormat: Total
@@ -251,9 +233,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_vpas_with_in_place_updatable_pods_total{pod=~"$pod"})
                   seriesNameFormat: In-place updatable
@@ -262,9 +242,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_vpas_with_in_place_updated_pods_total{pod=~"$pod"}[$__rate_interval])))
                   seriesNameFormat: Successfully in-place updated
@@ -290,9 +268,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_evictable_pods_total{pod=~"$pod"}) by (update_mode)
                   seriesNameFormat: Pending eviction with '{{update_mode}}' mode
@@ -301,9 +277,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_controlled_pods_total{pod=~"$pod", update_mode!="InPlaceOrRecreate"})
                   seriesNameFormat: Total
@@ -329,9 +303,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(vpa_updater_vpas_with_evictable_pods_total{pod=~"$pod"}) by (update_mode)
                   seriesNameFormat: Evictable with '{{update_mode}}' update mode
@@ -340,9 +312,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_vpas_with_evicted_pods_total{pod=~"$pod"}[$__rate_interval]))) by (update_mode)
                   seriesNameFormat: Successfully evicted with '{{update_mode}}' mode
@@ -369,9 +339,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_in_place_updated_pods_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval]))) by (vpa_name,vpa_namespace)
                   seriesNameFormat: '{{vpa_namespace}}/{{vpa_name}}'
@@ -380,9 +348,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_in_place_updated_pods_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval])))
                   seriesNameFormat: Total
@@ -409,9 +375,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval]))) by (vpa_name,vpa_namespace)
                   seriesNameFormat: '{{vpa_namespace}}/{{vpa_name}}'
@@ -420,9 +384,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_failed_in_place_update_attempts_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval])))
                   seriesNameFormat: Total
@@ -449,9 +411,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_evicted_pods_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval]))) by (vpa_name,vpa_namespace)
                   seriesNameFormat: '{{vpa_namespace}}/{{vpa_name}}'
@@ -460,9 +420,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_evicted_pods_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval])))
                   seriesNameFormat: Total
@@ -489,9 +447,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_failed_eviction_attempts_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval]))) by (vpa_name,vpa_namespace)
                   seriesNameFormat: '{{vpa_namespace}}/{{vpa_name}}'
@@ -500,9 +456,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(floor(increase(vpa_updater_failed_eviction_attempts_total{pod=~"$pod", vpa_namespace=~"$vpa_namespace"}[$__rate_interval])))
                   seriesNameFormat: Total

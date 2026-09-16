@@ -74,9 +74,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval]))
                   seriesNameFormat: _total
@@ -85,9 +83,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval])
                   seriesNameFormat: '{{ pod }}'
@@ -111,9 +107,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(container_memory_working_set_bytes{pod=~"istio-ingress.*"})
                   seriesNameFormat: _total
@@ -122,9 +116,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: container_memory_working_set_bytes{pod=~"$istio_proxy_pod"}
                   seriesNameFormat: '{{ pod }}'
@@ -148,9 +140,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval])) by (namespace)
                   seriesNameFormat: '{{ namespace }}'
@@ -174,9 +164,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(container_memory_working_set_bytes{pod=~"$istio_proxy_pod"}[$__rate_interval])) by (namespace)
                   seriesNameFormat: '{{ namespace }}'
@@ -200,9 +188,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(istio_tcp_received_bytes_total{pod=~"$istio_proxy_pod" }[$__rate_interval])) by(pod)
                   seriesNameFormat: '{{  pod }} '
@@ -226,9 +212,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(istio_tcp_sent_bytes_total{pod=~"$istio_proxy_pod"}[$__rate_interval])) by(pod)
                   seriesNameFormat: '{{  pod }} '
@@ -252,9 +236,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(istio_tcp_received_bytes_total{pod=~"$istio_proxy_pod", namespace=~"$istio_proxy_namespace" }[$__rate_interval])) by (namespace)
                   seriesNameFormat: '{{  namespace }} '
@@ -278,9 +260,7 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: ${datasource}
+                  datasource: $datasource
                   minStep: ""
                   query: sum(rate(istio_tcp_sent_bytes_total{pod=~"$istio_proxy_pod", namespace=~"$istio_proxy_namespace" }[$__rate_interval])) by (namespace)
                   seriesNameFormat: '{{  namespace }} '
