@@ -158,7 +158,7 @@ spec:
                     name: ${datasource}
                   minStep: ""
                   query: sum(rate(rest_client_requests_total{job="$job",pod=~"$pod",method=~"$verb",code=~"$code"}[$__rate_interval])) by (code)
-                  seriesNameFormat: '{{result}}'
+                  seriesNameFormat: '{{code}}'
     "0_2":
       kind: Panel
       spec:

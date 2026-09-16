@@ -306,7 +306,7 @@ spec:
                     name: ${datasource}
                   minStep: ""
                   query: sum(controller_runtime_active_workers{job="$job",controller=~"$controller"}) by (controller)
-                  seriesNameFormat: '{{pod}}'
+                  seriesNameFormat: '{{controller}}'
     "2_1":
       kind: Panel
       spec:

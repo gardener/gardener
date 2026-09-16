@@ -905,7 +905,7 @@ spec:
                     kind: PrometheusDatasource
                   minStep: ""
                   query: histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(le,resource))
-                  seriesNameFormat: '{{kind}}'
+                  seriesNameFormat: '{{resource}}'
         links:
           - name: Drill Down
             url: /d/apiserver-watch-details/apiserver-watch-details
