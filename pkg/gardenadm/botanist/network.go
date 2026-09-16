@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -39,6 +40,25 @@ func (b *GardenadmBotanist) IsPodNetworkAvailable(ctx context.Context) (bool, er
 	}
 
 	return false, nil
+}
+
+// CheckControlPlaneNodeLabeled returns an error until the control plane Node carries the `node-role.kubernetes.io/control-plane`
+// label (applied asynchronously by gardener-node-agent), which bootstrap components pin themselves to.
+func (b *GardenadmBotanist) CheckControlPlaneNodeLabeled(ctx context.Context) error {
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
+	}
+
+	if node == nil {
+		return fmt.Errorf("node for host %q was not created yet", b.HostName)
+	}
+
+	if _, ok := node.Labels[v1beta1constants.LabelNodeRoleControlPlane]; !ok {
+		return fmt.Errorf("node %q does not yet carry the %q label", node.Name, v1beta1constants.LabelNodeRoleControlPlane)
+	}
+
+	return nil
 }
 
 // ApplyNetworkPolicies reconciles all namespaces in the cluster in order to apply the network policies.
