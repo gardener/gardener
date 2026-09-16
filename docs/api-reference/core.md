@@ -225,13 +225,13 @@ allows to specify additional options.
 
 <tr>
 <td>
-<code>name</code></br>
+<code>AccessRestriction</code></br>
 <em>
-string
+<a href="#accessrestriction">AccessRestriction</a>
 </em>
 </td>
 <td>
-<p>Name is the name of the restriction.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -5431,14 +5431,13 @@ KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -5673,14 +5672,13 @@ KubeControllerManagerConfig contains configuration settings for the kube-control
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -5771,14 +5769,13 @@ KubeProxyConfig contains configuration settings for the kube-proxy.
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -5833,14 +5830,13 @@ KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -5895,14 +5891,13 @@ KubeletConfig contains configuration settings for the kubelet.
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -6788,13 +6783,13 @@ KubernetesDashboard describes configuration values for the kubernetes-dashboard 
 
 <tr>
 <td>
-<code>enabled</code></br>
+<code>Addon</code></br>
 <em>
-boolean
+<a href="#addon">Addon</a>
 </em>
 </td>
 <td>
-<p>Enabled indicates whether the addon is enabled or not.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -7149,7 +7144,7 @@ LastOperationType is a string alias.
 
 
 <p>
-(<em>Appears on:</em><a href="#expirableversion">ExpirableVersion</a>, <a href="#machineimageversion">MachineImageVersion</a>)
+(<em>Appears on:</em><a href="#expirableversion">ExpirableVersion</a>)
 </p>
 
 <p>
@@ -7664,49 +7659,13 @@ MachineImageVersion is an expirable version with list of supported container run
 
 <tr>
 <td>
-<code>version</code></br>
+<code>ExpirableVersion</code></br>
 <em>
-string
+<a href="#expirableversion">ExpirableVersion</a>
 </em>
 </td>
 <td>
-<p>Version is the version identifier.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>expirationDate</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">Time</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ExpirationDate defines the time at which this version expires.<br />Deprecated: Is replaced by Lifecycle; mutually exclusive with it.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>classification</code></br>
-<em>
-<a href="#versionclassification">VersionClassification</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Classification defines the state of a version (preview, supported, deprecated).<br />Deprecated: Is replaced by Lifecycle. mutually exclusive with it.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lifecycle</code></br>
-<em>
-<a href="#lifecyclestage">LifecycleStage</a> array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Lifecycle defines the lifecycle stages for this version.<br />Mutually exclusive with Classification and ExpirationDate.<br />This can only be used when the VersionClassificationLifecycle feature gate is enabled.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -8883,13 +8842,13 @@ NginxIngress describes configuration values for the nginx-ingress addon.
 
 <tr>
 <td>
-<code>enabled</code></br>
+<code>Addon</code></br>
 <em>
-boolean
+<a href="#addon">Addon</a>
 </em>
 </td>
 <td>
-<p>Enabled indicates whether the addon is enabled or not.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -9333,48 +9292,13 @@ ProjectMember is a member of a project.
 
 <tr>
 <td>
-<code>kind</code></br>
+<code>Subject</code></br>
 <em>
-string
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#subject-v1-rbac">Subject</a>
 </em>
 </td>
 <td>
-<p>Kind of object being referenced. Values defined by this API group are "User", "Group", and "ServiceAccount".<br />If the Authorizer does not recognized the kind value, the Authorizer should report an error.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>apiGroup</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>APIGroup holds the API group of the referenced subject.<br />Defaults to "" for ServiceAccount subjects.<br />Defaults to "rbac.authorization.k8s.io" for User and Group subjects.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Name of the object being referenced.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>namespace</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Namespace of the referenced object.  If the object kind is non-namespace, such as "User" or "Group", and this value is not empty<br />the Authorizer should report an error.</p>
+<p>Subject is representing a user name, an email address, or any other identifier of a user, group, or service<br />account that has a certain role.</p>
 </td>
 </tr>
 <tr>
@@ -9982,36 +9906,13 @@ ResourceData holds the data of a resource referred to by an extension controller
 
 <tr>
 <td>
-<code>kind</code></br>
+<code>CrossVersionObjectReference</code></br>
 <em>
-string
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#crossversionobjectreference-v1-autoscaling">CrossVersionObjectReference</a>
 </em>
 </td>
 <td>
-<p>kind is the kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>name is the name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>apiVersion</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>apiVersion is the API version of the referent</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -10678,26 +10579,14 @@ SeedSelector contains constraints for selecting seed to be usable for shoots usi
 
 <tr>
 <td>
-<code>matchLabels</code></br>
+<code>LabelSelector</code></br>
 <em>
-object (keys:string, values:string)
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#labelselector-v1-meta">LabelSelector</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>matchLabels is a map of \{key,value\} pairs. A single \{key,value\} in the matchLabels<br />map is equivalent to an element of matchExpressions, whose key field is "key", the<br />operator is "In", and the values array contains only "value". The requirements are ANDed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>matchExpressions</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#labelselectorrequirement-v1-meta">LabelSelectorRequirement</a> array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>matchExpressions is a list of label selector requirements. The requirements are ANDed.</p>
+<p>LabelSelector is optional and can be used to select seeds by their label settings</p>
 </td>
 </tr>
 <tr>
@@ -13531,7 +13420,7 @@ string
 
 
 <p>
-(<em>Appears on:</em><a href="#expirableversion">ExpirableVersion</a>, <a href="#expirableversionstatus">ExpirableVersionStatus</a>, <a href="#lifecyclestage">LifecycleStage</a>, <a href="#machineimageversion">MachineImageVersion</a>)
+(<em>Appears on:</em><a href="#expirableversion">ExpirableVersion</a>, <a href="#expirableversionstatus">ExpirableVersionStatus</a>, <a href="#lifecyclestage">LifecycleStage</a>)
 </p>
 
 <p>

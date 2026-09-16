@@ -402,146 +402,14 @@ the image, etc.
 
 <tr>
 <td>
-<code>replicaCount</code></br>
+<code>GardenletDeployment</code></br>
 <em>
-integer
+<a href="#gardenletdeployment">GardenletDeployment</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ReplicaCount is the number of gardenlet replicas. Defaults to 2.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>revisionHistoryLimit</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>serviceAccountName</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>image</code></br>
-<em>
-<a href="#image">Image</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Image is the gardenlet container image.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#resourcerequirements-v1-core">ResourceRequirements</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources are the compute resources required by the gardenlet container.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>podLabels</code></br>
-<em>
-object (keys:string, values:string)
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>PodLabels are the labels on gardenlet pods.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>podAnnotations</code></br>
-<em>
-object (keys:string, values:string)
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>PodAnnotations are the annotations on gardenlet pods.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>additionalVolumes</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#volume-v1-core">Volume</a> array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AdditionalVolumes is the list of additional volumes that should be mounted by gardenlet containers.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>additionalVolumeMounts</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#volumemount-v1-core">VolumeMount</a> array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AdditionalVolumeMounts is the list of additional pod volumes to mount into the gardenlet container's filesystem.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>env</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envvar-v1-core">EnvVar</a> array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Env is the list of environment variables to set in the gardenlet container.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>tolerations</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#toleration-v1-core">Toleration</a> array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Tolerations are the tolerations to be applied to gardenlet pods.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>enableHealthProbes</code></br>
-<em>
-boolean
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>EnableHealthProbes specifies whether the Kubernetes liveness and readiness probes are added to the gardenlet<br />deployment. Defaults to true.</p>
+<p>GardenletDeployment specifies common gardenlet deployment parameters.</p>
 </td>
 </tr>
 <tr>
@@ -700,7 +568,7 @@ integer
 
 
 <p>
-(<em>Appears on:</em><a href="#gardenletdeployment">GardenletDeployment</a>, <a href="#gardenletselfdeployment">GardenletSelfDeployment</a>)
+(<em>Appears on:</em><a href="#gardenletdeployment">GardenletDeployment</a>)
 </p>
 
 <p>
