@@ -787,7 +787,7 @@ spec:
       kind: Panel
       spec:
         display:
-          name: ETCD Request Duration Per Type
+          name: ETCD Request Duration Per Resource
         plugin:
           kind: TimeSeriesChart
           spec:
@@ -809,8 +809,8 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                   minStep: ""
-                  query: histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(le,type))
-                  seriesNameFormat: '{{type}}'
+                  query: histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{job=~"$job",pod=~"$pod"}[$__rate_interval])) by(le,resource))
+                  seriesNameFormat: '{{resource}}'
         links:
           - name: Drill Down
             url: /d/apiserver-storage-details/apiserver-storage-details
