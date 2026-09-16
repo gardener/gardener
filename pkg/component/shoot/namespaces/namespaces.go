@@ -78,6 +78,8 @@ func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
+		// For self-hosted shoots, the kube-system namespace is managed by Botanist.DeployControlPlaneNamespace instead of
+		// this component.
 		kubeSystemNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: metav1.NamespaceSystem,

@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -744,6 +745,15 @@ var _ = Describe("Namespaces", func() {
 					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b"),
 				))
 			})
+
+			It("should add the labels of the kube-system namespace", func() {
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				Expect(botanist.SeedNamespaceObject.Labels).To(And(
+					HaveKeyWithValue("gardener.cloud/purpose", "kube-system"),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				))
+			})
 		})
 
 		When("spec.controlPlane.zones is set", func() {
@@ -816,6 +826,47 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Create(ctx, obj)).To(Succeed())
 			Expect(botanist.DeleteSeedNamespace(ctx)).To(Succeed())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
+		})
+	})
+
+	Describe("#DefaultShootNamespaces", func() {
+		var managedResource *resourcesv1alpha1.ManagedResource
+
+		BeforeEach(func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot-core-namespaces",
+					Namespace: botanist.Shoot.ControlPlaneNamespace,
+				},
+			}
+		})
+
+		It("should deploy the ManagedResource for hosted shoots", func() {
+			Expect(botanist.DefaultShootNamespaces().Deploy(ctx)).To(Succeed())
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+		})
+
+		It("should destroy the ManagedResource for self-hosted shoots running the control plane", func() {
+			botanist.Shoot.ControlPlaneNamespace = metav1.NamespaceSystem
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{
+							Name:         "control-plane",
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						}},
+					},
+				},
+			})
+			managedResource.Namespace = metav1.NamespaceSystem
+			Expect(seedClient.Create(ctx, managedResource)).To(Succeed())
+
+			Expect(botanist.DefaultShootNamespaces().Deploy(ctx)).To(Succeed())
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 		})
 	})
 

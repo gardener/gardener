@@ -99,6 +99,10 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 		)
 
 		if b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane() {
+			// The kube-system namespace of self-hosted shoot clusters is not managed by the shoot namespaces component
+			// (ManagedResource), hence set its labels here.
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenerPurpose, metav1.NamespaceSystem)
+
 			// In self-hosted shoot clusters, the control plane namespace (kube-system) does not only host control plane
 			// components but also data plane system components (e.g., coredns, calico-typha).
 			// The data plane components are not required to run on the control plane pool exclusively. On the contrary, for
@@ -309,7 +313,16 @@ func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
 func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
-	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
+	shootNamespaces := namespaces.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
+
+	// In self-hosted shoot clusters running their own control plane, the kube-system namespace is fully managed by
+	// DeployControlPlaneNamespace. Destroy the ManagedResource in case it still exists from a previous version. Note
+	// that the kube-system namespace itself is kept (the ManagedResource is created with keepObjects=true).
+	if b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane() {
+		return component.OpDestroyAndWait(shootNamespaces)
+	}
+
+	return shootNamespaces
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.
