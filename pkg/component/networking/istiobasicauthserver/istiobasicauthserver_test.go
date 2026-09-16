@@ -185,7 +185,7 @@ spec:
       tcp:
         maxConnectionDuration: 86400s
         tcpKeepalive:
-          interval: 60s
+          interval: 10s
           time: 300s
     loadBalancer:
       simple: LEAST_REQUEST

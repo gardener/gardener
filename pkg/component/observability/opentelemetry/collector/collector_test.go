@@ -1032,7 +1032,7 @@ func getDestinationRule() *istionetworkingv1beta1.DestinationRule {
 					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 							Time:     &durationpb.Duration{Seconds: 300},
-							Interval: &durationpb.Duration{Seconds: 60},
+							Interval: &durationpb.Duration{Seconds: 10},
 						},
 						MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 					},

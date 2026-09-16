@@ -534,7 +534,7 @@ honor_labels: true`
 						Tcp: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
 							TcpKeepalive: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 								Time:     &durationpb.Duration{Seconds: 300},
-								Interval: &durationpb.Duration{Seconds: 60},
+								Interval: &durationpb.Duration{Seconds: 10},
 							},
 							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 						},

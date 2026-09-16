@@ -19,7 +19,7 @@ const MaxConnectionDuration = 86400
 const TCPKeepaliveTime = 300
 
 // TCPKeepaliveInterval is the duration in seconds between individual TCP keepalive probes.
-const TCPKeepaliveInterval = 60
+const TCPKeepaliveInterval = 10
 
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {

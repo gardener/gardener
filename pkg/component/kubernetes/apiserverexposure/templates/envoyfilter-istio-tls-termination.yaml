@@ -106,3 +106,19 @@ spec:
                 connection_keepalive:
                   interval: 120s
                   timeout: 60s
+  - applyTo: CLUSTER
+    match:
+      context: GATEWAY
+      cluster:
+        name: outbound|{{ .Port }}||{{ .Host }}
+    patch:
+      operation: MERGE
+      value:
+        typed_extension_protocol_options:
+          envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+            '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+            use_downstream_protocol_config:
+              http2_protocol_options:
+                connection_keepalive:
+                  interval: 120s
+                  timeout: 60s
