@@ -216,7 +216,7 @@ const (
 
 // ManagedResource describes a list of managed resources.
 type ManagedResource struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -230,7 +230,7 @@ type ManagedResource struct {
 
 // ManagedResourceList is a list of ManagedResource resources.
 type ManagedResourceList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -282,7 +282,7 @@ type ManagedResourceStatus struct {
 
 // ObjectReference is a reference to another object.
 type ObjectReference struct {
-	corev1.ObjectReference `json:",inline"`
+	corev1.ObjectReference `json:",embed"`
 
 	// Labels is a map of labels that were used during last update of the resource.
 	Labels map[string]string `json:"labels,omitempty"`

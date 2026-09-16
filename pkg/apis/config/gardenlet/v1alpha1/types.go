@@ -30,7 +30,7 @@ const (
 // to be merged with the parent gardenlet configuration.
 // For more information, see the ManagedSeed's '.spec.gardenlet.mergeWithParent' field.
 type GardenletConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// for the proxy server to use when communicating with the garden apiserver.
@@ -97,7 +97,7 @@ type GardenletConfiguration struct {
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
 // for the proxy server to use when communicating with the garden apiserver.
 type GardenClientConnection struct {
-	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
+	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",embed"`
 
 	// GardenClusterAddress is the external address that the gardenlets can use to remotely connect to the Garden
 	// cluster. It is needed in case the gardenlet deploys itself into ManagedSeeds.
@@ -143,13 +143,13 @@ type KubeconfigValidity struct {
 // SeedClientConnection specifies the client connection settings
 // for the proxy server to use when communicating with the seed apiserver.
 type SeedClientConnection struct {
-	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
+	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",embed"`
 }
 
 // ShootClientConnection specifies the client connection settings
 // for the proxy server to use when communicating with the shoot apiserver.
 type ShootClientConnection struct {
-	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
+	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",embed"`
 }
 
 // GardenletControllerConfiguration defines the configuration of the controllers.
@@ -505,7 +505,7 @@ type ResourcesConfiguration struct {
 
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
-	gardencorev1beta1.SeedTemplate `json:",inline"`
+	gardencorev1beta1.SeedTemplate `json:",embed"`
 }
 
 // Vali contains configuration for the Vali.

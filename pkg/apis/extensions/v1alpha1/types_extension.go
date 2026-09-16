@@ -23,7 +23,7 @@ const ExtensionResource = "Extension"
 
 // Extension is a specification for a Extension resource.
 type Extension struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -48,7 +48,7 @@ func (i *Extension) GetExtensionStatus() Status {
 
 // ExtensionList is a list of Extension resources.
 type ExtensionList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -58,11 +58,11 @@ type ExtensionList struct {
 // ExtensionSpec is the spec for a Extension resource.
 type ExtensionSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 }
 
 // ExtensionStatus is the status for a Extension resource.
 type ExtensionStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 }

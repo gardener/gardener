@@ -19,7 +19,7 @@ import (
 // Workload identities are designed to be used by components running in the Gardener environment,
 // seed or runtime cluster, that make use of identity federation inspired by the OIDC protocol.
 type WorkloadIdentity struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -58,7 +58,7 @@ type WorkloadIdentityStatus struct {
 
 // WorkloadIdentityList is a collection of WorkloadIdentities.
 type WorkloadIdentityList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

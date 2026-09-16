@@ -31,7 +31,7 @@ const (
 
 // ContainerRuntime is a specification for a container runtime resource.
 type ContainerRuntime struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -56,7 +56,7 @@ func (i *ContainerRuntime) GetExtensionStatus() Status {
 
 // ContainerRuntimeList is a list of ContainerRuntime resources.
 type ContainerRuntimeList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -66,7 +66,7 @@ type ContainerRuntimeList struct {
 // ContainerRuntimeSpec is the spec for a ContainerRuntime resource.
 type ContainerRuntimeSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// BinaryPath is the Worker's machine path where container runtime extensions should copy the binaries to.
 	BinaryPath string `json:"binaryPath"`
@@ -87,5 +87,5 @@ type ContainerRuntimeWorkerPool struct {
 // ContainerRuntimeStatus is the status for a ContainerRuntime resource.
 type ContainerRuntimeStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 }

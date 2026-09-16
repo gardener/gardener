@@ -25,7 +25,7 @@ const InfrastructureResource = "Infrastructure"
 
 // Infrastructure is a specification for cloud provider infrastructure.
 type Infrastructure struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -50,7 +50,7 @@ func (i *Infrastructure) GetExtensionStatus() Status {
 
 // InfrastructureList is a list of Infrastructure resources.
 type InfrastructureList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -61,7 +61,7 @@ type InfrastructureList struct {
 // InfrastructureSpec is the spec for an Infrastructure resource.
 type InfrastructureSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// Region is the region of this infrastructure. This field is immutable.
 	Region string `json:"region"`
@@ -75,7 +75,7 @@ type InfrastructureSpec struct {
 // InfrastructureStatus is the status for an Infrastructure resource.
 type InfrastructureStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 
 	// NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
 	// This might be needed in environments in which the CIDR for the network for the shoot worker node cannot

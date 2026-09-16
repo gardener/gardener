@@ -23,7 +23,7 @@ import (
 
 // Extension describes a Gardener extension.
 type Extension struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -37,7 +37,7 @@ type Extension struct {
 
 // ExtensionList is a list of Extension resources.
 type ExtensionList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -80,7 +80,7 @@ type Deployment struct {
 type ExtensionDeploymentSpec struct {
 	// DeploymentSpec is the deployment configuration for the extension.
 	// +optional
-	DeploymentSpec `json:",inline"`
+	DeploymentSpec `json:",embed"`
 
 	// Values are the deployment values used in the creation of the ControllerDeployment in the virtual garden cluster.
 	// +optional

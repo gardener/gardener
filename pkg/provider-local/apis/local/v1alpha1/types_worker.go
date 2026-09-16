@@ -15,7 +15,7 @@ import (
 
 // WorkerStatus contains information about created worker resources.
 type WorkerStatus struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// MachineImages is a list of machine images that have been used in this worker. Usually, the extension controller
 	// gets the mapping from name/version to the provider-specific machine image data from the CloudProfile. However, if

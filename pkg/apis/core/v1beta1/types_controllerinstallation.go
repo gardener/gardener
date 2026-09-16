@@ -16,7 +16,7 @@ import (
 
 // ControllerInstallation represents an installation request for an external controller.
 type ControllerInstallation struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -31,7 +31,7 @@ type ControllerInstallation struct {
 
 // ControllerInstallationList is a collection of ControllerInstallations.
 type ControllerInstallationList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

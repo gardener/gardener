@@ -21,7 +21,7 @@ const ClusterResource = "Cluster"
 
 // Cluster is a specification for a Cluster resource.
 type Cluster struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta   `json:",embed"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec ClusterSpec `json:"spec"`
@@ -31,7 +31,7 @@ type Cluster struct {
 
 // ClusterList is a list of Cluster resources.
 type ClusterList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 

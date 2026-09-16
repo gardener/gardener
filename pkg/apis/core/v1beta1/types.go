@@ -67,7 +67,7 @@ type AccessRestriction struct {
 // AccessRestrictionWithOptions describes an access restriction for a Kubernetes cluster (e.g., EU access-only) and
 // allows to specify additional options.
 type AccessRestrictionWithOptions struct {
-	AccessRestriction `json:",inline" protobuf:"bytes,1,opt,name=accessRestriction"`
+	AccessRestriction `json:",embed" protobuf:"bytes,1,opt,name=accessRestriction"`
 
 	// Options is a map of additional options for the access restriction.
 	// +optional

@@ -29,7 +29,7 @@ type MetricsSpec struct {
 // Resource configures a custom resource for metric generation.
 type Resource struct {
 	// Labels are added to all metrics. If the same key is used in a metric, the value from the metric will overwrite the value here.
-	Labels `yaml:",inline" json:",inline"`
+	Labels `yaml:",inline" json:",embed"`
 
 	// MetricNamePrefix defines a prefix for all metrics of the resource.
 	// If set to "", no prefix will be added.
@@ -73,7 +73,7 @@ type Generator struct {
 	Each Metric `yaml:"each" json:"each"`
 
 	// Labels are added to all metrics. Labels from Each will overwrite these if using the same key.
-	Labels `yaml:",inline" json:",inline"`
+	Labels `yaml:",inline" json:",embed"`
 	// Name of the metric. Subject to prefixing based on the configuration of the Resource.
 	Name string `yaml:"name" json:"name"`
 	// Help text for the metric.

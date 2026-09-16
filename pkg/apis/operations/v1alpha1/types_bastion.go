@@ -23,7 +23,7 @@ const (
 
 // Bastion holds details about an SSH bastion for a shoot cluster.
 type Bastion struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -38,7 +38,7 @@ type Bastion struct {
 
 // BastionList is a list of Bastion objects.
 type BastionList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

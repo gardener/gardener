@@ -26,7 +26,7 @@ const OperatingSystemConfigResource = "OperatingSystemConfig"
 
 // OperatingSystemConfig is a specification for a OperatingSystemConfig resource
 type OperatingSystemConfig struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -56,7 +56,7 @@ func (o *OperatingSystemConfig) GetExtensionStatus() Status {
 
 // OperatingSystemConfigList is a list of OperatingSystemConfig resources.
 type OperatingSystemConfigList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -67,7 +67,7 @@ type OperatingSystemConfigList struct {
 // OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.
 type OperatingSystemConfigSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// CRI config is a structure contains configurations of the CRI library
 	// +optional
@@ -197,7 +197,7 @@ type FileContentImageRef struct {
 // OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 
 	// ExtensionUnits is a list of additional systemd units provided by the extension.
 	// +patchMergeKey=name

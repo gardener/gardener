@@ -23,7 +23,7 @@ import (
 
 // Shoot represents a Shoot cluster created and managed by Gardener.
 type Shoot struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -41,7 +41,7 @@ type Shoot struct {
 
 // ShootList is a list of Shoot objects.
 type ShootList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -516,7 +516,7 @@ type Addon struct {
 
 // KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.
 type KubernetesDashboard struct {
-	Addon `json:",inline" protobuf:"bytes,2,opt,name=addon"`
+	Addon `json:",embed" protobuf:"bytes,2,opt,name=addon"`
 
 	// AuthenticationMode defines the authentication mode for the kubernetes-dashboard.
 	// +optional
@@ -530,7 +530,7 @@ const (
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
-	Addon `json:",inline" protobuf:"bytes,1,opt,name=addon"`
+	Addon `json:",embed" protobuf:"bytes,1,opt,name=addon"`
 
 	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
 	// +optional
@@ -972,7 +972,7 @@ type KubernetesConfig struct {
 
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
-	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
+	KubernetesConfig `json:",embed" protobuf:"bytes,1,opt,name=kubernetesConfig"`
 
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding
 	// configuration.
@@ -1230,7 +1230,7 @@ type ResourceWatchCacheSize struct {
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
-	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
+	KubernetesConfig `json:",embed" protobuf:"bytes,1,opt,name=kubernetesConfig"`
 
 	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 	// +optional
@@ -1293,7 +1293,7 @@ const (
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
-	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
+	KubernetesConfig `json:",embed" protobuf:"bytes,1,opt,name=kubernetesConfig"`
 
 	// KubeMaxPDVols is not respected anymore by kube-scheduler.
 	// The maximum number of attached volumes is configured by the CSI driver.
@@ -1323,7 +1323,7 @@ const (
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {
-	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
+	KubernetesConfig `json:",embed" protobuf:"bytes,1,opt,name=kubernetesConfig"`
 
 	// Mode specifies which proxy mode to use.
 	// defaults to IPTables.
@@ -1354,7 +1354,7 @@ const (
 
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
-	KubernetesConfig `json:",inline" protobuf:"bytes,1,opt,name=kubernetesConfig"`
+	KubernetesConfig `json:",embed" protobuf:"bytes,1,opt,name=kubernetesConfig"`
 
 	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
 	// +optional

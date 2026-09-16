@@ -15,7 +15,7 @@ import (
 
 // Project holds certain properties about a Gardener project.
 type Project struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -32,7 +32,7 @@ type Project struct {
 
 // ProjectList is a collection of Projects.
 type ProjectList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -109,7 +109,7 @@ type ProjectStatus struct {
 type ProjectMember struct {
 	// Subject is representing a user name, an email address, or any other identifier of a user, group, or service
 	// account that has a certain role.
-	rbacv1.Subject `json:",inline" protobuf:"bytes,1,opt,name=subject"`
+	rbacv1.Subject `json:",embed" protobuf:"bytes,1,opt,name=subject"`
 
 	// Role represents the role of this member.
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`

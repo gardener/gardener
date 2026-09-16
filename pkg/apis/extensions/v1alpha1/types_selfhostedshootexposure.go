@@ -26,7 +26,7 @@ const SelfHostedShootExposureResource = "SelfHostedShootExposure"
 
 // SelfHostedShootExposure contains the configuration for the exposure of a self-hosted shoot control plane.
 type SelfHostedShootExposure struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -51,7 +51,7 @@ func (s *SelfHostedShootExposure) GetExtensionStatus() Status {
 
 // SelfHostedShootExposureList is a list of SelfHostedShootExposure resources.
 type SelfHostedShootExposureList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -62,7 +62,7 @@ type SelfHostedShootExposureList struct {
 // SelfHostedShootExposureSpec is the spec for an SelfHostedShootExposure resource.
 type SelfHostedShootExposureSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// CredentialsRef is a reference to the cloud provider credentials.
 	// It is only set for shoots with managed infrastructure (i.e., if `Shoot.spec.{credentials,secret}BindingName` is set).
@@ -87,7 +87,7 @@ type ControlPlaneEndpoint struct {
 // SelfHostedShootExposureStatus is the status for an SelfHostedShootExposure resource.
 type SelfHostedShootExposureStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 
 	// Ingress is a list of endpoints of the exposure mechanism.
 	// +optional

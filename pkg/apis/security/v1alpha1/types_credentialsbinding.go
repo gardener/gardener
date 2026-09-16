@@ -14,7 +14,7 @@ import (
 
 // CredentialsBinding represents a binding to credentials in the same or another namespace.
 type CredentialsBinding struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -43,7 +43,7 @@ type CredentialsBindingProvider struct {
 
 // CredentialsBindingList is a collection of CredentialsBindings.
 type CredentialsBindingList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

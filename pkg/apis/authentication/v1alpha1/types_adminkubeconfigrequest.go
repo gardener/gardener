@@ -13,7 +13,7 @@ import (
 // AdminKubeconfigRequest can be used to request a kubeconfig with admin credentials
 // for a Shoot cluster.
 type AdminKubeconfigRequest struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 

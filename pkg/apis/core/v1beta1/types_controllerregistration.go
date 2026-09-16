@@ -14,7 +14,7 @@ import (
 
 // ControllerRegistration represents a registration of an external controller.
 type ControllerRegistration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -27,7 +27,7 @@ type ControllerRegistration struct {
 
 // ControllerRegistrationList is a collection of ControllerRegistrations.
 type ControllerRegistrationList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

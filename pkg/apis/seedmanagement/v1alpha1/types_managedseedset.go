@@ -15,7 +15,7 @@ import (
 
 // ManagedSeedSet represents a set of identical ManagedSeeds.
 type ManagedSeedSet struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -32,7 +32,7 @@ type ManagedSeedSet struct {
 
 // ManagedSeedSetList is a list of ManagedSeed objects.
 type ManagedSeedSetList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

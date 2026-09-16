@@ -16,7 +16,7 @@ import (
 // CloudProfileConfig contains provider-specific configuration that is embedded into Gardener's `CloudProfile`
 // resource.
 type CloudProfileConfig struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// MachineImages is the list of machine images that are understood by the controller. It maps
 	// logical names and versions to provider-specific identifiers.

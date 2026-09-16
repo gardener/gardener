@@ -18,7 +18,7 @@ import (
 
 // Gardenlet represents a Gardenlet configuration for an unmanaged seed.
 type Gardenlet struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -35,7 +35,7 @@ type Gardenlet struct {
 
 // GardenletList is a list of Gardenlet objects.
 type GardenletList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -65,7 +65,7 @@ type GardenletSpec struct {
 type GardenletSelfDeployment struct {
 	// GardenletDeployment specifies common gardenlet deployment parameters.
 	// +optional
-	GardenletDeployment `json:",inline" protobuf:"bytes,1,opt,name=gardenletDeployment"`
+	GardenletDeployment `json:",embed" protobuf:"bytes,1,opt,name=gardenletDeployment"`
 
 	// Helm is the Helm deployment configuration.
 	Helm GardenletHelm `json:"helm" protobuf:"bytes,2,opt,name=helm"`

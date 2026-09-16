@@ -13,7 +13,7 @@ import (
 
 // TokenRequest is a resource that is used to request WorkloadIdentity tokens.
 type TokenRequest struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
