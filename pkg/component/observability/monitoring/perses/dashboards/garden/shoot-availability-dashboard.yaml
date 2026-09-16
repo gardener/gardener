@@ -146,7 +146,11 @@ spec:
         plugin:
           kind: Table
           spec:
-            columnSettings: []
+            columnSettings:
+              - name: value
+                hide: true
+              - name: timestamp
+                hide: true
         queries:
           - kind: TimeSeriesQuery
             spec:
