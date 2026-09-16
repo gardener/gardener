@@ -745,6 +745,7 @@ var _ = Describe("ResourceManager", func() {
 					corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 				)
 				deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}}
+				deployment.Spec.Template.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 				deployment.Spec.Template.Spec.HostNetwork = true
 				deployment.Spec.Template.Spec.PriorityClassName = "system-cluster-critical"
 			}
