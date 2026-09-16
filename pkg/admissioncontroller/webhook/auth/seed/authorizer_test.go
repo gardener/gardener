@@ -1420,6 +1420,22 @@ var _ = Describe("Seed", func() {
 					Entry("watch w/ needed selector", "watch", true),
 					Entry("watch w/o needed selector", "watch", false),
 				)
+
+				It("should deny list/watch if label selector uses a non-equality operator", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					selector, err := labels.Parse("unrelated-label!=some-value")
+					Expect(err).NotTo(HaveOccurred())
+					reqs, selectable := selector.Requirements()
+					Expect(selectable).To(BeTrue())
+					attrs.LabelSelectorRequirements = reqs
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("must specify field or label selector"))
+				})
 			})
 
 			Context("when requested for Gardenlets", func() {
@@ -1878,6 +1894,22 @@ var _ = Describe("Seed", func() {
 					Entry("watch w/ needed selector", "watch", true),
 					Entry("watch w/o needed selector", "watch", false),
 				)
+
+				It("should deny list/watch if label selector uses a non-equality operator", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					selector, err := labels.Parse("unrelated-label!=some-value")
+					Expect(err).NotTo(HaveOccurred())
+					reqs, selectable := selector.Requirements()
+					Expect(selectable).To(BeTrue())
+					attrs.LabelSelectorRequirements = reqs
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("must specify field or label selector"))
+				})
 			})
 
 			Context("when requested for Seeds", func() {
@@ -1996,6 +2028,22 @@ var _ = Describe("Seed", func() {
 					Entry("watch w/ needed selector", "watch", true),
 					Entry("watch w/o needed selector", "watch", false),
 				)
+
+				It("should deny list/watch if label selector uses a non-equality operator", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					selector, err := labels.Parse("unrelated-label!=some-value")
+					Expect(err).NotTo(HaveOccurred())
+					reqs, selectable := selector.Requirements()
+					Expect(selectable).To(BeTrue())
+					attrs.LabelSelectorRequirements = reqs
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("must specify field or label selector"))
+				})
 			})
 
 			Context("when requested for ControllerRegistrations", func() {

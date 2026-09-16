@@ -2298,6 +2298,21 @@ var _ = Describe("Shoot", func() {
 						Entry("watch", "watch"),
 					)
 
+					It("should deny list/watch if label selector uses a non-equality operator", func() {
+						attrs.Verb = "list"
+
+						selector, err := labels.Parse("unrelated-label!=some-value")
+						Expect(err).NotTo(HaveOccurred())
+						reqs, selectable := selector.Requirements()
+						Expect(selectable).To(BeTrue())
+						attrs.LabelSelectorRequirements = reqs
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("must specify field or label selector"))
+					})
+
 					It("should fall through to graph-based authorization for extension user type", func() {
 						attrs.Verb = "list"
 						attrs.User = &user.DefaultInfo{
