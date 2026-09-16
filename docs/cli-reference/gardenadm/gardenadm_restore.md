@@ -24,6 +24,7 @@ gardenadm restore --config-dir /path/to/manifests --backup-data-path /path/to/et
 ```
       --backup-data-path string   Local path on the node where the etcd backup data is stored. Expected structure: <backupBucketsRoot>/<bucketName>/<namespace>--<uid>/etcd-main/v2
   -d, --config-dir string         Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
+      --force                     If set, the restore is executed even if the control plane is already initialized. Use this only to retry a failed 'gardenadm restore'.
   -h, --help                      help for restore
       --prior-node-name string    The name of the prior control plane node. Required in order to cleanup stale resources.
   -z, --zone string               Availability zone of the new machine where the prior node is being restored to. Required if the control plane worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.
