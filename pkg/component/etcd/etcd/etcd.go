@@ -677,7 +677,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						{
 							Alert: "KubeEtcd3" + role + "DbSizeLimitApproaching",
 							Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} / on (pod) group_left etcd_server_quota_backend_bytes{job="` + serviceMonitorJobNameEtcd + `"}) > 0.8`), // above 80% of the configured etcd quota
-							For:   ptr.To(monitoringv1.Duration("15m")),
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "etcd",
 								"severity":   "warning",
@@ -692,7 +692,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						{
 							Alert: "KubeEtcd3" + role + "DbSizeLimitCrossed",
 							Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} / on (pod) group_left etcd_server_quota_backend_bytes{job="` + serviceMonitorJobNameEtcd + `"}) > 0.95`), // above 95% of the configured etcd quota
-							For:   ptr.To(monitoringv1.Duration("5m")),
+							For:   new(monitoringv1.Duration("5m")),
 							Labels: map[string]string{
 								"service":    "etcd",
 								"severity":   "critical",

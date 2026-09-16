@@ -627,7 +627,7 @@ var _ = Describe("Etcd", func() {
 							{
 								Alert: "KubeEtcd3" + serviceMonitorAlertName(role) + "DbSizeLimitApproaching",
 								Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + jobNameEtcd + `"} / on (pod) group_left etcd_server_quota_backend_bytes{job="` + jobNameEtcd + `"}) > 0.8`),
-								For:   ptr.To(monitoringv1.Duration("15m")),
+								For:   new(monitoringv1.Duration("15m")),
 								Labels: map[string]string{
 									"service":    "etcd",
 									"severity":   "warning",
@@ -642,7 +642,7 @@ var _ = Describe("Etcd", func() {
 							{
 								Alert: "KubeEtcd3" + serviceMonitorAlertName(role) + "DbSizeLimitCrossed",
 								Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + jobNameEtcd + `"} / on (pod) group_left etcd_server_quota_backend_bytes{job="` + jobNameEtcd + `"}) > 0.95`),
-								For:   ptr.To(monitoringv1.Duration("5m")),
+								For:   new(monitoringv1.Duration("5m")),
 								Labels: map[string]string{
 									"service":    "etcd",
 									"severity":   "critical",
