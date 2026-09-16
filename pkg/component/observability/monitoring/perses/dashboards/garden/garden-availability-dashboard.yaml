@@ -129,7 +129,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
-                  query: up{job="gardener-controller-manager"}
+                  query: max(up{job="gardener-controller-manager"})
                   seriesNameFormat: ""
     "3":
       kind: Panel
@@ -169,7 +169,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
-                  query: up{job="terminal-controller-manager"}
+                  query: max(up{job="terminal-controller-manager"})
                   seriesNameFormat: ""
     "5":
       kind: Panel
