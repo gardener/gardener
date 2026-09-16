@@ -99,8 +99,24 @@ func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 		)
 
 		if b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane() {
-			zones = v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers).Zones
+			// In self-hosted shoot clusters, the control plane namespace (kube-system) does not only host control plane
+			// components but also data plane system components (e.g., coredns, calico-typha).
+			// The data plane components are not required to run on the control plane pool exclusively. On the contrary, for
+			// some, it might even be desirable to spread them across control plane and worker nodes – especially, with a
+			// single control plane node.
+			// Zone pinning is disabled to allow control plane and system components to spread across hosts and zones.
+			// The most important control plane components run as static pods and are thereby pinned to the control plane
+			// pool's zone(s) anyhow. Cross-AZ traffic might occur for other components if the control plane pool uses
+			// different zones than the other pools allowing system components.
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "false")
+			// If zone pinning is disabled, only the number of zones available for system components is relevant to inject
+			// topology spread constraints accordingly. Consider the zones of all worker pools for this.
+			zones = v1beta1helper.ZonesWithSystemComponents(b.Shoot.GetInfo().Spec.Provider.Workers)
 		} else if !b.Shoot.IsSelfHosted() {
+			// Enable zone pinning for hosted shoots for avoiding cross-AZ traffic in control planes without zone failure
+			// tolerance on seeds with multiple (more) zones.
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "true")
+
 			if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
 				(!failureToleranceTypeExisting || existingFailureToleranceType != newFailureToleranceType) {
 				var explicitZones []string
