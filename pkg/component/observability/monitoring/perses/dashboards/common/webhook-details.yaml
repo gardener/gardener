@@ -112,6 +112,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: sum(rate(controller_runtime_webhook_requests_total{job="$job",webhook="$webhook",code=~"$code",pod=~"$pod"}[$__rate_interval])) by (pod)
                   seriesNameFormat: '{{pod}}'
     "0_1":
@@ -146,6 +148,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: sum(rate(controller_runtime_webhook_requests_total{job="$job",webhook="$webhook",code=~"$code",pod=~"$pod"}[$__rate_interval])) by (code)
                   seriesNameFormat: '{{code}}'
     "0_2":
@@ -180,6 +184,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: sum(controller_runtime_webhook_requests_in_flight{job="$job",pod=~"$pod",webhook="$webhook"}) by (pod)
                   seriesNameFormat: '{{pod}}'
     "0_3":
@@ -215,6 +221,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: histogram_quantile(0.5,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job="$job",pod=~"$pod",webhook="$webhook"}[$__rate_interval])) by(le,webhook))
                   seriesNameFormat: P50
           - kind: TimeSeriesQuery
@@ -224,6 +232,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: histogram_quantile(0.9,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job="$job",pod=~"$pod",webhook="$webhook"}[$__rate_interval])) by(le,webhook))
                   seriesNameFormat: P90
           - kind: TimeSeriesQuery
@@ -233,6 +243,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: histogram_quantile(0.99,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job="$job",pod=~"$pod",webhook="$webhook"}[$__rate_interval])) by(le,webhook))
                   seriesNameFormat: P99
   layouts:

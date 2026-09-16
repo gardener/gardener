@@ -27,12 +27,12 @@ spec:
         plugin:
           kind: TimeSeriesChart
           spec:
-            yAxis:
-              format:
-                unit: decimal
             legend:
               position: bottom
               mode: list
+            yAxis:
+              format:
+                unit: decimal
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -41,6 +41,8 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: ${datasource}
+                  minStep: ""
                   query: sum(rate(vpa_admission_controller_admission_pods_total[$__rate_interval])) by (applied)
                   seriesNameFormat: Applied recommendation "{{ applied }}"
     "1":
@@ -52,6 +54,7 @@ spec:
           kind: Markdown
           spec:
             text: '**Migration from Grafana not supported !**'
+        queries: []
     "2":
       kind: Panel
       spec:
@@ -61,6 +64,7 @@ spec:
           kind: Markdown
           spec:
             text: '**Migration from Grafana not supported !**'
+        queries: []
     "3":
       kind: Panel
       spec:
@@ -70,6 +74,7 @@ spec:
           kind: Markdown
           spec:
             text: '**Migration from Grafana not supported !**'
+        queries: []
   layouts:
     - kind: Grid
       spec:
