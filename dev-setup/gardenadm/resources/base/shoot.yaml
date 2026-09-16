@@ -53,6 +53,13 @@ spec:
       protectKernelDefaults: true
       streamingConnectionIdleTimeout: 5m
       failSwapOn: false # Swap is not supported in our kindest/node machine pods.
+      # These are usually defaulted by the resourcereservation admission plugin.
+      # When unset, this triggers a node-roll on the first reconcile after gardenadm connect.
+      # Since the control-plane nodes are currently not HA, this is not possible at the moment.
+      kubeReserved:
+        pid: 20k
+        memory: 1Gi
+        cpu: 80m
   networking:
     type: calico
     # Disable calico-typha so Felix watches the kube-apiserver directly. Typha's watcher cache can block resync for
