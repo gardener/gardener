@@ -63,6 +63,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_input_records_total{pod=~"$pod"})
                   seriesNameFormat: ""
@@ -88,6 +89,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: 'sum(rate(fluentbit_input_bytes_total{pod=~"$pod"}[$__rate_interval])) by (name) / 1024  '
                   seriesNameFormat: '{{name}}'
@@ -113,6 +115,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_output_proc_bytes_total{pod=~"$pod"}[$__rate_interval])) by (name) /1024
                   seriesNameFormat: '{{name}}'
@@ -138,6 +141,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_output_errors_total{pod=~"$pod"}) by (name)
                   seriesNameFormat: '{{name}}'
@@ -163,6 +167,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_output_dropped_records_total{pod=~"$pod"}) by (name)
                   seriesNameFormat: '{{name}}'
@@ -188,6 +193,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_output_proc_records_total{pod=~"$pod"})
                   seriesNameFormat: ""
@@ -224,6 +230,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_input_records_total{pod=~"$pod"}[$__rate_interval])) by (name)
                   seriesNameFormat: '{{name}}'
@@ -260,6 +267,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_output_proc_records_total{pod=~"$pod"}[$__rate_interval])) by (name)
                   seriesNameFormat: '{{name}}'
@@ -295,6 +303,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_input_records_total{pod=~"$pod"}[$__rate_interval])) by (pod, name)
                   seriesNameFormat: '{{ pod }}/{{name}}'
@@ -331,6 +340,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_output_proc_records_total{pod=~"$pod"}[$__rate_interval])) by (pod, name)
                   seriesNameFormat: '{{ pod }}/{{name}}'
@@ -366,6 +376,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: fluentbit_storage_mem_chunks{pod=~"$pod"}
                   seriesNameFormat: mem-{{pod}}
@@ -401,6 +412,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: fluentbit_storage_fs_chunks{pod=~"$pod"}
                   seriesNameFormat: '{{pod}}'
@@ -434,6 +446,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: fluentbit_storage_fs_chunks_up{pod=~"$pod"}
                   seriesNameFormat: up-{{pod}}
@@ -467,6 +480,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: fluentbit_storage_fs_chunks_down{pod=~"$pod"}
                   seriesNameFormat: down-{{pod}}
@@ -493,6 +507,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_gardener_incoming_logs_total{pod=~"$pod",host=~"$host"})
                   seriesNameFormat: ""
@@ -519,6 +534,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_gardener_output_client_logs_total{pod=~"$pod",host=~".+$host.+"})
                   seriesNameFormat: ""
@@ -547,6 +563,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum by (type)(fluentbit_gardener_clients_total{pod=~"$pod"})
                   seriesNameFormat: '{{type}}'
@@ -581,6 +598,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_gardener_errors_total{pod=~"$pod",host=~"$host"})
                   seriesNameFormat: ""
@@ -607,6 +625,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(fluentbit_gardener_dropped_logs_total{pod=~"$pod",host=~".*$host.*"})
                   seriesNameFormat: ""
@@ -632,6 +651,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(output_plugin_otel_sdk_exporter_log_exported_total{server_address=~".+$host.*"})
                   seriesNameFormat: ""
@@ -667,6 +687,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_gardener_incoming_logs_total{pod=~"$pod",host=~"$host"}[$__rate_interval])) by (host)
                   seriesNameFormat: '{{host}}'
@@ -702,6 +723,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum(rate(fluentbit_gardener_output_client_logs_total{pod=~"$pod",host=~".+$host.*"}[$__rate_interval])) by (host)
                   seriesNameFormat: '{{host}}'
@@ -737,6 +759,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: fluentbit_gardener_dque_size{pod=~"$pod",name=~"$host"}
                   seriesNameFormat: '{{pod}}/{{name}}'
@@ -772,6 +795,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum by (host)(fluentbit_gardener_buffered_logs{pod=~"$pod",host=~"$host"})
                   seriesNameFormat: ""
@@ -807,6 +831,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum by (host)(rate(fluentbit_gardener_exported_client_logs_total{pod=~"$pod",host=~"$host"}[$__rate_interval]))
                   seriesNameFormat: '{{host}}'
@@ -842,6 +867,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum by (host) (rate(fluentbit_gardener_throttled_logs_total{pod=~"$pod",host=~"$host"}[$__rate_interval]))
                   seriesNameFormat: '{{host}}'
@@ -877,6 +903,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(process_cpu_seconds_total{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}}'
@@ -912,6 +939,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: process_resident_memory_bytes{pod=~"$pod"}
                   seriesNameFormat: '{{pod}} - resident memory'
@@ -922,6 +950,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: process_virtual_memory_bytes{pod=~"$pod"}
                   seriesNameFormat: '{{pod}} - virtual memory'
@@ -955,6 +984,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(process_network_transmit_bytes_total{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - TX'
@@ -965,6 +995,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(process_network_receive_bytes_total{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - RX'
@@ -998,6 +1029,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: go_memstats_heap_inuse_bytes{pod=~"$pod"}
                   seriesNameFormat: '{{pod}} - heap in use'
@@ -1008,6 +1040,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: go_memstats_heap_alloc_bytes{pod=~"$pod"}
                   seriesNameFormat: '{{pod}} - heap alloc'
@@ -1018,6 +1051,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: go_memstats_heap_idle_bytes{pod=~"$pod"}
                   seriesNameFormat: '{{pod}} - heap idle'
@@ -1051,6 +1085,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: go_gc_duration_seconds{pod=~"fluent-bit.+",quantile="0.75"}
                   seriesNameFormat: '{{pod}} - GC 75p'
@@ -1061,6 +1096,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: |
                     sum by (pod) (
@@ -1101,6 +1137,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(go_memstats_mallocs_total{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - alloc rate'
@@ -1111,6 +1148,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(go_memstats_frees_total{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - free rate'
@@ -1139,6 +1177,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum (output_plugin_otel_sdk_log_created_total{pod=~"$pod"})
                   seriesNameFormat: '{{pod}}'
@@ -1166,6 +1205,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: |-
                     sum (
@@ -1204,6 +1244,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum by (server_address) (  rate(output_plugin_otel_sdk_exporter_log_exported_total{server_address=~".+$host.+"}[$__rate_interval]))
                   seriesNameFormat: '{{server_address}}'
@@ -1237,6 +1278,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: histogram_quantile(0.50,sum by (le, server_address) (    rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket{server_address=~".+$host.+"}[$__rate_interval])))
                   seriesNameFormat: '{{server_address}} - p50'
@@ -1270,6 +1312,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(output_plugin_rpc_client_request_size_bytes_sum{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - request bytes/sec'
@@ -1303,6 +1346,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: sum by (rpc_response_status_code,server_address) (rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{server_address=~".+$host.+"}[$__rate_interval]))
                   seriesNameFormat: '{{server_address}} - {{rpc_response_status_code}}'
@@ -1338,6 +1382,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: rate(output_plugin_rpc_client_call_duration_seconds_count{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - {{rpc_method}}'
@@ -1369,6 +1414,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
+                    name: prometheus-aggregate
                   minStep: ""
                   query: |-
                     sum by (rpc_response_status_code, server_address) (
