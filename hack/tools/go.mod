@@ -1,6 +1,5 @@
 module github.com/gardener/gardener/hack/tools
 
-// Version must be kept in sync with Go version of https://github.com/golangci/golangci-lint.
 go 1.26.0
 
 tool (
@@ -21,8 +20,7 @@ tool (
 	sigs.k8s.io/controller-tools/cmd/controller-gen
 )
 
-// This is a separate go module to decouple the gardener codebase and production binaries from dependencies that are
-// only needed to build the logcheck tool and kube-api-linter plugin
+// This separate Go module decouples development-tool dependencies from Gardener's production binaries.
 require (
 	golang.org/x/exp v0.0.0-20261109185158-a52e3aef5920
 	// this has to be kept in sync with the used golangci-lint version
