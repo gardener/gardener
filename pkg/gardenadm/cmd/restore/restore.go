@@ -62,6 +62,7 @@ func run(ctx context.Context, opts *Options) error {
 		UseBootstrapEtcd: false,
 		UseHostNetwork:   false,
 		Zone:             opts.Zone,
+		Force:            opts.Force,
 	}
 
 	var (
