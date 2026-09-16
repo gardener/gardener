@@ -261,9 +261,9 @@ spec:
         topology: garden
       annotations:
         summary: >-
-          A seed etcd-main in landscape {{$externalLabels.landscape}} is approaching its current DB size limit.
+          A seed etcd-main in landscape {{$externalLabels.landscape}} is approaching its configured etcd quota.
         description: >-
-          Seed {{$labels.name}} etcd-main DB size is approaching its current limit in landscape {{$externalLabels.landscape}}. 
+          Seed {{$labels.name}} etcd-main DB size is approaching its configured etcd quota in landscape {{$externalLabels.landscape}}.
           Etcd quota might need to be increased.
 
     - alert: SeedKubeEtcd3MainDbSizeLimitCrossed
@@ -274,10 +274,10 @@ spec:
         topology: garden
       annotations:
         summary: >-
-          A seed etcd-main in landscape {{$externalLabels.landscape}} has crossed its current DB size limit.
+          A seed etcd-main in landscape {{$externalLabels.landscape}} has crossed its configured etcd quota.
         description: >-
-          Seed {{$labels.name}} etcd-main DB size has crossed its current practical limit in landscape {{$externalLabels.landscape}}. 
-          Etcd quota must be increased to allow updates. 
+          Seed {{$labels.name}} etcd-main DB size has crossed its configured etcd quota in landscape {{$externalLabels.landscape}}.
+          Etcd quota must be increased to allow updates.
     
     - alert: SeedPodStuckInPending
       expr: |
