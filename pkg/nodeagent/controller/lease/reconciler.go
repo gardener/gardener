@@ -55,8 +55,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		op = controllerutil.OperationResultCreated
 	}
 
-	existing := lease.DeepCopy()
-
 	if err := controllerutil.SetControllerReference(node, lease, r.Client.Scheme()); err != nil {
 		log.Error(err, "Unable to set controller reference for Lease", "lease", client.ObjectKeyFromObject(lease))
 	}
@@ -71,8 +69,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, fmt.Errorf("failed creating lease %s: %w", client.ObjectKeyFromObject(lease), err)
 		}
 	} else {
-		if err := r.Client.Patch(ctx, lease, client.MergeFrom(existing)); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed patching lease %s: %w", client.ObjectKeyFromObject(lease), err)
+		if err := r.Client.Update(ctx, lease); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed updating lease %s: %w", client.ObjectKeyFromObject(lease), err)
 		}
 	}
 
